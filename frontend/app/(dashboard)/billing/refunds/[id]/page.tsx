@@ -188,9 +188,9 @@ export default function RefundDetailPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                        <div className="flex justify-between items-center p-4 bg-muted rounded-lg border">
                             <span className="text-sm font-medium text-gray-500">Amount to Refund</span>
-                            <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            <span className="text-2xl font-bold text-foreground">
                                 {formatCurrency(parseFloat(refund.amount))}
                             </span>
                         </div>
@@ -213,7 +213,7 @@ export default function RefundDetailPage() {
 
                         <div>
                             <h3 className="text-sm font-medium text-gray-500 mb-2">Reason</h3>
-                            <p className="text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded-md min-h-[60px]">
+                            <p className="text-sm bg-muted p-3 rounded-md min-h-[60px]">
                                 {refund.reason}
                             </p>
                         </div>

@@ -169,10 +169,10 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
+                    <h1 className="text-2xl font-black tracking-tight text-foreground">
                         Edit Fixed Asset
                     </h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                         Update details for asset {asset?.asset_number}
                     </p>
                 </div>

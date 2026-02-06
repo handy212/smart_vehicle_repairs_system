@@ -510,7 +510,7 @@ export default function PerformInspectionPage() {
         <div className="flex-1 min-w-0">
           {/* Vehicle Damage */}
           {activeTab === "vehicle-damage" && (
-            <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+            <Card className="border-border shadow-sm overflow-hidden">
               <CardContent className="p-0">
                 <VehicleDamageMarker
                   damage={vehicleDamage}

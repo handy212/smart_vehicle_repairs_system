@@ -50,7 +50,7 @@ export default function HelpPage() {
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+                    <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
                         <BookOpen className="w-8 h-8 text-primary" />
                         Help Center
                     </h1>
@@ -88,7 +88,7 @@ export default function HelpPage() {
                                             onClick={() => setActiveModuleId(module.id)}
                                             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
                                                     ? "bg-primary/10 text-primary"
-                                                    : "text-gray-600 dark:text-gray-400 hover:bg-muted hover:text-foreground"
+                                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                                 }`}
                                         >
                                             <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-gray-500"}`} />

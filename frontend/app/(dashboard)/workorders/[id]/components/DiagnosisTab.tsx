@@ -68,7 +68,7 @@ export default function DiagnosisTab({
       <Card>
         <CardContent className="py-12 text-center">
           <Search className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">No Diagnosis Started</h3>
+          <h3 className="text-lg font-semibold mb-2 text-foreground">No Diagnosis Started</h3>
           <p className="text-gray-500 mb-6 max-w-md mx-auto">
             Start diagnosis to document findings, identify root causes, and create repair recommendations for the customer.
           </p>
@@ -137,7 +137,7 @@ export default function DiagnosisTab({
           {/* Customer Complaint */}
           <div>
             <Label className="text-sm font-semibold mb-2 block">Customer Complaint</Label>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border">
+            <div className="p-3 bg-muted rounded-md border">
               <p className="text-sm whitespace-pre-wrap">{diagnosis.customer_complaint}</p>
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function DiagnosisTab({
               <div className="p-3 bg-primary/10 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
                 <p className="text-sm font-medium mb-1">{diagnosis.root_cause}</p>
                 {diagnosis.root_cause_explanation && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     {diagnosis.root_cause_explanation}
                   </p>
                 )}
@@ -159,7 +159,7 @@ export default function DiagnosisTab({
 
           {/* Diagnostic Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <div className="p-3 bg-muted rounded-md">
               <div className="flex items-center space-x-2 mb-1">
                 <Clock className="w-4 h-4 text-gray-500" />
                 <Label className="text-xs text-gray-500">Diagnostic Time</Label>
@@ -168,7 +168,7 @@ export default function DiagnosisTab({
                 {diagnosis.diagnostic_time_formatted || `${diagnosis.diagnostic_time_hours}h`}
               </p>
             </div>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <div className="p-3 bg-muted rounded-md">
               <div className="flex items-center space-x-2 mb-1">
                 <DollarSign className="w-4 h-4 text-gray-500" />
                 <Label className="text-xs text-gray-500">Diagnostic Fee</Label>
@@ -177,7 +177,7 @@ export default function DiagnosisTab({
                 {formatCurrency(Number(diagnosis.diagnostic_fee || 0))}
               </p>
             </div>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <div className="p-3 bg-muted rounded-md">
               <div className="flex items-center space-x-2 mb-1">
                 <Wrench className="w-4 h-4 text-gray-500" />
                 <Label className="text-xs text-gray-500">Recommendations</Label>
@@ -196,7 +196,7 @@ export default function DiagnosisTab({
                 {diagnosis.repair_recommendations.slice(0, 3).map((rec) => (
                   <div
                     key={rec.id}
-                    className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border flex items-center justify-between"
+                    className="p-3 bg-muted rounded-md border flex items-center justify-between"
                   >
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">

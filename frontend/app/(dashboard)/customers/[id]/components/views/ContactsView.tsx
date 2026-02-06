@@ -101,7 +101,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
     };
 
     const columns = [
-        { header: "Name", accessorKey: "first_name", cell: (item: any) => <span className="font-medium text-gray-900 dark:text-gray-100">{item.first_name} {item.last_name}</span> },
+        { header: "Name", accessorKey: "first_name", cell: (item: any) => <span className="font-medium text-foreground">{item.first_name} {item.last_name}</span> },
         { header: "Email", accessorKey: "email", cell: (item: any) => <span className="text-gray-500">{item.email}</span> },
         { header: "Position", accessorKey: "job_title" },
         { header: "Phone", accessorKey: "phone" },

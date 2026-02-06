@@ -224,9 +224,9 @@ export default function RoadsideDetailPage() {
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-0.5">
                             <Link href="/roadside" className="hover:underline">Roadside</Link>
                             <span>/</span>
-                            <span className="text-gray-900 dark:text-gray-100 font-medium">{request.request_number}</span>
+                            <span className="text-foreground font-medium">{request.request_number}</span>
                         </div>
-                        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                        <h1 className="text-lg font-bold text-foreground tracking-tight">
                             {request.service_type_display}
                         </h1>
                     </div>
@@ -263,8 +263,8 @@ export default function RoadsideDetailPage() {
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Breakdown Location</p>
-                                    <p className="text-sm text-gray-900 dark:text-gray-100">{request.breakdown_location}</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Breakdown Location</p>
+                                    <p className="text-sm text-foreground">{request.breakdown_location}</p>
                                     {request.latitude && request.longitude && (
                                         <a
                                             href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
@@ -278,10 +278,10 @@ export default function RoadsideDetailPage() {
                                 </div>
                                 {request.destination && (
                                     <div className="pt-3 border-t">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Destination</p>
-                                        <p className="text-sm text-gray-900 dark:text-gray-100">{request.destination}</p>
+                                        <p className="text-xs text-muted-foreground mb-1">Destination</p>
+                                        <p className="text-sm text-foreground">{request.destination}</p>
                                         {request.tow_distance_km && (
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                            <p className="text-xs text-muted-foreground mt-0.5">
                                                 {request.tow_distance_km} km
                                             </p>
                                         )}
@@ -300,15 +300,15 @@ export default function RoadsideDetailPage() {
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 <div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Customer</p>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{request.customer_name}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mb-1">Customer</p>
+                                    <p className="text-sm font-medium text-foreground">{request.customer_name}</p>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                         <Phone className="h-3 w-3" /> {request.customer_phone}
                                     </p>
                                 </div>
                                 <div className="pt-3 border-t">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Vehicle</p>
-                                    <p className="text-sm text-gray-900 dark:text-gray-100">{request.vehicle_display}</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Vehicle</p>
+                                    <p className="text-sm text-foreground">{request.vehicle_display}</p>
                                     <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-primary dark:text-primary hover:underline">
                                         View Details
                                     </Link>
@@ -326,16 +326,16 @@ export default function RoadsideDetailPage() {
                             <CardContent className="space-y-3">
                                 {request.description && (
                                     <div>
-                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Problem Description</p>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Problem Description</p>
+                                        <p className="text-sm text-card-foreground whitespace-pre-wrap bg-muted p-3 rounded-md">
                                             {request.description}
                                         </p>
                                     </div>
                                 )}
                                 {request.notes && (
                                     <div className={request.description ? "pt-3 border-t" : ""}>
-                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Internal Notes</p>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Internal Notes</p>
+                                        <p className="text-sm text-card-foreground whitespace-pre-wrap">
                                             {request.notes}
                                         </p>
                                     </div>
@@ -371,7 +371,7 @@ export default function RoadsideDetailPage() {
                                     <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-primary"></div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm font-semibold">Request Created</span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.requested_at), "h:mm a")}</span>
+                                        <span className="text-xs text-muted-foreground">{format(new Date(request.requested_at), "h:mm a")}</span>
                                     </div>
                                 </div>
 
@@ -380,10 +380,10 @@ export default function RoadsideDetailPage() {
                                         <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-indigo-600"></div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-semibold">Technician Dispatched</span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.dispatched_at), "h:mm a")}</span>
+                                            <span className="text-xs text-muted-foreground">{format(new Date(request.dispatched_at), "h:mm a")}</span>
                                         </div>
                                         {request.assigned_technician_name && (
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Assigned to: {request.assigned_technician_name}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Assigned to: {request.assigned_technician_name}</p>
                                         )}
                                     </div>
                                 )}
@@ -393,7 +393,7 @@ export default function RoadsideDetailPage() {
                                         <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-emerald-600"></div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-semibold">Technician Arrived</span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.arrived_at), "h:mm a")}</span>
+                                            <span className="text-xs text-muted-foreground">{format(new Date(request.arrived_at), "h:mm a")}</span>
                                         </div>
                                     </div>
                                 )}
@@ -403,11 +403,11 @@ export default function RoadsideDetailPage() {
                                         <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-green-600"></div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-semibold">Service Completed</span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.completed_at), "h:mm a")}</span>
+                                            <span className="text-xs text-muted-foreground">{format(new Date(request.completed_at), "h:mm a")}</span>
                                         </div>
                                         {request.invoice_number && (
                                             <div className="text-xs mt-1 flex items-center gap-2">
-                                                <span className="text-gray-500 dark:text-gray-400">Invoice:</span>
+                                                <span className="text-muted-foreground">Invoice:</span>
                                                 <Link
                                                     href={`/billing/invoices/${request.invoice}`}
                                                     className="font-semibold text-primary dark:text-primary hover:underline flex items-center gap-1"
@@ -493,7 +493,7 @@ export default function RoadsideDetailPage() {
                     {!['cancelled', 'failed'].includes(request.status) && (
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Progress</CardTitle>
+                                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Progress</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center justify-between space-x-1">
@@ -503,11 +503,11 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'requested'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                                : 'bg-border text-gray-400'
                                             }`}>
                                             {['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '1'}
                                         </div>
-                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Request</span>
+                                        <span className="text-[9px] mt-0.5 text-muted-foreground">Request</span>
                                     </div>
                                     <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
@@ -517,11 +517,11 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'dispatched'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                                : 'bg-border text-gray-400'
                                             }`}>
                                             {['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '2'}
                                         </div>
-                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Dispatch</span>
+                                        <span className="text-[9px] mt-0.5 text-muted-foreground">Dispatch</span>
                                     </div>
                                     <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
@@ -531,11 +531,11 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'en_route'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                                : 'bg-border text-gray-400'
                                             }`}>
                                             {['on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '3'}
                                         </div>
-                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">En Route</span>
+                                        <span className="text-[9px] mt-0.5 text-muted-foreground">En Route</span>
                                     </div>
                                     <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
@@ -545,11 +545,11 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-green-500 text-white'
                                             : ['on_site', 'arrived'].includes(request.status)
                                                 ? 'bg-primary text-white'
-                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                                : 'bg-border text-gray-400'
                                             }`}>
                                             {['in_progress', 'completed'].includes(request.status) ? '✓' : '4'}
                                         </div>
-                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">On Site</span>
+                                        <span className="text-[9px] mt-0.5 text-muted-foreground">On Site</span>
                                     </div>
                                     <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
@@ -559,11 +559,11 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'in_progress'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                                : 'bg-border text-gray-400'
                                             }`}>
                                             {request.status === 'completed' ? '✓' : '5'}
                                         </div>
-                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Working</span>
+                                        <span className="text-[9px] mt-0.5 text-muted-foreground">Working</span>
                                     </div>
                                     <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
@@ -571,11 +571,11 @@ export default function RoadsideDetailPage() {
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
                                             ? 'bg-green-600 text-white'
-                                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                            : 'bg-border text-gray-400'
                                             }`}>
                                             {request.status === 'completed' ? '✓' : '6'}
                                         </div>
-                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Done</span>
+                                        <span className="text-[9px] mt-0.5 text-muted-foreground">Done</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -586,16 +586,16 @@ export default function RoadsideDetailPage() {
                     {request.assigned_technician && (
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Technician</CardTitle>
+                                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Technician</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-2 mb-3">
-                                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-primary">
+                                    <div className="h-10 w-10 rounded-full bg-border flex items-center justify-center text-sm font-bold text-primary">
                                         {request.assigned_technician_name?.substring(0, 2).toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{request.assigned_technician_name}</div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">Mobile Tech</div>
+                                        <div className="font-medium text-sm text-foreground truncate">{request.assigned_technician_name}</div>
+                                        <div className="text-xs text-muted-foreground">Mobile Tech</div>
                                     </div>
                                 </div>
                                 <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setIsDispatchDialogOpen(true)}>
@@ -615,11 +615,11 @@ export default function RoadsideDetailPage() {
                             </CardHeader>
                             <CardContent className="text-xs space-y-1.5">
                                 <div className="flex justify-between">
-                                    <span className="text-gray-600 dark:text-gray-400">Plan:</span>
-                                    <span className="font-medium text-gray-900 dark:text-gray-100">{request.subscription_number}</span>
+                                    <span className="text-muted-foreground">Plan:</span>
+                                    <span className="font-medium text-foreground">{request.subscription_number}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                                    <span className="text-muted-foreground">Status:</span>
                                     <span className={`font-medium ${request.subscription_allowance_deducted ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
                                         {request.subscription_allowance_deducted ? "Deducted" : "Refunded"}
                                     </span>
@@ -632,10 +632,10 @@ export default function RoadsideDetailPage() {
                     {request.charge_amount && (
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Charge</CardTitle>
+                                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Charge</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                <div className="text-xl font-bold text-foreground">
                                     {currencySymbol} {request.charge_amount}
                                 </div>
                             </CardContent>
@@ -646,7 +646,7 @@ export default function RoadsideDetailPage() {
 
             {/* Dialogs */}
             <Dialog open={isDispatchDialogOpen} onOpenChange={setIsDispatchDialogOpen}>
-                <DialogContent className="sm:max-w-[400px] p-0 gap-0 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl rounded-xl">
+                <DialogContent className="sm:max-w-[400px] p-0 gap-0 bg-card border border-border shadow-xl rounded-xl">
                     <DialogHeader className="p-6 pb-3">
                         <DialogTitle className="text-base font-semibold">Assign Technician</DialogTitle>
                         <DialogDescription className="text-xs">
@@ -659,7 +659,7 @@ export default function RoadsideDetailPage() {
                             <select
                                 value={selectedTechnicianId}
                                 onChange={(e) => setSelectedTechnicianId(e.target.value)}
-                                className="w-full h-9 px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-sm"
+                                className="w-full h-9 px-3 py-2 border rounded-md bg-card text-sm"
                             >
                                 <option value="">-- Choose technician --</option>
                                 {technicians?.map(tech => (
@@ -668,7 +668,7 @@ export default function RoadsideDetailPage() {
                             </select>
                         </div>
                     </div>
-                    <DialogFooter className="p-6 pt-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-xl">
+                    <DialogFooter className="p-6 pt-2 border-t border-border bg-muted/50 rounded-b-xl">
                         <Button variant="ghost" size="sm" onClick={() => setIsDispatchDialogOpen(false)}>Cancel</Button>
                         <Button
                             size="sm"
@@ -772,7 +772,7 @@ export default function RoadsideDetailPage() {
                                 rows={5}
                                 maxLength={160}
                             />
-                            <p className="text-xs text-gray-500 dark:text-gray-400 text-right">
+                            <p className="text-xs text-muted-foreground text-right">
                                 {smsMessage.length}/160 characters
                             </p>
                         </div>

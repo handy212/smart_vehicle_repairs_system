@@ -54,11 +54,11 @@ export const StatCard = memo(function StatCard({
 
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 relative z-10">
         <div className="flex-1 min-w-0 pr-2">
-          <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
             {title}
           </CardTitle>
           {subtitle && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-xs text-muted-foreground truncate">
               {subtitle}
             </p>
           )}
@@ -84,7 +84,7 @@ export const StatCard = memo(function StatCard({
       <CardContent className="relative z-10 pt-0">
         <div className="flex items-baseline justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
+            <div className="text-xl sm:text-2xl font-bold text-foreground truncate">
               {typeof value === "number" && !isNaN(value)
                 ? value.toLocaleString()
                 : value}
@@ -110,7 +110,7 @@ export const StatCard = memo(function StatCard({
                     : trend.value}
                 </span>
                 {trend.label && (
-                  <span className="text-gray-500 dark:text-gray-400">
+                  <span className="text-muted-foreground">
                     {trend.label}
                   </span>
                 )}
@@ -118,7 +118,7 @@ export const StatCard = memo(function StatCard({
             )}
           </div>
           {link && (
-            <ArrowRight className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform group-hover:translate-x-1" />
+            <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform group-hover:translate-x-1" />
           )}
         </div>
 

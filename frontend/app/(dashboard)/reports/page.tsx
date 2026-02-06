@@ -183,10 +183,10 @@ export default function ReportsPage() {
       {/* Header - Mobile optimized */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
             Reports & Analytics
           </h1>
-          <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
             Comprehensive business intelligence and reporting
           </p>
         </div>
@@ -225,10 +225,10 @@ export default function ReportsPage() {
       </div>
 
       {/* Quick Date Range Filters - Mobile friendly */}
-      <Card className="border-gray-200 dark:border-gray-800">
+      <Card className="border-border">
         <CardContent className="p-3 sm:p-4">
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 self-center mr-2">
+            <span className="text-xs sm:text-sm text-muted-foreground self-center mr-2">
               Quick ranges:
             </span>
             {dateRangeOptions.map((option) => (
@@ -249,14 +249,14 @@ export default function ReportsPage() {
       {/* Dashboard Overview - Mobile responsive */}
       {dashboardData && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-gray-200 dark:border-gray-800">
+          <Card className="border-border">
             <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Today's Revenue
                   </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                  <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
                     {formatCurrency(dashboardData.today.revenue)}
                   </p>
                 </div>
@@ -264,14 +264,14 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-200 dark:border-gray-800">
+          <Card className="border-border">
             <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     This Week
                   </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                  <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
                     {formatCurrency(dashboardData.week.revenue)}
                   </p>
                 </div>
@@ -279,14 +279,14 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-200 dark:border-gray-800">
+          <Card className="border-border">
             <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     This Month
                   </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                  <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
                     {formatCurrency(dashboardData.month.revenue)}
                   </p>
                 </div>
@@ -294,17 +294,17 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-200 dark:border-gray-800">
+          <Card className="border-border">
             <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Overdue Invoices
                   </p>
                   <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                     {dashboardData.alerts?.overdue_invoices?.count || 0}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-muted-foreground">
                     {formatCurrency((dashboardData.alerts?.overdue_invoices?.total || 0))}
                   </p>
                 </div>
@@ -347,21 +347,21 @@ export default function ReportsPage() {
           {revenueData && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Total Invoiced
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {formatCurrency(revenueData.summary.total_invoiced)}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Total Paid
                     </CardTitle>
                   </CardHeader>
@@ -371,9 +371,9 @@ export default function ReportsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Outstanding
                     </CardTitle>
                   </CardHeader>
@@ -383,14 +383,14 @@ export default function ReportsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Payment Rate
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {revenueData.summary.payment_rate.toFixed(1)}%
                     </p>
                   </CardContent>
@@ -400,9 +400,9 @@ export default function ReportsPage() {
               {/* Subscription vs Service Revenue Breakdown */}
               {(revenueData.summary.subscription_revenue !== undefined || revenueData.summary.service_revenue !== undefined) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Card className="border-gray-200 dark:border-gray-800">
+                  <Card className="border-border">
                     <CardHeader className="pb-2 sm:pb-3">
-                      <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                         Subscription Revenue
                       </CardTitle>
                     </CardHeader>
@@ -411,15 +411,15 @@ export default function ReportsPage() {
                         {formatCurrency((revenueData.summary.subscription_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {((revenueData.summary.subscription_revenue || 0) / revenueData.summary.total_paid * 100).toFixed(1)}% of total
                         </p>
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="border-gray-200 dark:border-gray-800">
+                  <Card className="border-border">
                     <CardHeader className="pb-2 sm:pb-3">
-                      <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                         Service Revenue
                       </CardTitle>
                     </CardHeader>
@@ -428,7 +428,7 @@ export default function ReportsPage() {
                         {formatCurrency((revenueData.summary.service_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {((revenueData.summary.service_revenue || 0) / revenueData.summary.total_paid * 100).toFixed(1)}% of total
                         </p>
                       )}
@@ -438,7 +438,7 @@ export default function ReportsPage() {
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-3 sm:pb-6">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base sm:text-lg">Revenue Analysis</CardTitle>
@@ -508,14 +508,14 @@ export default function ReportsPage() {
                         </ResponsiveContainer>
                       )
                     ) : (
-                      <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                         No data available
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-3 sm:pb-6">
                     <CardTitle className="text-base sm:text-lg">Revenue by Payment Method</CardTitle>
                   </CardHeader>
@@ -543,7 +543,7 @@ export default function ReportsPage() {
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                         No data available
                       </div>
                     )}
@@ -551,7 +551,7 @@ export default function ReportsPage() {
                 </Card>
               </div>
 
-              <Card className="border-gray-200 dark:border-gray-800">
+              <Card className="border-border">
                 <CardHeader className="pb-3 sm:pb-6">
                   <CardTitle className="text-base sm:text-lg">Revenue by Technician</CardTitle>
                 </CardHeader>
@@ -574,7 +574,7 @@ export default function ReportsPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                       No data available
                     </div>
                   )}
@@ -584,26 +584,26 @@ export default function ReportsPage() {
           )}
 
           {profitMarginData && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Profit Margin Analysis</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total Revenue</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {formatCurrency(profitMarginData.revenue.total)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Costs</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total Costs</p>
                     <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                       {formatCurrency(profitMarginData.costs.parts)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Profit Margin</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Profit Margin</p>
                     <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {profitMarginData.profit.profit_margin.toFixed(1)}%
                     </p>
@@ -634,7 +634,7 @@ export default function ReportsPage() {
         <TabsContent value="operational" className="space-y-4 sm:space-y-6">
           {workOrderStats && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <Card className="border-gray-200 dark:border-gray-800">
+              <Card className="border-border">
                 <CardHeader className="pb-3 sm:pb-6">
                   <CardTitle className="text-base sm:text-lg">Work Orders by Status</CardTitle>
                 </CardHeader>
@@ -663,38 +663,38 @@ export default function ReportsPage() {
                       </PieChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                       No data available
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              <Card className="border-gray-200 dark:border-gray-800">
+              <Card className="border-border">
                 <CardHeader className="pb-3 sm:pb-6">
                   <CardTitle className="text-base sm:text-lg">Work Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Total Work Orders
                     </p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {workOrderStats.summary?.total_work_orders || 0}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
                     <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {workOrderStats.summary?.completed || 0}
                     </p>
                   </div>
                   {workOrderStats.summary?.average_completion_hours && (
                     <div>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Avg Completion Time
                       </p>
-                      <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-xl sm:text-2xl font-bold text-foreground">
                         {workOrderStats.summary.average_completion_hours.toFixed(1)} hours
                       </p>
                     </div>
@@ -705,7 +705,7 @@ export default function ReportsPage() {
           )}
 
           {technicianPerf && technicianPerf.technicians && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Technician Performance</CardTitle>
               </CardHeader>
@@ -758,28 +758,28 @@ export default function ReportsPage() {
           )}
 
           {appointmentStats && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Appointment Statistics</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Total Appointments
                     </p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {appointmentStats.summary?.total_appointments || 0}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">No-Show Rate</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">No-Show Rate</p>
                     <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                       {appointmentStats.summary?.no_show_rate?.toFixed(1) || 0}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
                     <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {appointmentStats.summary?.completed || 0}
                     </p>
@@ -807,7 +807,7 @@ export default function ReportsPage() {
         {/* Inventory Reports */}
         <TabsContent value="inventory" className="space-y-4 sm:space-y-6">
           {turnoverData && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Inventory Turnover Rate</CardTitle>
                 <p className="text-xs text-gray-500">How many times your inventory is sold and replaced over a 90-day period.</p>
@@ -819,16 +819,16 @@ export default function ReportsPage() {
           )}
 
           {inventoryValuation && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Inventory Valuation</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="mb-4 sm:mb-6">
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Total Inventory Value
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     $
                     {(inventoryValuation.summary?.total_value ||
                       inventoryValuation.total_value ||
@@ -854,7 +854,7 @@ export default function ReportsPage() {
           )}
 
           {lowStockData && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Low Stock Items</CardTitle>
               </CardHeader>
@@ -901,7 +901,7 @@ export default function ReportsPage() {
                     </Table>
                   </div>
                 ) : (
-                  <p className="text-center py-8 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-center py-8 text-xs sm:text-sm text-muted-foreground">
                     No low stock items
                   </p>
                 )}
@@ -915,21 +915,21 @@ export default function ReportsPage() {
           {customerStats && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Total Customers
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {customerStats.total_customers || 0}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       New Customers
                     </CardTitle>
                   </CardHeader>
@@ -939,34 +939,34 @@ export default function ReportsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Active Customers
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {customerStats.active_customers || 0}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Top Customers
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {customerStats.top_customers?.length || 0}
                     </p>
                   </CardContent>
                 </Card>
                 {customerStats.customers_with_subscriptions !== undefined && (
-                  <Card className="border-gray-200 dark:border-gray-800">
+                  <Card className="border-border">
                     <CardHeader className="pb-2 sm:pb-3">
-                      <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                         With Subscriptions
                       </CardTitle>
                     </CardHeader>
@@ -975,7 +975,7 @@ export default function ReportsPage() {
                         {customerStats.customers_with_subscriptions || 0}
                       </p>
                       {customerStats.subscription_adoption_rate !== undefined && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {customerStats.subscription_adoption_rate.toFixed(1)}% adoption rate
                         </p>
                       )}
@@ -985,7 +985,7 @@ export default function ReportsPage() {
               </div>
 
               {customerStats.top_customers && customerStats.top_customers.length > 0 && (
-                <Card className="border-gray-200 dark:border-gray-800">
+                <Card className="border-border">
                   <CardHeader className="pb-3 sm:pb-6">
                     <CardTitle className="text-base sm:text-lg">Top Customers by Revenue</CardTitle>
                   </CardHeader>
@@ -1018,7 +1018,7 @@ export default function ReportsPage() {
                                     Active
                                   </span>
                                 ) : (
-                                  <span className="text-gray-400 dark:text-gray-500">—</span>
+                                  <span className="text-muted-foreground">—</span>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -1036,21 +1036,21 @@ export default function ReportsPage() {
         {/* Vehicle Reports */}
         <TabsContent value="vehicles" className="space-y-4 sm:space-y-6">
           {vehicleStats && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Vehicle Statistics</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Vehicles</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total Vehicles</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {vehicleStats.total_vehicles || 0}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Average Age</p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Average Age</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {vehicleStats.average_age
                         ? `${vehicleStats.average_age.toFixed(1)} years`
                         : "N/A"}
@@ -1076,7 +1076,7 @@ export default function ReportsPage() {
           )}
 
           {serviceDueData && (
-            <Card className="border-gray-200 dark:border-gray-800">
+            <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Service Due Report</CardTitle>
               </CardHeader>
@@ -1119,7 +1119,7 @@ export default function ReportsPage() {
                     </Table>
                   </div>
                 ) : (
-                  <p className="text-center py-8 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-center py-8 text-xs sm:text-sm text-muted-foreground">
                     No vehicles due for service
                   </p>
                 )}
@@ -1129,7 +1129,7 @@ export default function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="controls" className="space-y-4 sm:space-y-6">
-          <Card className="border-gray-200 dark:border-gray-800">
+          <Card className="border-border">
             <CardHeader className="pb-3 sm:pb-6">
               <CardTitle className="text-base sm:text-lg">Discounts & Overrides Analysis</CardTitle>
             </CardHeader>

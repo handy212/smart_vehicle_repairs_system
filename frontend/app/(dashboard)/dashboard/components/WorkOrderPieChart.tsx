@@ -97,7 +97,7 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+      <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
         <FileCheck className="w-12 h-12 mb-2 opacity-50" />
         <p className="text-sm font-medium">No work order data available</p>
         <p className="text-xs mt-1">Work orders created in the last 30 days will appear here</p>
@@ -110,15 +110,15 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
       const data = payload[0].payload;
       const percentage = totalCount > 0 ? ((data.count / totalCount) * 100).toFixed(1) : 0;
       return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
-          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1">
+        <div className="bg-card border border-border rounded-lg shadow-lg p-3">
+          <p className="font-semibold text-sm text-foreground mb-1">
             {data.label}
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            Count: <span className="font-semibold text-gray-900 dark:text-gray-100">{data.count}</span>
+          <p className="text-xs text-muted-foreground">
+            Count: <span className="font-semibold text-foreground">{data.count}</span>
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            Percentage: <span className="font-semibold text-gray-900 dark:text-gray-100">{percentage}%</span>
+          <p className="text-xs text-muted-foreground">
+            Percentage: <span className="font-semibold text-foreground">{percentage}%</span>
           </p>
         </div>
       );
@@ -185,13 +185,13 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="flex-1 text-gray-700 dark:text-gray-300 truncate">
+                <span className="flex-1 text-card-foreground truncate">
                   {item.label}
                 </span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                <span className="font-semibold text-foreground">
                   {item.count}
                 </span>
-                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                <span className="text-muted-foreground text-xs">
                   ({percentage}%)
                 </span>
               </div>
@@ -202,7 +202,7 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
 
       {/* Summary Cards */}
       {summary.length > 0 && (
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="pt-4 border-t border-border">
           <div className="grid grid-cols-2 gap-3">
             {summary.map((group, index) => {
               const Icon = group.icon;
@@ -210,7 +210,7 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
               return (
                 <div
                   key={index}
-                  className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800"
+                  className="flex items-center gap-2 p-2 rounded-lg bg-muted"
                 >
                   <div
                     className="p-1.5 rounded"
@@ -219,10 +219,10 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
                     <Icon className="w-4 h-4" style={{ color: group.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                    <p className="text-xs text-muted-foreground truncate">
                       {group.label}
                     </p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    <p className="text-sm font-semibold text-foreground">
                       {group.count} <span className="text-xs font-normal text-gray-500">({percentage}%)</span>
                     </p>
                   </div>

@@ -229,8 +229,8 @@ export default function NewRoadsideRequestDashboardPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">New Roadside Request</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Log a new breakdown assistance request</p>
+                        <h1 className="text-3xl font-bold text-foreground">New Roadside Request</h1>
+                        <p className="text-sm text-muted-foreground mt-1">Log a new breakdown assistance request</p>
                     </div>
                 </div>
             </div>
@@ -266,7 +266,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 placeholder="Name, Phone, or Customer #"
                                                 value={customerSearch}
                                                 onChange={(e) => setCustomerSearch(e.target.value)}
-                                                className="pl-9 h-11 border-gray-200 dark:border-gray-700"
+                                                className="pl-9 h-11 border-border"
                                             />
                                             {isLoadingCustomers && <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-primary border-r-transparent animate-spin" />}
                                         </div>
@@ -274,8 +274,8 @@ export default function NewRoadsideRequestDashboardPage() {
                                             <select
                                                 id="customer"
                                                 className={cn(
-                                                    "w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-800 transition-all",
-                                                    errors.customer ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-primary/10"
+                                                    "w-full px-3 py-2.5 border rounded-lg bg-card transition-all",
+                                                    errors.customer ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
                                                 )}
                                                 value={selectedCustomerId || ""}
                                                 onChange={(e) => {
@@ -316,8 +316,8 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 {...register("vehicle", { valueAsNumber: true })}
                                                 disabled={!selectedCustomerId || isLoadingVehicles}
                                                 className={cn(
-                                                    "w-full h-11 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 transition-all disabled:opacity-50",
-                                                    errors.vehicle ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-primary/10"
+                                                    "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all disabled:opacity-50",
+                                                    errors.vehicle ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
                                                 )}
                                             >
                                                 <option value="">
@@ -354,11 +354,11 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     <UserIcon className="w-5 h-5" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-gray-900 dark:text-gray-100">{selectedCustomer.full_name || selectedCustomer.company_name}</h4>
+                                                    <h4 className="font-bold text-foreground">{selectedCustomer.full_name || selectedCustomer.company_name}</h4>
                                                     <p className="text-xs text-gray-500">{selectedCustomer.customer_number} • {selectedCustomer.phone || "No phone"}</p>
                                                 </div>
                                             </div>
-                                            <Badge variant="secondary" className="bg-white dark:bg-gray-800">Verified</Badge>
+                                            <Badge variant="secondary" className="bg-card">Verified</Badge>
                                         </div>
 
                                         {selectedVehicleId && (
@@ -478,8 +478,8 @@ export default function NewRoadsideRequestDashboardPage() {
                                         id="service_type"
                                         {...register("service_type")}
                                         className={cn(
-                                            "w-full h-11 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 transition-all",
-                                            errors.service_type ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-primary/10"
+                                            "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all",
+                                            errors.service_type ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
                                         )}
                                     >
                                         <option value="">Select Service Type</option>
@@ -558,10 +558,10 @@ export default function NewRoadsideRequestDashboardPage() {
                                 </div>
 
                                 <div className="pt-2">
-                                    <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-border">
                                         <Info className="h-5 w-5 text-primary mt-0.5" />
                                         <div className="space-y-1">
-                                            <p className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Policy Check</p>
+                                            <p className="text-xs font-bold text-foreground uppercase tracking-wider">Policy Check</p>
                                             <p className="text-[11px] text-gray-500 leading-relaxed">System will auto-check AA Membership during submission and apply covered benefits immediately.</p>
                                         </div>
                                     </div>

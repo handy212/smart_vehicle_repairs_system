@@ -247,7 +247,7 @@ export function PartRequestDetailDialog({
                                     </Link>
                                 </DialogTitle>
                                 <DialogDescription className="mt-1.5 text-sm text-gray-500">
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">{customerName}</span>
+                                    <span className="font-medium text-card-foreground">{customerName}</span>
                                     <span className="mx-2 text-gray-300">|</span>
                                     {parts.length} item{parts.length !== 1 ? 's' : ''} requested
                                 </DialogDescription>
@@ -290,7 +290,7 @@ export function PartRequestDetailDialog({
                                                 <TableRow className="group hover:bg-gray-50/50">
                                                     <TableCell className="py-2.5 pl-4">
                                                         <div className="flex flex-col gap-0.5">
-                                                            <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{part.part_name}</span>
+                                                            <span className="font-medium text-sm text-foreground">{part.part_name}</span>
                                                             {part.description && (
                                                                 <span className="text-xs text-gray-500 truncate max-w-[300px]">{part.description}</span>
                                                             )}

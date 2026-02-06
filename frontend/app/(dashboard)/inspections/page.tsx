@@ -63,9 +63,9 @@ export default function InspectionsPage() {
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
             <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Inspections</span>
+            <span className="text-foreground font-medium">Inspections</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Vehicle Inspections</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Vehicle Inspections</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/inspections/templates">
@@ -86,7 +86,7 @@ export default function InspectionsPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-md">
@@ -95,14 +95,14 @@ export default function InspectionsPage() {
                 placeholder="Search inspections..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:w-full transition-all"
+                className="pl-9 h-9 text-sm bg-card border-border focus:w-full transition-all"
               />
             </div>
             <div className="flex gap-2">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="h-9 rounded-md border border-border bg-card px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">All Status</option>
                 <option value="in_progress">In Progress</option>
@@ -113,7 +113,7 @@ export default function InspectionsPage() {
               <select
                 value={resultFilter}
                 onChange={(e) => setResultFilter(e.target.value)}
-                className="h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="h-9 rounded-md border border-border bg-card px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">All Results</option>
                 <option value="pass">Pass</option>
@@ -143,9 +143,9 @@ export default function InspectionsPage() {
 
       {/* Table */}
       <Card className="border-t shadow-sm">
-        <CardHeader className="py-3 px-4 border-b bg-gray-50/50 dark:bg-gray-800/50">
+        <CardHeader className="py-3 px-4 border-b bg-muted/50">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <CardTitle className="text-sm font-semibold text-card-foreground">
               Inspections List
             </CardTitle>
             <span className="text-xs text-gray-500 font-medium">
@@ -157,7 +157,7 @@ export default function InspectionsPage() {
           {inspections.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No inspections found</h3>
+              <h3 className="mt-2 text-sm font-medium text-foreground">No inspections found</h3>
               <p className="mt-1 text-sm text-gray-500">
                 Get started by creating a new inspection or try adjusting your filters.
               </p>
@@ -198,14 +198,14 @@ export default function InspectionsPage() {
                         {inspection.inspection_number}
                       </TableCell>
                       <TableCell className="py-2">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <div className="text-sm font-medium text-foreground">
                           {inspection.vehicle_info || "Unknown Vehicle"}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2 text-sm text-gray-600 dark:text-gray-400">
+                      <TableCell className="py-2 text-sm text-muted-foreground">
                         {inspection.template_name || "N/A"}
                       </TableCell>
-                      <TableCell className="py-2 text-sm text-gray-600 dark:text-gray-400">
+                      <TableCell className="py-2 text-sm text-muted-foreground">
                         {format(new Date(inspection.inspection_date), "MMM dd, yyyy")}
                       </TableCell>
                       <TableCell className="py-2">

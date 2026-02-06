@@ -37,7 +37,7 @@ export default function JobProfitabilityPage() {
         <div className="space-y-4">
             {/* Compact Header */}
             <div className="pt-2">
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Job Profitability</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Job Profitability</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Analyze revenue vs costs for all work orders
                 </p>
@@ -79,7 +79,7 @@ export default function JobProfitabilityPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</p>
-                                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">
+                                    <p className="text-lg font-bold text-foreground mt-1">
                                         {formatCurrency(report.summary?.total_revenue || 0)}
                                     </p>
                                 </div>
@@ -92,7 +92,7 @@ export default function JobProfitabilityPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Costs</p>
-                                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">
+                                    <p className="text-lg font-bold text-foreground mt-1">
                                         {formatCurrency(report.summary?.total_costs || 0)}
                                     </p>
                                 </div>
@@ -118,7 +118,7 @@ export default function JobProfitabilityPage() {
 
             {/* Table - Compact */}
             <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                <CardHeader className="pb-3 border-b border-border">
                     <CardTitle className="text-base">Work Orders ({report?.jobs?.length || 0})</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -129,7 +129,7 @@ export default function JobProfitabilityPage() {
                     ) : report?.jobs?.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
-                                <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                                <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">WO #</TableHead>
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Customer</TableHead>
@@ -143,23 +143,23 @@ export default function JobProfitabilityPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report.jobs.map((job: any) => (
-                                        <TableRow key={job.work_order_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        <TableRow key={job.work_order_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                 {job.work_order_number}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {job.customer_name}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {job.date ? format(new Date(job.date), 'MMM d, yyyy') : '-'}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-900 dark:text-gray-100 text-right font-mono">
+                                            <TableCell className="px-4 py-2 text-xs text-foreground text-right font-mono">
                                                 {formatCurrency(job.revenue || 0)}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 text-right font-mono">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground text-right font-mono">
                                                 {formatCurrency(job.labor_cost || 0)}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 text-right font-mono">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground text-right font-mono">
                                                 {formatCurrency(job.parts_cost || 0)}
                                             </TableCell>
                                             <TableCell className={`px-4 py-2 text-xs text-right font-mono font-medium ${(job.profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>

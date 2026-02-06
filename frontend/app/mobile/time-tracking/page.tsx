@@ -193,7 +193,7 @@ export default function TimeTrackingPage() {
     <div className="p-4 space-y-4 max-w-md mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold text-foreground">
           Time Tracking
         </h2>
         <Button size="sm" variant="outline" onClick={loadRecentLogs} disabled={loading}>
@@ -216,7 +216,7 @@ export default function TimeTrackingPage() {
                 <div className="text-xs text-gray-500 uppercase font-semibold mb-1">
                   Work Order
                 </div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">
+                <div className="font-medium text-foreground">
                   {activeLog.work_order_number || `WO #${activeLog.work_order}`}
                 </div>
               </div>
@@ -224,13 +224,13 @@ export default function TimeTrackingPage() {
                 <div className="text-xs text-gray-500 uppercase font-semibold mb-1">
                   Started At
                 </div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">
+                <div className="font-medium text-foreground">
                   {new Date(activeLog.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 p-4 rounded-lg flex flex-col items-center justify-center border border-orange-100 dark:border-orange-900/50">
+            <div className="bg-card p-4 rounded-lg flex flex-col items-center justify-center border border-orange-100 dark:border-orange-900/50">
               <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Elapsed Time</div>
               <div className="font-mono text-3xl font-bold text-orange-600 dark:text-orange-400">
                 {formatDuration(
@@ -264,10 +264,10 @@ export default function TimeTrackingPage() {
               <Card key={wo.id} className="overflow-hidden hover:border-primary/50 transition-colors">
                 <div className="p-4 flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-lg text-gray-900 dark:text-white">
+                    <div className="font-bold text-lg text-foreground">
                       {wo.work_order_number || `WO #${wo.id}`}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
                       <span>{wo.vehicle_info || "Vehicle"}</span>
                       {wo.status && (
                         <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs uppercase font-semibold">
@@ -299,7 +299,7 @@ export default function TimeTrackingPage() {
         <Card className="bg-transparent border-none shadow-none">
           <CardContent className="p-0">
             {recentLogs.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4 italic">
+              <p className="text-sm text-muted-foreground text-center py-4 italic">
                 No recent time logs
               </p>
             ) : (
@@ -307,14 +307,14 @@ export default function TimeTrackingPage() {
                 {recentLogs.map((log) => (
                   <div
                     key={log.id || Math.random()}
-                    className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                    className="p-3 bg-card rounded-lg border border-border shadow-sm"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900 dark:text-white text-sm">
+                        <div className="font-medium text-foreground text-sm">
                           {log.work_order_number || `WO #${log.work_order}`}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <div className="text-xs text-muted-foreground mt-0.5">
                           {new Date(log.clock_in).toLocaleDateString()} • {new Date(log.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>

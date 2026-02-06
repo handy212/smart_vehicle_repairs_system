@@ -133,10 +133,10 @@ export default function MobileDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-foreground">
             Dashboard
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             {isOnline ? "Online" : "Offline Mode"}
           </p>
         </div>
@@ -164,7 +164,7 @@ export default function MobileDashboardPage() {
                 <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                <div className="text-sm font-semibold text-foreground">
                   Currently Clocked In
                 </div>
                 <div className="text-xs text-gray-500">
@@ -224,9 +224,9 @@ export default function MobileDashboardPage() {
           <CardContent className="space-y-2">
             {activeWorkOrders.map((wo) => (
               <Link key={wo.id} href={`/mobile/workorders/${wo.id}`}>
-                <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <div className="p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <div className="flex items-start justify-between mb-1">
-                    <div className="font-medium text-sm text-gray-900 dark:text-white">
+                    <div className="font-medium text-sm text-foreground">
                       {wo.work_order_number || `WO #${wo.id}`}
                     </div>
                     <Badge
@@ -240,7 +240,7 @@ export default function MobileDashboardPage() {
                       {wo.status === 'in_progress' ? 'In Progress' : 'Assigned'}
                     </Badge>
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     {wo.vehicle_display || wo.vehicle_info || 'Vehicle'}
                   </div>
                   {wo.customer_name && (
@@ -259,12 +259,12 @@ export default function MobileDashboardPage() {
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-2xl font-bold text-foreground">
               {stats.total}
             </div>
           </CardContent>
@@ -272,7 +272,7 @@ export default function MobileDashboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <Wrench className="h-4 w-4" />
               In Progress
             </CardTitle>
@@ -286,7 +286,7 @@ export default function MobileDashboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <Clock className="h-4 w-4" />
               Pending
             </CardTitle>
@@ -300,7 +300,7 @@ export default function MobileDashboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <CheckCircle className="h-4 w-4" />
               Completed
             </CardTitle>
@@ -353,7 +353,7 @@ export default function MobileDashboardPage() {
         </CardHeader>
         <CardContent>
           {recentWorkOrders.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-4">
               No work orders found
             </p>
           ) : (
@@ -362,14 +362,14 @@ export default function MobileDashboardPage() {
                 <Link
                   key={wo.id}
                   href={`/mobile/workorders/${wo.id}`}
-                  className="block p-3 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="block p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                      <div className="font-medium text-foreground">
                         {wo.work_order_number || `WO #${wo.id}`}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-muted-foreground">
                         {wo.vehicle_display || wo.vehicle_info || "Vehicle"}
                       </div>
                     </div>

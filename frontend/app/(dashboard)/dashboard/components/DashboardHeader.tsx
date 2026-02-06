@@ -18,7 +18,7 @@ export function DashboardHeader() {
             <div>
                 {/* Clean Header - Removed manual opacity breadcrumb */}
                 <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
                         <PremiumIcons.Dashboard className="w-8 h-8 text-primary dark:text-primary" />
                         Dashboard
                     </h1>

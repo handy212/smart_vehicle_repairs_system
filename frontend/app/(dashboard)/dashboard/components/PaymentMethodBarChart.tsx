@@ -58,7 +58,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+      <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
         <DollarSign className="w-12 h-12 mb-2 opacity-50" />
         <p className="text-sm font-medium">No payment data available</p>
         <p className="text-xs mt-1">Payment data will appear here when available</p>
@@ -71,24 +71,24 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
       const data = payload[0].payload;
       const percentage = totalRevenue > 0 ? ((data.total / totalRevenue) * 100).toFixed(1) : 0;
       return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
-          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+        <div className="bg-card border border-border rounded-lg shadow-lg p-3">
+          <p className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
             <data.icon className="w-4 h-4" style={{ color: data.color }} />
             {data.label}
           </p>
           <div className="space-y-1">
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Revenue: <span className="font-semibold text-gray-900 dark:text-gray-100">
+            <p className="text-xs text-muted-foreground">
+              Revenue: <span className="font-semibold text-foreground">
                 {formatMoney(data.total)}
               </span>
             </p>
             {data.count && (
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Transactions: <span className="font-semibold text-gray-900 dark:text-gray-100">{data.count}</span>
+              <p className="text-xs text-muted-foreground">
+                Transactions: <span className="font-semibold text-foreground">{data.count}</span>
               </p>
             )}
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Percentage: <span className="font-semibold text-gray-900 dark:text-gray-100">{percentage}%</span>
+            <p className="text-xs text-muted-foreground">
+              Percentage: <span className="font-semibold text-foreground">{percentage}%</span>
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
           return (
             <div
               key={index}
-              className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+              className="flex items-center gap-2 p-2 rounded-lg bg-muted border border-border"
             >
               <div
                 className="p-1.5 rounded flex-shrink-0"
@@ -148,13 +148,13 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
                 <Icon className="w-4 h-4" style={{ color: item.color }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-600 dark:text-gray-400 truncate font-medium">
+                <p className="text-xs text-muted-foreground truncate font-medium">
                   {item.label}
                 </p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-semibold text-foreground">
                   {formatMoney(item.total)}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   {percentage}% {item.count && `• ${item.count} txns`}
                 </p>
               </div>
@@ -165,7 +165,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
 
       {/* Total Revenue Summary */}
       {totalRevenue > 0 && (
-        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="pt-3 border-t border-border">
           <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
             <div className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-primary dark:text-primary" />

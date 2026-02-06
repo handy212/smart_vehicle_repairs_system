@@ -328,12 +328,12 @@ export default function AppointmentsPage() {
         <div>
           {/* Premium Header */}
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
               <PremiumIcons.Calendar className="w-8 h-8 text-primary dark:text-primary" />
               Appointments
             </h1>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Manage your service schedule and bookings
           </p>
         </div>
@@ -393,7 +393,7 @@ export default function AppointmentsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-8 h-9 text-sm w-80 transition-all focus:w-full focus:max-w-md bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+              className="pl-8 h-9 text-sm w-80 transition-all focus:w-full focus:max-w-md bg-card border-border"
             />
           </div>
 
@@ -503,7 +503,7 @@ export default function AppointmentsPage() {
       {/* Appointments Table */}
       <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
         <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm">
-          <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+          <CardTitle className="text-base font-semibold text-foreground tracking-tight">
             All Appointments ({data?.count || 0})
           </CardTitle>
         </CardHeader>
@@ -602,7 +602,7 @@ export default function AppointmentsPage() {
                       <TableCell className="py-2.5 text-sm">{appointment.customer_name || "N/A"}</TableCell>
                       <TableCell className="py-2.5 text-sm">{appointment.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="py-2.5">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           <PremiumIcons.Calendar className="w-3.5 h-3.5" />
                           <span>
                             {appointment.appointment_date

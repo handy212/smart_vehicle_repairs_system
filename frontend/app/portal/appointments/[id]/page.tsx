@@ -128,7 +128,7 @@ export default function AppointmentDetailPage() {
     return (
       <div className="text-center py-12">
         <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">Appointment not found</p>
+        <p className="text-muted-foreground">Appointment not found</p>
         <Link href="/portal/appointments">
           <Button variant="secondary" className="mt-4">
             Back to Appointments
@@ -171,10 +171,10 @@ export default function AppointmentDetailPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-3xl font-bold text-foreground">
               Appointment #{appointment.appointment_number}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {format(new Date(appointment.appointment_date), "EEEE, MMMM d, yyyy")} at{" "}
               {appointment.appointment_time}
             </p>
@@ -232,38 +232,38 @@ export default function AppointmentDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
                     <Calendar className="w-4 h-4" />
                     <span>Date</span>
                   </div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                  <p className="font-medium text-foreground">
                     {format(new Date(appointment.appointment_date), "MMMM d, yyyy")}
                   </p>
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
                     <Clock className="w-4 h-4" />
                     <span>Time</span>
                   </div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                  <p className="font-medium text-foreground">
                     {appointment.appointment_time}
                   </p>
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
                     <Wrench className="w-4 h-4" />
                     <span>Service Type</span>
                   </div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                  <p className="font-medium text-foreground capitalize">
                     {appointment.service_type?.replace("_", " ")}
                   </p>
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
                     <Clock className="w-4 h-4" />
                     <span>Duration</span>
                   </div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                  <p className="font-medium text-foreground">
                     {appointment.estimated_duration || 60} minutes
                   </p>
                 </div>
@@ -280,11 +280,11 @@ export default function AppointmentDetailPage() {
               <div className="flex items-start space-x-4">
                 <Car className="w-8 h-8 text-primary mt-1" />
                 <div className="flex-1">
-                  <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  <p className="font-semibold text-lg text-foreground">
                     {apt.vehicle_info || apt.vehicle_display || "N/A"}
                   </p>
                   {apt.vehicle_plate && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       License: {apt.vehicle_plate}
                     </p>
                   )}
@@ -305,7 +305,7 @@ export default function AppointmentDetailPage() {
                 <CardTitle>Your Concerns</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                <p className="text-card-foreground whitespace-pre-wrap">
                   {apt.customer_concerns}
                 </p>
               </CardContent>
@@ -319,7 +319,7 @@ export default function AppointmentDetailPage() {
                 <CardTitle>Special Instructions</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                <p className="text-card-foreground whitespace-pre-wrap">
                   {apt.special_instructions}
                 </p>
               </CardContent>
@@ -337,23 +337,23 @@ export default function AppointmentDetailPage() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Current Status</span>
+                  <span className="text-sm text-muted-foreground">Current Status</span>
                   <Badge variant={statusColors[appointment.status] as any}>
                     {appointment.status?.replace("_", " ").toUpperCase()}
                   </Badge>
                 </div>
                 {apt.confirmed_at && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Confirmed At</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-sm text-muted-foreground">Confirmed At</span>
+                    <span className="text-sm font-medium text-foreground">
                       {format(new Date(apt.confirmed_at), "MMM d, yyyy")}
                     </span>
                   </div>
                 )}
                 {apt.check_in_time && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Checked In</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-sm text-muted-foreground">Checked In</span>
+                    <span className="text-sm font-medium text-foreground">
                       {format(new Date(apt.check_in_time), "MMM d, h:mm a")}
                     </span>
                   </div>
@@ -369,10 +369,10 @@ export default function AppointmentDetailPage() {
                 <CardTitle>Estimated Cost</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-2xl font-bold text-foreground">
                   {formatCurrency(apt.estimated_cost)}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Final cost may vary
                 </p>
               </CardContent>
@@ -388,7 +388,7 @@ export default function AppointmentDetailPage() {
               <CardContent>
                 <div className="flex items-start space-x-2">
                   <MapPin className="w-4 h-4 text-gray-400 mt-1" />
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-card-foreground">
                     {apt.branch_name}
                   </p>
                 </div>

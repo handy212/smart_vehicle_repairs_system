@@ -244,7 +244,7 @@ export default function SubscriptionsPage() {
       accessor: "customer_name" as const,
       cell: (subscription: Subscription) => (
         <div className="flex flex-col">
-          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+          <span className="font-medium text-sm text-foreground">
             {subscription.customer_name || `Customer #${subscription.customer}`}
           </span>
           {subscription.vehicle && (
@@ -267,7 +267,7 @@ export default function SubscriptionsPage() {
       accessor: "start_date" as const,
       cell: (subscription: Subscription) => (
         <div className="flex flex-col text-xs">
-          <span className="text-gray-900 dark:text-gray-100">
+          <span className="text-foreground">
             {format(new Date(subscription.start_date), "MMM dd, yyyy")} - {format(new Date(subscription.end_date), "MMM dd, yyyy")}
           </span>
           {subscription.days_remaining !== undefined && (
@@ -387,8 +387,8 @@ export default function SubscriptionsPage() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Subscriptions</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Subscriptions</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               Manage customer subscriptions and packages
             </p>
           </div>
@@ -410,12 +410,12 @@ export default function SubscriptionsPage() {
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Subscriptions</p>
-                  <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{totalSubscriptions}</p>
+                  <p className="text-2xl font-black text-foreground mt-1">{totalSubscriptions}</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-950/20 flex items-center justify-center">
                   <PackageIcon className="w-5 h-5 text-primary dark:text-primary" />
@@ -423,7 +423,7 @@ export default function SubscriptionsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -436,7 +436,7 @@ export default function SubscriptionsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -452,7 +452,7 @@ export default function SubscriptionsPage() {
         </div>
 
         {/* Main Content Card with Toolbar and DataTable */}
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+        <Card className="border-border shadow-sm">
           <CardContent className="p-4 space-y-4">
             {/* Toolbar */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -469,7 +469,7 @@ export default function SubscriptionsPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -481,7 +481,7 @@ export default function SubscriptionsPage() {
                 <select
                   value={paymentFilter}
                   onChange={(e) => setPaymentFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Payments</option>
                   <option value="paid">Paid</option>
@@ -519,7 +519,7 @@ export default function SubscriptionsPage() {
               <DialogTitle>Cancel Subscription</DialogTitle>
             </DialogHeader>
             <div className="px-6 space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Are you sure you want to cancel subscription{" "}
                 <span className="font-mono font-semibold">{selectedSubscription?.subscription_number}</span>?
               </p>
@@ -563,7 +563,7 @@ export default function SubscriptionsPage() {
               <DialogTitle>Change Subscription Plan</DialogTitle>
             </DialogHeader>
             <div className="px-6 space-y-4 py-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Select a new package for subscription <span className="font-mono font-semibold">{selectedSubscription?.subscription_number}</span>.
                 This will update the package and reset allowances.
               </p>
@@ -613,7 +613,7 @@ export default function SubscriptionsPage() {
               <DialogTitle className="text-red-600">Delete Subscription</DialogTitle>
             </DialogHeader>
             <div className="px-6 py-4 space-y-3">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Are you sure you want to <strong>permanently delete</strong> subscription{" "}
                 <span className="font-mono font-semibold">{selectedSubscription?.subscription_number}</span>?
               </p>

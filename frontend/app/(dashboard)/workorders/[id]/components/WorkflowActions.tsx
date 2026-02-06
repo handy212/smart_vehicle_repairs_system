@@ -1002,7 +1002,7 @@ export default function WorkflowActions({
   if (availableActions.length === 0) {
     return (
       <div className="text-center py-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           No actions available at this stage.
         </p>
       </div>
@@ -1099,13 +1099,13 @@ export default function WorkflowActions({
             {/* Show prerequisites status */}
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Diagnosis Notes:</span>
+                <span className="text-muted-foreground">Diagnosis Notes:</span>
                 <span className={`font-medium ${currentWorkOrder?.diagnosis_notes ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {currentWorkOrder?.diagnosis_notes ? '✓ Set' : '✗ Missing'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Estimated Total:</span>
+                <span className="text-muted-foreground">Estimated Total:</span>
                 <span className={`font-medium ${parseFloat(currentWorkOrder?.estimated_total || '0') > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {parseFloat(currentWorkOrder?.estimated_total || '0') > 0
                     ? `✓ ${formatCurrency(parseFloat(currentWorkOrder?.estimated_total || '0'))}`
@@ -1348,15 +1348,15 @@ export default function WorkflowActions({
       <div className="space-y-3">
         {primaryButton}
         {primaryAction.description && (
-          <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+          <p className="text-xs text-muted-foreground text-center">
             {primaryAction.description}
           </p>
         )}
 
         {/* Secondary Actions - Always show if there are any, but label differently based on status */}
         {secondaryActions.length > 0 && (
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs font-medium text-muted-foreground mb-2">
               {status === 'in_progress' || status === 'additional_work_found' ? 'Work Management Actions' : 'Other Actions'}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1930,7 +1930,7 @@ function QualityCheckForm({
                 <Label htmlFor="allTasksCompleted" className="cursor-pointer dark:text-gray-300 text-sm">
                   All tasks completed
                   {(workOrder as any)?.tasks && (
-                    <span className="text-gray-500 dark:text-gray-400 ml-1">
+                    <span className="text-muted-foreground ml-1">
                       ({(workOrder as any).tasks.filter((t: any) => t.status === 'completed').length}/{(workOrder as any).tasks.length})
                     </span>
                   )}
@@ -1948,7 +1948,7 @@ function QualityCheckForm({
                 <Label htmlFor="allPartsInstalled" className="cursor-pointer dark:text-gray-300 text-sm">
                   All parts installed or returned
                   {(workOrder as any)?.parts && (
-                    <span className="text-gray-500 dark:text-gray-400 ml-1">
+                    <span className="text-muted-foreground ml-1">
                       ({(workOrder as any).parts.filter((p: any) => p.status === 'installed' || p.status === 'returned').length}/{(workOrder as any).parts.length})
                     </span>
                   )}
@@ -2201,7 +2201,7 @@ function MarkInvoicedForm({
               className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
             {odometerIn && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Odometer In: {odometerIn.toLocaleString()} miles
               </p>
             )}

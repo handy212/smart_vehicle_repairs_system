@@ -252,14 +252,14 @@ export default function VehicleDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-2xl font-bold text-foreground">
                 {vehicle.make} {vehicle.model} {vehicle.year}
               </h1>
               <Badge variant={getStatusVariant(vehicle.status) as any} className="capitalize">
                 {vehicle.status?.replace("_", " ") || vehicle.status}
               </Badge>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-mono">
+            <p className="text-sm text-muted-foreground mt-1 font-mono">
               VIN: {vehicle.vin}
             </p>
           </div>
@@ -324,7 +324,7 @@ export default function VehicleDetailPage() {
                   })()
                 }
                 disabled
-                className="bg-gray-50 dark:bg-gray-800"
+                className="bg-muted"
               />
             </div>
             <div className="space-y-2">

@@ -123,7 +123,7 @@ export default function CreateRefundPage() {
                                         id="payment"
                                         value={formData.payment_id}
                                         onChange={(e) => setFormData({ ...formData, payment_id: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 mt-1"
+                                        className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
                                         required
                                     >
                                         <option value="">Select payment...</option>
@@ -141,7 +141,7 @@ export default function CreateRefundPage() {
                                         id="invoice"
                                         value={formData.invoice_id}
                                         onChange={(e) => setFormData({ ...formData, invoice_id: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 mt-1"
+                                        className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
                                         required
                                     >
                                         <option value="">Select invoice...</option>
@@ -160,7 +160,7 @@ export default function CreateRefundPage() {
                                     id="customer"
                                     value={formData.customer_id}
                                     onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 mt-1"
+                                    className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
                                     required
                                 >
                                     <option value="">Select customer...</option>
@@ -197,7 +197,7 @@ export default function CreateRefundPage() {
                                         id="method"
                                         value={formData.refund_method}
                                         onChange={(e) => setFormData({ ...formData, refund_method: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 mt-1"
+                                        className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
                                     >
                                         <option value="cash">Cash</option>
                                         <option value="cheque">Cheque</option>

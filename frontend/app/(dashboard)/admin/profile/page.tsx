@@ -169,21 +169,21 @@ export default function ProfilePage() {
     <div className="space-y-4 dark:bg-gray-900 min-h-screen">
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Profile Settings</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Profile Settings</h1>
           <p className="text-xs text-gray-500 mt-0.5">Manage your account information and preferences</p>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[1fr_2fr] px-4 pb-8">
         {/* Profile Information */}
-        <Card className="border border-gray-200 dark:border-gray-800 shadow-sm">
-          <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50">
+        <Card className="border border-border shadow-sm">
+          <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
                 <User className="w-4 h-4 text-primary dark:text-primary" />
               </div>
               <div>
-                <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">Personal Information</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">Personal Information</CardTitle>
                 <CardDescription className="text-xs">Update your personal details</CardDescription>
               </div>
             </div>
@@ -350,14 +350,14 @@ export default function ProfilePage() {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Profile Picture */}
-          <Card className="border border-gray-200 dark:border-gray-800 shadow-sm">
-            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50">
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
                   <User className="w-4 h-4 text-primary dark:text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">Profile Picture</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-foreground">Profile Picture</CardTitle>
                 </div>
               </div>
             </CardHeader>
@@ -401,21 +401,21 @@ export default function ProfilePage() {
 
           {/* Employment Info - Only for staff */}
           {user?.role !== 'customer' && (
-            <Card className="border border-gray-200 dark:border-gray-800 shadow-sm">
-              <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50">
+            <Card className="border border-border shadow-sm">
+              <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-md">
                     <Briefcase className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">Employment</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-foreground">Employment</CardTitle>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-4 space-y-3">
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Employee ID</Label>
-                  <div className="font-mono text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                  <div className="font-mono text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
                     {user?.employee_id || "Not Assigned"}
                   </div>
                 </div>
@@ -423,7 +423,7 @@ export default function ProfilePage() {
                 {user?.hire_date && (
                   <div className="space-y-1">
                     <Label className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Hire Date</Label>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <div className="text-xs text-muted-foreground">
                       {format(new Date(user.hire_date), "MMM d, yyyy")}
                     </div>
                   </div>
@@ -431,7 +431,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Branch</Label>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     {user?.branch_name || "Not Assigned"}
                   </div>
                 </div>
@@ -440,14 +440,14 @@ export default function ProfilePage() {
           )}
 
           {/* Security */}
-          <Card className="border border-gray-200 dark:border-gray-800 shadow-sm">
-            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50">
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
                   <KeyRound className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">Security</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-foreground">Security</CardTitle>
                 </div>
               </div>
             </CardHeader>

@@ -200,7 +200,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                 </Dialog>
             </div>
 
-            <div className="border rounded-md shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
+            <div className="border rounded-md shadow-sm bg-card overflow-hidden">
                 <Table>
                     <TableHeader className="bg-gray-50/50">
                         <TableRow className="hover:bg-transparent border-gray-100">
@@ -234,16 +234,16 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                    <span className="text-sm font-semibold text-foreground truncate">
                                                         {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
                                                     </span>
                                                     {typeof item.part === 'object' && (item.part as any).category_name && (
-                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted border-border">
                                                             {(item.part as any).category_name}
                                                         </Badge>
                                                     )}
                                                 </div>
-                                                <span className="font-mono text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                                                     {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
                                                 </span>
                                             </div>
@@ -263,7 +263,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                             item.quantity
                                         )}
                                     </TableCell>
-                                    <TableCell className="px-4 py-3 text-right text-sm text-gray-500 dark:text-gray-400">
+                                    <TableCell className="px-4 py-3 text-right text-sm text-muted-foreground">
                                         {editingItemId === item.id ? (
                                             <Input
                                                 type="number"

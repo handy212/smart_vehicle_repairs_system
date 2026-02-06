@@ -128,11 +128,11 @@ export default function BalanceSheetPage() {
                         <Link href="/accounting" className="text-gray-500 hover:text-gray-700">
                             <ArrowLeft className="w-4 h-4" />
                         </Link>
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                             Balance Sheet
                         </h1>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground">
                         Statement of Financial Position
                     </p>
                 </div>
@@ -203,7 +203,7 @@ export default function BalanceSheetPage() {
                                             <TableCell colSpan={2} className="text-center text-gray-500">No assets found</TableCell>
                                         </TableRow>
                                     )}
-                                    <TableRow className="font-bold bg-gray-50 dark:bg-gray-900/50">
+                                    <TableRow className="font-bold bg-muted/50">
                                         <TableCell>Total Assets</TableCell>
                                         <TableCell className="text-right">{formatCurrency(report.totals.assets)}</TableCell>
                                     </TableRow>
@@ -242,7 +242,7 @@ export default function BalanceSheetPage() {
                                                 <TableCell colSpan={2} className="text-center text-gray-500">No liabilities found</TableCell>
                                             </TableRow>
                                         )}
-                                        <TableRow className="font-bold bg-gray-50 dark:bg-gray-900/50">
+                                        <TableRow className="font-bold bg-muted/50">
                                             <TableCell>Total Liabilities</TableCell>
                                             <TableCell className="text-right">{formatCurrency(report.totals.liabilities)}</TableCell>
                                         </TableRow>
@@ -280,7 +280,7 @@ export default function BalanceSheetPage() {
                                                 <TableCell colSpan={2} className="text-center text-gray-500">No equity records found</TableCell>
                                             </TableRow>
                                         )}
-                                        <TableRow className="font-bold bg-gray-50 dark:bg-gray-900/50">
+                                        <TableRow className="font-bold bg-muted/50">
                                             <TableCell>Total Equity</TableCell>
                                             <TableCell className="text-right">{formatCurrency(report.totals.equity)}</TableCell>
                                         </TableRow>

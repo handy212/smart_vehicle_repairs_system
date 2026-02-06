@@ -21,7 +21,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
             <CardContent>
                 <div className="relative">
                     {/* Timeline line */}
-                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
 
                     <div className="space-y-6 pl-8">
                         {/* Work Order Created */}
@@ -29,17 +29,17 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                             <div className="relative flex items-start">
                                 <div className="absolute -left-10 w-3 h-3 rounded-full bg-primary border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    <p className="text-sm font-semibold text-foreground">
                                         Work Order Created
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {format(
                                             new Date(workOrder.created_at),
                                             "MMM dd, yyyy 'at' h:mm a"
                                         )}
                                     </p>
                                     {workOrder.created_by && (
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                        <p className="text-xs text-muted-foreground mt-1">
                                             Created by:{" "}
                                             {typeof workOrder.created_by === "object"
                                                 ? workOrder.created_by.first_name +
@@ -57,10 +57,10 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                             <div className="relative flex items-start">
                                 <div className="absolute -left-10 w-3 h-3 rounded-full bg-purple-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    <p className="text-sm font-semibold text-foreground">
                                         Diagnosis Completed
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {format(
                                             new Date(workOrder.diagnosis_completed_at),
                                             "MMM dd, yyyy 'at' h:mm a"
@@ -74,10 +74,10 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                             <div className="relative flex items-start">
                                 <div className="absolute -left-10 w-3 h-3 rounded-full bg-yellow-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    <p className="text-sm font-semibold text-foreground">
                                         Approval Requested
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {format(
                                             new Date(workOrder.approval_requested_at),
                                             "MMM dd, yyyy 'at' h:mm a"
@@ -91,17 +91,17 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                             <div className="relative flex items-start">
                                 <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    <p className="text-sm font-semibold text-foreground">
                                         Work Order Approved
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {format(
                                             new Date(workOrder.approved_at),
                                             "MMM dd, yyyy 'at' h:mm a"
                                         )}
                                     </p>
                                     {workOrder.approval_method && (
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                        <p className="text-xs text-muted-foreground mt-1">
                                             Via: {workOrder.approval_method.replace("_", " ")}
                                         </p>
                                     )}
@@ -113,17 +113,17 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                             <div className="relative flex items-start">
                                 <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    <p className="text-sm font-semibold text-foreground">
                                         Work Started
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {format(
                                             new Date(workOrder.started_at),
                                             "MMM dd, yyyy 'at' h:mm a"
                                         )}
                                     </p>
                                     {workOrder.primary_technician_name && (
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                        <p className="text-xs text-muted-foreground mt-1">
                                             Technician: {workOrder.primary_technician_name}
                                         </p>
                                     )}
@@ -140,11 +140,11 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         }`}
                                 ></div>
                                 <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    <p className="text-sm font-semibold text-foreground">
                                         Quality Check{" "}
                                         {workOrder.quality_check_passed ? "Passed" : "Failed"}
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {format(
                                             new Date(workOrder.quality_check_at),
                                             "MMM dd, yyyy 'at' h:mm a"
@@ -158,10 +158,10 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                             <div className="relative flex items-start">
                                 <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-600 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                    <p className="text-sm font-semibold text-foreground">
                                         Work Order Completed
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {format(
                                             new Date(workOrder.completed_at),
                                             "MMM dd, yyyy 'at' h:mm a"
@@ -175,7 +175,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                         {notes.length > 0 && (
                             <>
                                 <div className="border-t dark:border-gray-700 pt-6 mt-4">
-                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                                    <p className="text-sm font-semibold text-card-foreground mb-4">
                                         Notes & Activity
                                     </p>
                                 </div>
@@ -197,7 +197,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                             ></div>
                                             <div className="flex-1 pt-0.5">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                    <p className="text-sm font-semibold text-foreground">
                                                         {note.note_type === "customer"
                                                             ? "Customer Note"
                                                             : note.is_important
@@ -205,10 +205,10 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                                                 : "Internal Note"}
                                                     </p>
                                                 </div>
-                                                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">
+                                                <p className="text-sm text-card-foreground mt-1 whitespace-pre-wrap">
                                                     {note.note}
                                                 </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                <p className="text-xs text-muted-foreground mt-1">
                                                     {format(
                                                         new Date(note.created_at),
                                                         "MMM dd, yyyy 'at' h:mm a"

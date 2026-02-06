@@ -169,7 +169,7 @@ export default function GatePassPage() {
       />
 
       {/* Unified Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white dark:bg-gray-900/50 p-2 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-card/50 p-2 rounded-lg border border-border shadow-sm">
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-56">
@@ -182,7 +182,7 @@ export default function GatePassPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-8 h-8 text-xs bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-1 transition-all"
+              className="pl-8 h-8 text-xs bg-muted border-border focus:ring-1 transition-all"
             />
           </div>
 
@@ -235,7 +235,7 @@ export default function GatePassPage() {
       </div>
 
       {/* Gate Passes Table */}
-      <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex-1">
+      <Card className="border-border shadow-sm overflow-hidden flex-1">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4">
@@ -245,12 +245,12 @@ export default function GatePassPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100 dark:border-gray-800">
+                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-border">
                     <SortableHeader
                       field="gate_pass_number"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Gate Pass #
                     </SortableHeader>
@@ -258,18 +258,18 @@ export default function GatePassPage() {
                       field="work_order__work_order_number"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Work Order
                     </SortableHeader>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Customer</TableHead>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Vehicle</TableHead>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Pickup Person</TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Pickup Person</TableHead>
                     <SortableHeader
                       field="status"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Status
                     </SortableHeader>
@@ -277,31 +277,31 @@ export default function GatePassPage() {
                       field="created_at"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Created
                     </SortableHeader>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 text-right">Actions</TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((gatePass) => (
                     <TableRow
                       key={gatePass.id}
-                      className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer"
+                      className="group hover:bg-gray-50/80 transition-colors border-b border-border cursor-pointer"
                       onDoubleClick={() => router.push(`/gatepass/${gatePass.id}`)}
                     >
                       <TableCell className="px-3 py-1.5 font-mono text-[11px] font-bold text-primary dark:text-primary">
                         {gatePass.gate_pass_number || "-"}
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 text-xs font-medium text-gray-900 dark:text-gray-100">
+                      <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">
                         <Link href={`/workorders/${typeof gatePass.work_order === 'object' ? gatePass.work_order.id : gatePass.work_order}`} className="text-primary hover:underline">
                           {gatePass.work_order_number || "-"}
                         </Link>
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 text-xs font-medium text-gray-900 dark:text-gray-100">{gatePass.customer_name || "N/A"}</TableCell>
-                      <TableCell className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 max-w-[150px] truncate" title={gatePass.vehicle_info || ""}>{gatePass.vehicle_info || "N/A"}</TableCell>
-                      <TableCell className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300">
+                      <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{gatePass.customer_name || "N/A"}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={gatePass.vehicle_info || ""}>{gatePass.vehicle_info || "N/A"}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs text-muted-foreground">
                         {gatePass.pickup_person_display || "N/A"}
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
@@ -309,7 +309,7 @@ export default function GatePassPage() {
                           {gatePass.status?.replace("_", " ") || gatePass.status || "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                      <TableCell className="px-3 py-1.5 text-[11px] text-muted-foreground">
                         {gatePass.created_at
                           ? format(new Date(gatePass.created_at), "MMM dd")
                           : "-"}
@@ -359,8 +359,8 @@ export default function GatePassPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No gate passes found.</p>
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No gate passes found.</p>
               <PermissionGuard permission="create_gatepass">
                 <Link href="/gatepass/new">
                   <Button className="mt-4" variant="secondary">
@@ -374,8 +374,8 @@ export default function GatePassPage() {
 
           {/* Pagination */}
           {data && data.count > 0 && (
-            <div className="p-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 pl-2">
+            <div className="p-2 border-t border-border flex items-center justify-between">
+              <div className="text-[10px] text-muted-foreground pl-2">
                 Page {page} of {Math.ceil(data.count / 10)} ({data.count} items)
               </div>
               <div className="flex space-x-2">

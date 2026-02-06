@@ -28,14 +28,14 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
     };
 
     return (
-        <Card className="border-t shadow-sm overflow-hidden bg-white dark:bg-gray-900">
+        <Card className="border-t shadow-sm overflow-hidden bg-card">
             <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="p-1 rounded bg-primary/10 text-primary">
                             <Wrench className="w-3.5 h-3.5" />
                         </div>
-                        <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                        <CardTitle className="text-sm font-semibold text-foreground uppercase tracking-wider">
                             Shop Pulse
                         </CardTitle>
                     </div>
@@ -65,7 +65,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                                     "flex items-center justify-center w-14 h-14 rounded-full border-2 transition-all duration-300",
                                     count > 0
                                         ? "bg-white dark:bg-gray-950 border-primary shadow-lg shadow-primary/10 scale-110"
-                                        : "bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-800 group-hover:border-gray-200"
+                                        : "bg-muted border-border group-hover:border-gray-200"
                                 )}>
                                     <span className={cn(
                                         "text-2xl font-bold tracking-tight",
@@ -75,10 +75,10 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                                     </span>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-[11px] font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tighter">
+                                    <p className="text-[11px] font-bold text-foreground uppercase tracking-tighter">
                                         {status.label}
                                     </p>
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">
                                         {count === 1 ? 'task' : 'tasks'} active
                                     </p>
                                 </div>
@@ -87,7 +87,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                     })}
                 </div>
 
-                <div className="mt-8 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-center gap-4 text-[10px] font-medium text-gray-400 uppercase tracking-widest">
+                <div className="mt-8 pt-4 border-t border-border flex items-center justify-center gap-4 text-[10px] font-medium text-gray-400 uppercase tracking-widest">
                     <span className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                         Live Flow Monitoring

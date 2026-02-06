@@ -52,7 +52,7 @@ export default function RoadsideListPage() {
         <div className="p-4 space-y-4 max-w-md mx-auto pb-20">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-2xl font-bold text-foreground">
                     Roadside Jobs
                 </h2>
                 <Button size="sm" variant="outline" onClick={loadRequests} disabled={loading}>
@@ -63,7 +63,7 @@ export default function RoadsideListPage() {
             {/* Active Requests */}
             <div className="space-y-3">
                 {activeRequests.length === 0 && !loading && (
-                    <div className="text-center py-8 text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="text-center py-8 text-gray-500 bg-muted rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
                         <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p>No active jobs assigned</p>
                     </div>
@@ -85,11 +85,11 @@ export default function RoadsideListPage() {
                                 </span>
                             </div>
 
-                            <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">
+                            <h3 className="font-bold text-lg text-foreground mb-1">
                                 {req.service_type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
                             </h3>
 
-                            <div className="space-y-1.5 text-sm text-gray-600 dark:text-gray-300 mb-3">
+                            <div className="space-y-1.5 text-sm text-muted-foreground mb-3">
                                 <div className="flex items-start gap-2">
                                     <MapPin className="h-4 w-4 mt-0.5 text-gray-400 shrink-0" />
                                     <span className="line-clamp-2">{req.breakdown_location}</span>
@@ -100,7 +100,7 @@ export default function RoadsideListPage() {
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
+                            <div className="flex justify-between items-center pt-2 border-t border-border">
                                 <div className="flex items-center gap-2 text-sm font-medium">
                                     {req.customer.first_name} {req.customer.last_name}
                                 </div>
@@ -123,7 +123,7 @@ export default function RoadsideListPage() {
                         {pastRequests.slice(0, 5).map((req) => (
                             <div
                                 key={req.id}
-                                className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 opacity-75"
+                                className="flex items-center justify-between p-3 bg-card rounded-lg border border-border opacity-75"
                                 onClick={() => router.push(`/mobile/roadside/${req.id}`)}
                             >
                                 <div>

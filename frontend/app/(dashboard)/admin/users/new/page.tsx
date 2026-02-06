@@ -320,7 +320,7 @@ export default function NewUserPage() {
               Back
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create New User</h1>
+          <h1 className="text-3xl font-bold text-foreground">Create New User</h1>
         </div>
         <div className="flex space-x-4">
           <Link href="/admin/users">
@@ -362,7 +362,7 @@ export default function NewUserPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">
                     Email <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -380,7 +380,7 @@ export default function NewUserPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">
                     Username <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -397,7 +397,7 @@ export default function NewUserPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">
                     First Name <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -414,7 +414,7 @@ export default function NewUserPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">
                     Last Name <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -431,7 +431,7 @@ export default function NewUserPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Phone</label>
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">Phone</label>
                   <Input
                     type="tel"
                     placeholder="(555) 123-4567"
@@ -441,7 +441,7 @@ export default function NewUserPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">
                     Role <span className="text-red-500">*</span>
                   </label>
                   <Select
@@ -468,7 +468,7 @@ export default function NewUserPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">
                     Password <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
@@ -482,7 +482,7 @@ export default function NewUserPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
                         title={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -522,7 +522,7 @@ export default function NewUserPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-card-foreground mb-2">
                     Confirm Password <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -535,7 +535,7 @@ export default function NewUserPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword2(!showPassword2)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
                       title={showPassword2 ? "Hide password" : "Show password"}
                     >
                       {showPassword2 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -567,13 +567,13 @@ export default function NewUserPage() {
                 <div className="space-y-6">
                   {isManager ? (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                      <label className="block text-sm font-semibold text-card-foreground mb-3">
                         Managed Branches <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <p className="text-xs text-muted-foreground mb-3">
                         Select all branches this manager should oversee
                       </p>
-                      <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
+                      <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
                         {branches.length > 0 ? (
                           branches.map((branch) => (
                             <label
@@ -599,18 +599,18 @@ export default function NewUserPage() {
                                 className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
                               />
                               <div className="flex-1">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{branch.name}</span>
+                                <span className="text-sm font-medium text-card-foreground">{branch.name}</span>
                                 {branch.code && (
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({branch.code})</span>
+                                  <span className="text-xs text-muted-foreground ml-2">({branch.code})</span>
                                 )}
                               </div>
                             </label>
                           ))
                         ) : (
                           <div className="text-center py-8">
-                            <Building2 className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500 dark:text-gray-400">No active branches available</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Create a branch first before assigning users</p>
+                            <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-sm text-muted-foreground">No active branches available</p>
+                            <p className="text-xs text-muted-foreground mt-1">Create a branch first before assigning users</p>
                           </div>
                         )}
                       </div>
@@ -622,7 +622,7 @@ export default function NewUserPage() {
                       )}
 
                       {/* Additional Options for Managers */}
-                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="mt-6 pt-6 border-t border-border space-y-3">
                         <div className="flex items-center space-x-2">
                           <input
                             type="checkbox"
@@ -630,7 +630,7 @@ export default function NewUserPage() {
                             {...register("is_active")}
                             className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                           />
-                          <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <label htmlFor="is_active" className="text-sm font-medium text-card-foreground">
                             User is active
                           </label>
                         </div>
@@ -641,7 +641,7 @@ export default function NewUserPage() {
                             {...register("send_welcome_email")}
                             className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                           />
-                          <label htmlFor="send_welcome_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <label htmlFor="send_welcome_email" className="text-sm font-medium text-card-foreground">
                             Do not send welcome letter
                           </label>
                         </div>
@@ -649,10 +649,10 @@ export default function NewUserPage() {
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                      <label className="block text-sm font-semibold text-card-foreground mb-3">
                         Assigned Branch <span className="text-red-500">*</span>
                       </label>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <p className="text-xs text-muted-foreground mb-3">
                         Select the primary branch for this staff member
                       </p>
                       <Select
@@ -686,7 +686,7 @@ export default function NewUserPage() {
                       )}
 
                       {/* Additional Options */}
-                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                      <div className="mt-6 pt-6 border-t border-border space-y-3">
                         <div className="flex items-center space-x-2">
                           <input
                             type="checkbox"
@@ -694,7 +694,7 @@ export default function NewUserPage() {
                             {...register("is_active")}
                             className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                           />
-                          <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <label htmlFor="is_active" className="text-sm font-medium text-card-foreground">
                             User is active
                           </label>
                         </div>
@@ -705,7 +705,7 @@ export default function NewUserPage() {
                             {...register("send_welcome_email")}
                             className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                           />
-                          <label htmlFor="send_welcome_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <label htmlFor="send_welcome_email" className="text-sm font-medium text-card-foreground">
                             Do not send welcome letter
                           </label>
                         </div>
@@ -718,9 +718,9 @@ export default function NewUserPage() {
                 {isStaff && (
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-card-foreground mb-2">
                         Employee ID
-                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 font-normal">(Auto-generated, editable)</span>
+                        <span className="text-xs text-muted-foreground ml-2 font-normal">(Auto-generated, editable)</span>
                       </label>
                       <Input
                         placeholder="EMP-00001"
@@ -729,7 +729,7 @@ export default function NewUserPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-card-foreground mb-2">
                         Hire Date
                       </label>
                       <Input
@@ -739,7 +739,7 @@ export default function NewUserPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-card-foreground mb-2">
                         Hourly Rate
                       </label>
                       <Input

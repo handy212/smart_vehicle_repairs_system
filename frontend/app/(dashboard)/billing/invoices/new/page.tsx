@@ -300,7 +300,7 @@ export default function NewInvoicePage() {
     <div className="space-y-6 pb-24">
       {/* Header - No Breadcrumbs */}
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{pageTitle}</h1>
+        <h1 className="text-xl font-bold text-foreground tracking-tight">{pageTitle}</h1>
       </div>
 
       {serverError && (

@@ -96,7 +96,7 @@ export default function BankReconciliationPage() {
         <div className="space-y-4">
             <div className="flex justify-between items-center pt-2">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Bank Reconciliation</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Bank Reconciliation</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Verify and match bank transactions
                     </p>
@@ -108,12 +108,12 @@ export default function BankReconciliationPage() {
             </div>
 
             <Card className="border shadow-sm">
-                <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                <CardHeader className="pb-3 border-b border-border">
                     <CardTitle className="text-base">Statement History</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
-                        <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                        <TableHeader className="bg-muted/50 border-y border-border">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Statement Date</TableHead>
                                 <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Bank Account</TableHead>
@@ -136,20 +136,20 @@ export default function BankReconciliationPage() {
                                 </TableRow>
                             ) : (
                                 (Array.isArray(statements) ? statements : (statements as any)?.results || []).map((statement: any) => (
-                                    <TableRow key={statement.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                                        <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                                    <TableRow key={statement.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                        <TableCell className="px-4 py-2 text-sm text-foreground">
                                             <div className="flex items-center">
                                                 <FileText className="w-4 h-4 mr-2 text-gray-400" />
                                                 {format(new Date(statement.statement_date), 'MMM d, yyyy')}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <TableCell className="px-4 py-2 text-sm text-muted-foreground">
                                             {statement.bank_account_name || 'Bank Account'}
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-400 text-right">
+                                        <TableCell className="px-4 py-2 text-sm font-mono text-muted-foreground text-right">
                                             {formatCurrency(statement.opening_balance)}
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100 font-medium text-right">
+                                        <TableCell className="px-4 py-2 text-sm font-mono text-foreground font-medium text-right">
                                             {formatCurrency(statement.closing_balance)}
                                         </TableCell>
                                         <TableCell className="px-4 py-2">

@@ -167,9 +167,9 @@ export default function AppointmentDetailPage() {
             <span>/</span>
             <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">#{appointment.appointment_number}</span>
+            <span className="text-foreground font-medium">#{appointment.appointment_number}</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Appointment Details</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Appointment Details</h1>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" onClick={() => router.back()} className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">

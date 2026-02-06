@@ -302,7 +302,7 @@ export default function InvoiceDetailPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowActionsMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                  <div className="absolute right-0 mt-2 w-56 bg-card rounded-md shadow-lg border border-border z-20">
                     <div className="py-1">
                       <button
                         onClick={() => {
@@ -312,7 +312,7 @@ export default function InvoiceDetailPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={sendEmailMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Mail className="w-4 h-4" />
                         {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
@@ -320,7 +320,7 @@ export default function InvoiceDetailPage() {
                       {/* Only show Convert to Invoice for proforma invoices */}
                       {invoice.status === 'proforma' && (
                         <>
-                          <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                          <div className="border-t border-border my-1" />
                           <button
                             onClick={() => {
                               if (confirm("Convert this proforma to a standard invoice? This will assign a new invoice number.")) {
@@ -329,18 +329,18 @@ export default function InvoiceDetailPage() {
                               setShowActionsMenu(false);
                             }}
                             disabled={convertToInvoiceMutation.isPending}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <FileCheck className="w-4 h-4" />
                             {convertToInvoiceMutation.isPending ? "Converting..." : "Convert to Invoice"}
                           </button>
                         </>
                       )}
-                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                      <div className="border-t border-border my-1" />
                       <Link href={`/billing/invoices/${invoiceId}/edit`}>
                         <button
                           onClick={() => setShowActionsMenu(false)}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                         >
                           <Edit className="w-4 h-4" />
                           Edit
@@ -470,7 +470,7 @@ export default function InvoiceDetailPage() {
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader className="bg-gray-50 dark:bg-gray-800/50">
+                    <TableHeader className="bg-muted/50">
                       <TableRow className="h-8">
                         <TableHead className="w-[40%] py-2">Item / Description</TableHead>
                         <TableHead className="text-right py-2">Qty</TableHead>
@@ -629,7 +629,7 @@ export default function InvoiceDetailPage() {
                             </div>
                             <div>
                               <div className="flex items-baseline gap-2">
-                                <p className="font-bold text-xl text-gray-900 dark:text-gray-100">
+                                <p className="font-bold text-xl text-foreground">
                                   {formatCurrency(parseFloat(payment.amount || "0"))}
                                 </p>
                                 {payment.refund_amount && parseFloat(payment.refund_amount) > 0 && (

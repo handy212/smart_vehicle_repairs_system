@@ -98,17 +98,17 @@ export default function MobileLayout({
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <SyncStatusBanner />
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-14 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+      <header className="bg-card border-b border-border h-14 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="bg-primary p-1.5 rounded-lg">
             <Wrench className="h-5 w-5 text-white" />
           </div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h1 className="text-lg font-bold text-foreground">
             Tech App
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-muted-foreground">
             {user?.first_name} {user?.last_name}
           </div>
         </div>
@@ -116,7 +116,7 @@ export default function MobileLayout({
 
       <main className="flex-1 overflow-y-auto">{children}</main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 safe-area-inset-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-inset-bottom">
         <div className="grid grid-cols-5 h-16">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -130,7 +130,7 @@ export default function MobileLayout({
                   "flex flex-col items-center justify-center gap-1 text-xs transition-colors",
                   isActive
                     ? "text-primary dark:text-primary"
-                    : "text-gray-500 dark:text-gray-400"
+                    : "text-muted-foreground"
                 )}
               >
                 <Icon

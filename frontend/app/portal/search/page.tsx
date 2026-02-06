@@ -50,8 +50,8 @@ export default function SearchPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Search</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-3xl font-bold text-foreground">Search</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Search across your vehicles, appointments, invoices, and more
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function SearchPage() {
                 autoFocus
               />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-muted-foreground">
               Enter at least 2 characters to search
             </p>
           </form>
@@ -94,14 +94,14 @@ export default function SearchPage() {
       ) : debouncedQuery.length >= 2 && totalResults > 0 ? (
         <div className="space-y-6">
           {/* Results Summary */}
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-muted-foreground">
             Found {totalResults} result{totalResults !== 1 ? "s" : ""} for "{debouncedQuery}"
           </div>
 
           {/* Vehicles */}
           {groupedResults.vehicles.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
                 <Car className="w-5 h-5 mr-2" />
                 Vehicles ({groupedResults.vehicles.length})
               </h2>
@@ -112,11 +112,11 @@ export default function SearchPage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            <h3 className="font-semibold text-foreground">
                               {result.title}
                             </h3>
                             {result.subtitle && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              <p className="text-sm text-muted-foreground mt-1">
                                 {result.subtitle}
                               </p>
                             )}
@@ -134,7 +134,7 @@ export default function SearchPage() {
           {/* Appointments */}
           {groupedResults.appointments.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
                 <Calendar className="w-5 h-5 mr-2" />
                 Appointments ({groupedResults.appointments.length})
               </h2>
@@ -145,11 +145,11 @@ export default function SearchPage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            <h3 className="font-semibold text-foreground">
                               {result.title}
                             </h3>
                             {result.subtitle && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              <p className="text-sm text-muted-foreground mt-1">
                                 {result.subtitle}
                               </p>
                             )}
@@ -174,7 +174,7 @@ export default function SearchPage() {
           {/* Invoices */}
           {groupedResults.invoices.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
                 <FileText className="w-5 h-5 mr-2" />
                 Invoices ({groupedResults.invoices.length})
               </h2>
@@ -185,11 +185,11 @@ export default function SearchPage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            <h3 className="font-semibold text-foreground">
                               {result.title}
                             </h3>
                             {result.subtitle && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              <p className="text-sm text-muted-foreground mt-1">
                                 {result.subtitle}
                               </p>
                             )}
@@ -222,7 +222,7 @@ export default function SearchPage() {
           {/* Estimates */}
           {groupedResults.estimates.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
                 <FileText className="w-5 h-5 mr-2" />
                 Estimates ({groupedResults.estimates.length})
               </h2>
@@ -233,11 +233,11 @@ export default function SearchPage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            <h3 className="font-semibold text-foreground">
                               {result.title}
                             </h3>
                             {result.subtitle && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              <p className="text-sm text-muted-foreground mt-1">
                                 {result.subtitle}
                               </p>
                             )}
@@ -270,7 +270,7 @@ export default function SearchPage() {
           {/* Payments */}
           {groupedResults.payments.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
                 <CreditCard className="w-5 h-5 mr-2" />
                 Payments ({groupedResults.payments.length})
               </h2>
@@ -281,11 +281,11 @@ export default function SearchPage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                            <h3 className="font-semibold text-foreground">
                               {result.title}
                             </h3>
                             {result.subtitle && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              <p className="text-sm text-muted-foreground mt-1">
                                 {result.subtitle}
                               </p>
                             )}
@@ -311,7 +311,7 @@ export default function SearchPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 mb-2">No results found</p>
+            <p className="text-muted-foreground mb-2">No results found</p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
               Try searching with different keywords
             </p>
@@ -321,7 +321,7 @@ export default function SearchPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 mb-2">Start searching</p>
+            <p className="text-muted-foreground mb-2">Start searching</p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
               Enter at least 2 characters to search across your vehicles, appointments, invoices,
               and more

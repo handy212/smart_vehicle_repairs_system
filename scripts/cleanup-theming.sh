@@ -34,6 +34,9 @@ replace_in_tsx 's/className="bg-white dark:bg-gray-800/className="bg-card/g'
 echo "  ✓ Replacing bg-white dark:bg-gray-900 with bg-card..."
 replace_in_tsx 's/bg-white dark:bg-gray-900/bg-card/g'
 
+echo "  ✓ Replacing transparent card backgrounds..."
+replace_in_tsx 's/bg-white\/60 dark:bg-gray-900\/40/bg-card\/60/g'
+
 echo "  ✓ Replacing bg-gray-50 dark:bg-gray-900 with bg-muted..."
 replace_in_tsx 's/bg-gray-50 dark:bg-gray-900/bg-muted/g'
 
@@ -53,6 +56,9 @@ replace_in_tsx 's/text-gray-900 dark:text-gray-100/text-foreground/g'
 echo "  ✓ Replacing text-gray-900 dark:text-white with text-foreground..."
 replace_in_tsx 's/text-gray-900 dark:text-white/text-foreground/g'
 
+echo "  ✓ Replacing text-gray-800 dark:text-gray-100 with text-foreground..."
+replace_in_tsx 's/text-gray-800 dark:text-gray-100/text-foreground/g'
+
 echo "  ✓ Replacing text-gray-500 dark:text-gray-400 with text-muted-foreground..."
 replace_in_tsx 's/text-gray-500 dark:text-gray-400/text-muted-foreground/g'
 
@@ -65,12 +71,18 @@ replace_in_tsx 's/text-gray-600 dark:text-gray-400/text-muted-foreground/g'
 echo "  ✓ Replacing text-gray-700 dark:text-gray-300 with text-card-foreground..."
 replace_in_tsx 's/text-gray-700 dark:text-gray-300/text-card-foreground/g'
 
+echo "  ✓ Replacing text-gray-700 dark:text-gray-200 with text-foreground..."
+replace_in_tsx 's/text-gray-700 dark:text-gray-200/text-foreground/g'
+
 # 3. Border Colors
 echo "  ✓ Replacing border-gray-200 dark:border-gray-700 with border-border..."
 replace_in_tsx 's/border-gray-200 dark:border-gray-700/border-border/g'
 
 echo "  ✓ Replacing border-gray-100 dark:border-gray-800 with border-border..."
 replace_in_tsx 's/border-gray-100 dark:border-gray-800/border-border/g'
+
+echo "  ✓ Replacing border-gray-100\/50 dark:border-gray-800\/50 with border-border/50..."
+replace_in_tsx 's/border-gray-100\/50 dark:border-gray-800\/50/border-border\/50/g'
 
 echo "  ✓ Replacing border-gray-300 dark:border-gray-600 with border-border..."
 replace_in_tsx 's/border-gray-300 dark:border-gray-600/border-border/g'
@@ -83,15 +95,43 @@ echo "  ✓ Replacing input backgrounds..."
 replace_in_tsx 's/bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600/bg-input border-input/g'
 replace_in_tsx 's/bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/bg-input border-border/g'
 
-# 5. Specific Elements - Dividers
+# 5. Semantic Colors (Success, Warning, Info, Primary)
+echo "  ✓ Replacing semantic colors with tokens..."
+replace_in_tsx 's/text-orange-600 dark:text-orange-400/text-primary/g'
+replace_in_tsx 's/bg-orange-600/bg-primary/g'
+replace_in_tsx 's/bg-orange-500/bg-primary/g'
+replace_in_tsx 's/border-orange-500/border-primary/g'
+replace_in_tsx 's/ring-orange-500/ring-primary/g'
+replace_in_tsx 's/text-orange-600/text-primary/g'
+replace_in_tsx 's/text-orange-700/text-primary/g'
+
+replace_in_tsx 's/text-blue-600 dark:text-blue-400/text-info/g'
+replace_in_tsx 's/text-blue-600/text-info/g'
+replace_in_tsx 's/bg-blue-600/bg-info/g'
+replace_in_tsx 's/bg-blue-50/bg-info\/10/g'
+
+replace_in_tsx 's/text-green-600 dark:text-green-400/text-success/g'
+replace_in_tsx 's/text-green-600/text-success/g'
+replace_in_tsx 's/bg-green-600/bg-success/g'
+replace_in_tsx 's/bg-green-50/bg-success\/10/g'
+
+replace_in_tsx 's/text-yellow-700 dark:text-yellow-500/text-warning/g'
+replace_in_tsx 's/bg-yellow-50/bg-warning\/10/g'
+replace_in_tsx 's/border-yellow-200 dark:border-yellow-900/border-warning/g'
+replace_in_tsx 's/bg-yellow-50\/50 dark:bg-yellow-900\/10/bg-warning\/10/g'
+
+# 6. Specific Elements - Dividers
 echo "  ✓ Replacing dividers..."
 replace_in_tsx 's/bg-gray-300 dark:bg-gray-700/bg-border/g'
 replace_in_tsx 's/bg-gray-200 dark:bg-gray-700/bg-border/g'
+replace_in_tsx 's/bg-gray-100 dark:bg-gray-800/bg-border/g'
 
-# 6. Icon Colors
+# 7. Icon Colors
 echo "  ✓ Replacing icon colors..."
 replace_in_tsx 's/text-gray-400 dark:text-gray-500/text-muted-foreground/g'
 replace_in_tsx 's/text-gray-400 dark:text-gray-600/text-muted-foreground/g'
+replace_in_tsx 's/text-gray-300 dark:text-gray-700/text-muted-foreground/g'
+
 
 # Count instances after
 AFTER_COUNT=$(find frontend/app -name "*.tsx" -o -name "*.ts" | xargs grep -o "dark:bg-gray-" 2>/dev/null | wc -l)

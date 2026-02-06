@@ -63,7 +63,7 @@ function TechniciansContent() {
             case 'available': return "bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
             case 'busy': return "bg-primary/15 text-orange-700 dark:text-primary border-orange-200 dark:border-orange-800";
             case 'break': return "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800";
-            case 'offline': return "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800";
+            case 'offline': return "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-border";
             default: return "";
         }
     };
@@ -91,35 +91,35 @@ function TechniciansContent() {
             {/* Stats Overview */}
             {!isLoading && data?.results && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                    <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
-                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{data.results.length}</span>
+                            <span className="text-lg font-bold text-foreground">{data.results.length}</span>
                         </CardContent>
                     </Card>
-                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                    <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Available</span>
                             <span className="text-lg font-bold text-green-600 dark:text-green-400">{data.results.filter(t => t.current_status === 'available').length}</span>
                         </CardContent>
                     </Card>
-                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                    <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Busy</span>
                             <span className="text-lg font-bold text-primary dark:text-primary">{data.results.filter(t => ['busy', 'break'].includes(t.current_status)).length}</span>
                         </CardContent>
                     </Card>
-                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                    <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Offline</span>
-                            <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{data.results.filter(t => t.current_status === 'offline').length}</span>
+                            <span className="text-lg font-bold text-muted-foreground">{data.results.filter(t => t.current_status === 'offline').length}</span>
                         </CardContent>
                     </Card>
                 </div>
             )}
 
             {/* Filter Bar - Lightweight */}
-            <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+            <Card className="border-none shadow-sm bg-muted/50">
                 <CardContent className="p-3">
                     <div className="flex items-center gap-3">
                         <div className="relative">
@@ -128,7 +128,7 @@ function TechniciansContent() {
                                 placeholder="Search technicians..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="h-8 w-64 pl-9 text-sm bg-white dark:bg-gray-900 transition-all focus:w-80"
+                                className="h-8 w-64 pl-9 text-sm bg-card transition-all focus:w-80"
                             />
                         </div>
 
@@ -209,10 +209,10 @@ function TechniciansContent() {
                                                         <AvatarFallback className="text-xs">{tech.user_details?.first_name?.[0]}{tech.user_details?.last_name?.[0]}</AvatarFallback>
                                                     </Avatar>
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                        <h3 className="text-sm font-semibold text-foreground truncate">
                                                             {tech.user_details?.full_name || `${tech.user_details?.first_name} ${tech.user_details?.last_name}`}
                                                         </h3>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">ID: #{tech.id}</p>
+                                                        <p className="text-xs text-muted-foreground">ID: #{tech.id}</p>
                                                     </div>
                                                 </div>
                                                 <Badge variant="outline" className={cn("capitalize text-[10px] px-2 py-0.5 border shadow-none bg-transparent", getStatusColor(tech.current_status))}>
@@ -240,12 +240,12 @@ function TechniciansContent() {
                                                 {/* Stats */}
                                                 <div className="grid grid-cols-2 gap-3 pt-2 border-t">
                                                     <div>
-                                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Experience</p>
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{tech.years_of_experience} yrs</p>
+                                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Experience</p>
+                                                        <p className="text-sm font-medium text-foreground">{tech.years_of_experience} yrs</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Role</p>
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize truncate">
+                                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Role</p>
+                                                        <p className="text-sm font-medium text-foreground capitalize truncate">
                                                             {tech.user_details?.role?.replace('_', ' ') || 'Technician'}
                                                         </p>
                                                     </div>
@@ -282,13 +282,13 @@ function TechniciansContent() {
                             <CardContent className="p-0">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50">
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Technician</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Contact</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Skills</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Experience</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Status</TableHead>
-                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 text-right">Actions</TableHead>
+                                        <TableRow className="bg-gray-50/50 hover:bg-muted/50 dark:hover:bg-gray-800/50">
+                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Technician</TableHead>
+                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contact</TableHead>
+                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Skills</TableHead>
+                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Experience</TableHead>
+                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                            <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -296,7 +296,7 @@ function TechniciansContent() {
                                             data.results.map((tech) => (
                                                 <TableRow
                                                     key={tech.id}
-                                                    className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer"
+                                                    className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors border-b border-border cursor-pointer"
                                                     onDoubleClick={() => router.push(`/technicians/${tech.id}`)}
                                                 >
                                                     <TableCell className="px-3 py-1.5">
@@ -306,17 +306,17 @@ function TechniciansContent() {
                                                                 <AvatarFallback className="text-xs">{tech.user_details?.first_name?.[0]}{tech.user_details?.last_name?.[0]}</AvatarFallback>
                                                             </Avatar>
                                                             <div>
-                                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                                <div className="text-sm font-medium text-foreground">
                                                                     {tech.user_details?.full_name || `${tech.user_details?.first_name} ${tech.user_details?.last_name}`}
                                                                 </div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                <div className="text-xs text-muted-foreground">
                                                                     ID: #{tech.id}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="px-4 py-2">
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                        <div className="text-xs text-muted-foreground">
                                                             <div>{tech.user_details?.email}</div>
                                                             <div className="capitalize">{tech.user_details?.role?.replace('_', ' ') || 'Technician'}</div>
                                                         </div>
@@ -341,7 +341,7 @@ function TechniciansContent() {
                                                             )}
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                                                    <TableCell className="px-4 py-2 text-sm text-foreground">
                                                         {tech.years_of_experience} yrs
                                                     </TableCell>
                                                     <TableCell className="px-4 py-2">

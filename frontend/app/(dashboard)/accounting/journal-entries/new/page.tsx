@@ -237,7 +237,7 @@ export default function NewJournalEntryPage() {
                             ))}
                         </TableBody>
                     </Table>
-                    <div className="p-4 border-t bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center">
+                    <div className="p-4 border-t bg-muted/50 flex justify-between items-center">
                         <Button variant="outline" size="sm" onClick={addLine}>
                             <Plus className="w-4 h-4 mr-2" /> Add Line
                         </Button>

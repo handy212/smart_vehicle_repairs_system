@@ -294,7 +294,7 @@ export default function ReconciliationDetailPage() {
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => router.push('/accounting/banking/reconciliation')}>
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
-                        <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">
                             {statement?.bank_account_name} &middot; {format(new Date(statement?.statement_date), 'MMMM yyyy')}
                         </h1>
                         {statement?.reconciled &&
@@ -325,7 +325,7 @@ export default function ReconciliationDetailPage() {
 
             <div className="grid grid-cols-4 gap-4 flex-shrink-0">
                 {/* Cards Summary */}
-                <Card className="border shadow-none bg-gray-50/50 dark:bg-gray-800/50">
+                <Card className="border shadow-none bg-muted/50">
                     <CardHeader className="p-4 pb-1">
                         <CardTitle className="text-xs font-medium text-gray-500 uppercase">Statement Opening</CardTitle>
                     </CardHeader>
@@ -333,7 +333,7 @@ export default function ReconciliationDetailPage() {
                         <div className="text-xl font-mono">{formatCurrency(statement?.opening_balance)}</div>
                     </CardContent>
                 </Card>
-                <Card className="border shadow-none bg-gray-50/50 dark:bg-gray-800/50">
+                <Card className="border shadow-none bg-muted/50">
                     <CardHeader className="p-4 pb-1">
                         <CardTitle className="text-xs font-medium text-gray-500 uppercase">Statement Closing</CardTitle>
                     </CardHeader>
@@ -397,7 +397,7 @@ export default function ReconciliationDetailPage() {
                                     onClick={() => setSelectedBankLine(selectedBankLine?.id === line.id ? null : line)}
                                 >
                                     <div className="flex-1">
-                                        <div className="text-gray-900 dark:text-gray-100 font-medium">{format(new Date(line.transaction_date), 'MMM d')}</div>
+                                        <div className="text-foreground font-medium">{format(new Date(line.transaction_date), 'MMM d')}</div>
                                         <div className="text-xs text-gray-500 truncate max-w-[200px]" title={line.description}>{line.description}</div>
                                         {line.matched && <div className="text-[10px] text-green-600 flex items-center mt-0.5"><Check className="w-3 h-3 mr-1" /> Matched</div>}
                                     </div>
@@ -438,7 +438,7 @@ export default function ReconciliationDetailPage() {
                                             onClick={() => setSelectedSysTx(selectedSysTx?.id === tx.id ? null : tx)}
                                         >
                                             <div className="flex-1">
-                                                <div className="text-gray-900 dark:text-gray-100 font-medium">
+                                                <div className="text-foreground font-medium">
                                                     {tx.date ? format(new Date(tx.date), 'MMM d') : '-'}
                                                 </div>
                                                 <div className="text-xs text-gray-500 truncate max-w-[200px]">{tx.description || 'Journal Entry'}</div>
@@ -459,7 +459,7 @@ export default function ReconciliationDetailPage() {
                 </Card>
             </div>
 
-            <div className="h-14 flex items-center justify-center border-t bg-gray-50 dark:bg-gray-900 flex-shrink-0 gap-4">
+            <div className="h-14 flex items-center justify-center border-t bg-muted flex-shrink-0 gap-4">
                 {/* State: Unmatched Selected, No Tx Selected */}
                 {viewMatched === 'unmatched' && selectedBankLine && !selectedSysTx && (
                     <div className="flex items-center gap-4 animate-in slide-in-from-bottom-2 fade-in">

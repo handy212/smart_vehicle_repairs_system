@@ -100,10 +100,10 @@ function FixedAssetsContent() {
             className: "min-w-[200px]",
             cell: (asset: FixedAsset) => (
                 <div className="flex flex-col">
-                    <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                    <span className="font-medium text-sm text-foreground">
                         {asset.name}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                         {asset.category_name}
                     </span>
                 </div>
@@ -114,7 +114,7 @@ function FixedAssetsContent() {
             accessor: "branch_name" as const,
             className: "w-32",
             cell: (asset: FixedAsset) => (
-                <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Building2 className="w-3 h-3" />
                     <span>{asset.branch_name}</span>
                 </div>
@@ -129,7 +129,7 @@ function FixedAssetsContent() {
                     <span className="font-mono text-xs font-bold text-green-600 dark:text-green-400">
                         {formatCurrency(asset.acquisition_cost, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    <span className="text-[10px] text-muted-foreground">
                         {format(new Date(asset.acquisition_date), "MMM yyyy")}
                     </span>
                 </div>
@@ -154,7 +154,7 @@ function FixedAssetsContent() {
                     <span className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">
                         {formatCurrency(asset.accumulated_depreciation, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    <span className="text-[10px] text-muted-foreground">
                         {asset.depreciation_percent.toFixed(1)}%
                     </span>
                 </div>
@@ -184,10 +184,10 @@ function FixedAssetsContent() {
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
+                            <h1 className="text-2xl font-black tracking-tight text-foreground">
                                 Fixed Assets
                             </h1>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                                 Track company assets and depreciation
                             </p>
                         </div>
@@ -211,17 +211,17 @@ function FixedAssetsContent() {
                 {/* Stats Grid */}
                 {stats && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+                        <Card className="border-border shadow-sm">
                             <CardContent className="p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Total Assets
                                         </p>
-                                        <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">
+                                        <p className="text-2xl font-black text-foreground mt-1">
                                             {stats.total_assets}
                                         </p>
-                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                        <p className="text-[10px] text-muted-foreground mt-1">
                                             {stats.active_assets} active
                                         </p>
                                     </div>
@@ -234,17 +234,17 @@ function FixedAssetsContent() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+                        <Card className="border-border shadow-sm">
                             <CardContent className="p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Net Book Value
                                         </p>
                                         <p className="text-2xl font-black text-primary dark:text-primary mt-1">
                                             {formatCurrency(stats.total_net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
-                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                        <p className="text-[10px] text-muted-foreground mt-1">
                                             Current value
                                         </p>
                                     </div>
@@ -257,17 +257,17 @@ function FixedAssetsContent() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+                        <Card className="border-border shadow-sm">
                             <CardContent className="p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Depreciation
                                         </p>
                                         <p className="text-2xl font-black text-orange-600 dark:text-orange-400 mt-1">
                                             {formatCurrency(stats.total_accumulated_depreciation, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
-                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                        <p className="text-[10px] text-muted-foreground mt-1">
                                             {stats.avg_depreciation_percent.toFixed(1)}% avg
                                         </p>
                                     </div>
@@ -280,17 +280,17 @@ function FixedAssetsContent() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+                        <Card className="border-border shadow-sm">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Total Investment
                                         </p>
                                         <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">
                                             {formatCurrency(stats.total_acquisition_cost, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
-                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                        <p className="text-[10px] text-muted-foreground mt-1">
                                             Original cost
                                         </p>
                                     </div>
@@ -306,7 +306,7 @@ function FixedAssetsContent() {
                 )}
 
                 {/* Toolbar */}
-                <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+                <Card className="border-border shadow-sm">
                     <CardContent className="p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <div className="relative flex-1">
@@ -322,7 +322,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="active">Active</option>
                                     <option value="">All Statuses</option>
@@ -334,7 +334,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={categoryFilter}
                                     onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="">All Categories</option>
                                     {categories?.map((cat) => (

@@ -23,10 +23,10 @@ export default function OfflinePage() {
             <WifiOff className="h-16 w-16 text-gray-400" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-foreground mb-2">
           You're Offline
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-muted-foreground mb-6">
           It looks like you're not connected to the internet. Some features may
           be limited, but you can still view cached content.
         </p>

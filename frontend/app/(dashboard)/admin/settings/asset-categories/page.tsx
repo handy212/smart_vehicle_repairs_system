@@ -184,9 +184,9 @@ export default function AssetCategoriesPage() {
                         <span>/</span>
                         <Link href="/admin/settings" className="hover:text-primary transition-colors">Settings</Link>
                         <span>/</span>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium">Asset Categories</span>
+                        <span className="text-foreground font-medium">Asset Categories</span>
                     </div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Asset Categories</h1>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">Asset Categories</h1>
                 </div>
                 <PermissionGuard permission="manage_settings">
                     <Button size="sm" onClick={() => handleOpenDialog()} className="h-8">

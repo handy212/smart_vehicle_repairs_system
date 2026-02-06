@@ -319,8 +319,8 @@ export default function SMSConsolePage() {
             <div className="space-y-4">
                 {/* Compact Header */}
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">SMS Console</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Send SMS messages to customers</p>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">SMS Console</h1>
+                    <p className="text-sm text-muted-foreground">Send SMS messages to customers</p>
                 </div>
 
                 {/* Stats Cards */}
@@ -330,7 +330,7 @@ export default function SMSConsolePage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Sent Today</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{stats?.sent_today || 0}</p>
+                                    <p className="text-2xl font-bold text-foreground mt-1">{stats?.sent_today || 0}</p>
                                 </div>
                                 <TrendingUp className="h-8 w-8 text-green-500 opacity-20" />
                             </div>
@@ -363,7 +363,7 @@ export default function SMSConsolePage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Balance</p>
-                                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                                    <p className="text-2xl font-bold text-foreground mt-1">
                                         {balance?.success ? `${balance.currency} ${balance.balance.toFixed(2)}` : 'N/A'}
                                     </p>
                                 </div>
@@ -400,13 +400,13 @@ export default function SMSConsolePage() {
                                             {smsInfo.chars} chars
                                         </span>
                                         <span className="text-gray-500">•</span>
-                                        <span className="text-gray-600 dark:text-gray-400">
+                                        <span className="text-muted-foreground">
                                             {smsInfo.count} SMS {smsInfo.count > 1 ? 'segments' : 'segment'}
                                         </span>
                                         {recipients.length > 0 && (
                                             <>
                                                 <span className="text-gray-500">•</span>
-                                                <span className="text-gray-600 dark:text-gray-400">
+                                                <span className="text-muted-foreground">
                                                     Est. cost: GHS {smsInfo.cost.toFixed(2)}
                                                 </span>
                                             </>
@@ -518,7 +518,7 @@ export default function SMSConsolePage() {
                                         />
                                     </div>
                                     <DialogFooter className="flex justify-between items-center">
-                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                        <div className="text-sm text-muted-foreground">
                                             {selectedCustomerIds.length > 0 && `${selectedCustomerIds.length} selected`}
                                         </div>
                                         <div className="flex gap-2">

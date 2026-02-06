@@ -129,7 +129,7 @@ export default function InspectionDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-2xl font-bold text-foreground">
                 Inspection #{inspection.inspection_number}
               </h1>
               <Badge variant="outline" className={cn(statusColors[inspection.status], "border shadow-none")}>
@@ -141,7 +141,7 @@ export default function InspectionDetailPage() {
                 <Calendar className="w-3.5 h-3.5" />
                 {format(new Date(inspection.inspection_date), "MMM dd, yyyy")}
               </span>
-              {vehicle?.license_plate && <span className="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-100 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">{vehicle.license_plate}</span>}
+              {vehicle?.license_plate && <span className="flex items-center gap-1 font-medium text-foreground px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">{vehicle.license_plate}</span>}
             </div>
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function InspectionDetailPage() {
                 <Card className="border-dashed">
                   <CardContent className="py-12 flex flex-col items-center justify-center text-center">
                     <FileText className="w-12 h-12 text-gray-300 mb-2" />
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100">No results yet</h3>
+                    <h3 className="font-medium text-foreground">No results yet</h3>
                     <p className="text-sm text-gray-500">Perform the inspection to see results here.</p>
                     {inspection.status === 'in_progress' && (
                       <Button className="mt-4" onClick={() => router.push(`/inspections/${inspectionId}/perform`)}>
@@ -255,10 +255,10 @@ export default function InspectionDetailPage() {
               ) : (
                 Object.entries(resultsByCategory).map(([category, results]) => (
                   <Card key={category}>
-                    <CardHeader className="py-3 px-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+                    <CardHeader className="py-3 px-4 border-b border-border bg-muted/50">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-semibold">{category}</CardTitle>
-                        <Badge variant="secondary" className="text-xs font-normal bg-white dark:bg-gray-800">{results.length} items</Badge>
+                        <Badge variant="secondary" className="text-xs font-normal bg-card">{results.length} items</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -281,10 +281,10 @@ export default function InspectionDetailPage() {
                                     </Badge>
                                   )}
                                 </div>
-                                {result.text_note && <p className="text-sm text-gray-600 dark:text-gray-400">{result.text_note}</p>}
+                                {result.text_note && <p className="text-sm text-muted-foreground">{result.text_note}</p>}
                                 {(result.measurement_value) && (
                                   <p className="text-xs text-muted-foreground">
-                                    Measured: <span className="font-medium text-gray-900 dark:text-gray-100">{result.measurement_value}</span>
+                                    Measured: <span className="font-medium text-foreground">{result.measurement_value}</span>
                                   </p>
                                 )}
                                 {result.photos && result.photos.length > 0 && (
@@ -314,7 +314,7 @@ export default function InspectionDetailPage() {
                   {allPhotos.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {allPhotos.map((photo) => (
-                        <div key={photo.id} className="aspect-square relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 group">
+                        <div key={photo.id} className="aspect-square relative rounded-lg overflow-hidden border border-border bg-gray-100 group">
                           <img src={photo.image} alt={photo.caption || "Inspection"} className="w-full h-full object-cover" />
                           {photo.caption && (
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 text-white text-xs truncate">
@@ -386,7 +386,7 @@ export default function InspectionDetailPage() {
                       .map((result: any) => (
                         <div key={result.id} className="border-l-2 border-primary pl-4 py-2">
                           <div className="flex items-start justify-between mb-1">
-                            <p className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                            <p className="font-medium text-sm text-foreground">
                               {result.item_name || `Item #${result.inspection_item}`}
                             </p>
                             {result.category_name && (
@@ -395,7 +395,7 @@ export default function InspectionDetailPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                          <p className="text-sm text-card-foreground whitespace-pre-wrap">
                             {result.notes}
                           </p>
                         </div>
@@ -425,12 +425,12 @@ export default function InspectionDetailPage() {
         {/* Right Sidebar */}
         <div className="space-y-6">
           <Card>
-            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+            <CardHeader className="pb-3 border-b border-border">
               <CardTitle className="text-sm font-medium">Linked Work Order</CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
               {inspection.work_order ? (
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
                   <div className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full">
                     <Wrench className="w-4 h-4 text-primary dark:text-primary" />
                   </div>
@@ -451,7 +451,7 @@ export default function InspectionDetailPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+            <CardHeader className="pb-3 border-b border-border">
               <CardTitle className="text-sm font-medium">Timeline</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">

@@ -70,8 +70,8 @@ export default function TechnicianRoadsideDashboard() {
         <div className="space-y-6 pb-20">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Technician Portal</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Your assigned roadside assistance calls</p>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">Technician Portal</h1>
+                    <p className="text-sm text-muted-foreground">Your assigned roadside assistance calls</p>
                 </div>
                 <Badge variant="info" className="text-[10px] px-2 py-0.5 font-medium border shadow-none uppercase tracking-wider">
                     Live Updates
@@ -79,10 +79,10 @@ export default function TechnicianRoadsideDashboard() {
             </div>
 
             {activeRequests.length === 0 ? (
-                <Card className="border-dashed border-2 bg-gray-50/50 dark:bg-gray-900/50">
+                <Card className="border-dashed border-2 bg-muted/50">
                     <CardContent className="py-12 flex flex-col items-center justify-center text-center">
                         <Truck className="h-12 w-12 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-bold text-gray-700 dark:text-gray-300">No Active Assignments</h3>
+                        <h3 className="text-lg font-bold text-card-foreground">No Active Assignments</h3>
                         <p className="text-sm text-muted-foreground mt-2 max-w-xs">
                             You don't have any active roadside requests assigned to you at the moment.
                         </p>
@@ -138,7 +138,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
     const nextAction = getNextAction();
 
     return (
-        <Card className="overflow-hidden border-none shadow-premium bg-white dark:bg-gray-800">
+        <Card className="overflow-hidden border-none shadow-premium bg-card">
             <div className="h-1.5 bg-gradient-to-r from-primary to-indigo-500"></div>
             <CardHeader className="pb-3 flex flex-row items-start justify-between">
                 <div>
@@ -156,7 +156,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl space-y-3">
+                <div className="p-3 bg-muted/50 rounded-xl space-y-3">
                     <div className="flex items-start gap-2">
                         <MapPin className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
@@ -175,7 +175,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
                         <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
                                 <Phone className="h-4 w-4" />

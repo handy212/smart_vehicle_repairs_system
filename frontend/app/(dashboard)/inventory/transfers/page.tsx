@@ -96,9 +96,9 @@ export default function TransfersPage() {
                             <span>/</span>
                             <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
                             <span>/</span>
-                            <span className="text-gray-900 dark:text-gray-100 font-medium">Transfers</span>
+                            <span className="text-foreground font-medium">Transfers</span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
                             Inter-Branch Transfers
                         </h1>
                     </div>
@@ -106,7 +106,7 @@ export default function TransfersPage() {
             </div>
 
             {/* Unified Toolbar */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/50 p-1 rounded-lg">
                 <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
                     {/* Search */}
                     <div className="relative flex-1 md:flex-none md:w-64">
@@ -119,7 +119,7 @@ export default function TransfersPage() {
                                 setSearchQuery(e.target.value);
                                 setPage(1);
                             }}
-                            className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+                            className="pl-9 h-9 text-sm bg-muted border-none focus:ring-1 transition-all"
                         />
                     </div>
 
@@ -172,7 +172,7 @@ export default function TransfersPage() {
                             }
 
                             return (
-                                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
                                     {displayLabel}: {displayValue}
                                     <X
                                         className="w-3 h-3 cursor-pointer hover:text-red-500"
@@ -192,7 +192,7 @@ export default function TransfersPage() {
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 bg-white dark:bg-gray-800">
+                            <Button variant="outline" size="sm" className="h-9 bg-card">
                                 Actions
                                 <ChevronDown className="w-3.5 h-3.5 ml-2" />
                             </Button>
@@ -222,7 +222,7 @@ export default function TransfersPage() {
                     ) : transfers.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
-                                <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                                <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Transfer #</TableHead>
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Source & Destination</TableHead>
@@ -236,19 +236,19 @@ export default function TransfersPage() {
                                     {transfers.map((transfer: any) => (
                                         <TableRow
                                             key={transfer.id}
-                                            className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors"
+                                            className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border cursor-pointer transition-colors"
                                             onClick={() => router.push(`/inventory/transfers/${transfer.id}`)}
                                         >
-                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                 {transfer.transfer_number}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col text-sm">
-                                                    <div className="flex items-center text-gray-900 dark:text-gray-100 font-medium">
+                                                    <div className="flex items-center text-foreground font-medium">
                                                         <MapPin className="w-3 h-3 mr-1.5 text-primary" />
                                                         {transfer.source_branch_name || "Unknown"}
                                                     </div>
-                                                    <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mt-0.5 ml-4">
+                                                    <div className="flex items-center text-muted-foreground text-xs mt-0.5 ml-4">
                                                         <ArrowRightLeft className="w-3 h-3 mr-1.5" />
                                                         To: {transfer.destination_branch_name || "Unknown"}
                                                     </div>
@@ -267,7 +267,7 @@ export default function TransfersPage() {
                                                     {getStatusLabel(transfer.status)}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 font-mono text-xs text-gray-900 dark:text-gray-100 text-right">
+                                            <TableCell className="px-4 py-2 font-mono text-xs text-foreground text-right">
                                                 {transfer.items?.length || 0}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
@@ -300,7 +300,7 @@ export default function TransfersPage() {
                     ) : (
                         <div className="text-center py-12">
                             <Truck className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No transfers found</h3>
+                            <h3 className="text-lg font-medium text-foreground">No transfers found</h3>
                             <p className="text-gray-500 max-w-sm mx-auto mt-1 mb-4">
                                 Get started by initiating a new stock transfer.
                             </p>
@@ -315,7 +315,7 @@ export default function TransfersPage() {
 
                     {/* Pagination */}
                     {!Array.isArray(data) && data && data.count > 0 && (
-                        <div className="p-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/30">
+                        <div className="p-3 border-t border-border flex items-center justify-between bg-gray-50/30">
                             <div className="text-xs text-gray-500">
                                 Showing {((page - 1) * 10) + 1} to {Math.min(page * 10, data.count)} of {data.count}
                             </div>

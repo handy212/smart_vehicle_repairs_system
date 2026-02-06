@@ -85,9 +85,9 @@ export default function DiagnosisListPage() {
               Dashboard
             </Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Diagnosis</span>
+            <span className="text-foreground font-medium">Diagnosis</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
             Diagnosis Overview
           </h1>
         </div>
@@ -96,13 +96,13 @@ export default function DiagnosisListPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Total Reports
             </span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <span className="text-xl font-bold text-foreground">
                 {stats.total}
               </span>
               <FileText className="w-5 h-5 text-gray-400 mb-0.5" />
@@ -110,7 +110,7 @@ export default function DiagnosisListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               In Progress
@@ -124,7 +124,7 @@ export default function DiagnosisListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Completed
@@ -138,7 +138,7 @@ export default function DiagnosisListPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Total Fees
@@ -154,7 +154,7 @@ export default function DiagnosisListPage() {
       </div>
 
       {/* Filters & Table */}
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-xs">
@@ -163,7 +163,7 @@ export default function DiagnosisListPage() {
                 placeholder="Search diagnosis..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 transition-all focus:w-full sm:focus:w-80"
+                className="pl-9 h-9 text-sm bg-card transition-all focus:w-full sm:focus:w-80"
               />
             </div>
 
@@ -200,20 +200,20 @@ export default function DiagnosisListPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : diagnoses.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-800">
+          <div className="text-center py-16 bg-card rounded-lg border border-dashed border-border">
             <Stethoscope className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No diagnoses found</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <h3 className="text-lg font-medium text-foreground">No diagnoses found</h3>
+            <p className="text-sm text-muted-foreground mt-1">
               {searchQuery || statusFilter !== "all"
                 ? "Try adjusting your search or filters."
                 : "Diagnosis reports will appear here when technicians start working on them."}
             </p>
           </div>
         ) : (
-          <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
+          <div className="rounded-md border border-border bg-card overflow-hidden shadow-sm">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-50/50">
+                <TableRow className="bg-muted/50 hover:bg-gray-50/50">
                   <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">
                     ID / WO#
                   </TableHead>
@@ -261,7 +261,7 @@ export default function DiagnosisListPage() {
                     >
                       <TableCell className="py-2.5 font-medium">
                         <div className="flex flex-col">
-                          <span className="text-sm text-gray-900 dark:text-gray-100">
+                          <span className="text-sm text-foreground">
                             #{diagnosis.id}
                           </span>
                           <span className="text-xs text-gray-500 font-mono">
@@ -269,7 +269,7 @@ export default function DiagnosisListPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-2.5 text-xs text-gray-600 dark:text-gray-400">
+                      <TableCell className="py-2.5 text-xs text-muted-foreground">
                         {diagnosis.started_at
                           ? format(new Date(diagnosis.started_at), "MMM d, yyyy")
                           : "-"}
@@ -277,7 +277,7 @@ export default function DiagnosisListPage() {
                       <TableCell className="py-2.5">
                         {diagnosis.vehicle_info ? (
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <span className="text-sm font-medium text-foreground">
                               {diagnosis.vehicle_info.make} {diagnosis.vehicle_info.model}
                             </span>
                             <span className="text-xs text-gray-500">
@@ -289,7 +289,7 @@ export default function DiagnosisListPage() {
                         )}
                       </TableCell>
                       <TableCell className="py-2.5 hidden md:table-cell">
-                        <div className="max-w-[250px] truncate text-xs text-gray-600 dark:text-gray-400" title={diagnosis.customer_complaint}>
+                        <div className="max-w-[250px] truncate text-xs text-muted-foreground" title={diagnosis.customer_complaint}>
                           {diagnosis.customer_complaint || "-"}
                         </div>
                       </TableCell>
@@ -297,7 +297,7 @@ export default function DiagnosisListPage() {
                         {diagnosis.technician_name ? (
                           <div className="flex items-center gap-1.5">
                             <User className="w-3 h-3 text-gray-400" />
-                            <span className="text-xs text-gray-700 dark:text-gray-300">
+                            <span className="text-xs text-card-foreground">
                               {diagnosis.technician_name}
                             </span>
                           </div>
@@ -320,7 +320,7 @@ export default function DiagnosisListPage() {
                           {diagnosis.status_display || diagnosis.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-2.5 text-right font-medium text-sm text-gray-900 dark:text-gray-100">
+                      <TableCell className="py-2.5 text-right font-medium text-sm text-foreground">
                         {diagnosis.diagnostic_fee ? `${formatCurrency(Number(diagnosis.diagnostic_fee))}` : "-"}
                       </TableCell>
                       <TableCell className="py-2.5 text-right">

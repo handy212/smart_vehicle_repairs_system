@@ -74,7 +74,7 @@ export default function MyInvoicesPage() {
         <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-yellow-50 dark:bg-yellow-900/10">
           <CardContent className="p-4 flex flex-col justify-center h-full">
             <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Pending Amount</p>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+            <div className="text-2xl font-bold text-foreground mt-1">
               {formatCurrency(totalPending)}
             </div>
           </CardContent>
@@ -82,7 +82,7 @@ export default function MyInvoicesPage() {
         <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-primary/10 dark:bg-orange-900/10">
           <CardContent className="p-4 flex flex-col justify-center h-full">
             <p className="text-xs font-medium text-primary dark:text-primary uppercase tracking-wider">Total Invoices</p>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+            <div className="text-2xl font-bold text-foreground mt-1">
               {invoices.length}
             </div>
           </CardContent>
@@ -107,7 +107,7 @@ export default function MyInvoicesPage() {
                 {
                   header: "Invoice #",
                   cell: (inv) => (
-                    <div className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <div className="font-mono text-sm font-medium text-foreground">
                       #{inv.invoice_number}
                     </div>
                   )
@@ -115,7 +115,7 @@ export default function MyInvoicesPage() {
                 {
                   header: "Date",
                   cell: (inv) => (
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-muted-foreground">
                       {format(new Date(inv.invoice_date), "MMM d, yyyy")}
                     </div>
                   )
@@ -123,7 +123,7 @@ export default function MyInvoicesPage() {
                 {
                   header: "Amount",
                   cell: (inv) => (
-                    <div className="font-bold text-gray-900 dark:text-gray-100">
+                    <div className="font-bold text-foreground">
                       {formatCurrency(inv.total || 0)}
                     </div>
                   )
@@ -173,7 +173,7 @@ export default function MyInvoicesPage() {
                   subtitle={format(new Date(inv.invoice_date), "MMM d, yyyy")}
                   status={
                     <div className="flex flex-col items-end gap-1">
-                      <span className="font-bold text-gray-900 dark:text-gray-100">
+                      <span className="font-bold text-foreground">
                         {formatCurrency(inv.total || 0)}
                       </span>
                       <Badge variant={getStatusVariant(inv.status)} className="capitalize text-[10px] h-5 px-1.5">

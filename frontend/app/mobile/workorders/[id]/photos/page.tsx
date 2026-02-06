@@ -168,7 +168,7 @@ export default function WorkOrderPhotosPage() {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
+            <div className="bg-card border-b border-border sticky top-0 z-10">
                 <div className="px-4 py-3 flex items-center justify-between">
                     <Link href={`/mobile/workorders/${workOrderId}`}>
                         <Button variant="ghost" size="sm">
@@ -293,8 +293,8 @@ export default function WorkOrderPhotosPage() {
                                     </button>
                                 </div>
                                 {photo.caption && (
-                                    <div className="p-2 bg-white dark:bg-gray-800">
-                                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                                    <div className="p-2 bg-card">
+                                        <p className="text-xs text-muted-foreground line-clamp-2">
                                             {photo.caption}
                                         </p>
                                     </div>

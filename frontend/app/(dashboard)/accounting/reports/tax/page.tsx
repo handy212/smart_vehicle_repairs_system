@@ -146,19 +146,19 @@ export default function TaxReportPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
-                                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                                <div className="flex justify-between items-center p-3 bg-muted rounded">
                                     <span className="font-medium">VAT</span>
                                     <span className="font-bold">{formatCurrency(report.tax_collected.vat)}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                                <div className="flex justify-between items-center p-3 bg-muted rounded">
                                     <span className="font-medium">NHIL</span>
                                     <span className="font-bold">{formatCurrency(report.tax_collected.nhil)}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                                <div className="flex justify-between items-center p-3 bg-muted rounded">
                                     <span className="font-medium">GETFund</span>
                                     <span className="font-bold">{formatCurrency(report.tax_collected.getfund)}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                                <div className="flex justify-between items-center p-3 bg-muted rounded">
                                     <span className="font-medium">COVID-19 HRL</span>
                                     <span className="font-bold">{formatCurrency(report.tax_collected.hrl)}</span>
                                 </div>

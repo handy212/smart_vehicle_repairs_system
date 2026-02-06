@@ -52,7 +52,7 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
     ];
 
     return (
-        <div className={cn("bg-gray-50/50 dark:bg-gray-800/10 border-r border-gray-200 dark:border-gray-800 h-full py-4", className)}>
+        <div className={cn("bg-gray-50/50 dark:bg-gray-800/10 border-r border-border h-full py-4", className)}>
             <div className="px-3 mb-2">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">Menu</h3>
             </div>
@@ -66,8 +66,8 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                 isActive
-                                    ? "bg-white dark:bg-gray-800 text-primary dark:text-primary shadow-sm border border-gray-100 dark:border-gray-700"
-                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900"
+                                    ? "bg-card text-primary dark:text-primary shadow-sm border border-gray-100 dark:border-gray-700"
+                                    : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900"
                             )}
                         >
                             <item.icon className={cn("w-4 h-4", isActive ? "text-primary dark:text-primary" : "text-gray-400")} />
@@ -77,7 +77,7 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
                                     "text-xs px-2 py-0.5 rounded-full",
                                     isActive
                                         ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
-                                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                        : "bg-gray-100 dark:bg-gray-800 text-muted-foreground"
                                 )}>
                                     {item.count}
                                 </span>

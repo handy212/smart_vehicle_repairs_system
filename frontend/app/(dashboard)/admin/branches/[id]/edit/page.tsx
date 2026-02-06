@@ -157,14 +157,14 @@ export default function BranchEditPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <div className="h-9 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className="h-9 w-48 bg-border rounded animate-pulse"></div>
         </div>
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-4">
-              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="h-10 bg-border rounded animate-pulse"></div>
+              <div className="h-10 bg-border rounded animate-pulse"></div>
+              <div className="h-10 bg-border rounded animate-pulse"></div>
             </div>
           </CardContent>
         </Card>
@@ -184,7 +184,7 @@ export default function BranchEditPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">Branch not found</p>
+              <p className="text-muted-foreground">Branch not found</p>
             </div>
           </CardContent>
         </Card>
@@ -203,8 +203,8 @@ export default function BranchEditPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Edit Branch</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{branch.name}</p>
+              <h1 className="text-3xl font-bold text-foreground">Edit Branch</h1>
+              <p className="text-sm text-muted-foreground mt-1">{branch.name}</p>
             </div>
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function BranchEditPage() {
                     placeholder="e.g., DTN"
                     maxLength={10}
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Branch code cannot be changed after creation
                   </p>
                   {errors.code && (
@@ -338,7 +338,7 @@ export default function BranchEditPage() {
                     {...register("is_active")}
                     className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
+                  <span className="text-sm text-card-foreground">Active</span>
                 </label>
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
@@ -346,7 +346,7 @@ export default function BranchEditPage() {
                     {...register("is_headquarters")}
                     className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Headquarters</span>
+                  <span className="text-sm text-card-foreground">Headquarters</span>
                 </label>
               </div>
             </CardContent>

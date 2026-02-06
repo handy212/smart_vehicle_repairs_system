@@ -387,9 +387,9 @@ export default function DiagnosisPage() {
               #{workOrderId}
             </Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Diagnosis</span>
+            <span className="text-foreground font-medium">Diagnosis</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
             Diagnosis & Repair Recommendations
           </h1>
         </div>
@@ -463,7 +463,7 @@ export default function DiagnosisPage() {
       </div>
 
       {/* Workflow Status & Info Banner */}
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -487,7 +487,7 @@ export default function DiagnosisPage() {
                   </div>
                 )}
                 {diagnosis.diagnostic_time_formatted && (
-                  <div className="flex items-center gap-1.5 border-l pl-4 border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-1.5 border-l pl-4 border-border">
                     <Clock className="w-3.5 h-3.5" />
                     <span className="font-mono">{diagnosis.diagnostic_time_formatted}</span>
                   </div>
@@ -552,38 +552,38 @@ export default function DiagnosisPage() {
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+        <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diagnostic Codes</span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{codesCount}</span>
+              <span className="text-xl font-bold text-foreground">{codesCount}</span>
               <Code className="w-4 h-4 text-primary mb-1" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+        <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tests Run</span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{testsCount}</span>
+              <span className="text-xl font-bold text-foreground">{testsCount}</span>
               <TestTube className="w-4 h-4 text-purple-500 mb-1" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+        <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Photos</span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{photosCount}</span>
+              <span className="text-xl font-bold text-foreground">{photosCount}</span>
               <Camera className="w-4 h-4 text-orange-500 mb-1" />
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+        <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recommendations</span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{recommendationsCount}</span>
+              <span className="text-xl font-bold text-foreground">{recommendationsCount}</span>
               <Wrench className="w-4 h-4 text-indigo-500 mb-1" />
             </div>
           </CardContent>
@@ -593,7 +593,7 @@ export default function DiagnosisPage() {
       {/* Tabs */}
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
+        <div className="border-b border-border mb-6">
           <TabsList className="flex w-full h-auto p-0 bg-transparent gap-6">
             <TabsTrigger
               value="complaint"
@@ -1029,8 +1029,8 @@ function RecommendationsTab({
 
   return (
     <>
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Repair Recommendations</CardTitle>
             <CardDescription className="text-xs">
@@ -1113,8 +1113,8 @@ function RecommendationsTab({
               {/* Unapproved Recommendations */}
               {unapprovedRecommendations.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
-                    <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Pending Approval ({unapprovedRecommendations.length})</h3>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <h3 className="font-semibold text-sm text-foreground">Pending Approval ({unapprovedRecommendations.length})</h3>
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={selectedRecommendations.size === unapprovedRecommendations.length && unapprovedRecommendations.length > 0}
@@ -1128,7 +1128,7 @@ function RecommendationsTab({
                     {unapprovedRecommendations.map((rec: any) => (
                       <div
                         key={rec.id}
-                        className={`group p-4 bg-white dark:bg-gray-900 border rounded-lg transition-all duration-200 hover:shadow-md ${selectedRecommendations.has(rec.id) ? "border-primary ring-1 ring-primary bg-primary/5" : "border-gray-100 dark:border-gray-800"
+                        className={`group p-4 bg-card border rounded-lg transition-all duration-200 hover:shadow-md ${selectedRecommendations.has(rec.id) ? "border-primary ring-1 ring-primary bg-primary/5" : "border-border"
                           }`}
                       >
                         <div className="flex items-start gap-3">
@@ -1148,13 +1148,13 @@ function RecommendationsTab({
                                 </Badge>
                               </div>
                               {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-mono">
+                                <span className="text-sm font-bold text-foreground font-mono">
                                   {formatCurrency(Number(rec.estimated_total_cost))}
                                 </span>
                               )}
                             </div>
 
-                            <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 leading-relaxed">{rec.description}</p>
+                            <p className="text-sm text-card-foreground line-clamp-2 leading-relaxed">{rec.description}</p>
 
                             {/* Parts and Labor Details */}
                             {(() => {
@@ -1177,7 +1177,7 @@ function RecommendationsTab({
 
                               if (hasOldData || hasLinkedData) {
                                 return (
-                                  <div className="text-xs bg-gray-50 dark:bg-gray-800/50 rounded p-2 text-gray-600 dark:text-gray-400 space-y-1">
+                                  <div className="text-xs bg-muted/50 rounded p-2 text-muted-foreground space-y-1">
                                     {/* Old parts_needed data */}
                                     {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
                                       <div className="flex items-center gap-1.5">
@@ -1215,7 +1215,7 @@ function RecommendationsTab({
                               }
                             })()}
 
-                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -1255,7 +1255,7 @@ function RecommendationsTab({
               {/* Approved but not converted */}
               {approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800 pb-2">
+                  <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
                     Approved - Ready to Convert ({approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1329,7 +1329,7 @@ function RecommendationsTab({
               {/* Converted to Tasks */}
               {convertedRecommendations.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800 pb-2">
+                  <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
                     Converted to Tasks ({convertedRecommendations.length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1340,7 +1340,7 @@ function RecommendationsTab({
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
                               {rec.priority_display || rec.priority}
                             </Badge>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-white dark:bg-gray-900">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-card">
                               ✓ Task Created
                             </Badge>
                           </div>
@@ -1353,7 +1353,7 @@ function RecommendationsTab({
                         <p className="text-sm text-gray-600 line-clamp-2">{rec.description}</p>
 
                         {rec.converted_to_task_id && (
-                          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <div className="pt-2 border-t border-border">
                             <Link href={`/workorders/${workOrderId}`} className="flex items-center text-xs font-medium text-primary hover:underline">
                               <span>View Task #{rec.converted_to_task_id}</span>
                               <ArrowRight className="w-3 h-3 ml-1" />
@@ -1367,9 +1367,9 @@ function RecommendationsTab({
               )}
             </div>
           ) : (
-            <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+            <div className="text-center py-16 bg-muted/50 rounded-lg border border-dashed border-border">
               <Wrench className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">No recommendations yet</h3>
+              <h3 className="text-sm font-medium text-foreground mb-1">No recommendations yet</h3>
               <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">Add repair recommendations to suggest parts and labor services for this diagnosis.</p>
               <Button onClick={() => setShowAddDialog(true)} variant="outline" size="sm" className="h-8">
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -1446,8 +1446,8 @@ function PhotosTab({
 
   return (
     <>
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Visual Evidence</CardTitle>
             <CardDescription className="text-xs">
@@ -1471,9 +1471,9 @@ function PhotosTab({
               Failed to load photos. Please try again.
             </div>
           ) : photos.length === 0 ? (
-            <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+            <div className="text-center py-16 bg-muted/50 rounded-lg border border-dashed border-border">
               <Camera className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">No photos yet</h3>
+              <h3 className="text-sm font-medium text-foreground mb-1">No photos yet</h3>
               <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">Upload photos to document vehicle condition, evidence, or parts.</p>
               <Button
                 variant="outline"
@@ -1491,7 +1491,7 @@ function PhotosTab({
               {photos.map((photo) => (
                 <div
                   key={photo.id}
-                  className="group relative border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-200"
+                  className="group relative border border-border rounded-lg overflow-hidden bg-card hover:shadow-lg transition-all duration-200"
                 >
                   <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-800">
                     {photo.photo_url ? (
@@ -1540,7 +1540,7 @@ function PhotosTab({
                   </div>
 
                   <div className="p-3">
-                    <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate" title={photo.caption || "Untitled"}>
+                    <p className="text-xs font-medium text-foreground truncate" title={photo.caption || "Untitled"}>
                       {photo.caption || <span className="text-gray-400 italic">No caption</span>}
                     </p>
                     <p className="text-[10px] text-gray-500 mt-1">
@@ -1672,9 +1672,9 @@ function PhotoUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 gap-0 p-0 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
+      <DialogContent className="max-w-2xl bg-card gap-0 p-0 border border-border shadow-xl sm:rounded-xl">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">Upload Diagnosis Photo</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-foreground">Upload Diagnosis Photo</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
             Add photos to document findings, evidence, or repair verification.
           </DialogDescription>
@@ -1683,7 +1683,7 @@ function PhotoUploadDialog({
           <div className="p-6 pt-4 space-y-5">
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="photo" className="text-sm font-medium text-gray-700 dark:text-gray-300">Photo <span className="text-red-500">*</span></Label>
+              <Label htmlFor="photo" className="text-sm font-medium text-card-foreground">Photo <span className="text-red-500">*</span></Label>
               <input
                 id="photo"
                 type="file"
@@ -1707,7 +1707,7 @@ function PhotoUploadDialog({
                       />
                     </div>
                     <div className="flex items-center justify-center gap-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">{selectedFile?.name}</span>
+                      <span className="text-sm text-muted-foreground font-medium">{selectedFile?.name}</span>
                       <Button
                         type="button"
                         variant="secondary"
@@ -1729,10 +1729,10 @@ function PhotoUploadDialog({
                       <Camera className="w-8 h-8 text-primary dark:text-primary" />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <p className="text-sm font-medium text-foreground">
                         Click to upload or drag and drop
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         PNG, JPG, GIF up to 10MB
                       </p>
                     </div>
@@ -1744,19 +1744,19 @@ function PhotoUploadDialog({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Caption */}
               <div className="space-y-2">
-                <Label htmlFor="caption" className="text-sm font-medium text-gray-700 dark:text-gray-300">Caption</Label>
+                <Label htmlFor="caption" className="text-sm font-medium text-card-foreground">Caption</Label>
                 <Input
                   id="caption"
                   value={formData.caption}
                   onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
                   placeholder="Describe what this photo shows..."
-                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-primary"
+                  className="h-9 bg-card border-border focus:border-primary"
                 />
               </div>
 
               {/* Photo Type */}
               <div className="space-y-2">
-                <Label htmlFor="photo_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">Photo Type <span className="text-red-500">*</span></Label>
+                <Label htmlFor="photo_type" className="text-sm font-medium text-card-foreground">Photo Type <span className="text-red-500">*</span></Label>
                 <Select
                   value={formData.photo_type}
                   onValueChange={(val) =>
@@ -1764,7 +1764,7 @@ function PhotoUploadDialog({
                   }
                   required
                 >
-                  <SelectTrigger id="photo_type" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                  <SelectTrigger id="photo_type" className="h-9 w-full bg-card border-border">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1783,7 +1783,7 @@ function PhotoUploadDialog({
 
           </div>
 
-          <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-xl">
+          <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-border bg-muted/50 rounded-b-xl">
             <Button type="button" variant="ghost" onClick={handleClose} className="hover:bg-gray-200/50">
               Cancel
             </Button>
@@ -1916,39 +1916,39 @@ function SummaryTab({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
-        <CardHeader className="pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
+        <CardHeader className="pb-3 border-b bg-muted/50">
           <CardTitle className="text-base font-semibold">Overview</CardTitle>
           <CardDescription>Key metrics for this diagnosis</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-3 gap-6">
-            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+            <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
               <div className="p-2 mb-3 rounded-full bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary">
                 <Clock className="w-5 h-5" />
               </div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Time Spent</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Time Spent</p>
+              <p className="text-lg font-bold text-foreground">
                 {totalTimeSpent || "-"}
               </p>
             </div>
-            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+            <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
               <div className="p-2 mb-3 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">
                 <DollarSign className="w-5 h-5" />
               </div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Estimate Total</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Estimate Total</p>
+              <p className="text-lg font-bold text-foreground">
                 {diagnosis.total_estimated_cost && Number(diagnosis.total_estimated_cost) > 0
                   ? `${formatCurrency(Number(diagnosis.total_estimated_cost))}`
                   : "-"}
               </p>
             </div>
-            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+            <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
               <div className="p-2 mb-3 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
                 <Wrench className="w-5 h-5" />
               </div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Items</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{diagnosis.repair_recommendations?.length || 0}</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Items</p>
+              <p className="text-lg font-bold text-foreground">{diagnosis.repair_recommendations?.length || 0}</p>
             </div>
           </div>
         </CardContent>
@@ -1961,7 +1961,7 @@ function SummaryTab({
         </CardHeader>
         <CardContent className="flex-1 pt-4 space-y-4 flex flex-col">
           <Textarea
-            className="flex-1 min-h-[200px] resize-none bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-950 transition-colors"
+            className="flex-1 min-h-[200px] resize-none bg-muted border-border focus:bg-white dark:focus:bg-gray-950 transition-colors"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Enter detailed diagnostic notes here..."

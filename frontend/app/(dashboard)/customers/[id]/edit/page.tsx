@@ -361,8 +361,8 @@ export default function EditCustomerPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Edit Customer</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <h1 className="text-3xl font-bold text-foreground">Edit Customer</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               {customer.user?.first_name} {customer.user?.last_name} • {customer.customer_number}
             </p>
           </div>
@@ -415,7 +415,7 @@ export default function EditCustomerPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="first_name" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                  <Label htmlFor="first_name" className="text-sm font-semibold text-card-foreground mb-2 block">
                     First Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -432,7 +432,7 @@ export default function EditCustomerPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="last_name" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                  <Label htmlFor="last_name" className="text-sm font-semibold text-card-foreground mb-2 block">
                     Last Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -449,7 +449,7 @@ export default function EditCustomerPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                  <Label htmlFor="email" className="text-sm font-semibold text-card-foreground mb-2 block">
                     Email <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -467,7 +467,7 @@ export default function EditCustomerPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                  <Label htmlFor="phone" className="text-sm font-semibold text-card-foreground mb-2 block">
                     Phone
                   </Label>
                   <Input
@@ -494,7 +494,7 @@ export default function EditCustomerPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-6">
                   <div>
-                    <Label htmlFor="customer_type" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                    <Label htmlFor="customer_type" className="text-sm font-semibold text-card-foreground mb-2 block">
                       Customer Type <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -515,7 +515,7 @@ export default function EditCustomerPage() {
                   {(customerType === "business" || customerType === "fleet") && (
                     <>
                       <div>
-                        <Label htmlFor="company_name" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                        <Label htmlFor="company_name" className="text-sm font-semibold text-card-foreground mb-2 block">
                           Company Name <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -532,7 +532,7 @@ export default function EditCustomerPage() {
                         )}
                       </div>
                       <div>
-                        <Label htmlFor="business_type" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                        <Label htmlFor="business_type" className="text-sm font-semibold text-card-foreground mb-2 block">
                           Business Type
                         </Label>
                         <Input
@@ -543,7 +543,7 @@ export default function EditCustomerPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="tax_id" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                        <Label htmlFor="tax_id" className="text-sm font-semibold text-card-foreground mb-2 block">
                           Tax ID
                         </Label>
                         <Input
@@ -559,7 +559,7 @@ export default function EditCustomerPage() {
 
                 <div className="space-y-6">
                   <div>
-                    <Label htmlFor="payment_terms" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                    <Label htmlFor="payment_terms" className="text-sm font-semibold text-card-foreground mb-2 block">
                       Payment Terms
                     </Label>
                     <Select
@@ -580,7 +580,7 @@ export default function EditCustomerPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="status" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                    <Label htmlFor="status" className="text-sm font-semibold text-card-foreground mb-2 block">
                       Status
                     </Label>
                     <Select
@@ -614,8 +614,8 @@ export default function EditCustomerPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Portal Access Status</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className="text-sm font-medium text-card-foreground">Portal Access Status</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {hasPortalAccess ? "Customer can log in to the portal" : "Customer cannot access the portal"}
                     </p>
                   </div>
@@ -709,9 +709,9 @@ export default function EditCustomerPage() {
                     </div>
 
                     {showPasswordReset && (
-                      <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                      <div className="pt-4 mt-4 border-t border-border space-y-4">
                         <div>
-                          <Label htmlFor="new_password_edit" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                          <Label htmlFor="new_password_edit" className="text-sm font-semibold text-card-foreground mb-2 block">
                             New Password <span className="text-red-500">*</span>
                           </Label>
                           <div className="flex gap-2">
@@ -727,7 +727,7 @@ export default function EditCustomerPage() {
                               <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
                                 title={showPassword ? "Hide password" : "Show password"}
                               >
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -765,7 +765,7 @@ export default function EditCustomerPage() {
                             id="send_password_email_customer_edit"
                             className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                           />
-                          <Label htmlFor="send_password_email_customer_edit" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <Label htmlFor="send_password_email_customer_edit" className="text-sm font-medium text-card-foreground">
                             Send new password to customer via email
                           </Label>
                         </div>

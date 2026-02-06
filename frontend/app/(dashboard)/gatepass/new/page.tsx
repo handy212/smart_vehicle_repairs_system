@@ -253,20 +253,20 @@ export default function NewGatePassPage() {
             </div>
 
             {workOrderData && (
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2 border border-gray-200 dark:border-gray-700">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Work Order Details:</p>
+              <div className="bg-muted p-4 rounded-lg space-y-2 border border-border">
+                <p className="text-sm font-semibold text-foreground mb-2">Work Order Details:</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Work Order Number</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{workOrderData.work_order_number || "N/A"}</p>
+                    <p className="text-xs text-muted-foreground">Work Order Number</p>
+                    <p className="text-sm font-medium text-foreground">{workOrderData.work_order_number || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Customer</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{getCustomerName(workOrderData)}</p>
+                    <p className="text-xs text-muted-foreground">Customer</p>
+                    <p className="text-sm font-medium text-foreground">{getCustomerName(workOrderData)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Vehicle</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{getVehicleInfo(workOrderData)}</p>
+                    <p className="text-xs text-muted-foreground">Vehicle</p>
+                    <p className="text-sm font-medium text-foreground">{getVehicleInfo(workOrderData)}</p>
                   </div>
                 </div>
               </div>

@@ -288,34 +288,34 @@ export default function VehiclesPage() {
   // Stats Grid Component
   const StatsGrid = () => (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-      <Card className="shadow-sm border bg-white dark:bg-gray-800">
+      <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats?.total_vehicles || 0}</span>
+          <span className="text-lg font-bold text-foreground">{stats?.total_vehicles || 0}</span>
         </CardContent>
       </Card>
-      <Card className="shadow-sm border bg-white dark:bg-gray-800">
+      <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
           <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_vehicles || 0}</span>
         </CardContent>
       </Card>
-      <Card className="shadow-sm border bg-white dark:bg-gray-800">
+      <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">In Service</span>
           <span className="text-lg font-bold text-primary dark:text-primary">{stats?.in_service_vehicles || 0}</span>
         </CardContent>
       </Card>
-      <Card className="shadow-sm border bg-white dark:bg-gray-800">
+      <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Service</span>
           <span className="text-lg font-bold text-red-600 dark:text-red-400">{stats?.due_service_vehicles || 0}</span>
         </CardContent>
       </Card>
-      <Card className="shadow-sm border bg-white dark:bg-gray-800">
+      <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sold</span>
-          <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{stats?.sold_vehicles || 0}</span>
+          <span className="text-lg font-bold text-muted-foreground">{stats?.sold_vehicles || 0}</span>
         </CardContent>
       </Card>
     </div>
@@ -335,8 +335,8 @@ export default function VehiclesPage() {
       <DynamicPageTitle title="Vehicles" />
       <div className="space-y-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Vehicles</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Vehicles</h1>
+          <p className="text-sm text-muted-foreground">
             Manage your fleet and customer vehicles.
           </p>
         </div>
@@ -345,7 +345,7 @@ export default function VehiclesPage() {
       </div>
 
       {/* Unified Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/50 p-1 rounded-lg">
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-64">
@@ -358,7 +358,7 @@ export default function VehiclesPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+              className="pl-9 h-9 text-sm bg-muted border-none focus:ring-1 transition-all"
             />
           </div>
 
@@ -409,7 +409,7 @@ export default function VehiclesPage() {
                 : String(value);
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"
@@ -487,7 +487,7 @@ export default function VehiclesPage() {
           ) : data?.results && data.results.length > 0 ? (
             <div className="rounded-md">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-900/50">
+                <thead className="bg-gray-50/50 hover:bg-muted/50">
                   <tr>
                     <th className="px-4 py-3 text-left w-12 h-10">
                       <input
@@ -500,17 +500,17 @@ export default function VehiclesPage() {
                         className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                       />
                     </th>
-                    <th className="px-4 h-10 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 h-10 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       Customer
                     </th>
-                    <th className="px-4 h-10 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 h-10 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       License Plate
                     </th>
                     <SortableHeader
                       field="make"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Make/Model
                     </SortableHeader>
@@ -518,7 +518,7 @@ export default function VehiclesPage() {
                       field="vin"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       VIN
                     </SortableHeader>
@@ -526,7 +526,7 @@ export default function VehiclesPage() {
                       field="year"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Year
                     </SortableHeader>
@@ -534,7 +534,7 @@ export default function VehiclesPage() {
                       field="status"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Status
                     </SortableHeader>
@@ -542,16 +542,16 @@ export default function VehiclesPage() {
                       field="created_at"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Created
                     </SortableHeader>
-                    <th className="px-4 h-10 text-right text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 h-10 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
                   {data.results.map((vehicle) => (
                     <tr key={vehicle.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors duration-150 cursor-pointer" onDoubleClick={() => router.push(`/vehicles/${vehicle.id}`)}>
                       <td className="px-4 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -562,24 +562,24 @@ export default function VehiclesPage() {
                           className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                         />
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
                         {(vehicle as any).owner_name || (typeof vehicle.owner === "object" ? `${(vehicle.owner as any).user?.first_name || ""} ${(vehicle.owner as any).user?.last_name || ""}`.trim() : "-") || "-"}
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
                         {vehicle.license_plate || "-"}
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-foreground">
                         <div className="flex items-center space-x-2">
-                          <Car className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                          <Car className="w-4 h-4 text-muted-foreground" />
                           <span className="font-medium">
                             {vehicle.make || ""} {vehicle.model || ""}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap font-mono text-xs text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-2 whitespace-nowrap font-mono text-xs text-muted-foreground">
                         {vehicle.vin || "-"}
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-foreground">
                         {vehicle.year || "-"}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
@@ -587,7 +587,7 @@ export default function VehiclesPage() {
                           {vehicle.status?.replace("_", " ") || vehicle.status || "-"}
                         </Badge>
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
                         {vehicle.created_at ? new Date(vehicle.created_at).toLocaleDateString() : "-"}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
@@ -654,8 +654,8 @@ export default function VehiclesPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Car className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No vehicles found.</p>
+              <Car className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No vehicles found.</p>
               <Link href="/vehicles/new">
                 <Button className="mt-4" variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
@@ -667,8 +667,8 @@ export default function VehiclesPage() {
 
           {/* Pagination */}
           {data && data.count > 0 && (
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <div className="text-sm text-gray-700 dark:text-gray-300">
+            <div className="p-4 border-t border-border flex items-center justify-between">
+              <div className="text-sm text-card-foreground">
                 Showing page {page} of {Math.ceil(data.count / 10)}
               </div>
               <div className="flex space-x-2">

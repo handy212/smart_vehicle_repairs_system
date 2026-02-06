@@ -156,7 +156,7 @@ export default function BackupsPage() {
     <div className="space-y-4 dark:bg-gray-900 min-h-screen">
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">System Backups</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">System Backups</h1>
           <p className="text-xs text-gray-500 mt-0.5">Manage database and file backups</p>
         </div>
         <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export default function BackupsPage() {
       </div>
 
       {/* Filters */}
-      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="mx-4 border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -185,7 +185,7 @@ export default function BackupsPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900">
+                <SelectTrigger className="h-8 w-[140px] text-xs bg-card">
                   <SelectValue placeholder="Filter Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,7 +205,7 @@ export default function BackupsPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900">
+                <SelectTrigger className="h-8 w-[140px] text-xs bg-card">
                   <SelectValue placeholder="Filter Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -227,7 +227,7 @@ export default function BackupsPage() {
         </div>
       ) : (
         <div className="px-4 pb-8">
-          <Card className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+          <Card className="border border-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-gray-50/80">
@@ -259,7 +259,7 @@ export default function BackupsPage() {
                             <div className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-md">
                               {getBackupTypeIcon(backup.backup_type)}
                             </div>
-                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">{backup.backup_type}</span>
+                            <span className="text-xs font-medium text-card-foreground capitalize">{backup.backup_type}</span>
                           </div>
                         </TableCell>
                         <TableCell className="px-4 py-2.5">
@@ -267,12 +267,12 @@ export default function BackupsPage() {
                             {backup.status.replace("_", " ")}
                           </Badge>
                         </TableCell>
-                        <TableCell className="px-4 py-2.5 text-xs font-mono text-gray-600 dark:text-gray-400">
+                        <TableCell className="px-4 py-2.5 text-xs font-mono text-muted-foreground">
                           {backup.file_size_display || backup.file_size
                             ? backup.file_size_display || `{formatCurrency((backup.file_size! / 1024 / 1024))} MB`
                             : "-"}
                         </TableCell>
-                        <TableCell className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400">
+                        <TableCell className="px-4 py-2.5 text-xs text-muted-foreground">
                           {backup.created_by_name || "System"}
                         </TableCell>
                         <TableCell className="px-4 py-2.5 text-xs text-gray-500">
@@ -374,7 +374,7 @@ function CreateBackupDialog({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md p-0 gap-0">
-        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <DialogHeader className="px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
               <Database className="w-5 h-5 text-primary dark:text-primary" />
@@ -426,7 +426,7 @@ function CreateBackupDialog({
             />
           </div>
         </form>
-        <DialogFooter className="px-6 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50">
+        <DialogFooter className="px-6 py-3 border-t border-border bg-gray-50/50">
           <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isCreating} className="h-8">
             Cancel
           </Button>

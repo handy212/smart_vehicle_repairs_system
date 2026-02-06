@@ -86,9 +86,9 @@ export default function RefundsPage() {
                         <span>/</span>
                         <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium">Refunds</span>
+                        <span className="text-foreground font-medium">Refunds</span>
                     </div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Refunds</h1>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">Refunds</h1>
                 </div>
                 <Link href="/billing/refunds/new">
                     <Button size="sm" className="h-9">
@@ -109,7 +109,7 @@ export default function RefundsPage() {
                                 placeholder="Search by refund # or customer..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
+                                className="pl-9 h-8 text-sm bg-card w-64 focus:w-80 transition-all duration-300"
                             />
                         </div>
 
@@ -146,7 +146,7 @@ export default function RefundsPage() {
             {/* Refunds Table */}
             <Card className="border-t shadow-sm">
                 <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
-                    <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <CardTitle className="text-sm font-semibold text-card-foreground">
                         All Refunds
                     </CardTitle>
                 </CardHeader>

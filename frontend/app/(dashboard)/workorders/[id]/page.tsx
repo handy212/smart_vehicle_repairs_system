@@ -144,8 +144,8 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-          Status: <span className="font-semibold capitalize text-gray-900 dark:text-gray-100">{status.replace('_', ' ')}</span>
+        <span className="text-xs font-medium text-muted-foreground">
+          Status: <span className="font-semibold capitalize text-foreground">{status.replace('_', ' ')}</span>
         </span>
         <Badge variant={getStatusVariant(status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
           {status?.replace("_", " ") || status}
@@ -165,7 +165,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                       ? 'bg-green-500 text-white'
                       : stepStatus === 'current'
                         ? 'bg-primary text-white ring-2 ring-orange-200 dark:ring-orange-900'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                        : 'bg-border text-muted-foreground'
                       }`}
                   >
                     {stepStatus === 'completed' ? '✓' : step.icon}
@@ -174,8 +174,8 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                     className={`text-xs mt-1 text-center whitespace-nowrap max-w-[70px] truncate ${stepStatus === 'current'
                       ? 'font-semibold text-primary dark:text-primary'
                       : stepStatus === 'completed'
-                        ? 'text-gray-600 dark:text-gray-400'
-                        : 'text-gray-400 dark:text-gray-500'
+                        ? 'text-muted-foreground'
+                        : 'text-muted-foreground'
                       }`}
                   >
                     {step.label}
@@ -183,7 +183,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                 </div>
                 {!isLast && (
                   <div
-                    className={`h-0.5 w-6 mx-1 ${stepStatus === 'completed' ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+                    className={`h-0.5 w-6 mx-1 ${stepStatus === 'completed' ? 'bg-green-500' : 'bg-border'
                       }`}
                   />
                 )}
@@ -352,7 +352,7 @@ export default function WorkOrderDetailPage() {
               Back
             </Button>
             {/* Premium Header - Removed manual breadcrumbs and WO number for cleaner look */}
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+            <h1 className="text-xl font-bold text-foreground tracking-tight">
               {workOrder.customer_name || "Customer"} - {workOrder.vehicle_info || "Vehicle"}
             </h1>
           </div>
@@ -394,7 +394,7 @@ export default function WorkOrderDetailPage() {
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-white/90 backdrop-blur-xl dark:bg-gray-800/90 rounded-xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-20 overflow-hidden ring-1 ring-black/5">
                     <div
-                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={() => {
                         setShowPrintMenu(false);
                         downloadPDF({
@@ -410,7 +410,7 @@ export default function WorkOrderDetailPage() {
                     <Link
                       href={`/workorders/${workOrderId}/jobcard`}
                       target="_blank"
-                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setShowPrintMenu(false)}
                     >
                       <FileText className="w-4 h-4 inline mr-2" />
@@ -418,9 +418,9 @@ export default function WorkOrderDetailPage() {
                     </Link>
                     {canPrintRecommendations && (
                       <>
-                        <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                        <div className="border-t border-border my-1" />
                         <div
-                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                           onClick={() => {
                             setShowPrintMenu(false);
                             handlePrintRecommendations("pdf");
@@ -430,7 +430,7 @@ export default function WorkOrderDetailPage() {
                           Print Recommendations (PDF)
                         </div>
                         <div
-                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                           onClick={() => {
                             setShowPrintMenu(false);
                             handlePrintRecommendations("html");
@@ -614,7 +614,7 @@ function UnapprovedRecommendationsDialog({
           ) : unapprovedRecommendations.length === 0 ? (
             <div className="text-center py-6">
               <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
-              <p className="font-medium text-gray-900 dark:text-gray-100">
+              <p className="font-medium text-foreground">
                 All Approved
               </p>
             </div>
@@ -624,7 +624,7 @@ function UnapprovedRecommendationsDialog({
                 <div key={rec.id} className="border border-orange-200 dark:border-orange-800 rounded-md bg-orange-50/50 dark:bg-orange-900/10 p-3">
                   <div className="flex items-start justify-between mb-1.5">
                     <div className="flex flex-col">
-                      <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                      <span className="font-medium text-sm text-foreground">
                         {rec.description}
                       </span>
                       <div className="flex items-center gap-2 mt-1">
@@ -640,7 +640,7 @@ function UnapprovedRecommendationsDialog({
                       </div>
                     </div>
                     {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-mono">
+                      <span className="text-sm font-bold text-foreground font-mono">
                         {formatCurrency(Number(rec.estimated_total_cost))}
                       </span>
                     )}

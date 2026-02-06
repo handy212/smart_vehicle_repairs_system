@@ -192,7 +192,7 @@ export default function CustomerDetailPage() {
           }
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-0 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden bg-white dark:bg-gray-900 shadow-sm min-h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-0 border border-border rounded-lg overflow-hidden bg-card shadow-sm min-h-[600px]">
           <CustomerSidebar
             activeView={activeView}
             onViewChange={setActiveView}

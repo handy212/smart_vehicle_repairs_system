@@ -120,9 +120,9 @@ export default function PaymentsPage() {
                         <span>/</span>
                         <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium">Payments</span>
+                        <span className="text-foreground font-medium">Payments</span>
                     </div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Payments</h1>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">Payments</h1>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleExport}>
                     <Download className="w-4 h-4 mr-2" />
@@ -140,7 +140,7 @@ export default function PaymentsPage() {
                                 placeholder="Search payments, customers, invoices..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 w-full focus:w-full transition-all duration-300"
+                                className="pl-9 h-8 text-sm bg-card w-full focus:w-full transition-all duration-300"
                             />
                         </div>
                         <div className="flex gap-3">
@@ -176,7 +176,7 @@ export default function PaymentsPage() {
             <Card className="border-t shadow-sm">
                 <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <CardTitle className="text-sm font-semibold text-card-foreground">
                             All Payments
                         </CardTitle>
                         <span className="text-xs text-muted-foreground">{filteredPayments.length} records</span>

@@ -108,7 +108,7 @@ export default function BudgetsPage() {
             {/* Compact Header */}
             <div className="flex justify-between items-center pt-2">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Budgets</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Budgets</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Manage fiscal year budgets and track variance
                     </p>
@@ -215,7 +215,7 @@ export default function BudgetsPage() {
 
             {/* Budgets Table - Compact */}
             <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                <CardHeader className="pb-3 border-b border-border">
                     <CardTitle className="text-base">All Budgets ({budgets?.length || 0})</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -226,7 +226,7 @@ export default function BudgetsPage() {
                     ) : budgets?.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
-                                <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                                <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Name</TableHead>
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Fiscal Year</TableHead>
@@ -238,17 +238,17 @@ export default function BudgetsPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {budgets.map((budget: any) => (
-                                        <TableRow key={budget.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                                            <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        <TableRow key={budget.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                            <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {budget.name}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {budget.fiscal_year}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {format(new Date(budget.start_date), 'MMM d')} - {format(new Date(budget.end_date), 'MMM d, yyyy')}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {budget.branch_name || "Company-wide"}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">

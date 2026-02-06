@@ -107,8 +107,8 @@ export function TestsTab({
 
     return (
         <>
-            <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+            <Card className="border-none shadow-sm bg-muted/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
                     <div className="space-y-1">
                         <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Diagnostic Tests</CardTitle>
                         <CardDescription className="text-xs">Tests performed on the vehicle</CardDescription>
@@ -141,7 +141,7 @@ export function TestsTab({
                             {tests.map((test: any) => (
                                 <div
                                     key={test.id}
-                                    className="group p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg hover:shadow-md transition-all duration-200"
+                                    className="group p-4 bg-card border border-border rounded-lg hover:shadow-md transition-all duration-200"
                                 >
                                     <div className="flex items-start justify-between mb-3">
                                         <div className="flex-1 min-w-0">
@@ -155,7 +155,7 @@ export function TestsTab({
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100">{test.test_name}</p>
+                                            <p className="font-semibold text-sm truncate text-foreground">{test.test_name}</p>
                                         </div>
                                         <div className="flex items-center gap-1 ml-2 shrink-0">
                                             <Badge
@@ -188,7 +188,7 @@ export function TestsTab({
                                         )}
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -368,9 +368,9 @@ function TestDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-card border border-border shadow-xl sm:rounded-xl">
                 <DialogHeader className="p-6 pb-2">
-                    <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                    <DialogTitle className="text-xl font-bold text-foreground">
                         {test ? "Edit Diagnostic Test" : "Add Diagnostic Test"}
                     </DialogTitle>
                     <DialogDescription>
@@ -397,7 +397,7 @@ function TestDialog({
                                                 setFormData({ ...formData, test_name: e.target.value });
                                             }
                                         }}
-                                        className="pl-9 border-orange-200 focus-visible:ring-primary bg-white dark:bg-gray-900"
+                                        className="pl-9 border-orange-200 focus-visible:ring-primary bg-card"
                                     />
                                     {isSearchingTemplates && (
                                         <div className="absolute right-3 top-2.5">
@@ -406,8 +406,8 @@ function TestDialog({
                                     )}
                                 </div>
                                 {templateResults.length > 0 && (
-                                    <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm overflow-hidden z-10 relative">
-                                        <div className="p-2 text-xs font-semibold text-gray-500 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                                    <div className="mt-2 border border-border rounded-lg bg-card shadow-sm overflow-hidden z-10 relative">
+                                        <div className="p-2 text-xs font-semibold text-gray-500 bg-muted/50 border-b border-gray-100 dark:border-gray-700">
                                             Recommended Templates
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">
@@ -418,7 +418,7 @@ function TestDialog({
                                                     onClick={() => handleSelectTemplate(template)}
                                                     className="w-full text-left p-3 hover:bg-primary/10 dark:hover:bg-orange-900/20 border-b border-gray-50 dark:border-gray-800 last:border-b-0 transition-colors group"
                                                 >
-                                                    <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover:text-orange-700 dark:group-hover:text-orange-300">
+                                                    <div className="font-semibold text-sm text-foreground group-hover:text-orange-700 dark:group-hover:text-orange-300">
                                                         {template.name}
                                                     </div>
                                                     <div className="text-xs text-gray-500 mt-1 line-clamp-1">
@@ -540,7 +540,7 @@ function TestDialog({
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 mt-auto">
+                    <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-muted/50 mt-auto">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>

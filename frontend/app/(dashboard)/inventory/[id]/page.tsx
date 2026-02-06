@@ -79,9 +79,9 @@ export default function PartDetailPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{part.name}</h1>
+            <h1 className="text-2xl font-bold text-foreground">{part.name}</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+              <p className="text-sm font-mono text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                 {part.part_number}
               </p>
               <Badge variant={stockStatus.variant} className="h-6 gap-1">
@@ -111,7 +111,7 @@ export default function PartDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Overview Card */}
           <Card>
-            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+            <CardHeader className="pb-3 border-b border-border">
               <CardTitle className="text-base font-medium">Overview</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
@@ -120,14 +120,14 @@ export default function PartDetailPage() {
                 <div className="flex-shrink-0">
                   {part.image ? (
                     <div
-                      className="w-full md:w-48 aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 relative cursor-pointer group"
+                      className="w-full md:w-48 aspect-square rounded-lg overflow-hidden border border-border relative cursor-pointer group"
                       onClick={() => setShowImageModal(true)}
                     >
                       <Image
                         src={part.image}
                         alt={part.name}
                         fill
-                        className="object-contain bg-gray-50 dark:bg-gray-900 transition-transform group-hover:scale-105"
+                        className="object-contain bg-muted transition-transform group-hover:scale-105"
                         unoptimized={part.image?.startsWith("data:")}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
@@ -135,7 +135,7 @@ export default function PartDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full md:w-48 aspect-square rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700">
+                    <div className="w-full md:w-48 aspect-square rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-border">
                       <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
                     </div>
                   )}
@@ -162,9 +162,9 @@ export default function PartDetailPage() {
                     </div>
                   </div>
                   {part.description && (
-                    <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div className="pt-2 border-t border-border">
                       <p className="text-xs text-muted-foreground mb-1">Description</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">{part.description}</p>
+                      <p className="text-sm text-card-foreground">{part.description}</p>
                     </div>
                   )}
                 </div>
@@ -214,7 +214,7 @@ export default function PartDetailPage() {
               </div>
 
               <Card>
-                <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                <CardHeader className="pb-3 border-b border-border">
                   <CardTitle className="text-base font-medium">Inventory Rules</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 grid grid-cols-3 gap-4">
@@ -257,7 +257,7 @@ export default function PartDetailPage() {
                     </div>
                   </div>
 
-                  <h3 className="text-sm font-medium mb-4 pt-4 border-t border-gray-100 dark:border-gray-800">Configuration</h3>
+                  <h3 className="text-sm font-medium mb-4 pt-4 border-t border-border">Configuration</h3>
                   <div className="flex flex-wrap gap-2">
                     {part.is_taxable && <Badge variant="outline">Taxable</Badge>}
                     {part.is_core && <Badge variant="outline">Core Part</Badge>}
@@ -291,10 +291,10 @@ export default function PartDetailPage() {
             <TabsContent value="history" className="mt-4">
               <Card className="border-none shadow-none bg-transparent">
                 <CardContent className="p-0">
-                  <div className="rounded-lg border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                  <div className="rounded-lg border border-border overflow-hidden bg-card shadow-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs text-left">
-                        <thead className="bg-gray-50/50 dark:bg-gray-800/50 text-gray-500 font-semibold uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+                        <thead className="bg-muted/50 text-gray-500 font-semibold uppercase tracking-wider border-b border-border">
                           <tr>
                             <th className="px-4 py-2.5 font-bold">Event</th>
                             <th className="px-4 py-2.5">Reference</th>
@@ -346,9 +346,9 @@ export default function PartDetailPage() {
                                   </td>
                                   <td className="px-4 py-3">
                                     {txn.reference_number ? (
-                                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                      <div className="flex items-center gap-1.5 text-muted-foreground">
                                         <Hash className="w-3 h-3 opacity-60" />
-                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-100 dark:border-gray-700">
+                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-muted px-1.5 py-0.5 rounded border border-gray-100 dark:border-gray-700">
                                           {txn.reference_number}
                                         </span>
                                       </div>
@@ -363,7 +363,7 @@ export default function PartDetailPage() {
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 text-right">
-                                    <span className="font-medium text-gray-900 dark:text-gray-100">{txn.balance_after}</span>
+                                    <span className="font-medium text-foreground">{txn.balance_after}</span>
                                   </td>
                                   <td className="px-4 py-3">
                                     <div className="flex items-center gap-1.5 text-gray-500">
@@ -408,7 +408,7 @@ export default function PartDetailPage() {
 
           {/* Supplier Info */}
           <Card>
-            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+            <CardHeader className="pb-3 border-b border-border">
               <CardTitle className="text-base font-medium">Supplier Info</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3">

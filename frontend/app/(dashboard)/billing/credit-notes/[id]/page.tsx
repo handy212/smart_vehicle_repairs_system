@@ -120,7 +120,7 @@ export default function CreditNoteDetailPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+                        <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
                             Credit Note #{creditNote.credit_note_number}
                             <Badge variant={getStatusVariant(creditNote.status) as any} className="text-base">
                                 {creditNote.status.toUpperCase()}

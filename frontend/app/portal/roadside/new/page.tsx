@@ -231,8 +231,8 @@ export default function NewRoadsideRequestPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Request Roadside Assistance</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-3xl font-bold text-foreground">Request Roadside Assistance</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Submit a request for roadside assistance. We'll dispatch help as soon as possible.
           </p>
         </div>

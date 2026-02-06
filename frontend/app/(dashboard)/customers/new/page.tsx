@@ -107,8 +107,8 @@ export default function NewCustomerPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Create New Customer</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <h1 className="text-2xl font-semibold text-foreground">Create New Customer</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Add a new customer to the system
             </p>
           </div>

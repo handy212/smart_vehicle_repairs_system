@@ -35,11 +35,11 @@ export function PortalCard({
                     </div>
                 )}
                 <div className="min-w-0 space-y-1">
-                    <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                    <div className="font-semibold text-sm text-foreground truncate">
                         {title}
                     </div>
                     {subtitle && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-muted-foreground">
                             {subtitle}
                         </div>
                     )}
@@ -60,7 +60,7 @@ export function PortalCard({
     );
 
     const wrapperClasses = cn(
-        "relative block p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm",
+        "relative block p-4 bg-card border border-border rounded-xl transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm",
         className
     );
 
@@ -84,11 +84,11 @@ export function PortalCard({
                             </div>
                         )}
                         <div className="min-w-0 space-y-1">
-                            <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                            <div className="font-semibold text-sm text-foreground truncate">
                                 {title}
                             </div>
                             {subtitle && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs text-muted-foreground">
                                     {subtitle}
                                 </div>
                             )}

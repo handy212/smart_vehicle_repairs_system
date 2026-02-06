@@ -143,8 +143,8 @@ export default function BookAppointmentPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Schedule Service</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-3xl font-bold text-foreground">Schedule Service</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Book an appointment for your vehicle
         </p>
       </div>
@@ -156,7 +156,7 @@ export default function BookAppointmentPage() {
           <CardContent className="py-8 text-center flex flex-col items-center">
             <Car className="w-12 h-12 text-yellow-500 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Vehicles Found</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
+            <p className="text-muted-foreground mb-6 max-w-md">
               You need to have a registered vehicle to book a service. Please contact us to add your vehicle.
             </p>
           </CardContent>

@@ -86,7 +86,7 @@ function TechnicianProfileContent() {
                 <span>/</span>
                 <Link href="/technicians" className="hover:text-foreground transition-colors">Technicians</Link>
                 <span>/</span>
-                <span className="text-gray-900 dark:text-gray-100 font-medium">
+                <span className="text-foreground font-medium">
                     {technician.user_details?.full_name || `${technician.user_details?.first_name} ${technician.user_details?.last_name}`}
                 </span>
             </div>
@@ -101,7 +101,7 @@ function TechnicianProfileContent() {
                         </AvatarFallback>
                     </Avatar>
                     <div>
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                        <h1 className="text-xl font-bold text-foreground tracking-tight">
                             {technician.user_details?.full_name || `${technician.user_details?.first_name} ${technician.user_details?.last_name}`}
                         </h1>
                         <p className="text-sm text-muted-foreground">ID: #{technician.id}</p>

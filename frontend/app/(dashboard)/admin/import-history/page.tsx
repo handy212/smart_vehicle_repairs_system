@@ -98,14 +98,14 @@ export default function ImportHistoryPage() {
       <div className="space-y-4 dark:bg-gray-900 min-h-screen">
         <div className="flex items-center justify-between px-4 pt-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Import History</h1>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">Import History</h1>
             <p className="text-xs text-gray-500 mt-0.5">Track bulk data import operations</p>
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
               <RefreshCw className="w-4 h-4 text-gray-500" />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={!data?.results || data.results.length === 0} className="h-8 text-xs bg-white dark:bg-gray-800">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={!data?.results || data.results.length === 0} className="h-8 text-xs bg-card">
               <Download className="w-3.5 h-3.5 mr-1.5" />
               Export CSV
             </Button>
@@ -113,7 +113,7 @@ export default function ImportHistoryPage() {
         </div>
 
         {/* Filters */}
-        <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <Card className="mx-4 border-none shadow-sm bg-muted/50">
           <CardContent className="p-3">
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
@@ -125,7 +125,7 @@ export default function ImportHistoryPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900">
+                  <SelectTrigger className="h-8 w-[140px] text-xs bg-card">
                     <SelectValue placeholder="All Models" />
                   </SelectTrigger>
                   <SelectContent>
@@ -146,7 +146,7 @@ export default function ImportHistoryPage() {
                     setStartDate(e.target.value);
                     setPage(1);
                   }}
-                  className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
+                  className="h-8 w-[140px] text-xs bg-card"
                 />
               </div>
 
@@ -159,7 +159,7 @@ export default function ImportHistoryPage() {
                     setEndDate(e.target.value);
                     setPage(1);
                   }}
-                  className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
+                  className="h-8 w-[140px] text-xs bg-card"
                 />
               </div>
 
@@ -186,7 +186,7 @@ export default function ImportHistoryPage() {
 
         {/* Import History Table */}
         <div className="px-4 pb-8">
-          <Card className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+          <Card className="border border-border shadow-sm overflow-hidden">
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="p-8">
@@ -197,7 +197,7 @@ export default function ImportHistoryPage() {
                   <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3">
                     <FileText className="w-6 h-6 text-gray-400" />
                   </div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">No import history found</p>
+                  <p className="text-sm font-medium text-foreground">No import history found</p>
                   <p className="text-xs text-gray-500 mt-1">Try adjusting your filters</p>
                 </div>
               ) : (
@@ -229,7 +229,7 @@ export default function ImportHistoryPage() {
                               <TableCell className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
                                 {format(new Date(log.timestamp), "MMM d, yyyy h:mm a")}
                               </TableCell>
-                              <TableCell className="px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 font-medium">
+                              <TableCell className="px-4 py-2.5 text-xs text-card-foreground font-medium">
                                 {log.user_name || log.user_email || "Unknown"}
                               </TableCell>
                               <TableCell className="px-4 py-2.5">
@@ -240,7 +240,7 @@ export default function ImportHistoryPage() {
                               <TableCell className="px-4 py-2.5">
                                 <div className="flex items-center gap-1.5 max-w-[200px]" title={filename}>
                                   <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                  <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{filename}</span>
+                                  <span className="text-xs text-muted-foreground truncate">{filename}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="px-4 py-2.5">
@@ -270,7 +270,7 @@ export default function ImportHistoryPage() {
 
                   {/* Pagination */}
                   {data.count > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50">
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-gray-50/50">
                       <p className="text-xs text-gray-500">
                         Showing <span className="font-medium text-gray-900 dark:text-gray-200">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-gray-900 dark:text-gray-200">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-gray-900 dark:text-gray-200">{data.count}</span> results
                       </p>

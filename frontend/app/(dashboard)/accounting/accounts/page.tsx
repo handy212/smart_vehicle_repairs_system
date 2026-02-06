@@ -169,7 +169,7 @@ export default function ChartOfAccountsPage() {
             {/* Compact Header */}
             <div className="flex justify-between items-center pt-2">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Chart of Accounts</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Chart of Accounts</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Manage GL accounts and categories
                     </p>
@@ -285,7 +285,7 @@ export default function ChartOfAccountsPage() {
 
             {/* Main Card - Compact */}
             <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                <CardHeader className="pb-3 border-b border-border">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-base">All Accounts ({filteredAccounts.length})</CardTitle>
                         <div className="relative w-64">
@@ -294,7 +294,7 @@ export default function ChartOfAccountsPage() {
                                 placeholder="Search accounts..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none"
+                                className="pl-9 h-9 text-sm bg-muted border-none"
                             />
                         </div>
                     </div>
@@ -307,9 +307,9 @@ export default function ChartOfAccountsPage() {
                     ) : (
                         <div>
                             {Object.entries(accountsByType).map(([type, typeAccounts]: [string, any]) => (
-                                <div key={type} className="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-                                    <div className="bg-gray-50/50 dark:bg-gray-800/50 px-4 py-2 border-b border-gray-100 dark:border-gray-800">
-                                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                                <div key={type} className="border-b border-border last:border-b-0">
+                                    <div className="bg-muted/50 px-4 py-2 border-b border-border">
+                                        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                             {type} ({typeAccounts.length})
                                         </h3>
                                     </div>
@@ -326,13 +326,13 @@ export default function ChartOfAccountsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {typeAccounts.map((account: any) => (
-                                                <TableRow key={account.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                                                    <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                <TableRow key={account.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                                    <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                         {account.code}
                                                     </TableCell>
-                                                    <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">{account.name}</TableCell>
-                                                    <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 capitalize">{account.balance_type}</TableCell>
-                                                    <TableCell className="px-4 py-2 text-xs text-gray-900 dark:text-gray-100 text-right font-mono font-medium">
+                                                    <TableCell className="px-4 py-2 text-sm font-medium text-foreground">{account.name}</TableCell>
+                                                    <TableCell className="px-4 py-2 text-xs text-muted-foreground capitalize">{account.balance_type}</TableCell>
+                                                    <TableCell className="px-4 py-2 text-xs text-foreground text-right font-mono font-medium">
                                                         {account.balance !== undefined ? formatCurrency(account.balance) : "-"}
                                                     </TableCell>
                                                     <TableCell className="px-4 py-2">

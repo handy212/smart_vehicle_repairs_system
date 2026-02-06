@@ -333,8 +333,8 @@ export default function EditWorkOrderPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Edit Work Order</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Update work order information</p>
+          <h1 className="text-3xl font-bold text-foreground">Edit Work Order</h1>
+          <p className="text-sm text-muted-foreground mt-1">Update work order information</p>
         </div>
       </div>
 
@@ -375,7 +375,7 @@ export default function EditWorkOrderPage() {
                     <div>
                       <label
                         htmlFor="customer"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        className="block text-sm font-medium text-card-foreground mb-1"
                       >
                         Customer *
                       </label>
@@ -447,27 +447,27 @@ export default function EditWorkOrderPage() {
 
                     {/* Customer Info Display */}
                     {selectedCustomerData && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                           Customer Information
                         </div>
                         <div className="space-y-2 text-sm">
                           {selectedCustomerData.phone && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
-                              <span className="text-gray-900 dark:text-gray-100">{selectedCustomerData.phone}</span>
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Phone:</span>
+                              <span className="text-foreground">{selectedCustomerData.phone}</span>
                             </div>
                           )}
                           {selectedCustomerData.email && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
-                              <span className="text-gray-900 dark:text-gray-100 break-words">{selectedCustomerData.email}</span>
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Email:</span>
+                              <span className="text-foreground break-words">{selectedCustomerData.email}</span>
                             </div>
                           )}
                           {selectedCustomerData.customer_type && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
-                              <span className="text-gray-900 dark:text-gray-100 capitalize">
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Type:</span>
+                              <span className="text-foreground capitalize">
                                 {selectedCustomerData.customer_type.replace('_', ' ')}
                               </span>
                             </div>
@@ -482,7 +482,7 @@ export default function EditWorkOrderPage() {
                     <div>
                       <label
                         htmlFor="vehicle"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        className="block text-sm font-medium text-card-foreground mb-1"
                       >
                         Vehicle *
                       </label>
@@ -541,27 +541,27 @@ export default function EditWorkOrderPage() {
 
                     {/* Vehicle Info Display */}
                     {selectedVehicle && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                           Vehicle Info
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-start">
-                            <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
-                            <span className="text-gray-900 dark:text-gray-100">
+                            <span className="font-medium text-card-foreground w-24 flex-shrink-0">Make/Model:</span>
+                            <span className="text-foreground">
                               {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
                             </span>
                           </div>
                           {selectedVehicle.license_plate && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
-                              <span className="text-gray-900 dark:text-gray-100">{selectedVehicle.license_plate}</span>
+                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">License:</span>
+                              <span className="text-foreground">{selectedVehicle.license_plate}</span>
                             </div>
                           )}
                           {selectedVehicle.vin && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
-                              <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{selectedVehicle.vin}</span>
+                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">VIN:</span>
+                              <span className="text-foreground font-mono text-xs break-all">{selectedVehicle.vin}</span>
                             </div>
                           )}
                         </div>
@@ -584,7 +584,7 @@ export default function EditWorkOrderPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {/* Maintenance Type */}
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Maintenance Type
                     </label>
                     <div className="flex items-center space-x-4 mt-2">
@@ -595,7 +595,7 @@ export default function EditWorkOrderPage() {
                           {...register("maintenance_type")}
                           className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">General Repair</span>
+                        <span className="text-sm font-medium text-foreground">General Repair</span>
                       </label>
                       <label className="flex items-center space-x-2 cursor-pointer">
                         <input
@@ -604,7 +604,7 @@ export default function EditWorkOrderPage() {
                           {...register("maintenance_type")}
                           className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Routine Service</span>
+                        <span className="text-sm font-medium text-foreground">Routine Service</span>
                       </label>
                     </div>
                   </div>
@@ -612,7 +612,7 @@ export default function EditWorkOrderPage() {
                   {/* Service Type (only if routine) */}
                   {watch("maintenance_type") === "routine" && (
                     <div className="col-span-2 md:col-span-1">
-                      <label htmlFor="service_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label htmlFor="service_type" className="block text-sm font-medium text-card-foreground mb-1">
                         Service Type
                       </label>
                       <Select
@@ -662,7 +662,7 @@ export default function EditWorkOrderPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="status" className="block text-sm font-medium text-card-foreground mb-1">
                       Status
                     </label>
                     <Select
@@ -688,7 +688,7 @@ export default function EditWorkOrderPage() {
                       </SelectContent>
                     </Select>
                     {workOrder && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Current: {STATUS_LABELS[workOrder.status] || workOrder.status}
                       </p>
                     )}
@@ -701,7 +701,7 @@ export default function EditWorkOrderPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="customer_concerns" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="customer_concerns" className="block text-sm font-medium text-card-foreground mb-1">
                     Customer Concerns / Description
                   </label>
                   <Textarea

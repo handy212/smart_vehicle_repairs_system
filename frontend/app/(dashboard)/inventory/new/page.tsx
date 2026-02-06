@@ -87,8 +87,8 @@ export default function NewPartPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">New Part</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <h1 className="text-2xl font-semibold text-foreground">New Part</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Add a new part to inventory
             </p>
           </div>

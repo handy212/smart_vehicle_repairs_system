@@ -281,7 +281,7 @@ export default function NewEstimatePage() {
     <div className="space-y-6 pb-24">
       {/* Header - No Breadcrumbs */}
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">New Estimate</h1>
+        <h1 className="text-xl font-bold text-foreground tracking-tight">New Estimate</h1>
       </div>
 
       {serverError && (

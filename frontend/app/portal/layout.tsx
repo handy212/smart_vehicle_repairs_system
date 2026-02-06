@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 const PortalNavbar = dynamic(() => import("@/components/layout/PortalNavbar").then(mod => ({ default: mod.PortalNavbar })), {
   ssr: true,
   loading: () => (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-16" />
+    <div className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border h-16" />
   ),
 });
 

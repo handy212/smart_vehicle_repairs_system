@@ -206,15 +206,15 @@ export default function NewPurchaseOrderPage() {
                             <div className="space-y-3">
                                 <div className="flex gap-3">
                                     <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 flex items-center justify-center text-xs font-bold shrink-0">1</div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">Initialize the order by selecting a supplier and basic dates.</p>
+                                    <p className="text-xs text-muted-foreground">Initialize the order by selecting a supplier and basic dates.</p>
                                 </div>
                                 <div className="flex gap-3">
                                     <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center text-xs font-bold shrink-0">2</div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Add parts and items to the order after it has been created.</p>
+                                    <p className="text-xs text-muted-foreground font-medium">Add parts and items to the order after it has been created.</p>
                                 </div>
                                 <div className="flex gap-3">
                                     <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center text-xs font-bold shrink-0">3</div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">Review the order summary and submit it to the provider.</p>
+                                    <p className="text-xs text-muted-foreground">Review the order summary and submit it to the provider.</p>
                                 </div>
                             </div>
                         </CardContent>

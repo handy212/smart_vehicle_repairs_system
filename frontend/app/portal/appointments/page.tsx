@@ -96,7 +96,7 @@ export default function MyAppointmentsPage() {
                   header: "Date & Time",
                   cell: (apt) => (
                     <div>
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                      <div className="font-semibold text-foreground">
                         {format(new Date(apt.appointment_date), "MMM d, yyyy")}
                       </div>
                       <div className="flex items-center text-xs text-gray-500 gap-1 mt-0.5">
@@ -109,7 +109,7 @@ export default function MyAppointmentsPage() {
                 {
                   header: "Vehicle",
                   cell: (apt) => (
-                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center gap-2 text-sm text-card-foreground">
                       <Car className="w-4 h-4 text-gray-400" />
                       {apt.vehicle_info || "N/A"}
                     </div>
@@ -119,7 +119,7 @@ export default function MyAppointmentsPage() {
                   header: "Service",
                   cell: (apt) => (
                     <div className="max-w-xs">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{apt.service_type || "Service"}</div>
+                      <div className="text-sm font-medium text-foreground">{apt.service_type || "Service"}</div>
                       {apt.customer_concerns && (
                         <div className="text-xs text-gray-500 truncate">{apt.customer_concerns}</div>
                       )}
@@ -157,7 +157,7 @@ export default function MyAppointmentsPage() {
                   title={format(new Date(apt.appointment_date), "EEEE, MMM d")}
                   subtitle={
                     <span className="flex flex-col gap-1 mt-1">
-                      <span className="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
+                      <span className="flex items-center gap-1.5 font-medium text-card-foreground">
                         <Clock className="w-3 h-3" /> {apt.appointment_time}
                       </span>
                       <span className="text-xs text-gray-500">{apt.vehicle_info}</span>

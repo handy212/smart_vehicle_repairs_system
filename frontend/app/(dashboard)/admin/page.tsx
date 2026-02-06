@@ -42,34 +42,34 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Administration</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage users, settings, and system configuration</p>
+        <h1 className="text-3xl font-black text-foreground tracking-tight">Administration</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Manage users, settings, and system configuration</p>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Users</span>
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{totalUsers}</span>
+            <span className="text-lg font-bold text-foreground">{totalUsers}</span>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
             <span className="text-lg font-bold text-green-600 dark:text-green-400">{activeUsers}</span>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive</span>
             <span className="text-lg font-bold text-red-600 dark:text-red-400">{inactiveUsers}</span>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Staff</span>
             <span className="text-lg font-bold text-primary dark:text-primary">{staffCount}</span>
@@ -79,8 +79,8 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick Actions - Compact */}
-        <Card className="lg:col-span-2 border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800">
+        <Card className="lg:col-span-2 border-border shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-border">
             <CardTitle className="text-base font-bold">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Users</span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">Manage accounts</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">Manage accounts</span>
                   </div>
                 </Button>
               </Link>
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Settings</span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">System config</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">System config</span>
                   </div>
                 </Button>
               </Link>
@@ -114,7 +114,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Audit Log</span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">View history</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">View history</span>
                   </div>
                 </Button>
               </Link>
@@ -125,7 +125,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Subscriptions</span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">Manage plans</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">Manage plans</span>
                   </div>
                 </Button>
               </Link>
@@ -134,17 +134,17 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Roles Distribution - Compact */}
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800">
+        <Card className="border-border shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-border">
             <CardTitle className="text-base font-bold">Staff Overview</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 gap-3">
               {Object.entries(roleCounts).slice(0, 6).map(([role, count]) => (
-                <div key={role} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                <div key={role} className="flex justify-between items-center p-3 bg-muted rounded-lg border border-border">
                   <div className="flex items-center gap-2">
                     <Shield className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{role.replace("_", " ")}</span>
+                    <span className="text-sm font-medium capitalize text-card-foreground">{role.replace("_", " ")}</span>
                   </div>
                   <Badge variant="secondary" className="font-bold">{count}</Badge>
                 </div>
@@ -156,8 +156,8 @@ export default function AdminDashboardPage() {
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800 flex flex-row items-center justify-between">
+        <Card className="border-border shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-border flex flex-row items-center justify-between">
             <CardTitle className="text-base font-bold">Recent Audit Logs</CardTitle>
             <Link href="/admin/audit-log">
               <Button variant="ghost" size="sm" className="h-8 text-xs">View All</Button>
@@ -175,14 +175,14 @@ export default function AdminDashboardPage() {
                             log.action === 'update' ? 'bg-primary' :
                               log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
                         )}></span>
-                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{log.user_name || "System"}</span>
+                        <span className="text-xs font-bold text-foreground">{log.user_name || "System"}</span>
                       </div>
                       <span className="text-[10px] text-gray-400 font-mono">
                         {format(new Date(log.timestamp), "HH:mm")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pl-4">
-                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px] capitalize font-medium">
+                      <p className="text-xs text-muted-foreground truncate max-w-[200px] capitalize font-medium">
                         {log.action} {log.model_name}
                       </p>
                       <Badge variant="outline" className="text-[10px] max-w-[120px] truncate font-mono">
@@ -198,8 +198,8 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800">
+        <Card className="border-border shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-border">
             <CardTitle className="text-base font-bold">Recent Backups</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -210,7 +210,7 @@ export default function AdminDashboardPage() {
                     <div>
                       <div className="flex items-center space-x-2">
                         <Database className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{backup.backup_type} Backup</span>
+                        <span className="text-sm font-semibold capitalize text-foreground">{backup.backup_type} Backup</span>
                       </div>
                       <span className="text-[10px] text-gray-500 pl-5 block mt-0.5">
                         {format(new Date(backup.started_at), "MMM dd, yyyy • HH:mm")}

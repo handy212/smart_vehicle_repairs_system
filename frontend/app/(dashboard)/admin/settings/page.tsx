@@ -296,24 +296,24 @@ export default function SystemSettingsPage() {
     const isEnabledToggle = setting.key.match(/(enabled)$/i);
 
     return (
-      <div key={setting.id} className="py-2.5 first:pt-0 last:pb-0 border-b last:border-0 border-gray-100 dark:border-gray-800">
+      <div key={setting.id} className="py-2.5 first:pt-0 last:pb-0 border-b last:border-0 border-border">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{label}</div>
+            <div className="font-medium text-sm text-foreground">{label}</div>
             {setting.description ? (
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
+              <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
                 {setting.description}
               </div>
             ) : null}
             {showKey ? (
-              <div className="text-[9px] text-gray-400 dark:text-gray-500 font-mono mt-0.5">
+              <div className="text-[9px] text-muted-foreground font-mono mt-0.5">
                 {setting.key}
               </div>
             ) : null}
           </div>
 
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">Active</span>
+            <span className="text-[10px] text-muted-foreground">Active</span>
             <Checkbox
               checked={setting.is_active}
               onCheckedChange={(checked) => handleActiveToggle(setting, Boolean(checked))}
@@ -335,7 +335,7 @@ export default function SystemSettingsPage() {
                   disabled={!canManage}
                   className="h-4 w-4"
                 />
-                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                <span className="text-xs text-muted-foreground font-medium">
                   {isTruthy(value) ? "Enabled" : "Disabled"}
                 </span>
               </div>
@@ -448,9 +448,9 @@ export default function SystemSettingsPage() {
             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
               <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
               <span>/</span>
-              <span className="text-gray-900 dark:text-gray-100 font-medium">Settings</span>
+              <span className="text-foreground font-medium">Settings</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">System Configuration</h1>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">System Configuration</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -477,7 +477,7 @@ export default function SystemSettingsPage() {
       {/* Settings Count Badge */}
       <div className="px-4">
         {settingsData && (
-          <div className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 inline-block">
+          <div className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-border inline-block">
             {settingsData.count} settings
           </div>
         )}
@@ -494,7 +494,7 @@ export default function SystemSettingsPage() {
                 onClick={() => handleCategorySelect(cat.value)}
                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isSelected
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-muted dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
                   }`}
               >
                 {cat.label}
@@ -523,10 +523,10 @@ export default function SystemSettingsPage() {
         )}
 
         {/* Settings List */}
-        <Card className="shadow-sm border border-gray-200 dark:border-gray-800">
+        <Card className="shadow-sm border border-border">
           <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <CardTitle className="text-sm font-semibold text-foreground">
                 {CATEGORIES.find((c) => c.value === selectedCategory)?.label} Settings
               </CardTitle>
               {selectedCategory === "integration" ? (
@@ -628,7 +628,7 @@ export default function SystemSettingsPage() {
 
                 {(selectedCategory !== "integration" || showIntegrationAdvanced) &&
                   tableSettings.length > 0 && (
-                    <div className="overflow-x-auto rounded-md border border-gray-100 dark:border-gray-800">
+                    <div className="overflow-x-auto rounded-md border border-border">
                       <table className="w-full text-left">
                         <thead className="bg-gray-50/80 text-[10px] uppercase text-gray-500 font-semibold border-b border-gray-100">
                           <tr>
@@ -645,7 +645,7 @@ export default function SystemSettingsPage() {
                               <tr key={setting.id} className="group hover:bg-gray-50/50 transition-colors">
                                 <td className="px-4 py-3 align-top">
                                   <div className="space-y-0.5">
-                                    <div className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                    <div className="text-xs font-medium text-foreground">
                                       {setting.display_name || setting.key}
                                     </div>
                                     <div className="text-[10px] text-gray-400 font-mono tracking-tight">
@@ -675,7 +675,7 @@ export default function SystemSettingsPage() {
                                           disabled={!canManage}
                                           className="h-4 w-4"
                                         />
-                                        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                        <span className="text-xs text-muted-foreground font-medium">
                                           {(() => {
                                             const val = getRowValue(setting);
                                             if (typeof val === 'boolean') return val ? 'Enabled' : 'Disabled';
@@ -926,7 +926,7 @@ export default function SystemSettingsPage() {
                                                               </div>
                                                               {getRowValue(setting) && (
                                                                 <div className="space-y-1">
-                                                                  <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                                  <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                                     <ImageIcon className="w-3 h-3" />
                                                                     Current: {getRowValue(setting)}
                                                                   </div>
@@ -1134,7 +1134,7 @@ export default function SystemSettingsPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   No settings found for this category
                 </p>
               </div>

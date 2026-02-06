@@ -163,7 +163,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 )}
               </div>
               {isWorkflow && taskInfo?.description && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {taskInfo.description}
                 </p>
               )}
@@ -215,7 +215,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           </div>
         </TableCell>
         <TableCell>
-          <div className="text-xs text-gray-600 dark:text-gray-400">
+          <div className="text-xs text-muted-foreground">
             {task.created_at ? (
               <>
                 <div>{format(new Date(task.created_at), "MMM d, yyyy")}</div>
@@ -301,7 +301,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
               <div className="mb-4 space-y-3">
                 {/* Note text removed per request */}
                 {workflowTasks.length > 0 && (
-                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-green-500" />
                       <span>Completed: {workflowTasks.filter(t => t.status === 'completed').length}</span>
@@ -352,7 +352,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
             {manualTasks.length === 0 ? (
               <div className="text-center py-12">
                 <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                <p className="text-sm font-medium text-foreground mb-1">
                   No manual tasks yet
                 </p>
                 <p className="text-sm text-gray-500 mb-4">

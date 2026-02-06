@@ -371,7 +371,7 @@ export default function UserDetailPage() {
           </Link>
           <div>
             <div className="flex items-center space-x-2 flex-wrap">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-3xl font-bold text-foreground">
                 {user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}
               </h1>
               <Badge variant={getRoleVariant(user.role) as any} className="dark:bg-gray-700 dark:text-white">
@@ -385,7 +385,7 @@ export default function UserDetailPage() {
                 <Badge variant="danger">Inactive</Badge>
               )}
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{user.email}</p>
+            <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
           </div>
         </div>
         <div className="flex space-x-4">
@@ -449,7 +449,7 @@ export default function UserDetailPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-card-foreground mb-2">
                       First Name <span className="text-red-500">*</span>
                     </label>
                     <Input
@@ -466,7 +466,7 @@ export default function UserDetailPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-card-foreground mb-2">
                       Last Name <span className="text-red-500">*</span>
                     </label>
                     <Input
@@ -483,7 +483,7 @@ export default function UserDetailPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Phone</label>
+                    <label className="block text-sm font-semibold text-card-foreground mb-2">Phone</label>
                     <Input
                       type="tel"
                       placeholder="(555) 123-4567"
@@ -493,7 +493,7 @@ export default function UserDetailPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-card-foreground mb-2">
                       Role <span className="text-red-500">*</span>
                     </label>
                     <Select
@@ -526,7 +526,7 @@ export default function UserDetailPage() {
                       {...register("is_active")}
                       className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
-                    <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label htmlFor="is_active" className="text-sm font-medium text-card-foreground">
                       User is active
                     </label>
                   </div>
@@ -538,7 +538,7 @@ export default function UserDetailPage() {
                       {...register("email_notifications")}
                       className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
-                    <label htmlFor="email_notifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label htmlFor="email_notifications" className="text-sm font-medium text-card-foreground">
                       Email Notifications
                     </label>
                   </div>
@@ -550,7 +550,7 @@ export default function UserDetailPage() {
                       {...register("sms_notifications")}
                       className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
-                    <label htmlFor="sms_notifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label htmlFor="sms_notifications" className="text-sm font-medium text-card-foreground">
                       SMS Notifications
                     </label>
                   </div>
@@ -573,13 +573,13 @@ export default function UserDetailPage() {
                     <div className="space-y-6">
                       {isManager ? (
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                          <label className="block text-sm font-semibold text-card-foreground mb-3">
                             Managed Branches <span className="text-red-500">*</span>
                           </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          <p className="text-xs text-muted-foreground mb-3">
                             Select all branches this manager should oversee
                           </p>
-                          <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
+                          <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
                             {branches.length > 0 ? (
                               branches.map((branch) => {
                                 const isSelected = (watch("managed_branches") || []).includes(branch.id);
@@ -605,9 +605,9 @@ export default function UserDetailPage() {
                                       className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
                                     />
                                     <div className="flex-1">
-                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{branch.name}</span>
+                                      <span className="text-sm font-medium text-card-foreground">{branch.name}</span>
                                       {branch.code && (
-                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({branch.code})</span>
+                                        <span className="text-xs text-muted-foreground ml-2">({branch.code})</span>
                                       )}
                                     </div>
                                   </label>
@@ -615,9 +615,9 @@ export default function UserDetailPage() {
                               })
                             ) : (
                               <div className="text-center py-8">
-                                <Building2 className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500 dark:text-gray-400">No active branches available</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Create a branch first before assigning users</p>
+                                <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                                <p className="text-sm text-muted-foreground">No active branches available</p>
+                                <p className="text-xs text-muted-foreground mt-1">Create a branch first before assigning users</p>
                               </div>
                             )}
                           </div>
@@ -630,10 +630,10 @@ export default function UserDetailPage() {
                         </div>
                       ) : (
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                          <label className="block text-sm font-semibold text-card-foreground mb-3">
                             Assigned Branch <span className="text-red-500">*</span>
                           </label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          <p className="text-xs text-muted-foreground mb-3">
                             Select the primary branch for this staff member
                           </p>
                           <Select
@@ -673,7 +673,7 @@ export default function UserDetailPage() {
                     {isStaff && (
                       <div className="space-y-6">
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-semibold text-card-foreground mb-2">
                             Employee ID
                           </label>
                           <Input
@@ -683,7 +683,7 @@ export default function UserDetailPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-semibold text-card-foreground mb-2">
                             Hire Date
                           </label>
                           <Input
@@ -693,7 +693,7 @@ export default function UserDetailPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-semibold text-card-foreground mb-2">
                             Hourly Rate
                           </label>
                           <Input
@@ -754,7 +754,7 @@ export default function UserDetailPage() {
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-semibold text-card-foreground mb-2">
                         New Password <span className="text-red-500">*</span>
                       </label>
                       <div className="flex gap-2">
@@ -769,7 +769,7 @@ export default function UserDetailPage() {
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
                             title={showPassword ? "Hide password" : "Show password"}
                           >
                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -807,7 +807,7 @@ export default function UserDetailPage() {
                         id="send_password_email"
                         className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                       />
-                      <label htmlFor="send_password_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label htmlFor="send_password_email" className="text-sm font-medium text-card-foreground">
                         Send new password to user via email
                       </label>
                     </div>
@@ -865,22 +865,22 @@ export default function UserDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</p>
-                  <p className="text-gray-900 dark:text-white mt-1">{user.email}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Email</p>
+                  <p className="text-foreground mt-1">{user.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Username</p>
-                  <p className="text-gray-900 dark:text-white mt-1">{user.username}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Username</p>
+                  <p className="text-foreground mt-1">{user.username}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Created At</p>
-                  <p className="text-gray-900 dark:text-white mt-1">
+                  <p className="text-sm font-medium text-muted-foreground">Created At</p>
+                  <p className="text-foreground mt-1">
                     {format(new Date(user.created_at), "MMM dd, yyyy HH:mm")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</p>
-                  <p className="text-gray-900 dark:text-white mt-1">
+                  <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+                  <p className="text-foreground mt-1">
                     {format(new Date(user.updated_at), "MMM dd, yyyy HH:mm")}
                   </p>
                 </div>
@@ -897,7 +897,7 @@ export default function UserDetailPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
+                    <p className="text-sm font-medium text-muted-foreground">Status</p>
                     {user.is_active ? (
                       <Badge variant="default" className="mt-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                         Active
@@ -922,7 +922,7 @@ export default function UserDetailPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Role</p>
+                    <p className="text-sm font-medium text-muted-foreground">Role</p>
                     <Badge variant={getRoleVariant(user.role) as any} className="mt-2 dark:bg-gray-700 dark:text-white">
                       {getRoleLabel(user.role)}
                     </Badge>
@@ -939,8 +939,8 @@ export default function UserDetailPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white mt-2 truncate">
+                    <p className="text-sm font-medium text-muted-foreground">Branch</p>
+                    <p className="text-sm font-medium text-foreground mt-2 truncate">
                       {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0
                         ? `${user.managed_branches_names.length} branch${user.managed_branches_names.length !== 1 ? "es" : ""}`
                         : user.branch_name || "Not assigned"}
@@ -964,22 +964,22 @@ export default function UserDetailPage() {
               <CardContent>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email Address</dt>
-                    <dd className="text-base text-gray-900 dark:text-white font-medium">{user.email}</dd>
+                    <dt className="text-sm font-medium text-muted-foreground mb-1">Email Address</dt>
+                    <dd className="text-base text-foreground font-medium">{user.email}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Username</dt>
-                    <dd className="text-base text-gray-900 dark:text-white font-mono">{user.username}</dd>
+                    <dt className="text-sm font-medium text-muted-foreground mb-1">Username</dt>
+                    <dd className="text-base text-foreground font-mono">{user.username}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Phone Number</dt>
-                    <dd className="text-base text-gray-900 dark:text-white">
+                    <dt className="text-sm font-medium text-muted-foreground mb-1">Phone Number</dt>
+                    <dd className="text-base text-foreground">
                       {user.phone || <span className="text-gray-400 italic">Not provided</span>}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</dt>
-                    <dd className="text-base text-gray-900 dark:text-white font-medium">
+                    <dt className="text-sm font-medium text-muted-foreground mb-1">Full Name</dt>
+                    <dd className="text-base text-foreground font-medium">
                       {user.full_name || `${user.first_name} ${user.last_name}`.trim() || "—"}
                     </dd>
                   </div>
@@ -995,28 +995,28 @@ export default function UserDetailPage() {
               <CardContent>
                 <dl className="space-y-4">
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Member Since</dt>
-                    <dd className="text-sm text-gray-900 dark:text-white">
+                    <dt className="text-sm font-medium text-muted-foreground mb-1">Member Since</dt>
+                    <dd className="text-sm text-foreground">
                       {format(new Date(user.created_at), "MMM dd, yyyy")}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Last Updated</dt>
-                    <dd className="text-sm text-gray-900 dark:text-white">
+                    <dt className="text-sm font-medium text-muted-foreground mb-1">Last Updated</dt>
+                    <dd className="text-sm text-foreground">
                       {format(new Date(user.updated_at), "MMM dd, yyyy")}
                     </dd>
                   </div>
-                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Notification Preferences</dt>
+                  <div className="pt-4 border-t border-border">
+                    <dt className="text-sm font-medium text-muted-foreground mb-3">Notification Preferences</dt>
                     <dd className="space-y-2">
                       <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Email</span>
+                        <span className="text-sm text-card-foreground">Email</span>
                         <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.email_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">SMS</span>
+                        <span className="text-sm text-card-foreground">SMS</span>
                         <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.sms_notifications ? "On" : "Off"}
                         </Badge>
@@ -1040,26 +1040,26 @@ export default function UserDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Branch Assignment */}
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                  <dt className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     Branch Assignment
                   </dt>
                   {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
                     <div className="p-4 bg-primary/10 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                      <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                      <p className="text-base font-semibold text-foreground mb-1">
                         {user.managed_branches_names.join(", ")}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         Managing {user.managed_branches_names.length} branch{user.managed_branches_names.length !== 1 ? "es" : ""}
                       </p>
                     </div>
                   ) : user.branch_name ? (
                     <div className="p-4 bg-primary/10 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                      <p className="text-base font-semibold text-gray-900 dark:text-white">{user.branch_name}</p>
+                      <p className="text-base font-semibold text-foreground">{user.branch_name}</p>
                     </div>
                   ) : (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <p className="text-sm text-gray-400 dark:text-gray-500 italic">No branch assigned</p>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-border">
+                      <p className="text-sm text-muted-foreground italic">No branch assigned</p>
                     </div>
                   )}
                 </div>
@@ -1067,26 +1067,26 @@ export default function UserDetailPage() {
                 {/* Employment Info */}
                 {(user.employee_id || user.hire_date || user.hourly_rate) && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Employment Details</dt>
+                    <dt className="text-sm font-medium text-muted-foreground mb-3">Employment Details</dt>
                     <dl className="space-y-3">
                       {user.employee_id && (
                         <div>
-                          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Employee ID</dt>
-                          <dd className="text-sm font-mono text-gray-900 dark:text-white font-semibold">{user.employee_id}</dd>
+                          <dt className="text-xs font-medium text-muted-foreground mb-1">Employee ID</dt>
+                          <dd className="text-sm font-mono text-foreground font-semibold">{user.employee_id}</dd>
                         </div>
                       )}
                       {user.hire_date && (
                         <div>
-                          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hire Date</dt>
-                          <dd className="text-sm text-gray-900 dark:text-white">
+                          <dt className="text-xs font-medium text-muted-foreground mb-1">Hire Date</dt>
+                          <dd className="text-sm text-foreground">
                             {format(new Date(user.hire_date), "MMMM dd, yyyy")}
                           </dd>
                         </div>
                       )}
                       {user.hourly_rate && (
                         <div>
-                          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hourly Rate</dt>
-                          <dd className="text-sm text-gray-900 dark:text-white font-semibold">
+                          <dt className="text-xs font-medium text-muted-foreground mb-1">Hourly Rate</dt>
+                          <dd className="text-sm text-foreground font-semibold">
                             {formatCurrency(parseFloat(user.hourly_rate))}/hr
                           </dd>
                         </div>
@@ -1138,9 +1138,9 @@ export default function UserDetailPage() {
                 </Button>
               </div>
               {showPasswordReset && (
-                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                <div className="mt-6 pt-6 border-t border-border space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-card-foreground mb-2">
                       New Password <span className="text-red-500">*</span>
                     </label>
                     <div className="flex gap-2">
@@ -1155,7 +1155,7 @@ export default function UserDetailPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
                           title={showPassword ? "Hide password" : "Show password"}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -1193,7 +1193,7 @@ export default function UserDetailPage() {
                       id="send_password_email_view"
                       className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
-                    <label htmlFor="send_password_email_view" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label htmlFor="send_password_email_view" className="text-sm font-medium text-card-foreground">
                       Send new password to user via email
                     </label>
                   </div>

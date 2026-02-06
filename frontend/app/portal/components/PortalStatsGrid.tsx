@@ -69,7 +69,7 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
                         <div>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{item.label}</p>
                             <div className="flex items-center gap-2">
-                                <span className="text-2xl font-bold text-gray-900 dark:text-white">{item.value}</span>
+                                <span className="text-2xl font-bold text-foreground">{item.value}</span>
                                 {item.alert && (
                                     <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                                 )}

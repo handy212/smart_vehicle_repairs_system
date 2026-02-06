@@ -106,7 +106,7 @@ export default function MyRoadsideRequestsPage() {
           {
             header: "Request #",
             cell: (req) => (
-              <div className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+              <div className="font-mono text-sm font-medium text-foreground">
                 {req.request_number}
               </div>
             )
@@ -114,7 +114,7 @@ export default function MyRoadsideRequestsPage() {
           {
             header: "Date",
             cell: (req) => (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 {format(new Date(req.requested_at), "MMM d, h:mm a")}
               </div>
             )
@@ -171,7 +171,7 @@ export default function MyRoadsideRequestsPage() {
               </Badge>
             }
           >
-            <div className="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="flex items-start gap-2 text-xs text-muted-foreground mt-1">
               <MapPin className="w-3 h-3 mt-0.5" />
               <span className="line-clamp-1">{req.breakdown_location}</span>
             </div>

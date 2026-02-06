@@ -313,9 +313,9 @@ export default function InvoicesPage() {
                         <span>/</span>
                         <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium">Invoices</span>
+                        <span className="text-foreground font-medium">Invoices</span>
                     </div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Invoices</h1>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">Invoices</h1>
                 </div>
                 <div className="flex items-center space-x-4">
                     {/* Mini Widget - Simple Text Version */}
@@ -337,7 +337,7 @@ export default function InvoicesPage() {
                                     className="fixed inset-0 z-10"
                                     onClick={() => setShowActionsMenu(false)}
                                 />
-                                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-md shadow-lg z-20">
                                     <div className="py-1">
                                         <PermissionGuard permission="export_invoices">
                                             <button
@@ -346,7 +346,7 @@ export default function InvoicesPage() {
                                                     setShowActionsMenu(false);
                                                 }}
                                                 disabled={!data?.results || data.results.length === 0}
-                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                             >
                                                 <Download className="w-4 h-4" />
                                                 Export CSV
@@ -371,7 +371,7 @@ export default function InvoicesPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'unpaid' ? null : 'unpaid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -387,7 +387,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-gray-800' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'paid' ? null : 'paid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -403,7 +403,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'partial' ? 'ring-2 ring-primary bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'partial' ? 'ring-2 ring-primary bg-primary/10 dark:bg-gray-800' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'partial' ? null : 'partial';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -419,7 +419,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-gray-800' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'overdue' ? null : 'overdue';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -435,7 +435,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-gray-500 bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-gray-500 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'draft' ? null : 'draft';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -468,7 +468,7 @@ export default function InvoicesPage() {
                                         setSearch(e.target.value);
                                         setPage(1);
                                     }}
-                                    className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
+                                    className="pl-9 h-8 text-sm bg-card w-64 focus:w-80 transition-all duration-300"
                                 />
                             </div>
 
@@ -509,17 +509,17 @@ export default function InvoicesPage() {
                                 <div className="hidden md:flex items-center space-x-2 ml-auto text-sm">
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-500 font-medium">Paid Inv:</span>
-                                        <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.financials.total_paid)}</span>
+                                        <span className="font-bold text-foreground">{formatCurrency(stats.financials.total_paid)}</span>
                                     </div>
-                                    <div className="h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+                                    <div className="h-4 w-px bg-border"></div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-500 font-medium">Past Due Inv:</span>
                                         <span className="font-bold text-red-600">{formatCurrency(stats.financials.past_due_total)}</span>
                                     </div>
-                                    <div className="h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+                                    <div className="h-4 w-px bg-border"></div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-500 font-medium">Outstanding Inv:</span>
-                                        <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.financials.outstanding_total)}</span>
+                                        <span className="font-bold text-foreground">{formatCurrency(stats.financials.outstanding_total)}</span>
                                     </div>
                                 </div>
                             )}
@@ -596,7 +596,7 @@ export default function InvoicesPage() {
             {/* Invoices Table */}
             <Card className="border-t shadow-sm">
                 <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
-                    <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <CardTitle className="text-sm font-semibold text-card-foreground">
                         All Invoices <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
                     </CardTitle>
                 </CardHeader>
@@ -773,7 +773,7 @@ export default function InvoicesPage() {
                             <div className="col-span-3">
                                 <select
                                     id="status"
-                                    className="flex h-10 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="flex h-10 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={bulkStatus}
                                     onChange={(e) => setBulkStatus(e.target.value)}
                                 >

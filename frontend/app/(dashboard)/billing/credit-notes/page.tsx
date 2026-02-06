@@ -79,11 +79,11 @@ export default function CreditNotesPage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                         <FileText className="h-6 w-6 text-primary" />
                         Credit Notes
                     </h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground">
                         Manage customer credit notes and refunds
                     </p>
                 </div>

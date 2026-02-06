@@ -128,9 +128,9 @@ export function RecommendationDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 gap-0 p-0 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
+            <DialogContent className="max-w-2xl bg-card gap-0 p-0 border border-border shadow-xl sm:rounded-xl">
                 <DialogHeader className="p-6 pb-2">
-                    <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                    <DialogTitle className="text-xl font-bold text-foreground">
                         {recommendation ? "Edit Recommendation" : "Add Recommendation"}
                     </DialogTitle>
                     <DialogDescription className="text-sm text-gray-500">
@@ -141,14 +141,14 @@ export function RecommendationDialog({
                 <form onSubmit={handleSubmit} className="flex flex-col">
                     <div className="p-6 pt-4 space-y-5">
                         <div className="space-y-2">
-                            <Label htmlFor="service_package" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <Label htmlFor="service_package" className="text-sm font-medium text-card-foreground">
                                 Quick Select (Service Package)
                             </Label>
                             <Select
                                 value={formData.service_package_id?.toString() || "none"}
                                 onValueChange={(val) => handlePackageChange(val)}
                             >
-                                <SelectTrigger id="service_package" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                <SelectTrigger id="service_package" className="h-9 w-full bg-card border-border">
                                     <SelectValue placeholder="-- Select a Service Package --" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -164,7 +164,7 @@ export function RecommendationDialog({
 
                         <div className="grid gap-5 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="recommendation_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <Label htmlFor="recommendation_type" className="text-sm font-medium text-card-foreground">
                                     Type <span className="text-red-500">*</span>
                                 </Label>
                                 <Select
@@ -172,7 +172,7 @@ export function RecommendationDialog({
                                     onValueChange={(val) => setFormData({ ...formData, recommendation_type: val as any })}
                                     required
                                 >
-                                    <SelectTrigger id="recommendation_type" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                    <SelectTrigger id="recommendation_type" className="h-9 w-full bg-card border-border">
                                         <SelectValue placeholder="Select type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -186,7 +186,7 @@ export function RecommendationDialog({
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="priority" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <Label htmlFor="priority" className="text-sm font-medium text-card-foreground">
                                     Priority <span className="text-red-500">*</span>
                                 </Label>
                                 <Select
@@ -194,7 +194,7 @@ export function RecommendationDialog({
                                     onValueChange={(val) => setFormData({ ...formData, priority: val as any })}
                                     required
                                 >
-                                    <SelectTrigger id="priority" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                    <SelectTrigger id="priority" className="h-9 w-full bg-card border-border">
                                         <SelectValue placeholder="Select priority" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -208,7 +208,7 @@ export function RecommendationDialog({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="description" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <Label htmlFor="description" className="text-sm font-medium text-card-foreground">
                                 Description <span className="text-red-500">*</span>
                             </Label>
                             <Textarea
@@ -216,7 +216,7 @@ export function RecommendationDialog({
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 placeholder="Describe the recommended repair or service..."
-                                className="min-h-[120px] resize-none bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:ring-1 focus:ring-primary"
+                                className="min-h-[120px] resize-none bg-card border-border focus:ring-1 focus:ring-primary"
                                 required
                             />
                         </div>
@@ -240,7 +240,7 @@ export function RecommendationDialog({
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-xl">
+                    <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-border bg-muted/50 rounded-b-xl">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="hover:bg-gray-200/50">
                             Cancel
                         </Button>

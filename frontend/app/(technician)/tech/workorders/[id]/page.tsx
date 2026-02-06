@@ -85,7 +85,7 @@ export default function TechnicianWorkOrderPage() {
     return (
         <div className="space-y-6 pb-20">
             {/* Overview Card */}
-            <Card className="border-none shadow-md bg-white dark:bg-gray-900">
+            <Card className="border-none shadow-md bg-card">
                 <CardContent className="p-5">
                     <div className="flex flex-col md:flex-row justify-between gap-4">
                         <div>
@@ -98,7 +98,7 @@ export default function TechnicianWorkOrderPage() {
                             <h2 className="text-xl md:text-2xl font-bold dark:text-white">
                                 {workOrder.vehicle_info || "Vehicle Info Unavailable"}
                             </h2>
-                            <p className="text-gray-500 dark:text-gray-400 mt-1">
+                            <p className="text-muted-foreground mt-1">
                                 {workOrder.customer_name}
                             </p>
                         </div>
@@ -169,24 +169,24 @@ export default function TechnicianWorkOrderPage() {
                             <div className="text-center py-8 text-gray-500">Loading tasks...</div>
                         ) : tasks && tasks.length > 0 ? (
                             tasks.map((task: any) => (
-                                <Card key={task.id} className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+                                <Card key={task.id} className="border border-border shadow-sm overflow-hidden">
                                     <div className="flex border-l-4 border-primary">
                                         <div className="flex-1 p-4">
                                             <div className="flex justify-between items-start mb-2">
-                                                <h3 className="font-semibold text-gray-900 dark:text-white">{task.name}</h3>
+                                                <h3 className="font-semibold text-foreground">{task.name}</h3>
                                                 <Badge variant={task.status === "completed" ? "success" : "secondary"}>
                                                     {task.status}
                                                 </Badge>
                                             </div>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">{task.description || "No description provided."}</p>
+                                            <p className="text-sm text-muted-foreground">{task.description || "No description provided."}</p>
                                         </div>
                                     </div>
                                 </Card>
                             ))
                         ) : (
-                            <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                            <div className="text-center py-12 bg-muted/50 rounded-lg border border-dashed border-border">
                                 <CheckCircle className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-white">All Caught Up</h3>
+                                <h3 className="text-lg font-medium text-foreground">All Caught Up</h3>
                                 <p className="text-gray-500">No tasks assigned to this work order yet.</p>
                             </div>
                         )}
@@ -212,13 +212,13 @@ export default function TechnicianWorkOrderPage() {
                 </TabsContent>
                 {/* Photos & Parts Placeholder */}
                 <TabsContent value="photos">
-                    <div className="flex flex-col items-center justify-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed">
+                    <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-lg border border-dashed">
                         <Camera className="h-12 w-12 text-gray-300 mb-3" />
                         <p className="text-gray-500">Photo upload coming soon.</p>
                     </div>
                 </TabsContent>
                 <TabsContent value="parts">
-                    <div className="flex flex-col items-center justify-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed">
+                    <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-lg border border-dashed">
                         <Wrench className="h-12 w-12 text-gray-300 mb-3" />
                         <p className="text-gray-500">Parts list coming soon.</p>
                     </div>

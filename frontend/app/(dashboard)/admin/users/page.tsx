@@ -153,9 +153,9 @@ export default function UsersManagementPage() {
             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
               <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
               <span>/</span>
-              <span className="text-gray-900 dark:text-gray-100 font-medium">Users</span>
+              <span className="text-foreground font-medium">Users</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">User Management</h1>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">User Management</h1>
           </div>
         </div>
         <PermissionGuard permission="create_users">
@@ -169,7 +169,7 @@ export default function UsersManagementPage() {
       </div>
 
       {/* Filters */}
-      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="mx-4 border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex flex-col sm:flex-row gap-3 items-center">
             <div className="flex items-center gap-2 text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
@@ -184,7 +184,7 @@ export default function UsersManagementPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-900">
+                <SelectTrigger className="h-8 text-sm bg-card">
                   <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,7 +205,7 @@ export default function UsersManagementPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-900">
+                <SelectTrigger className="h-8 text-sm bg-card">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,7 +221,7 @@ export default function UsersManagementPage() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-900">
+                <SelectTrigger className="h-8 text-sm bg-card">
                   <SelectValue placeholder="All Branches" />
                 </SelectTrigger>
                 <SelectContent>
@@ -241,7 +241,7 @@ export default function UsersManagementPage() {
       {/* Users Table */}
       <Card className="mx-4 border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
         <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
-          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <CardTitle className="text-sm font-semibold text-card-foreground">
             Users Directory <span className="text-muted-foreground font-normal ml-1">({usersData?.count || 0})</span>
           </CardTitle>
         </CardHeader>
@@ -249,14 +249,14 @@ export default function UsersManagementPage() {
           {users.length > 0 ? (
             <div className="rounded-md">
               <Table>
-                <TableHeader className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-900/50">
+                <TableHeader className="bg-gray-50/50 hover:bg-muted/50">
                   <TableRow>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">User</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Role</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Branch</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Status</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Created</TableHead>
-                    <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Actions</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">User</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Role</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Created</TableHead>
+                    <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -268,10 +268,10 @@ export default function UsersManagementPage() {
                             {user.first_name?.[0] || user.email[0].toUpperCase()}
                           </div>
                           <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <div className="text-sm font-medium text-foreground">
                               {user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{user.email}</div>
+                            <div className="text-xs text-muted-foreground">{user.email}</div>
                           </div>
                         </div>
                       </TableCell>
@@ -281,7 +281,7 @@ export default function UsersManagementPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
-                        <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center text-xs text-muted-foreground">
                           {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
                             <span className="truncate max-w-[150px]" title={user.managed_branches_names.join(", ")}>
                               {user.managed_branches_names.length > 1 ? `${user.managed_branches_names.length} Branches` : user.managed_branches_names[0]}
@@ -306,7 +306,7 @@ export default function UsersManagementPage() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="px-4 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                      <TableCell className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">
                         {format(new Date(user.created_at), "MMM dd, yyyy")}
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap text-right">

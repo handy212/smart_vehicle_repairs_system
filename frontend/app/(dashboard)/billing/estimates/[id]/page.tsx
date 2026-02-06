@@ -347,14 +347,14 @@ export default function EstimateDetailPage() {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowActionsMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                <div className="absolute right-0 mt-2 w-56 bg-card rounded-md shadow-lg border border-border z-20">
                   <div className="py-1">
                     <button
                       onClick={() => {
                         window.print();
                         setShowActionsMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
                       <Printer className="w-4 h-4" />
                       Print
@@ -369,7 +369,7 @@ export default function EstimateDetailPage() {
                         setShowActionsMenu(false);
                       }}
                       disabled={isDownloading}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Download className="w-4 h-4" />
                       {isDownloading ? 'Generating...' : 'Download PDF'}
@@ -380,7 +380,7 @@ export default function EstimateDetailPage() {
                         setShowActionsMenu(false);
                       }}
                       disabled={sendEmailMutation.isPending}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Mail className="w-4 h-4" />
                       {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
@@ -388,7 +388,7 @@ export default function EstimateDetailPage() {
                     <Link href={`/billing/estimates/${estimateId}/edit`}>
                       <button
                         onClick={() => setShowActionsMenu(false)}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                       >
                         <Edit className="w-4 h-4" />
                         Edit
@@ -401,7 +401,7 @@ export default function EstimateDetailPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={approveEstimateMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-t border-gray-200 dark:border-gray-700 mt-1"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-t border-border mt-1"
                       >
                         <CheckCircle className="w-4 h-4" />
                         {approveEstimateMutation.isPending ? "Approving..." : "Approve Estimate"}
@@ -409,14 +409,14 @@ export default function EstimateDetailPage() {
                     )}
                     {estimate.can_be_converted && estimate.status !== "converted" && (
                       <>
-                        <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                        <div className="border-t border-border my-1" />
                         <button
                           onClick={() => {
                             handleConvertToInvoice();
                             setShowActionsMenu(false);
                           }}
                           disabled={isConverting}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <FileText className="w-4 h-4" />
                           To Invoice
@@ -427,7 +427,7 @@ export default function EstimateDetailPage() {
                             setShowActionsMenu(false);
                           }}
                           disabled={isConverting}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Wrench className="w-4 h-4" />
                           To Work Order
@@ -444,7 +444,7 @@ export default function EstimateDetailPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 rounded-lg w-full justify-start h-auto flex-wrap">
+          <TabsList className="bg-card p-1 border border-border rounded-lg w-full justify-start h-auto flex-wrap">
             <TabsTrigger
               value="estimate"
               className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
@@ -597,7 +597,7 @@ export default function EstimateDetailPage() {
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader className="bg-gray-50 dark:bg-gray-800/50">
+                    <TableHeader className="bg-muted/50">
                       <TableRow className="h-8">
                         <TableHead className="w-[40%] py-2">Item / Description</TableHead>
                         <TableHead className="text-right py-2">Qty/Hrs</TableHead>
@@ -749,15 +749,15 @@ export default function EstimateDetailPage() {
               </div>
               <DialogDescription className="pt-2">
                 <div className="space-y-4">
-                  <p className="text-base text-gray-700 dark:text-gray-300">
+                  <p className="text-base text-card-foreground">
                     This will mark the estimate as <strong>approved by the customer</strong>.
                   </p>
 
                   {estimate?.total && (
-                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                    <div className="bg-muted/50 rounded-lg p-3 border border-border">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Amount:</span>
-                        <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <span className="text-sm font-medium text-muted-foreground">Total Amount:</span>
+                        <span className="text-lg font-semibold text-foreground">
                           {formatCurrency(parseFloat(estimate.total))}
                         </span>
                       </div>

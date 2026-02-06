@@ -332,7 +332,7 @@ export default function WorkOrderKanbanPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <PremiumIcons.LayoutGrid className="w-5 h-5 text-gray-500" />
               Kanban Board
             </h1>

@@ -167,7 +167,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
           <CardContent className="pt-6">
             <div className="text-center py-12">
               <ImageIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+              <p className="text-sm font-medium text-foreground mb-1">
                 No photos uploaded yet
               </p>
               <p className="text-sm text-gray-500 mb-4">

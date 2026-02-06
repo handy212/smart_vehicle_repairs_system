@@ -126,7 +126,7 @@ export default function NewCreditNotePage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create Credit Note</h1>
+                    <h1 className="text-2xl font-bold text-foreground">Create Credit Note</h1>
                     <p className="text-sm text-gray-500">Issue a credit to a customer</p>
                 </div>
             </div>

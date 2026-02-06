@@ -307,40 +307,40 @@ export default function WorkOrdersPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats?.total_workorders || 0}</span>
+            <span className="text-lg font-bold text-foreground">{stats?.total_workorders || 0}</span>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">In Progress</span>
             <span className="text-lg font-bold text-primary dark:text-primary">{stats?.in_progress || 0}</span>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending</span>
             <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats?.pending || 0}</span>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Completed</span>
             <span className="text-lg font-bold text-green-600 dark:text-green-400">{stats?.completed || 0}</span>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+        <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cancelled</span>
-            <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{stats?.cancelled || 0}</span>
+            <span className="text-lg font-bold text-muted-foreground">{stats?.cancelled || 0}</span>
           </CardContent>
         </Card>
       </div>
 
       {/* Unified Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white dark:bg-gray-900/50 p-2 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-card/50 p-2 rounded-lg border border-border shadow-sm">
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-56">
@@ -353,7 +353,7 @@ export default function WorkOrdersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-8 h-8 text-xs bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-1 transition-all"
+              className="pl-8 h-8 text-xs bg-muted border-border focus:ring-1 transition-all"
             />
           </div>
 
@@ -408,7 +408,7 @@ export default function WorkOrdersPage() {
                 : String(value);
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal border border-gray-200 dark:border-gray-700">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal border border-border">
                   {displayLabel}: {displayValue}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"
@@ -480,7 +480,7 @@ export default function WorkOrdersPage() {
       />
 
       {/* Work Orders Table */}
-      <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden flex-1">
+      <Card className="border-border shadow-sm overflow-hidden flex-1">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-4">
@@ -490,7 +490,7 @@ export default function WorkOrdersPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100 dark:border-gray-800">
+                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-border">
                     <TableHead className="w-[30px] px-3 h-8">
                       <input
                         type="checkbox"
@@ -506,7 +506,7 @@ export default function WorkOrdersPage() {
                       field="work_order_number"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       WO #
                     </SortableHeader>
@@ -514,16 +514,16 @@ export default function WorkOrdersPage() {
                       field="customer__user__last_name"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Customer
                     </SortableHeader>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Vehicle</TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
                     <SortableHeader
                       field="status"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Status
                     </SortableHeader>
@@ -531,7 +531,7 @@ export default function WorkOrdersPage() {
                       field="priority"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Priority
                     </SortableHeader>
@@ -539,7 +539,7 @@ export default function WorkOrdersPage() {
                       field="estimated_total"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Cost
                     </SortableHeader>
@@ -547,18 +547,18 @@ export default function WorkOrdersPage() {
                       field="created_at"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Created
                     </SortableHeader>
-                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 text-right">Actions</TableHead>
+                    <TableHead className="px-3 h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((workorder) => (
                     <TableRow
                       key={workorder.id}
-                      className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer"
+                      className="group hover:bg-gray-50/80 transition-colors border-b border-border cursor-pointer"
                       onDoubleClick={() => router.push(`/workorders/${workorder.id}`)}
                     >
                       <TableCell className="px-3 py-1.5">
@@ -573,8 +573,8 @@ export default function WorkOrdersPage() {
                       <TableCell className="px-3 py-1.5 font-mono text-[11px] font-bold text-primary dark:text-primary">
                         {workorder.work_order_number || "-"}
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 text-xs font-medium text-gray-900 dark:text-gray-100">{workorder.customer_name || "N/A"}</TableCell>
-                      <TableCell className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{workorder.customer_name || "N/A"}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5">
                         <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
                           {workorder.status?.replace("_", " ") || workorder.status || "-"}
@@ -585,10 +585,10 @@ export default function WorkOrdersPage() {
                           {workorder.priority || "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 font-mono text-xs font-medium text-gray-900 dark:text-gray-100">
+                      <TableCell className="px-3 py-1.5 font-mono text-xs font-medium text-foreground">
                         {workorder.total_cost ? `${formatCurrency(parseFloat(workorder.total_cost))}` : "-"}
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                      <TableCell className="px-3 py-1.5 text-[11px] text-muted-foreground">
                         {workorder.created_at
                           ? format(new Date(workorder.created_at), "MMM dd")
                           : "-"}
@@ -651,8 +651,8 @@ export default function WorkOrdersPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Wrench className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No work orders found.</p>
+              <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No work orders found.</p>
               <Link href="/workorders/new">
                 <Button className="mt-4" variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
@@ -664,8 +664,8 @@ export default function WorkOrdersPage() {
 
           {/* Pagination */}
           {data && data.count > 0 && (
-            <div className="p-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 pl-2">
+            <div className="p-2 border-t border-border flex items-center justify-between">
+              <div className="text-[10px] text-muted-foreground pl-2">
                 Page {page} of {Math.ceil(data.count / 10)} ({data.count} items)
               </div>
               <div className="flex space-x-2">
@@ -700,7 +700,7 @@ export default function WorkOrdersPage() {
             <DialogTitle>Update Status for {bulkSelection.selectedCount} Work Order(s)</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               New Status
             </label>
             <Select

@@ -346,9 +346,9 @@ export default function EstimatesPage() {
             <span>/</span>
             <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Estimates</span>
+            <span className="text-foreground font-medium">Estimates</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Estimates</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Estimates</h1>
         </div>
         <div className="flex items-center space-x-2">
           <div className="relative">
@@ -367,7 +367,7 @@ export default function EstimatesPage() {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowActionsMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-md shadow-lg z-20">
                   <div className="py-1">
                     <PermissionGuard permission="export_estimates">
                       <button
@@ -376,7 +376,7 @@ export default function EstimatesPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         <Download className="w-4 h-4" />
                         Export CSV
@@ -401,7 +401,7 @@ export default function EstimatesPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-gray-500 bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-gray-500 bg-muted' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'draft' ? null : 'draft';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -417,7 +417,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'sent' ? 'ring-2 ring-primary bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'sent' ? 'ring-2 ring-primary bg-primary/10 dark:bg-gray-800' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'sent' ? null : 'sent';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -433,7 +433,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-gray-800' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'approved' ? null : 'approved';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -449,7 +449,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'declined' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'declined' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-gray-800' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'declined' ? null : 'declined';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -465,7 +465,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'expired' ? null : 'expired';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -498,7 +498,7 @@ export default function EstimatesPage() {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
+                  className="pl-9 h-8 text-sm bg-card w-64 focus:w-80 transition-all duration-300"
                 />
               </div>
 
@@ -545,9 +545,9 @@ export default function EstimatesPage() {
                 <div className="hidden md:flex items-center space-x-4 ml-auto text-sm">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 font-medium">Approved Value:</span>
-                    <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.financials.total_approved)}</span>
+                    <span className="font-bold text-foreground">{formatCurrency(stats.financials.total_approved)}</span>
                   </div>
-                  <div className="h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+                  <div className="h-4 w-px bg-border"></div>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 font-medium">Pipeline Value:</span>
                     <span className="font-bold text-primary">{formatCurrency(stats.financials.total_pending)}</span>
@@ -628,7 +628,7 @@ export default function EstimatesPage() {
       {/* Estimates Table */}
       <Card className="border-t shadow-sm">
         <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
-          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <CardTitle className="text-sm font-semibold text-card-foreground">
             All Estimates <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
           </CardTitle>
         </CardHeader>
@@ -771,7 +771,7 @@ export default function EstimatesPage() {
                 }}
               />
               <div
-                className="fixed z-50 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700"
+                className="fixed z-50 w-48 bg-card rounded-md shadow-lg border border-border"
                 style={{
                   top: `${menuPosition.top}px`,
                   left: `${menuPosition.left}px`,
@@ -789,7 +789,7 @@ export default function EstimatesPage() {
                           setOpenMenuId(null);
                           setMenuPosition(null);
                         }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                       >
                         <Eye className="w-4 h-4" />
                         View
@@ -802,7 +802,7 @@ export default function EstimatesPage() {
                               setOpenMenuId(null);
                               setMenuPosition(null);
                             }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                           >
                             <Edit className="w-4 h-4" />
                             Edit
@@ -830,7 +830,7 @@ export default function EstimatesPage() {
                               });
                             }
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                         >
                           <Copy className="w-4 h-4" />
                           Duplicate
@@ -854,14 +854,14 @@ export default function EstimatesPage() {
                                 });
                               }
                             }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                           >
                             <Mail className="w-4 h-4" />
                             Send
                           </button>
                         </PermissionGuard>
                       )}
-                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                      <div className="border-t border-border my-1" />
                       <PermissionGuard permission="delete_estimates">
                         <button
                           onClick={() => {

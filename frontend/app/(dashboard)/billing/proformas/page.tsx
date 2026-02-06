@@ -97,9 +97,9 @@ export default function ProformasPage() {
                         <span>/</span>
                         <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium">Proforma Invoices</span>
+                        <span className="text-foreground font-medium">Proforma Invoices</span>
                     </div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Proforma Invoices</h1>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">Proforma Invoices</h1>
                 </div>
                 <div className="flex items-center space-x-2">
                     <Button
@@ -137,7 +137,7 @@ export default function ProformasPage() {
                                     setSearch(e.target.value);
                                     setPage(1);
                                 }}
-                                className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 focus:ring-1 focus:ring-primary"
+                                className="pl-9 h-8 text-sm bg-card focus:ring-1 focus:ring-primary"
                             />
                         </div>
                         <AdvancedFilters

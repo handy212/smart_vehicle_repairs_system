@@ -158,9 +158,9 @@ export default function AppointmentCalendarPage() {
             <span>/</span>
             <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Calendar</span>
+            <span className="text-foreground font-medium">Calendar</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Appointment Calendar</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Appointment Calendar</h1>
         </div>
         <div className="flex items-center space-x-2">
           <Link href="/appointments">

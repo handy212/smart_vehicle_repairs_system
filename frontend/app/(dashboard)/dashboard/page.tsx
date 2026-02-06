@@ -20,17 +20,17 @@ import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 
 // Lazy load heavy chart components
 const RevenueAreaChart = dynamic(() => import("./components/RevenueAreaChart"), {
-  loading: () => <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">Loading chart...</div>,
+  loading: () => <div className="flex items-center justify-center h-[200px] text-muted-foreground">Loading chart...</div>,
   ssr: false,
 });
 
 const WorkOrderPieChart = dynamic(() => import("./components/WorkOrderPieChart"), {
-  loading: () => <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">Loading chart...</div>,
+  loading: () => <div className="flex items-center justify-center h-[200px] text-muted-foreground">Loading chart...</div>,
   ssr: false,
 });
 
 const PaymentMethodBarChart = dynamic(() => import("./components/PaymentMethodBarChart"), {
-  loading: () => <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">Loading chart...</div>,
+  loading: () => <div className="flex items-center justify-center h-[200px] text-muted-foreground">Loading chart...</div>,
   ssr: false,
 });
 
@@ -207,7 +207,7 @@ export default function DashboardPage() {
                     <PremiumIcons.Receipt className="w-4 h-4" />
                   </div>
                   <div>
-                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+                    <CardTitle className="text-base font-semibold text-foreground tracking-tight">
                       Revenue Performance
                     </CardTitle>
                   </div>
@@ -216,7 +216,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="mb-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   Daily revenue totals for the last 7 days.
                 </p>
               </div>
@@ -228,7 +228,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
               <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50">
-                <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+                <CardTitle className="text-base font-semibold text-foreground tracking-tight">
                   Workload Distribution
                 </CardTitle>
               </CardHeader>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
 
             <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
               <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50">
-                <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+                <CardTitle className="text-base font-semibold text-foreground tracking-tight">
                   Payment Mix
                 </CardTitle>
               </CardHeader>

@@ -354,10 +354,10 @@ export default function NewProformaPage() {
                 <span>/</span>
                 <Link href="/billing/proformas" className="hover:text-primary transition-colors">Proforma Invoices</Link>
                 <span>/</span>
-                <span className="text-gray-900 dark:text-gray-100 font-medium">New</span>
+                <span className="text-foreground font-medium">New</span>
             </div>
             <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Create Proforma Invoice</h1>
+                <h1 className="text-xl font-bold text-foreground tracking-tight">Create Proforma Invoice</h1>
             </div>
 
             {serverError && (

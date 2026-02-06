@@ -76,7 +76,7 @@ export default function NewBundlePage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">New Service Bundle</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">New Service Bundle</h1>
                         <p className="text-sm text-muted-foreground mt-0.5">
                             Create a reusable bundle of parts.
                         </p>

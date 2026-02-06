@@ -78,27 +78,27 @@ const CustomerRow = memo(function CustomerRow({
               {customer.user?.first_name?.[0]?.toUpperCase() || customer.full_name?.[0]?.toUpperCase() || customer.email?.[0]?.toUpperCase() || "C"}
             </div>
             <div className="ml-3">
-              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <div className="text-sm font-medium text-foreground">
                 {customer.full_name || customer.company_name || (customer.user?.first_name && customer.user?.last_name ? `${customer.user.first_name} ${customer.user.last_name}` : null) || "-"}
               </div>
               {customer.company_name && customer.full_name && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">{customer.company_name}</div>
+                <div className="text-xs text-muted-foreground">{customer.company_name}</div>
               )}
               {customer.user?.phone && (
-                <div className="text-xs text-gray-400 dark:text-gray-500">{customer.user.phone}</div>
+                <div className="text-xs text-muted-foreground">{customer.user.phone}</div>
               )}
             </div>
           </div>
         </TableCell>
       )}
       {visibleColumns.has("email") && (
-        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
           {customer.email || customer.user?.email || "-"}
         </TableCell>
       )}
       {visibleColumns.has("type") && (
         <TableCell className="px-4 py-2 whitespace-nowrap">
-          <Badge variant="outline" className="capitalize text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700">
+          <Badge variant="outline" className="capitalize text-muted-foreground border-border">
             {customer.customer_type || "-"}
           </Badge>
         </TableCell>
@@ -106,14 +106,14 @@ const CustomerRow = memo(function CustomerRow({
       {visibleColumns.has("balance") && (
         <TableCell className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
           <span className={cn(
-            parseFloat(customer.current_balance || "0") > 0 ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
+            parseFloat(customer.current_balance || "0") > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
           )}>
             {formatCurrency(parseFloat(customer.current_balance || "0"))}
           </span>
         </TableCell>
       )}
       {visibleColumns.has("created_at") && (
-        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
           {new Date(customer.created_at).toLocaleDateString()}
         </TableCell>
       )}
@@ -122,7 +122,7 @@ const CustomerRow = memo(function CustomerRow({
           <div className="flex flex-col gap-1">
             {customer.last_visit_date ? (
               <>
-                <span className="text-sm text-gray-900 dark:text-gray-100">
+                <span className="text-sm text-foreground">
                   {new Date(customer.last_visit_date).toLocaleDateString()}
                 </span>
                 {customer.days_since_last_visit !== null && customer.days_since_last_visit !== undefined && (
@@ -131,14 +131,14 @@ const CustomerRow = memo(function CustomerRow({
                     customer.days_since_last_visit >= 730 ? "text-red-600 dark:text-red-400 font-semibold" :
                       customer.days_since_last_visit >= 365 ? "text-orange-600 dark:text-orange-400" :
                         customer.days_since_last_visit >= 180 ? "text-yellow-600 dark:text-yellow-400" :
-                          "text-gray-500 dark:text-gray-400"
+                          "text-muted-foreground"
                   )}>
                     {customer.days_since_last_visit} days ago
                   </span>
                 )}
               </>
             ) : (
-              <span className="text-sm text-gray-400 dark:text-gray-500 italic">Never visited</span>
+              <span className="text-sm text-muted-foreground italic">Never visited</span>
             )}
             {customer.is_inactive && (
               <Badge
@@ -492,8 +492,8 @@ export default function CustomersPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-9 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-9 w-48 bg-border rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-border rounded animate-pulse"></div>
           </div>
         </div>
         <Card>
@@ -519,47 +519,47 @@ export default function CustomersPage() {
       <DynamicPageTitle title="Customers" />
       <div className="space-y-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Customers</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your customer database</p>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Customers</h1>
+          <p className="text-sm text-muted-foreground">Manage your customer database</p>
         </div>
 
         {/* Stats Grid - Small Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats?.total_customers || 0}</span>
+              <span className="text-lg font-bold text-foreground">{stats?.total_customers || 0}</span>
             </CardContent>
           </Card>
-          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
               <span className="text-lg font-bold text-green-600 dark:text-green-400">{stats?.active_customers || 0}</span>
             </CardContent>
           </Card>
-          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive</span>
-              <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{stats?.inactive_customers || 0}</span>
+              <span className="text-lg font-bold text-muted-foreground">{stats?.inactive_customers || 0}</span>
             </CardContent>
           </Card>
-          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Contact</span>
               <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_contacts || 0}</span>
             </CardContent>
           </Card>
-          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive Contact</span>
-              <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{stats?.inactive_contacts || 0}</span>
+              <span className="text-lg font-bold text-muted-foreground">{stats?.inactive_contacts || 0}</span>
             </CardContent>
           </Card>
         </div>
       </div>
 
       {/* Unified Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/50 p-1 rounded-lg">
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-64">
@@ -572,7 +572,7 @@ export default function CustomersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+              className="pl-9 h-9 text-sm bg-muted border-none focus:ring-1 transition-all"
             />
           </div>
 
@@ -595,7 +595,7 @@ export default function CustomersPage() {
               }
             }}
           >
-            <SelectTrigger className="h-9 w-[180px] text-sm bg-gray-50 dark:bg-gray-800 border-none">
+            <SelectTrigger className="h-9 w-[180px] text-sm bg-muted border-none">
               <SelectValue placeholder="Inactive Period" />
             </SelectTrigger>
             <SelectContent>
@@ -621,7 +621,7 @@ export default function CustomersPage() {
                   setInactivePeriod(`custom_${days}`);
                   setPage(1);
                 }}
-                className="h-9 w-24 text-sm bg-gray-50 dark:bg-gray-800 border-none"
+                className="h-9 w-24 text-sm bg-muted border-none"
                 min="1"
               />
               <span className="text-xs text-gray-500">days</span>
@@ -681,7 +681,7 @@ export default function CustomersPage() {
               if (key.includes("_to")) return null;
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
                   {String(value)}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"
@@ -759,7 +759,7 @@ export default function CustomersPage() {
           ) : data?.results && data.results.length > 0 ? (
             <div className="rounded-md">
               <Table>
-                <TableHeader className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-900/50">
+                <TableHeader className="bg-gray-50/50 hover:bg-muted/50">
                   <TableRow>
                     {visibleColumns.has("checkbox") && (
                       <TableHead className="w-[50px] px-4 h-10">
@@ -779,7 +779,7 @@ export default function CustomersPage() {
                         field="user__last_name"
                         sortConfig={sortConfig}
                         onSort={handleSort}
-                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                       >
                         Name
                       </SortableHeader>
@@ -789,7 +789,7 @@ export default function CustomersPage() {
                         field="user__email"
                         sortConfig={sortConfig}
                         onSort={handleSort}
-                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                       >
                         Email
                       </SortableHeader>
@@ -799,7 +799,7 @@ export default function CustomersPage() {
                         field="customer_type"
                         sortConfig={sortConfig}
                         onSort={handleSort}
-                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                       >
                         Type
                       </SortableHeader>
@@ -809,13 +809,13 @@ export default function CustomersPage() {
                         field="current_balance"
                         sortConfig={sortConfig}
                         onSort={handleSort}
-                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 text-right"
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right"
                       >
                         Balance
                       </SortableHeader>
                     )}
                     {visibleColumns.has("last_visit") && (
-                      <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
+                      <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                         Last Visit
                       </TableHead>
                     )}
@@ -824,7 +824,7 @@ export default function CustomersPage() {
                         field="created_at"
                         sortConfig={sortConfig}
                         onSort={handleSort}
-                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                       >
                         Joined
                       </SortableHeader>
@@ -834,13 +834,13 @@ export default function CustomersPage() {
                         field="status"
                         sortConfig={sortConfig}
                         onSort={handleSort}
-                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                       >
                         Status
                       </SortableHeader>
                     )}
                     {visibleColumns.has("actions") && (
-                      <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
+                      <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                         Actions
                       </TableHead>
                     )}
@@ -863,7 +863,7 @@ export default function CustomersPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">No customers found.</p>
+              <p className="text-muted-foreground">No customers found.</p>
               <PermissionGuard permission="create_customers">
                 <Link href="/customers/new">
                   <Button className="mt-4" variant="secondary">
@@ -878,7 +878,7 @@ export default function CustomersPage() {
           {/* Pagination */}
           {data && data.count > 0 && (
             <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700 dark:text-gray-300">
+              <div className="text-sm text-card-foreground">
                 Showing page {page} of {Math.ceil(data.count / 10)}
               </div>
               <div className="flex space-x-2">
@@ -925,7 +925,7 @@ export default function CustomersPage() {
             <DialogTitle>Update Status for {bulkSelection.selectedCount} Customer(s)</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-card-foreground mb-2">
               New Status
             </label>
             <Select

@@ -69,9 +69,9 @@ export default function ServiceBundlesPage() {
                             <span>/</span>
                             <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
                             <span>/</span>
-                            <span className="text-gray-900 dark:text-gray-100 font-medium">Service Bundles</span>
+                            <span className="text-foreground font-medium">Service Bundles</span>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
                             Service Bundles
                         </h1>
                     </div>
@@ -79,7 +79,7 @@ export default function ServiceBundlesPage() {
             </div>
 
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/50 p-1 rounded-lg">
                 <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
                     <div className="relative flex-1 md:flex-none md:w-64">
                         <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -88,7 +88,7 @@ export default function ServiceBundlesPage() {
                             placeholder="Search bundles..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+                            className="pl-9 h-9 text-sm bg-muted border-none focus:ring-1 transition-all"
                         />
                     </div>
                 </div>
@@ -113,7 +113,7 @@ export default function ServiceBundlesPage() {
                     ) : bundles.length > 0 ? (
                         <div className="overflow-x-auto">
                             <Table>
-                                <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                                <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Name</TableHead>
                                         <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Service Type</TableHead>
@@ -126,13 +126,13 @@ export default function ServiceBundlesPage() {
                                     {bundles.map((bundle) => (
                                         <TableRow
                                             key={bundle.id}
-                                            className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors"
+                                            className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border cursor-pointer transition-colors"
                                         >
                                             <TableCell className="px-4 py-3">
                                                 <div className="flex items-center">
                                                     <Box className="w-4 h-4 mr-2 text-primary" />
                                                     <div>
-                                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{bundle.name}</span>
+                                                        <span className="text-sm font-medium text-foreground">{bundle.name}</span>
                                                         {bundle.description && (
                                                             <p className="text-xs text-muted-foreground line-clamp-1 truncate max-w-xs">{bundle.description}</p>
                                                         )}
@@ -193,7 +193,7 @@ export default function ServiceBundlesPage() {
                     ) : (
                         <div className="text-center py-12">
                             <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No service bundles found</h3>
+                            <h3 className="text-lg font-medium text-foreground">No service bundles found</h3>
                             <p className="text-gray-500 max-w-sm mx-auto mt-1 mb-4">
                                 Service bundles make it easy to add common parts to work orders in one click.
                             </p>

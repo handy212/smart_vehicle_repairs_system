@@ -34,7 +34,7 @@ export function PortalList<T extends { id: string | number }>({
         return (
             <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 w-full bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse" />
+                    <div key={i} className="h-16 w-full bg-muted/50 rounded-lg animate-pulse" />
                 ))}
             </div>
         );
@@ -42,8 +42,8 @@ export function PortalList<T extends { id: string | number }>({
 
     if (data.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center border border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{emptyMessage}</p>
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center border border-dashed border-border rounded-xl">
+                <p className="text-sm text-muted-foreground mb-4">{emptyMessage}</p>
                 {emptyAction}
             </div>
         );
@@ -63,9 +63,9 @@ export function PortalList<T extends { id: string | number }>({
             )}
 
             {/* Desktop View (Table) */}
-            <div className={cn("overflow-hidden border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-gray-900 shadow-sm", renderMobileItem ? "hidden md:block" : "block")}>
+            <div className={cn("overflow-hidden border border-border rounded-xl bg-card shadow-sm", renderMobileItem ? "hidden md:block" : "block")}>
                 <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
-                    <thead className="bg-gray-50/50 dark:bg-gray-800/50">
+                    <thead className="bg-muted/50">
                         <tr>
                             {columns.map((col, idx) => (
                                 <th
@@ -81,7 +81,7 @@ export function PortalList<T extends { id: string | number }>({
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-card">
                         {data.map((item) => (
                             <tr
                                 key={item.id}
@@ -95,7 +95,7 @@ export function PortalList<T extends { id: string | number }>({
                                     <td
                                         key={idx}
                                         className={cn(
-                                            "px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100",
+                                            "px-6 py-4 whitespace-nowrap text-sm text-foreground",
                                             col.className
                                         )}
                                     >

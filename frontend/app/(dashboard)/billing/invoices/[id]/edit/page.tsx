@@ -375,7 +375,7 @@ export default function EditInvoicePage() {
     <div className="space-y-6 pb-24">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Edit Invoice #{invoice.invoice_number}</h1>
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Edit Invoice #{invoice.invoice_number}</h1>
       </div>
 
       {serverError && (

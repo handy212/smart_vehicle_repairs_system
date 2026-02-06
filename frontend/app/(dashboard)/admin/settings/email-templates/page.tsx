@@ -239,9 +239,9 @@ export default function EmailTemplatesPage() {
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
             <Link href="/admin/settings" className="hover:text-primary transition-colors">Settings</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Templates</span>
+            <span className="text-foreground font-medium">Templates</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Email Templates</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Email Templates</h1>
         </div>
         <PermissionGuard permission="manage_settings">
           <Button onClick={handleCreate} size="sm" className="bg-primary hover:bg-primary/90 text-white dark:bg-primary dark:hover:bg-primary/90">
@@ -252,7 +252,7 @@ export default function EmailTemplatesPage() {
       </div>
 
       {/* Filters */}
-      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="mx-4 border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
@@ -262,7 +262,7 @@ export default function EmailTemplatesPage() {
                 placeholder="Search templates..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-8 text-sm bg-white dark:bg-gray-900"
+                className="pl-8 h-8 text-sm bg-card"
               />
             </div>
 
@@ -270,7 +270,7 @@ export default function EmailTemplatesPage() {
               value={typeFilter}
               onValueChange={(val) => setTypeFilter(val)}
             >
-              <SelectTrigger className="h-8 w-[180px] text-xs bg-white dark:bg-gray-900">
+              <SelectTrigger className="h-8 w-[180px] text-xs bg-card">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -326,12 +326,12 @@ export default function EmailTemplatesPage() {
         {filteredTemplates.map((template: NotificationTemplateType) => (
           <Card
             key={template.id}
-            className="hover:shadow-md transition-all duration-200 group border border-gray-200 dark:border-gray-800"
+            className="hover:shadow-md transition-all duration-200 group border border-border"
           >
             <CardHeader className="p-3 pb-0">
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[200px]" title={template.name}>
+                  <CardTitle className="text-sm font-semibold text-foreground truncate max-w-[200px]" title={template.name}>
                     {template.name || "Unnamed Template"}
                   </CardTitle>
                   <div className="flex items-center gap-1.5 mt-1">
@@ -353,18 +353,18 @@ export default function EmailTemplatesPage() {
               <div className="space-y-2">
                 <div>
                   <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Subject</div>
-                  <p className="text-xs text-gray-700 dark:text-gray-300 truncate font-medium">
+                  <p className="text-xs text-card-foreground truncate font-medium">
                     {template.subject || <span className="text-gray-400 italic">No subject</span>}
                   </p>
                 </div>
                 <div>
                   <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Preview</div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-2 min-h-[2.5em]">
+                  <p className="text-[10px] text-muted-foreground line-clamp-2 min-h-[2.5em]">
                     {template.body || <span className="text-gray-400 italic">No content</span>}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between pt-2 mt-1 border-t border-border">
                   <span className="text-[10px] text-gray-400">
                     {format(new Date(template.updated_at), "MMM d, yyyy")}
                   </span>
@@ -408,7 +408,7 @@ export default function EmailTemplatesPage() {
           <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
             <Mail className="w-6 h-6 text-gray-400" />
           </div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">No templates found</h3>
+          <h3 className="text-sm font-semibold text-foreground">No templates found</h3>
           <p className="text-xs text-gray-500 mt-1">
             {search || typeFilter ? "Try adjusting your filters" : "Create a new template to get started"}
           </p>
@@ -422,13 +422,13 @@ export default function EmailTemplatesPage() {
           onOpenChange={(open) => !open && (creatingTemplate ? setCreatingTemplate(false) : setEditingTemplate(null))}
         >
           <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0">
-            <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+            <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-primary'}`}>
                   {creatingTemplate ? <Plus className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                 </div>
                 <div>
-                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                  <DialogTitle className="text-lg font-bold text-foreground">
                     {creatingTemplate ? "Create Template" : "Edit Template"}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-gray-500">
@@ -517,7 +517,7 @@ export default function EmailTemplatesPage() {
                     </Tabs>
                   </div>
 
-                  <div className="flex-1 relative border rounded-md border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="flex-1 relative border rounded-md border-border overflow-hidden">
                     {activeTab === "plain" ? (
                       <Textarea
                         value={editForm.body || ""}
@@ -541,8 +541,8 @@ export default function EmailTemplatesPage() {
               </div>
 
               {/* Sidebar */}
-              <div className="w-full lg:w-[280px] border-l border-gray-100 dark:border-gray-800 bg-gray-50/50 flex flex-col">
-                <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="w-full lg:w-[280px] border-l border-border bg-gray-50/50 flex flex-col">
+                <div className="p-4 border-b border-border">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
                     <Sparkles className="w-3 h-3" /> Variables
                   </h4>
@@ -572,7 +572,7 @@ export default function EmailTemplatesPage() {
               </div>
             </div>
 
-            <DialogFooter className="px-6 py-3 border-t border-gray-100 dark:border-gray-800 flex-shrink-0 bg-gray-50/50">
+            <DialogFooter className="px-6 py-3 border-t border-border flex-shrink-0 bg-gray-50/50">
               <div className="flex items-center justify-between w-full">
                 <Button
                   variant="ghost"
@@ -604,7 +604,7 @@ export default function EmailTemplatesPage() {
       {previewTemplate && (
         <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
           <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0">
-            <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+            <DialogHeader className="px-6 py-4 border-b border-border">
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-green-600" />
                 <div>

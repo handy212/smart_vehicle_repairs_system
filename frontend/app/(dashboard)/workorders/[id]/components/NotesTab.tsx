@@ -36,7 +36,7 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
           {notes.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+              <p className="text-sm font-medium text-foreground mb-1">
                 No notes yet
               </p>
               <p className="text-sm text-gray-500 mb-4">
@@ -51,7 +51,7 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
             <>
               {importantNotes.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center">
                     <AlertCircle className="w-4 h-4 mr-2 text-red-500" />
                     Important Notes ({importantNotes.length})
                   </h3>
@@ -68,13 +68,13 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
                               <Badge variant="secondary" className="text-xs">Customer Visible</Badge>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="text-xs text-muted-foreground">
                             {format(new Date(note.created_at), "MMM dd, yyyy 'at' h:mm a")}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{note.note}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{note.note}</p>
                         {note.created_by_name && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          <p className="text-xs text-muted-foreground mt-2">
                             By: {note.created_by_name}
                           </p>
                         )}
@@ -86,13 +86,13 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
 
               {regularNotes.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center">
                     <MessageSquare className="w-4 h-4 mr-2" />
                     All Notes ({regularNotes.length})
                   </h3>
                   <div className="space-y-3">
                     {regularNotes.map((note) => (
-                      <div key={note.id} className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 rounded-lg">
+                      <div key={note.id} className="border border-border bg-card p-4 rounded-lg">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <Badge variant="default" className="text-xs">{note.note_type?.replace('_', ' ')}</Badge>
@@ -100,13 +100,13 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
                               <Badge variant="secondary" className="text-xs">Customer Visible</Badge>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="text-xs text-muted-foreground">
                             {format(new Date(note.created_at), "MMM dd, yyyy 'at' h:mm a")}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{note.note}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{note.note}</p>
                         {note.created_by_name && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          <p className="text-xs text-muted-foreground mt-2">
                             By: {note.created_by_name}
                           </p>
                         )}

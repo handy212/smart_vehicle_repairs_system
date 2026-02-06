@@ -171,7 +171,7 @@ export default function NewBillPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Create New Bill</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Create New Bill</h1>
                     <p className="text-sm text-gray-500">Enter vendor bill details and line items.</p>
                 </div>
             </div>

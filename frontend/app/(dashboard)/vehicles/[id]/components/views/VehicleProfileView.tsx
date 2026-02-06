@@ -56,7 +56,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                 {Icon && <Icon className="w-3 h-3" />}
                 {label}
             </span>
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate line-clamp-1">{value || <span className="text-gray-400 font-normal">-</span>}</div>
+            <div className="text-sm font-medium text-foreground truncate line-clamp-1">{value || <span className="text-gray-400 font-normal">-</span>}</div>
         </div>
     );
 
@@ -68,7 +68,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                 <div className="lg:col-span-8 space-y-6">
 
                     {/* Hero Section */}
-                    <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-gray-800">
+                    <Card className="overflow-hidden border-none shadow-md bg-card">
                         <div className="flex flex-col md:flex-row">
                             {/* Vehicle Image */}
                             <div className="w-full md:w-1/3 relative bg-gray-100 dark:bg-gray-900 group cursor-pointer" onClick={() => vehicle.image && setShowImageModal(true)}>
@@ -97,7 +97,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                             {/* Key Details */}
                             <div className="flex-1 p-6 flex flex-col justify-center">
                                 <div className="mb-6">
-                                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
                                         {vehicle.year} {vehicle.make} {vehicle.model}
                                         {vinData?.trim && <Badge variant="secondary" className="font-normal text-xs">{vinData.trim}</Badge>}
                                     </h1>
@@ -115,7 +115,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                             (vehicle as any).exterior_color ? (
                                                 <div className="flex items-center gap-2">
                                                     <div
-                                                        className="w-4 h-4 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm shrink-0"
+                                                        className="w-4 h-4 rounded-full border border-border shadow-sm shrink-0"
                                                         style={{ backgroundColor: (vehicle as any).exterior_color }}
                                                     />
                                                     <span className="truncate">{(vehicle as any).exterior_color}</span>

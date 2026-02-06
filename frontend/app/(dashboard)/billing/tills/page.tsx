@@ -44,9 +44,9 @@ export default function TillDashboardPage() {
                         <span>/</span>
                         <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium">Till Management</span>
+                        <span className="text-foreground font-medium">Till Management</span>
                     </div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Till Management</h1>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">Till Management</h1>
                 </div>
                 {!hasOpenTill && (
                     <Link href="/billing/tills/open">
@@ -98,13 +98,13 @@ export default function TillDashboardPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="shadow-none border-none bg-gray-50/50 dark:bg-gray-800/50">
+                <Card className="shadow-none border-none bg-muted/50">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <AlertCircle className="h-5 w-5 text-gray-400" />
                                 <div>
-                                    <p className="font-semibold text-gray-900 dark:text-gray-100">No Open Till</p>
+                                    <p className="font-semibold text-foreground">No Open Till</p>
                                     <p className="text-xs text-muted-foreground">Open a till to start processing cash transactions</p>
                                 </div>
                             </div>

@@ -91,7 +91,7 @@ export default function MobileWorkOrdersPage() {
     <div className="p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold text-foreground">
           Work Orders
         </h2>
         <Button
@@ -134,7 +134,7 @@ export default function MobileWorkOrdersPage() {
       {filteredWorkOrders.length === 0 ? (
         <div className="text-center py-12">
           <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground">
             No work orders found
           </p>
         </div>
@@ -144,12 +144,12 @@ export default function MobileWorkOrdersPage() {
             <Link
               key={wo.id}
               href={`/mobile/workorders/${wo.id}`}
-              className="block p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="block p-4 rounded-lg border border-border bg-card hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-gray-900 dark:text-white">
+                    <span className="font-semibold text-foreground">
                       {wo.work_order_number || `WO #${wo.id}`}
                     </span>
                     {wo.priority === "high" && (
@@ -158,7 +158,7 @@ export default function MobileWorkOrdersPage() {
                       </span>
                     )}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <div className="text-sm text-muted-foreground mb-1">
                     {wo.vehicle_display || wo.vehicle_info || "Vehicle"}
                   </div>
                   {wo.customer_name && (
@@ -189,7 +189,7 @@ export default function MobileWorkOrdersPage() {
                     {wo.status?.replace("_", " ").toUpperCase()}
                   </span>
                   {wo.total_cost && (
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium text-foreground">
                       {wo.total_cost}
                     </span>
                   )}

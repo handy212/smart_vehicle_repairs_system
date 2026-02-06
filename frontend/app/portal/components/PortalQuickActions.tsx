@@ -57,20 +57,20 @@ export function PortalQuickActions() {
                     key={index}
                     href={action.href}
                     className={cn(
-                        "group flex flex-col justify-between p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl transition-all duration-300",
+                        "group flex flex-col justify-between p-4 bg-card border border-border rounded-xl transition-all duration-300",
                         action.hoverBg,
                         action.borderColor
                     )}
                 >
                     <div className="flex justify-between items-start mb-2">
-                        <div className={cn("p-2 rounded-lg bg-gray-50 dark:bg-gray-800 group-hover:bg-white dark:group-hover:bg-gray-900 transition-colors", action.color)}>
+                        <div className={cn("p-2 rounded-lg bg-muted group-hover:bg-white dark:group-hover:bg-gray-900 transition-colors", action.color)}>
                             <action.icon className="w-5 h-5" />
                         </div>
                         <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 -translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">{action.title}</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{action.desc}</p>
+                        <h3 className="font-semibold text-sm text-foreground">{action.title}</h3>
+                        <p className="text-xs text-muted-foreground">{action.desc}</p>
                     </div>
                 </Link>
             ))}

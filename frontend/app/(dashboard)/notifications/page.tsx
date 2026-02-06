@@ -191,10 +191,10 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">
             Notifications
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}` : "All caught up!"}
           </p>
         </div>
@@ -226,7 +226,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Search & Filters */}
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
         <div className="p-3 space-y-3">
           {/* Search */}
           <div className="relative">
@@ -236,7 +236,7 @@ export default function NotificationsPage() {
               placeholder="Search notifications..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9 w-full bg-white dark:bg-gray-900"
+              className="pl-9 h-9 w-full bg-card"
             />
             {search && (
               <Button
@@ -293,7 +293,7 @@ export default function NotificationsPage() {
                   getPriorityColor(notification.priority),
                   isUnread
                     ? "bg-primary/5 dark:bg-orange-950/20 border-r border-t border-b border-orange-200/50 dark:border-orange-800/50"
-                    : "bg-white dark:bg-gray-800/50 border-r border-t border-b border-gray-200 dark:border-gray-700",
+                    : "bg-card/50 border-r border-t border-b border-border",
                   isClickable && "cursor-pointer hover:shadow-sm hover:scale-[1.01] dark:hover:bg-gray-800"
                 )}
                 onClick={() => isClickable && handleNotificationClick(notification)}
@@ -305,21 +305,21 @@ export default function NotificationsPage() {
 
                 <div className="flex items-start gap-3">
                   {/* Avatar/Icon */}
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-muted-foreground">
                     {getTypeIcon(notification.notification_type)}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-0.5">
+                    <h3 className="text-sm font-semibold text-foreground mb-0.5">
                       {notification.title}
                     </h3>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                    <p className="text-sm text-card-foreground mb-2">
                       {notification.message}
                     </p>
 
                     {/* Metadata */}
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         {getTypeIcon(notification.notification_type)}
                         {notification.notification_type.replace("_", " ")}
@@ -368,15 +368,15 @@ export default function NotificationsPage() {
           )}
         </div>
       ) : (
-        <Card className="border-dashed border-2 bg-gray-50/50 dark:bg-gray-900/50">
+        <Card className="border-dashed border-2 bg-muted/50">
           <div className="py-16 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
               <Bell className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            <h3 className="text-lg font-semibold text-card-foreground mb-1">
               {debouncedSearch ? "No notifications found" : filter === "unread" ? "No unread notifications" : "No notifications yet"}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+            <p className="text-sm text-muted-foreground max-w-sm">
               {debouncedSearch
                 ? "Try adjusting your search"
                 : "You're all caught up! New notifications will appear here."}

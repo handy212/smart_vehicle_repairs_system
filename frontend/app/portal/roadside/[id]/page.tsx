@@ -172,10 +172,10 @@ export default function RoadsideRequestDetailPage() {
         <Card>
           <CardContent className="p-6 text-center">
             <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Request Not Found
             </h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-muted-foreground">
               The roadside assistance request you're looking for doesn't exist.
             </p>
           </CardContent>
@@ -196,7 +196,7 @@ export default function RoadsideRequestDetailPage() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-3xl font-bold text-foreground">
               {req.request_number}
             </h1>
             <Badge variant={getStatusVariant(req.status || 'requested')}>
@@ -209,7 +209,7 @@ export default function RoadsideRequestDetailPage() {
               </Badge>
             )}
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             {getServiceTypeDisplay(req.service_type)}
           </p>
         </div>
@@ -234,32 +234,32 @@ export default function RoadsideRequestDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Service Type</p>
-                  <p className="text-gray-900 dark:text-gray-100">{getServiceTypeDisplay(req.service_type)}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Service Type</p>
+                  <p className="text-foreground">{getServiceTypeDisplay(req.service_type)}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
                   <Badge variant={getStatusVariant(req.status || 'requested')}>
                     {req.status_display || req.status}
                   </Badge>
                 </div>
                 {req.vehicle_display && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Vehicle</p>
-                    <p className="text-gray-900 dark:text-gray-100">{req.vehicle_display}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Vehicle</p>
+                    <p className="text-foreground">{req.vehicle_display}</p>
                   </div>
                 )}
                 {req.tow_distance_km && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tow Distance</p>
-                    <p className="text-gray-900 dark:text-gray-100">{req.tow_distance_km} km</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Tow Distance</p>
+                    <p className="text-foreground">{req.tow_distance_km} km</p>
                   </div>
                 )}
               </div>
               {req.description && (
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</p>
-                  <p className="text-gray-900 dark:text-gray-100">{req.description}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
+                  <p className="text-foreground">{req.description}</p>
                 </div>
               )}
             </CardContent>
@@ -274,22 +274,22 @@ export default function RoadsideRequestDetailPage() {
               <div className="flex items-start gap-2">
                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Breakdown Location</p>
-                  <p className="text-gray-900 dark:text-gray-100">{req.breakdown_location}</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Breakdown Location</p>
+                  <p className="text-foreground">{req.breakdown_location}</p>
                 </div>
               </div>
               {req.destination && (
                 <div className="flex items-start gap-2">
                   <Navigation className="w-5 h-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Destination</p>
-                    <p className="text-gray-900 dark:text-gray-100">{req.destination}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Destination</p>
+                    <p className="text-foreground">{req.destination}</p>
                   </div>
                 </div>
               )}
               {(req.latitude && req.longitude) && (
                 <div className="space-y-4">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     GPS: {req.latitude}, {req.longitude}
                   </div>
                   <RoadsideMap
@@ -311,8 +311,8 @@ export default function RoadsideRequestDetailPage() {
               <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Requested</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-foreground">Requested</p>
+                  <p className="text-xs text-muted-foreground">
                     {format(new Date(req.requested_at), "MMM dd, yyyy 'at' h:mm a")}
                   </p>
                 </div>
@@ -321,12 +321,12 @@ export default function RoadsideRequestDetailPage() {
                 <div className="flex items-start gap-3">
                   <User className="w-5 h-5 text-primary mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Dispatched</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground">Dispatched</p>
+                    <p className="text-xs text-muted-foreground">
                       {format(new Date(req.dispatched_at), "MMM dd, yyyy 'at' h:mm a")}
                     </p>
                     {req.assigned_technician_name && (
-                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Service Provider: {req.assigned_technician_name}
                       </p>
                     )}
@@ -337,8 +337,8 @@ export default function RoadsideRequestDetailPage() {
                 <div className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-green-500 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Arrived on Site</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground">Arrived on Site</p>
+                    <p className="text-xs text-muted-foreground">
                       {format(new Date(req.arrived_at), "MMM dd, yyyy 'at' h:mm a")}
                     </p>
                   </div>
@@ -348,8 +348,8 @@ export default function RoadsideRequestDetailPage() {
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Completed</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground">Completed</p>
+                    <p className="text-xs text-muted-foreground">
                       {format(new Date(req.completed_at), "MMM dd, yyyy 'at' h:mm a")}
                     </p>
                   </div>
@@ -423,8 +423,8 @@ export default function RoadsideRequestDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Contact Phone</p>
-                <p className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Contact Phone</p>
+                <p className="text-foreground flex items-center gap-2">
                   <Phone className="w-4 h-4" />
                   {req.customer_phone}
                 </p>
@@ -442,8 +442,8 @@ export default function RoadsideRequestDetailPage() {
                 </div>
               ) : req.charge_amount && parseFloat(req.charge_amount) > 0 ? (
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Charge Amount</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Charge Amount</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {formatCurrency(parseFloat(req.charge_amount))}
                   </p>
                 </div>

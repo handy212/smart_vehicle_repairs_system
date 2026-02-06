@@ -51,7 +51,7 @@ export default function PortalHomePage() {
     return (
       <div className="text-center py-12">
         <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">Unable to load dashboard data</p>
+        <p className="text-muted-foreground">Unable to load dashboard data</p>
       </div>
     );
   }
@@ -63,11 +63,11 @@ export default function PortalHomePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Welcome, {user?.first_name || "Customer"}
           </h1>
         </div>
-        <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-800">
+        <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-1 rounded-full border border-border">
           {format(new Date(), "EEEE, MMMM d, yyyy")}
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function PortalHomePage() {
                             {format(new Date(apt.appointment_date), "d")}
                           </div>
                           <div>
-                            <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{apt.vehicle_info || "Vehicle"}</p>
+                            <p className="font-medium text-sm text-foreground">{apt.vehicle_info || "Vehicle"}</p>
                             <p className="text-xs text-gray-500 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {apt.appointment_time} • {apt.service_type || "Service"}
@@ -149,7 +149,7 @@ export default function PortalHomePage() {
                       >
                         <div className="flex justify-between items-start mb-1">
                           <p className="font-mono text-xs font-medium text-gray-500">#{inv.invoice_number}</p>
-                          <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                          <span className="font-bold text-sm text-foreground">
                             {formatCurrency(inv.total || 0)}
                           </span>
                         </div>

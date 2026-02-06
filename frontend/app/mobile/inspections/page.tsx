@@ -57,7 +57,7 @@ export default function MobileInspectionsPage() {
     <div className="p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold text-foreground">
           Inspections
         </h2>
         <div className="flex gap-2">
@@ -82,7 +82,7 @@ export default function MobileInspectionsPage() {
       {inspections.length === 0 ? (
         <div className="text-center py-12">
           <ClipboardCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-muted-foreground mb-4">
             No inspections found
           </p>
           <Link href="/mobile/inspections/new">
@@ -98,15 +98,15 @@ export default function MobileInspectionsPage() {
             <Link
               key={inspection.id}
               href={`/mobile/inspections/${inspection.id}`}
-              className="block p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="block p-4 rounded-lg border border-border bg-card hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold text-gray-900 dark:text-white mb-1">
+                  <div className="font-semibold text-foreground mb-1">
                     Inspection #{inspection.id}
                   </div>
                   {inspection.vehicle_info && (
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                    <div className="text-sm text-muted-foreground mb-1">
                       {inspection.vehicle_info}
                     </div>
                   )}

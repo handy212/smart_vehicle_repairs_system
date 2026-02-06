@@ -76,7 +76,7 @@ export default function VehicleDetailPage() {
     return (
       <div className="text-center py-12">
         <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400 mb-4">Vehicle not found</p>
+        <p className="text-muted-foreground mb-4">Vehicle not found</p>
         <Button onClick={() => router.push("/portal/vehicles")}>Back to Vehicles</Button>
       </div>
     );
@@ -95,10 +95,10 @@ export default function VehicleDetailPage() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-foreground">
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             Vehicle Details & Service History
           </p>
         </div>
@@ -118,41 +118,41 @@ export default function VehicleDetailPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">VIN</p>
-              <p className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+              <p className="text-sm text-muted-foreground mb-1">VIN</p>
+              <p className="font-mono text-sm font-medium text-foreground">
                 {vehicle.vin || "N/A"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">License Plate</p>
-              <p className="font-medium text-gray-900 dark:text-gray-100">
+              <p className="text-sm text-muted-foreground mb-1">License Plate</p>
+              <p className="font-medium text-foreground">
                 {vehicle.license_plate || "N/A"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Year</p>
-              <p className="font-medium text-gray-900 dark:text-gray-100">{vehicle.year}</p>
+              <p className="text-sm text-muted-foreground mb-1">Year</p>
+              <p className="font-medium text-foreground">{vehicle.year}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Make</p>
-              <p className="font-medium text-gray-900 dark:text-gray-100">{vehicle.make}</p>
+              <p className="text-sm text-muted-foreground mb-1">Make</p>
+              <p className="font-medium text-foreground">{vehicle.make}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Model</p>
-              <p className="font-medium text-gray-900 dark:text-gray-100">{vehicle.model}</p>
+              <p className="text-sm text-muted-foreground mb-1">Model</p>
+              <p className="font-medium text-foreground">{vehicle.model}</p>
             </div>
             {(vehicle.color || vehicle.exterior_color) && (
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Color</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-sm text-muted-foreground mb-1">Color</p>
+                <p className="font-medium text-foreground">
                   {vehicle.color || vehicle.exterior_color}
                 </p>
               </div>
             )}
             {(vehicle.mileage || vehicle.current_mileage) && (
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Mileage</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-sm text-muted-foreground mb-1">Mileage</p>
+                <p className="font-medium text-foreground">
                   {parseInt(String(vehicle.mileage || vehicle.current_mileage || 0)).toLocaleString()}{" "}
                   miles
                 </p>
@@ -160,14 +160,14 @@ export default function VehicleDetailPage() {
             )}
             {vehicle.engine_type && (
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Engine</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">{vehicle.engine_type}</p>
+                <p className="text-sm text-muted-foreground mb-1">Engine</p>
+                <p className="font-medium text-foreground">{vehicle.engine_type}</p>
               </div>
             )}
             {vehicle.fuel_type && (
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Fuel Type</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">{vehicle.fuel_type}</p>
+                <p className="text-sm text-muted-foreground mb-1">Fuel Type</p>
+                <p className="font-medium text-foreground">{vehicle.fuel_type}</p>
               </div>
             )}
           </div>
@@ -194,43 +194,43 @@ export default function VehicleDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Total Services
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-3xl font-bold text-foreground">
                   {workOrders.length}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Work orders</p>
+                <p className="text-xs text-muted-foreground mt-1">Work orders</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Appointments
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-3xl font-bold text-foreground">
                   {appointments.length}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total appointments</p>
+                <p className="text-xs text-muted-foreground mt-1">Total appointments</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Inspections
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-3xl font-bold text-foreground">
                   {inspections.length}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total inspections</p>
+                <p className="text-xs text-muted-foreground mt-1">Total inspections</p>
               </CardContent>
             </Card>
           </div>
@@ -245,13 +245,13 @@ export default function VehicleDetailPage() {
                   {workOrders.slice(0, 5).map((wo: any) => (
                     <div
                       key={wo.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
                     >
                       <div>
-                        <p className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                        <p className="font-medium text-sm text-foreground">
                           Work Order #{wo.work_order_number}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {format(new Date(wo.created_at), "MMM d, yyyy")}
                         </p>
                       </div>
@@ -274,21 +274,21 @@ export default function VehicleDetailPage() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <Wrench className="w-5 h-5 text-primary" />
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <h3 className="text-lg font-semibold text-foreground">
                           Work Order #{wo.work_order_number}
                         </h3>
                       </div>
                       <div className="ml-8 space-y-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Date: {format(new Date(wo.created_at), "MMM d, yyyy")}
                         </p>
                         {wo.customer_concerns && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                          <p className="text-sm text-muted-foreground mt-2">
                             {wo.customer_concerns}
                           </p>
                         )}
                         {wo.estimated_total && (
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-2">
+                          <p className="text-sm font-medium text-foreground mt-2">
                             Total: {formatCurrency(wo.estimated_total || 0)}
                           </p>
                         )}
@@ -303,7 +303,7 @@ export default function VehicleDetailPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">No work orders found</p>
+                <p className="text-muted-foreground">No work orders found</p>
               </CardContent>
             </Card>
           )}
@@ -319,15 +319,15 @@ export default function VehicleDetailPage() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <Calendar className="w-5 h-5 text-green-500" />
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <h3 className="text-lg font-semibold text-foreground">
                           {format(new Date(apt.appointment_date), "EEEE, MMMM d, yyyy")}
                         </h3>
                       </div>
                       <div className="ml-8 space-y-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Time: {apt.appointment_time}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Service: {apt.service_type}
                         </p>
                       </div>
@@ -341,7 +341,7 @@ export default function VehicleDetailPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">No appointments found</p>
+                <p className="text-muted-foreground">No appointments found</p>
               </CardContent>
             </Card>
           )}
@@ -357,21 +357,21 @@ export default function VehicleDetailPage() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <Search className="w-5 h-5 text-purple-500" />
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <h3 className="text-lg font-semibold text-foreground">
                           Inspection #{inspection.inspection_number || inspection.id}
                         </h3>
                       </div>
                       <div className="ml-8 space-y-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Date: {format(new Date(inspection.inspection_date), "MMM d, yyyy")}
                         </p>
                         {inspection.inspection_type && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             Type: {inspection.inspection_type}
                           </p>
                         )}
                         {inspection.overall_condition && (
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-2">
+                          <p className="text-sm font-medium text-foreground mt-2">
                             Condition: {inspection.overall_condition}
                           </p>
                         )}
@@ -388,7 +388,7 @@ export default function VehicleDetailPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">No inspections found</p>
+                <p className="text-muted-foreground">No inspections found</p>
               </CardContent>
             </Card>
           )}

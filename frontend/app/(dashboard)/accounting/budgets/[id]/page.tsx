@@ -122,7 +122,7 @@ export default function BudgetDetailEditPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Add Line Form */}
                 <Card className="md:col-span-1 border shadow-sm h-fit">
-                    <CardHeader className="bg-gray-50/50 dark:bg-gray-800/50 pb-3">
+                    <CardHeader className="bg-muted/50 pb-3">
                         <CardTitle className="text-base font-medium">Add Allocation</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-4 space-y-4">

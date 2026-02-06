@@ -51,15 +51,15 @@ export function ComplaintTab({
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
-                <CardHeader className="pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+            <Card className="border-none shadow-sm bg-muted/50">
+                <CardHeader className="pb-3 border-b bg-muted/50">
                     <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Customer Complaint</CardTitle>
                     <CardDescription className="text-xs">What the customer reported</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
                     <div className="space-y-4">
                         <Textarea
-                            className="min-h-[150px] bg-white dark:bg-gray-900 resize-none focus-visible:ring-1"
+                            className="min-h-[150px] bg-card resize-none focus-visible:ring-1"
                             value={customerComplaint}
                             onChange={(e) => setCustomerComplaint(e.target.value)}
                             placeholder="Enter details about the customer's complaint..."
@@ -71,14 +71,14 @@ export function ComplaintTab({
                     </div>
                 </CardContent>
             </Card>
-            <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
-                <CardHeader className="pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+            <Card className="border-none shadow-sm bg-muted/50">
+                <CardHeader className="pb-3 border-b bg-muted/50">
                     <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Initial Observations</CardTitle>
                     <CardDescription className="text-xs">Technician's initial visual check</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
                     <Textarea
-                        className="min-h-[150px] bg-white dark:bg-gray-900 resize-none focus-visible:ring-1"
+                        className="min-h-[150px] bg-card resize-none focus-visible:ring-1"
                         value={initialObservations}
                         onChange={(e) => setInitialObservations(e.target.value)}
                         placeholder="Record any visual observations or notes..."

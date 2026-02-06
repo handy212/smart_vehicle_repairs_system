@@ -166,9 +166,9 @@ export default function RolesPage() {
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
             <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Roles</span>
+            <span className="text-foreground font-medium">Roles</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Roles & Permissions</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Roles & Permissions</h1>
         </div>
         <PermissionGuard permission="manage_roles">
           <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="h-8 dark:bg-primary dark:hover:bg-primary/90">
@@ -184,7 +184,7 @@ export default function RolesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Roles</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalRoles}</p>
+              <p className="text-xl font-bold text-foreground">{stats.totalRoles}</p>
             </div>
             <Shield className="w-5 h-5 text-primary opacity-80" />
           </CardContent>
@@ -202,7 +202,7 @@ export default function RolesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">System</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.systemRoles}</p>
+              <p className="text-xl font-bold text-foreground">{stats.systemRoles}</p>
             </div>
             <Shield className="w-5 h-5 text-gray-400 opacity-80" />
           </CardContent>
@@ -211,7 +211,7 @@ export default function RolesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Users</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalUsers}</p>
+              <p className="text-xl font-bold text-foreground">{stats.totalUsers}</p>
             </div>
             <Users className="w-5 h-5 text-purple-500 opacity-80" />
           </CardContent>
@@ -220,7 +220,7 @@ export default function RolesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Perms</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalPermissions}</p>
+              <p className="text-xl font-bold text-foreground">{stats.totalPermissions}</p>
             </div>
             <Shield className="w-5 h-5 text-orange-500 opacity-80" />
           </CardContent>
@@ -228,7 +228,7 @@ export default function RolesPage() {
       </div>
 
       {/* Filters */}
-      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="mx-4 border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
@@ -238,14 +238,14 @@ export default function RolesPage() {
                 placeholder="Search roles..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-8 text-sm bg-white dark:bg-gray-900"
+                className="pl-8 h-8 text-sm bg-card"
               />
             </div>
             <Select
               value={statusFilter}
               onValueChange={(val) => setStatusFilter(val)}
             >
-              <SelectTrigger className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900">
+              <SelectTrigger className="w-[140px] h-8 text-sm bg-card">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -258,7 +258,7 @@ export default function RolesPage() {
               value={typeFilter}
               onValueChange={(val) => setTypeFilter(val)}
             >
-              <SelectTrigger className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900">
+              <SelectTrigger className="w-[140px] h-8 text-sm bg-card">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -274,7 +274,7 @@ export default function RolesPage() {
       {/* Roles Table */}
       <Card className="mx-4 border-t shadow-sm">
         <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
-          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <CardTitle className="text-sm font-semibold text-card-foreground">
             Roles Directory <span className="text-muted-foreground font-normal ml-1">({filteredRoles.length})</span>
           </CardTitle>
         </CardHeader>
@@ -312,7 +312,7 @@ export default function RolesPage() {
                     <tr key={role.id} className="hover:bg-gray-50/80 transition-colors group">
                       <TableCell className="px-4 py-2.5">
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
+                          <div className="text-sm font-medium text-foreground">{role.name}</div>
                           {role.description && (
                             <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]">
                               {role.description}
@@ -822,7 +822,7 @@ function PermissionsDialog({
           {/* Permissions List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {Object.keys(filteredCategories).length === 0 ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-muted-foreground">
                 <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No permissions found</p>
               </div>

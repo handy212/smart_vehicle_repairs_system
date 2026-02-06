@@ -133,7 +133,7 @@ export default function WorkOrderOverviewTab({
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <User className="w-5 h-5 text-gray-400" />
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Customer</h3>
+                  <h3 className="text-sm font-semibold text-card-foreground">Customer</h3>
                 </div>
                 {workOrder.customer ? (
                   <>
@@ -155,27 +155,27 @@ export default function WorkOrderOverviewTab({
                       )}
                     </div>
                     {typeof workOrder.customer === "object" && workOrder.customer !== null && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                           Customer Information
                         </div>
                         <div className="space-y-2 text-sm">
                           {workOrder.customer.phone && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
-                              <span className="text-gray-900 dark:text-gray-100">{workOrder.customer.phone}</span>
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Phone:</span>
+                              <span className="text-foreground">{workOrder.customer.phone}</span>
                             </div>
                           )}
                           {workOrder.customer.email && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
-                              <span className="text-gray-900 dark:text-gray-100 break-words">{workOrder.customer.email}</span>
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Email:</span>
+                              <span className="text-foreground break-words">{workOrder.customer.email}</span>
                             </div>
                           )}
                           {workOrder.customer.customer_type && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
-                              <span className="text-gray-900 dark:text-gray-100 capitalize">
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Type:</span>
+                              <span className="text-foreground capitalize">
                                 {workOrder.customer.customer_type.replace('_', ' ')}
                               </span>
                             </div>
@@ -185,7 +185,7 @@ export default function WorkOrderOverviewTab({
                     )}
                   </>
                 ) : (
-                  <p className="text-gray-900 dark:text-gray-100">{workOrder.customer_name || "-"}</p>
+                  <p className="text-foreground">{workOrder.customer_name || "-"}</p>
                 )}
       </div>
 
@@ -193,7 +193,7 @@ export default function WorkOrderOverviewTab({
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Car className="w-5 h-5 text-gray-400" />
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Vehicle</h3>
+                  <h3 className="text-sm font-semibold text-card-foreground">Vehicle</h3>
                 </div>
                 {workOrder.vehicle ? (
                   <>
@@ -215,27 +215,27 @@ export default function WorkOrderOverviewTab({
                       )}
                     </div>
                     {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                           Vehicle Info
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-start">
-                            <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
-                            <span className="text-gray-900 dark:text-gray-100">
+                            <span className="font-medium text-card-foreground w-24 flex-shrink-0">Make/Model:</span>
+                            <span className="text-foreground">
                               {workOrder.vehicle.make} {workOrder.vehicle.model} {workOrder.vehicle.year}
                             </span>
                           </div>
                           {workOrder.vehicle.license_plate && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
-                              <span className="text-gray-900 dark:text-gray-100">{workOrder.vehicle.license_plate}</span>
+                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">License:</span>
+                              <span className="text-foreground">{workOrder.vehicle.license_plate}</span>
                             </div>
                           )}
                           {workOrder.vehicle.vin && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
-                              <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{workOrder.vehicle.vin}</span>
+                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">VIN:</span>
+                              <span className="text-foreground font-mono text-xs break-all">{workOrder.vehicle.vin}</span>
                             </div>
           )}
         </div>
@@ -243,7 +243,7 @@ export default function WorkOrderOverviewTab({
                     )}
                   </>
                 ) : (
-                  <p className="text-gray-900 dark:text-gray-100">{workOrder.vehicle_info || "-"}</p>
+                  <p className="text-foreground">{workOrder.vehicle_info || "-"}</p>
                 )}
               </div>
     </div>
@@ -312,7 +312,7 @@ export default function WorkOrderOverviewTab({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <LinkIcon className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <span className="text-sm font-medium text-foreground">
                         Original Work Order
                       </span>
                     </div>
@@ -323,22 +323,22 @@ export default function WorkOrderOverviewTab({
                     </Link>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <p className="font-mono text-gray-900 dark:text-gray-100">
+                    <p className="font-mono text-foreground">
                       {(workOrder as any).related_work_order_detail.work_order_number}
                     </p>
                     {(workOrder as any).related_work_order_detail.completed_at && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         Completed: {format(new Date((workOrder as any).related_work_order_detail.completed_at), "MMM dd, yyyy")}
                       </p>
                     )}
-                    <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
+                    <p className="text-xs text-muted-foreground capitalize">
                       Status: {(workOrder as any).related_work_order_detail.status.replace("_", " ")}
                     </p>
                   </div>
                   {(workOrder as any).warranty_reason && (
                     <div className="mt-2 pt-2 border-t border-orange-200 dark:border-orange-800">
-                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Warranty Reason:</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-xs font-medium text-card-foreground mb-1">Warranty Reason:</p>
+                      <p className="text-xs text-muted-foreground">
                         {(workOrder as any).warranty_reason}
                       </p>
                     </div>
@@ -349,12 +349,12 @@ export default function WorkOrderOverviewTab({
               {/* Rework Work Orders (if this work order has been reworked) */}
               {(workOrder as any).rework_work_orders && (workOrder as any).rework_work_orders.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <p className="text-sm font-medium text-card-foreground mb-2">
                     Subsequent Rework(s) ({((workOrder as any).rework_work_orders as any[]).length}):
                   </p>
                   <div className="space-y-2">
                     {((workOrder as any).rework_work_orders as any[]).map((rework: any) => (
-                      <div key={rework.id} className="p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+                      <div key={rework.id} className="p-2 bg-muted rounded-md border border-border">
                         <div className="flex items-center justify-between">
                           <div>
                             <Link 
@@ -363,7 +363,7 @@ export default function WorkOrderOverviewTab({
                             >
                               {rework.work_order_number}
                             </Link>
-                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                            <p className="text-xs text-muted-foreground">
                               Created: {format(new Date(rework.created_at), "MMM dd, yyyy")}
                             </p>
                           </div>
@@ -401,22 +401,22 @@ export default function WorkOrderOverviewTab({
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">Estimated Labor</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-medium text-foreground">
                 {formatCurrency(parseFloat((workOrder as any).estimated_labor_cost || "0"))}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">Estimated Parts</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-medium text-foreground">
                 {formatCurrency(parseFloat((workOrder as any).estimated_parts_cost || "0"))}
               </span>
             </div>
             <div className="border-t dark:border-gray-700 pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Total</span>
+                <span className="text-sm font-medium text-card-foreground">Estimated Total</span>
                 <span className={`text-lg font-bold ${
                   parseFloat((workOrder as any).estimated_total || "0") > 0 
-                    ? "text-gray-900 dark:text-gray-100" 
+                    ? "text-foreground" 
                     : "text-gray-400"
                 }`}>
                   {formatCurrency(parseFloat((workOrder as any).estimated_total || workOrder.total_cost || "0"))}
@@ -427,20 +427,20 @@ export default function WorkOrderOverviewTab({
               <>
                 <div className="border-t dark:border-gray-700 pt-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Labor</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-sm font-medium text-card-foreground">Actual Labor</span>
+                    <span className="text-sm font-medium text-foreground">
                       {formatCurrency(parseFloat((workOrder as any).actual_labor_cost || "0"))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Parts</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="text-sm font-medium text-card-foreground">Actual Parts</span>
+                    <span className="text-sm font-medium text-foreground">
                       {formatCurrency(parseFloat((workOrder as any).actual_parts_cost || "0"))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t dark:border-gray-700">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Actual Total</span>
-                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    <span className="text-sm font-semibold text-foreground">Actual Total</span>
+                    <span className="text-lg font-bold text-foreground">
                       {formatCurrency(parseFloat((workOrder as any).actual_total))}
                     </span>
                   </div>

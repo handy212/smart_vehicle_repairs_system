@@ -435,7 +435,7 @@ export default function MobileWorkOrderDetailPage() {
           <div className="flex items-start gap-2">
             <User className="h-4 w-4 text-gray-500 mt-0.5" />
             <div className="flex-1">
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className="text-sm font-medium text-foreground">
                 {workOrder.customer_name || "Customer"}
               </div>
               {workOrder.primary_technician_name && (
@@ -448,7 +448,7 @@ export default function MobileWorkOrderDetailPage() {
 
           <div className="flex items-start gap-2">
             <Car className="h-4 w-4 text-gray-500 mt-0.5" />
-            <div className="text-sm text-gray-700 dark:text-gray-300">
+            <div className="text-sm text-card-foreground">
               {workOrder.vehicle_display || workOrder.vehicle_info || "Vehicle"}
             </div>
           </div>
@@ -456,17 +456,17 @@ export default function MobileWorkOrderDetailPage() {
           {workOrder.customer_concerns && (
             <div className="flex items-start gap-2">
               <FileText className="h-4 w-4 text-gray-500 mt-0.5" />
-              <div className="text-sm text-gray-700 dark:text-gray-300">
+              <div className="text-sm text-card-foreground">
                 {workOrder.customer_concerns}
               </div>
             </div>
           )}
 
           {(workOrder.estimated_total || workOrder.total_cost) && (
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-2 border-t border-border">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Estimated Total</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
+                <span className="font-semibold text-foreground">
                   ${workOrder.estimated_total || workOrder.total_cost}
                 </span>
               </div>
@@ -474,7 +474,7 @@ export default function MobileWorkOrderDetailPage() {
           )}
 
           {/* Quick Link to Photos */}
-          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="pt-3 border-t border-border">
             <Link href={`/mobile/workorders/${workOrderId}/photos`}>
               <Button variant="outline" size="sm" className="w-full">
                 <Package className="h-4 w-4 mr-2" />
@@ -615,11 +615,11 @@ export default function MobileWorkOrderDetailPage() {
             parts.map((part) => (
               <div
                 key={part.id}
-                className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+                className="p-3 rounded-lg border border-border bg-card"
               >
                 <div className="flex items-start justify-between mb-1">
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="text-sm font-medium text-foreground">
                       {part.part_name}
                     </div>
                     {part.part_number && (
@@ -635,7 +635,7 @@ export default function MobileWorkOrderDetailPage() {
                 <div className="flex items-center justify-between mt-2 text-xs">
                   <span className="text-gray-500">Qty: {part.quantity}</span>
                   {part.total_cost && (
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="font-medium text-foreground">
                       ${part.total_cost}
                     </span>
                   )}
@@ -685,7 +685,7 @@ export default function MobileWorkOrderDetailPage() {
                         "text-sm font-medium",
                         task.status === "completed"
                           ? "line-through text-gray-500"
-                          : "text-gray-900 dark:text-white"
+                          : "text-foreground"
                       )}
                     >
                       {task.description}

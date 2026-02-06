@@ -146,10 +146,10 @@ export default function AppointmentCalendarPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-3xl font-bold text-foreground">
               Appointment Calendar
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               View your appointments in calendar format
             </p>
           </div>
@@ -234,26 +234,26 @@ export default function AppointmentCalendarPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center space-x-6 text-sm">
-            <span className="font-medium text-gray-700 dark:text-gray-300">Status:</span>
+            <span className="font-medium text-card-foreground">Status:</span>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-yellow-500"></div>
-              <span className="text-gray-600 dark:text-gray-400">Pending</span>
+              <span className="text-muted-foreground">Pending</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-primary"></div>
-              <span className="text-gray-600 dark:text-gray-400">Confirmed</span>
+              <span className="text-muted-foreground">Confirmed</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-purple-500"></div>
-              <span className="text-gray-600 dark:text-gray-400">In Progress</span>
+              <span className="text-muted-foreground">In Progress</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-green-500"></div>
-              <span className="text-gray-600 dark:text-gray-400">Completed</span>
+              <span className="text-muted-foreground">Completed</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-red-500"></div>
-              <span className="text-gray-600 dark:text-gray-400">Cancelled</span>
+              <span className="text-muted-foreground">Cancelled</span>
             </div>
           </div>
         </CardContent>

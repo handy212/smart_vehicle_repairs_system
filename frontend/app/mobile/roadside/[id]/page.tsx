@@ -83,9 +83,9 @@ export default function RoadsideDetailPage() {
     }
 
     return (
-        <div className="pb-24 max-w-md mx-auto min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="pb-24 max-w-md mx-auto min-h-screen bg-muted">
             {/* Header */}
-            <div className="bg-white dark:bg-gray-800 p-4 sticky top-0 z-10 shadow-sm flex items-center gap-3">
+            <div className="bg-card p-4 sticky top-0 z-10 shadow-sm flex items-center gap-3">
                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
@@ -104,7 +104,7 @@ export default function RoadsideDetailPage() {
                 {/* Map / Location Card */}
                 <Card>
                     <CardContent className="p-0">
-                        <div className="h-32 bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative overflow-hidden">
+                        <div className="h-32 bg-border flex items-center justify-center relative overflow-hidden">
                             <MapIcon className="h-12 w-12 text-gray-400 opacity-50" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-4">
                                 <span className="text-white font-medium text-sm truncate w-full">
@@ -140,7 +140,7 @@ export default function RoadsideDetailPage() {
                             </Button>
                         </div>
 
-                        <div className="flex items-start gap-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                        <div className="flex items-start gap-3 border-t border-border pt-3">
                             <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 dark:text-orange-300 shrink-0">
                                 <Car className="h-4 w-4" />
                             </div>
@@ -174,7 +174,7 @@ export default function RoadsideDetailPage() {
 
                 {/* Workflow Action Bar (Fixed Bottom) */}
                 {!['completed', 'cancelled', 'failed'].includes(request.status) && (
-                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 max-w-md mx-auto">
+                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border max-w-md mx-auto">
                         {request.status === 'dispatched' && (
                             <Button
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6"

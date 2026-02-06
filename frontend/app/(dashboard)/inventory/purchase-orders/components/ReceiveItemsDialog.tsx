@@ -227,14 +227,14 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                         ) : (
                             <div className="space-y-4">
                                 {/* Summary Stats */}
-                                <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wider">Items Remaining</p>
-                                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{unreceivedItems.length}</p>
+                                        <p className="text-2xl font-bold text-foreground">{unreceivedItems.length}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wider">Total Remaining</p>
-                                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalRemaining}</p>
+                                        <p className="text-2xl font-bold text-foreground">{totalRemaining}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wider">Ready to Receive</p>
@@ -342,7 +342,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                         )}
                     </div>
 
-                    <DialogFooter className="px-6 py-4 border-t bg-gray-50 dark:bg-gray-800">
+                    <DialogFooter className="px-6 py-4 border-t bg-muted">
                         <div className="flex items-center justify-between w-full">
                             <Button variant="outline" onClick={() => setIsOpen(false)}>
                                 Close

@@ -212,8 +212,8 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Service Schedule</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h2 className="text-xl font-bold text-foreground">Service Schedule</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage scheduled maintenance services and intervals
           </p>
         </div>
@@ -233,21 +233,21 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
         <Card className="overflow-hidden border-orange-100 dark:border-gray-800">
           <CardContent className="p-0">
             <Table>
-              <TableHeader className="bg-gray-50 dark:bg-gray-800/50">
+              <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Service Type</TableHead>
-                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Last Service</TableHead>
-                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Next Due</TableHead>
-                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Interval Settings</TableHead>
-                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Status</TableHead>
-                  <TableHead className="text-right font-semibold text-gray-700 dark:text-gray-300">Actions</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Service Type</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Last Service</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Next Due</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Interval Settings</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Status</TableHead>
+                  <TableHead className="text-right font-semibold text-card-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {schedules.map((schedule) => (
                   <TableRow key={schedule.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <TableCell>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{schedule.service_type_name || "N/A"}</div>
+                      <div className="font-medium text-foreground">{schedule.service_type_name || "N/A"}</div>
                       {schedule.notes && (
                         <div className="text-xs text-gray-500 mt-1 max-w-[200px] truncate" title={schedule.notes}>
                           {schedule.notes}
@@ -256,7 +256,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col text-sm">
-                        <span className="text-gray-700 dark:text-gray-300">
+                        <span className="text-card-foreground">
                           {schedule.last_service_date
                             ? format(new Date(schedule.last_service_date), "MMM dd, yyyy")
                             : "Never"}
@@ -270,7 +270,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col text-sm">
-                        <span className={schedule.is_due ? "font-semibold text-red-600 dark:text-red-400" : "text-gray-700 dark:text-gray-300"}>
+                        <span className={schedule.is_due ? "font-semibold text-red-600 dark:text-red-400" : "text-card-foreground"}>
                           {schedule.next_service_due_date
                             ? format(new Date(schedule.next_service_due_date), "MMM dd, yyyy")
                             : "Not set"}
@@ -283,7 +283,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      <div className="flex items-center text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center text-muted-foreground">
                         {schedule.interval_months && (
                           <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-xs mr-2">
                             {schedule.interval_months} mo
@@ -348,10 +348,10 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
       ) : (
         <Card className="border-dashed border-2">
           <CardContent className="p-12 text-center">
-            <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No services scheduled</h3>
+            <h3 className="text-lg font-medium text-foreground mb-1">No services scheduled</h3>
             <p className="text-gray-500 mb-6">Create a maintenance schedule to track services for this vehicle.</p>
             <PermissionGuard permission="edit_vehicles">
               <Button onClick={openAddDialog}>
@@ -365,11 +365,11 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
 
       {/* Service Bundles Section */}
       <div className="pt-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Available Service Bundles</h2>
+        <h2 className="text-xl font-bold text-foreground mb-4">Available Service Bundles</h2>
         {bundles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {bundles.map((bundle) => (
-              <Card key={bundle.id} className="border border-gray-200 dark:border-gray-800">
+              <Card key={bundle.id} className="border border-border">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-base font-semibold">{bundle.name}</CardTitle>
@@ -380,8 +380,8 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                   <CardDescription>{bundle.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <div className="mb-2 font-medium text-gray-700 dark:text-gray-300">Included Parts:</div>
-                  <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
+                  <div className="mb-2 font-medium text-card-foreground">Included Parts:</div>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                     {bundle.items.slice(0, 3).map((item) => (
                       <li key={item.id} className="truncate">
                         {item.quantity}x {item.part_name}
@@ -398,7 +398,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed">
+          <div className="text-center py-8 text-gray-500 bg-muted/50 rounded-lg border border-dashed">
             No service bundles available.
           </div>
         )}
@@ -557,7 +557,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently remove the service schedule for
-              <span className="font-semibold text-gray-900 dark:text-gray-100"> {scheduleToDelete?.service_type_name}</span>.
+              <span className="font-semibold text-foreground"> {scheduleToDelete?.service_type_name}</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

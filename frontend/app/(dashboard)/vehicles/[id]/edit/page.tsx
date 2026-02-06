@@ -122,7 +122,7 @@ export default function EditVehiclePage() {
             Back
           </Button>
         </Link>
-        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="p-6 bg-card rounded-lg shadow-sm border border-border">
           <p className="text-red-600 dark:text-red-400">Vehicle not found.</p>
         </div>
       </div>
@@ -157,8 +157,8 @@ export default function EditVehiclePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Edit Vehicle</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <h1 className="text-2xl font-semibold text-foreground">Edit Vehicle</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               {vehicle.make} {vehicle.model} {vehicle.year}
             </p>
           </div>

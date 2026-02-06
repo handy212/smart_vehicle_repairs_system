@@ -137,7 +137,7 @@ export function StatementView({ customerId }: StatementViewProps) {
                              I will update the whole file to be safe and include DataTable. 
                           */}
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 font-medium border-b border-gray-100 dark:border-gray-800">
+                            <thead className="bg-muted/50 text-gray-500 font-medium border-b border-border">
                                 <tr>
                                     <th className="px-4 py-3">Date</th>
                                     <th className="px-4 py-3">Type</th>

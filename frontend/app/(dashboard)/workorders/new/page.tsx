@@ -560,7 +560,7 @@ export default function NewWorkOrderPage() {
               <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
               Back
             </Button>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
               <PremiumIcons.PlusCircle className="w-6 h-6 text-primary dark:text-primary" />
               <span className="font-semibold text-lg">New Work Order</span>
             </h1>
@@ -625,7 +625,7 @@ export default function NewWorkOrderPage() {
           <div className="space-y-4 py-4">
             {repeatVisitMatches.length > 0 && (
               <div className="space-y-3">
-                <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                <h4 className="font-semibold text-sm text-foreground">
                   Previous Work Order(s):
                 </h4>
                 {repeatVisitMatches.map((match, index) => (
@@ -637,7 +637,7 @@ export default function NewWorkOrderPage() {
                             <p className="font-medium text-sm">
                               Work Order: <strong>{match.work_order_number}</strong>
                             </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                            <p className="text-xs text-muted-foreground">
                               Completed {match.days_ago} day{match.days_ago !== 1 ? 's' : ''} ago
                             </p>
                           </div>
@@ -647,7 +647,7 @@ export default function NewWorkOrderPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                        <div className="text-xs text-muted-foreground space-y-1">
                           <p><strong>Branch:</strong> {match.branch_name}</p>
                           <p><strong>Technician:</strong> {match.technician}</p>
                           <p><strong>Previous Concerns:</strong> {match.customer_concerns.substring(0, 150)}{match.customer_concerns.length > 150 ? '...' : ''}</p>
@@ -661,7 +661,7 @@ export default function NewWorkOrderPage() {
                               onChange={() => setSelectedRelatedWorkOrder(match.work_order_id)}
                               className="w-4 h-4 text-orange-600"
                             />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                            <span className="text-sm text-card-foreground">
                               Link this work order as related
                             </span>
                           </label>
@@ -673,7 +673,7 @@ export default function NewWorkOrderPage() {
               </div>
             )}
 
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-2 border-t border-border">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -681,11 +681,11 @@ export default function NewWorkOrderPage() {
                   onChange={(e) => setIsWarrantyRework(e.target.checked)}
                   className="w-4 h-4 text-orange-600 rounded"
                 />
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-sm font-medium text-foreground">
                   Mark as warranty/rework case
                 </span>
               </label>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 ml-6">
+              <p className="text-xs text-muted-foreground mt-1 ml-6">
                 This will flag the work order as a warranty case and link it to the previous work order.
               </p>
             </div>
@@ -732,7 +732,7 @@ export default function NewWorkOrderPage() {
                     <div>
                       <label
                         htmlFor="customer"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        className="block text-sm font-medium text-card-foreground mb-1"
                       >
                         Customer *
                       </label>
@@ -781,27 +781,27 @@ export default function NewWorkOrderPage() {
 
                     {/* Customer Info Display */}
                     {selectedCustomerData && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                           Customer Information
                         </div>
                         <div className="space-y-2 text-sm">
                           {selectedCustomerData.phone && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
-                              <span className="text-gray-900 dark:text-gray-100">{selectedCustomerData.phone}</span>
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Phone:</span>
+                              <span className="text-foreground">{selectedCustomerData.phone}</span>
                             </div>
                           )}
                           {selectedCustomerData.email && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
-                              <span className="text-gray-900 dark:text-gray-100 break-words">{selectedCustomerData.email}</span>
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Email:</span>
+                              <span className="text-foreground break-words">{selectedCustomerData.email}</span>
                             </div>
                           )}
                           {selectedCustomerData.customer_type && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
-                              <span className="text-gray-900 dark:text-gray-100 capitalize">
+                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Type:</span>
+                              <span className="text-foreground capitalize">
                                 {selectedCustomerData.customer_type.replace('_', ' ')}
                               </span>
                             </div>
@@ -816,7 +816,7 @@ export default function NewWorkOrderPage() {
                     <div>
                       <label
                         htmlFor="vehicle"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        className="block text-sm font-medium text-card-foreground mb-1"
                       >
                         Vehicle *
                       </label>
@@ -853,27 +853,27 @@ export default function NewWorkOrderPage() {
 
                     {/* Vehicle Info Display */}
                     {selectedVehicle && (
-                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                           Vehicle Info
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-start">
-                            <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
-                            <span className="text-gray-900 dark:text-gray-100">
+                            <span className="font-medium text-card-foreground w-24 flex-shrink-0">Make/Model:</span>
+                            <span className="text-foreground">
                               {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
                             </span>
                           </div>
                           {selectedVehicle.license_plate && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
-                              <span className="text-gray-900 dark:text-gray-100">{selectedVehicle.license_plate}</span>
+                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">License:</span>
+                              <span className="text-foreground">{selectedVehicle.license_plate}</span>
                             </div>
                           )}
                           {selectedVehicle.vin && (
                             <div className="flex items-start">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
-                              <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{selectedVehicle.vin}</span>
+                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">VIN:</span>
+                              <span className="text-foreground font-mono text-xs break-all">{selectedVehicle.vin}</span>
                             </div>
                           )}
                         </div>
@@ -900,7 +900,7 @@ export default function NewWorkOrderPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {/* Maintenance Type */}
                   <div className="col-span-2 md:col-span-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Maintenance Type
                     </label>
                     <div className="flex items-center space-x-4 mt-2">
@@ -911,7 +911,7 @@ export default function NewWorkOrderPage() {
                           {...register("maintenance_type")}
                           className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">General Repair</span>
+                        <span className="text-sm font-medium text-foreground">General Repair</span>
                       </label>
                       <label className="flex items-center space-x-2 cursor-pointer">
                         <input
@@ -920,7 +920,7 @@ export default function NewWorkOrderPage() {
                           {...register("maintenance_type")}
                           className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
                         />
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Routine Service</span>
+                        <span className="text-sm font-medium text-foreground">Routine Service</span>
                       </label>
                     </div>
                   </div>
@@ -929,7 +929,7 @@ export default function NewWorkOrderPage() {
                   {watch("maintenance_type") === "routine" && (
                     <div className="col-span-2 md:col-span-1">
                       <div className="flex justify-between items-center mb-1">
-                        <label htmlFor="service_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label htmlFor="service_type" className="block text-sm font-medium text-card-foreground">
                           Service Type
                         </label>
                         {suggestedService && (
@@ -985,7 +985,7 @@ export default function NewWorkOrderPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="priority" className="block text-sm font-medium text-card-foreground mb-1">
                       Priority
                     </label>
                     <Select
@@ -1005,10 +1005,10 @@ export default function NewWorkOrderPage() {
                   </div>
                   {watch("maintenance_type") !== "routine" && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-card-foreground mb-2">
                         Quick Select Common Concerns
                       </label>
-                      <div className="max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-gray-50 dark:bg-gray-900/20">
+                      <div className="max-h-32 overflow-y-auto border border-border rounded-lg p-2 bg-muted/20">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                           {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
                             <label
@@ -1048,9 +1048,9 @@ export default function NewWorkOrderPage() {
                                     setValue("customer_concerns", "");
                                   }
                                 }}
-                                className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+                                className="rounded border-border text-primary focus:ring-primary"
                               />
-                              <span className="text-sm text-gray-700 dark:text-gray-300">{concern.label}</span>
+                              <span className="text-sm text-card-foreground">{concern.label}</span>
                             </label>
                           ))}
                         </div>
@@ -1062,7 +1062,7 @@ export default function NewWorkOrderPage() {
                 <div className="space-y-3">
 
                   <div>
-                    <label htmlFor="customer_concerns" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="customer_concerns" className="block text-sm font-medium text-card-foreground mb-1">
                       Customer Concerns / Description *
                     </label>
                     <Textarea
@@ -1134,10 +1134,10 @@ export default function NewWorkOrderPage() {
                       <AlertCircle className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className={`font-semibold text-base ${isWarrantyRework ? 'text-orange-900 dark:text-orange-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                      <h3 className={`font-semibold text-base ${isWarrantyRework ? 'text-orange-900 dark:text-orange-100' : 'text-card-foreground'}`}>
                         Return / Rework Job?
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         {isWarrantyRework ? 'Link to previous work order' : 'Click to mark this as a return or rework job'}
                       </p>
                     </div>
@@ -1157,7 +1157,7 @@ export default function NewWorkOrderPage() {
                     {vehicle && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <label className="text-sm font-medium text-card-foreground">
                             Select Previous Job
                           </label>
                           {selectedRelatedWorkOrder && (
@@ -1184,26 +1184,26 @@ export default function NewWorkOrderPage() {
                                 }}
                                 className={`p-3 rounded-lg border text-left cursor-pointer transition-all hover:shadow-md ${selectedRelatedWorkOrder === wo.id
                                   ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-500"
-                                  : "border-gray-200 dark:border-gray-700 hover:border-orange-300 bg-white dark:bg-gray-800"
+                                  : "border-border hover:border-orange-300 bg-card"
                                   }`}
                               >
                                 <div className="flex justify-between items-start mb-1">
-                                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100">{wo.work_order_number}</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-medium uppercase tracking-wide">
+                                  <span className="font-bold text-sm text-foreground">{wo.work_order_number}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-muted-foreground font-medium uppercase tracking-wide">
                                     {wo.days_ago !== null ? `${wo.days_ago} DAYS AGO` : 'N/A'}
                                   </span>
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 min-h-[2.5em]">
+                                <p className="text-xs text-muted-foreground line-clamp-2 mb-2 min-h-[2.5em]">
                                   {wo.customer_concerns || "No description provided"}
                                 </p>
-                                <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
+                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                   <User className="w-3 h-3" /> {wo.technician_name.split(' ')[0]}
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="text-center py-6 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                          <div className="text-center py-6 bg-muted/20 rounded-lg border border-dashed border-border">
                             <p className="text-sm text-gray-500 mt-1">No recent history found.</p>
                             <Button type="button" variant="link" size="sm" onClick={() => setShowWorkOrderSearch(true)} className="text-orange-600">
                               Search by ID instead
@@ -1215,7 +1215,7 @@ export default function NewWorkOrderPage() {
 
                     {/* Manual Search (Conditional) */}
                     {(showWorkOrderSearch || (!recentWorkOrders.length && !isLoadingRecentWorkOrders)) && (
-                      <div className="space-y-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="space-y-2 bg-muted p-3 rounded-lg border border-border">
                         <label className="text-xs font-semibold uppercase text-gray-500 tracking-wide">
                           Search by ID
                         </label>
@@ -1228,7 +1228,7 @@ export default function NewWorkOrderPage() {
                               setWorkOrderSearchQuery(e.target.value);
                               setShowWorkOrderSearch(e.target.value.length > 0);
                             }}
-                            className="bg-white dark:bg-gray-900"
+                            className="bg-card"
                           />
                           <Button size="sm" variant="ghost" className="absolute right-1 top-1 h-7 w-7 p-0" onClick={() => setShowWorkOrderSearch(false)}>
                             <XCircle className="w-4 h-4 text-gray-400" />
@@ -1240,7 +1240,7 @@ export default function NewWorkOrderPage() {
                     {/* Warranty Reason */}
                     {selectedRelatedWorkOrder && (
                       <div className="space-y-2 animate-in fade-in duration-300">
-                        <label htmlFor="warranty_reason" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                        <label htmlFor="warranty_reason" className="text-sm font-medium text-card-foreground flex items-center justify-between">
                           <span>Reason for Rework <span className="text-red-500">*</span></span>
                         </label>
                         <Textarea
@@ -1292,9 +1292,9 @@ export default function NewWorkOrderPage() {
                     return acc;
                   }, {} as Record<number, any>)
                 ).map(([woId, group]: [string, any]) => (
-                  <div key={woId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-                    <div className="mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                  <div key={woId} className="border border-border rounded-lg p-4 bg-muted/50">
+                    <div className="mb-3 pb-2 border-b border-border">
+                      <p className="font-semibold text-sm text-foreground">
                         Work Order: {group.work_order_number}
                       </p>
                       {group.work_order_completed_at && (
@@ -1305,7 +1305,7 @@ export default function NewWorkOrderPage() {
                     </div>
                     <div className="space-y-3">
                       {group.recommendations.map((rec: any) => (
-                        <div key={rec.id} className="border-l-4 border-l-orange-500 bg-white dark:bg-gray-900 rounded p-3">
+                        <div key={rec.id} className="border-l-4 border-l-orange-500 bg-card rounded p-3">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge
@@ -1325,12 +1325,12 @@ export default function NewWorkOrderPage() {
                               </Badge>
                             </div>
                             {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-mono">
+                              <span className="text-sm font-bold text-foreground font-mono">
                                 ${Number(rec.estimated_total_cost).toFixed(2)}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
+                          <p className="text-sm text-card-foreground mt-2">
                             {rec.description}
                           </p>
                         </div>
@@ -1342,7 +1342,7 @@ export default function NewWorkOrderPage() {
             ) : (
               <div className="text-center py-6">
                 <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
-                <p className="font-medium text-gray-900 dark:text-gray-100">
+                <p className="font-medium text-foreground">
                   No Unapproved Recommendations
                 </p>
               </div>
@@ -1358,7 +1358,7 @@ export default function NewWorkOrderPage() {
                   onChange={(e) => setAcknowledgedUnapproved(e.target.checked)}
                   className="w-4 h-4 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
                 />
-                <span className="text-gray-700 dark:text-gray-300">
+                <span className="text-card-foreground">
                   I acknowledge these unapproved recommendations and wish to proceed
                 </span>
               </label>

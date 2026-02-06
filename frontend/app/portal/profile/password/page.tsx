@@ -89,8 +89,8 @@ export default function ChangePasswordPage() {
                         Back to Profile
                     </Button>
                 </Link>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Change Password</h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <h1 className="text-3xl font-bold text-foreground">Change Password</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
                     Update your account password
                 </p>
             </div>
@@ -164,7 +164,7 @@ export default function ChangePasswordPage() {
                                 {errors.new_password && (
                                     <p className="text-sm text-red-600">{errors.new_password.message}</p>
                                 )}
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-muted-foreground">
                                     Password must be at least 8 characters long
                                 </p>
                             </div>
@@ -198,7 +198,7 @@ export default function ChangePasswordPage() {
                                 )}
                             </div>
 
-                            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
                                 <Button
                                     type="button"
                                     variant="secondary"

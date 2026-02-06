@@ -165,25 +165,25 @@ export default function RoadsidePage() {
     // Stats Grid Component
     const StatsGrid = () => (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <Card className="shadow-sm border bg-card">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
-                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats?.total_requests || 0}</span>
+                    <span className="text-lg font-bold text-foreground">{stats?.total_requests || 0}</span>
                 </CardContent>
             </Card>
-            <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <Card className="shadow-sm border bg-card">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
                     <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_requests || 0}</span>
                 </CardContent>
             </Card>
-            <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <Card className="shadow-sm border bg-card">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Completed</span>
                     <span className="text-lg font-bold text-green-600 dark:text-green-400">{stats?.completed_requests || 0}</span>
                 </CardContent>
             </Card>
-            <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <Card className="shadow-sm border bg-card">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Subscribed</span>
                     <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats?.covered_by_subscription || 0}</span>
@@ -205,8 +205,8 @@ export default function RoadsidePage() {
             {/* Header with Stats */}
             <div className="space-y-4">
                 <div>
-                    <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Roadside Assistance</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <h1 className="text-xl font-bold tracking-tight text-foreground">Roadside Assistance</h1>
+                    <p className="text-sm text-muted-foreground">
                         Manage roadside breakdown requests.
                     </p>
                 </div>
@@ -214,7 +214,7 @@ export default function RoadsidePage() {
             </div>
 
             {/* Unified Toolbar */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/50 p-1 rounded-lg">
                 <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
                     {/* Search */}
                     <div className="relative flex-1 md:flex-none md:w-64">
@@ -227,7 +227,7 @@ export default function RoadsidePage() {
                                 setSearch(e.target.value);
                                 setPage(1);
                             }}
-                            className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+                            className="pl-9 h-9 text-sm bg-muted border-none focus:ring-1 transition-all"
                         />
                     </div>
 
@@ -271,7 +271,7 @@ export default function RoadsidePage() {
                             const filter = filterOptions.find((f) => f.key === key);
                             if (!filter) return null;
                             return (
-                                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
                                     {filter.label}: {String(value)}
                                     <X
                                         className="w-3 h-3 cursor-pointer hover:text-red-500"
@@ -318,7 +318,7 @@ export default function RoadsidePage() {
             </div>
 
             {/* Data Table */}
-            <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+            <Card className="border-border shadow-sm overflow-hidden">
                 <CardContent className="p-0">
                     {isLoading ? (
                         <div className="p-4">
@@ -328,12 +328,12 @@ export default function RoadsidePage() {
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100 dark:border-gray-800">
+                                    <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-border">
                                         <SortableHeader
                                             field="request_number"
                                             sortConfig={sortConfig}
                                             onSort={handleSort}
-                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                                         >
                                             Request #
                                         </SortableHeader>
@@ -341,17 +341,17 @@ export default function RoadsidePage() {
                                             field="customer__user__last_name"
                                             sortConfig={sortConfig}
                                             onSort={handleSort}
-                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                                         >
                                             Customer
                                         </SortableHeader>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Service</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Location</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Service</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Location</TableHead>
                                         <SortableHeader
                                             field="requested_at"
                                             sortConfig={sortConfig}
                                             onSort={handleSort}
-                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                                         >
                                             Requested
                                         </SortableHeader>
@@ -359,18 +359,18 @@ export default function RoadsidePage() {
                                             field="status"
                                             sortConfig={sortConfig}
                                             onSort={handleSort}
-                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                                            className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                                         >
                                             Status
                                         </SortableHeader>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 text-right">Actions</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {requests.map((request) => (
                                         <TableRow
                                             key={request.id}
-                                            className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer"
+                                            className="group hover:bg-gray-50/80 transition-colors border-b border-border cursor-pointer"
                                             onDoubleClick={() => router.push(`/roadside/${request.id}`)}
                                         >
                                             <TableCell className="px-4 py-2">
@@ -386,7 +386,7 @@ export default function RoadsidePage() {
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-medium text-gray-900 dark:text-gray-100">{request.customer_name || `Customer #${request.customer}`}</span>
+                                                    <span className="text-xs font-medium text-foreground">{request.customer_name || `Customer #${request.customer}`}</span>
                                                     {request.customer_phone && (
                                                         <span className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                                                             <Phone className="h-2.5 w-2.5" />
@@ -396,7 +396,7 @@ export default function RoadsidePage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
-                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal border-gray-200 text-gray-600 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
+                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal border-gray-200 text-gray-600 bg-muted dark:border-gray-700 dark:text-gray-400">
                                                     {request.service_type_display}
                                                 </Badge>
                                                 {request.vehicle_display && (
@@ -406,12 +406,12 @@ export default function RoadsidePage() {
                                             <TableCell className="px-4 py-2">
                                                 <div className="flex items-start gap-1.5 max-w-[180px]">
                                                     <MapPin className="h-3 w-3 text-gray-400 mt-0.5 flex-shrink-0" />
-                                                    <span className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{request.breakdown_location}</span>
+                                                    <span className="text-xs text-muted-foreground line-clamp-2">{request.breakdown_location}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
                                                 <div className="text-xs">
-                                                    <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                                                    <div className="flex items-center gap-1 text-card-foreground">
                                                         <Clock className="h-3 w-3 text-gray-400" />
                                                         {format(new Date(request.requested_at), "MMM dd")}
                                                     </div>
@@ -461,8 +461,8 @@ export default function RoadsidePage() {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <Truck className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                            <p className="text-gray-500 dark:text-gray-400">No roadside requests found.</p>
+                            <Truck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">No roadside requests found.</p>
                             <Link href="/roadside/new">
                                 <Button className="mt-4" variant="secondary">
                                     <Plus className="w-4 h-4 mr-2" />
@@ -474,8 +474,8 @@ export default function RoadsidePage() {
 
                     {/* Pagination */}
                     {requestsData && requestsData.count > 0 && (
-                        <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="p-4 border-t border-border flex items-center justify-between">
+                            <div className="text-xs text-muted-foreground">
                                 Showing page {page} of {Math.ceil(requestsData.count / 10)}
                             </div>
                             <div className="flex space-x-2">

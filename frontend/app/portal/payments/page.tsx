@@ -105,8 +105,8 @@ export default function PaymentHistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Payment History</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-3xl font-bold text-foreground">Payment History</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           View all your payment transactions
         </p>
       </div>
@@ -115,13 +115,13 @@ export default function PaymentHistoryPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Payments
             </CardTitle>
             <CreditCard className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-2xl font-bold text-foreground">
               {payments.length}
             </div>
           </CardContent>
@@ -129,13 +129,13 @@ export default function PaymentHistoryPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Paid
             </CardTitle>
             <DollarSign className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-2xl font-bold text-foreground">
               {formatCurrency(totalPaid)}
             </div>
           </CardContent>
@@ -143,13 +143,13 @@ export default function PaymentHistoryPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Completed
             </CardTitle>
             <FileText className="h-5 w-5 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-2xl font-bold text-foreground">
               {payments.filter((p: any) => p.status === "completed").length}
             </div>
           </CardContent>
@@ -267,7 +267,7 @@ export default function PaymentHistoryPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 mb-4">No payments found</p>
+            <p className="text-muted-foreground mb-4">No payments found</p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
               Your payment history will appear here once you make a payment
             </p>

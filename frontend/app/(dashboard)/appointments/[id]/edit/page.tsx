@@ -158,9 +158,9 @@ export default function EditAppointmentPage() {
             <span>/</span>
             <Link href={`/appointments/${appointmentId}`} className="hover:text-primary transition-colors">#{appointmentId}</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Edit</span>
+            <span className="text-foreground font-medium">Edit</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Edit Appointment</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Edit Appointment</h1>
         </div>
         <Link href={`/appointments/${appointmentId}`}>
           <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">

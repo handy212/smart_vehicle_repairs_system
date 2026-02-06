@@ -89,7 +89,7 @@ export default function EstimateDetailPage() {
     return (
       <div className="text-center py-12">
         <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400 mb-4">Estimate not found</p>
+        <p className="text-muted-foreground mb-4">Estimate not found</p>
         <Button onClick={() => router.push("/portal/estimates")}>Back to Estimates</Button>
       </div>
     );
@@ -107,10 +107,10 @@ export default function EstimateDetailPage() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-foreground">
             Estimate #{estimate.estimate_number}
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Estimate Details</p>
+          <p className="mt-1 text-sm text-muted-foreground">Estimate Details</p>
         </div>
         <div className="flex items-center space-x-2">
           {canApprove && (
@@ -173,27 +173,27 @@ export default function EstimateDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Estimate Number</p>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm text-muted-foreground mb-1">Estimate Number</p>
+                  <p className="font-semibold text-foreground">
                     #{estimate.estimate_number}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Estimate Date</p>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm text-muted-foreground mb-1">Estimate Date</p>
+                  <p className="font-semibold text-foreground">
                     {format(new Date(estimate.estimate_date), "MMM d, yyyy")}
                   </p>
                 </div>
                 {estimate.valid_until && (
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Expiration Date</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">
+                    <p className="text-sm text-muted-foreground mb-1">Expiration Date</p>
+                    <p className="font-semibold text-foreground">
                       {format(new Date(estimate.valid_until), "MMM d, yyyy")}
                     </p>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
                   <Badge
                     variant={
                       estimate.status === "approved"
@@ -212,8 +212,8 @@ export default function EstimateDetailPage() {
 
               {estimate.vehicle_display && (
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Vehicle</p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                  <p className="text-sm text-muted-foreground mb-1">Vehicle</p>
+                  <p className="font-medium text-foreground">
                     {estimate.vehicle_display}
                   </p>
                 </div>
@@ -221,8 +221,8 @@ export default function EstimateDetailPage() {
 
               {estimate.work_order && (
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Work Order</p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                  <p className="text-sm text-muted-foreground mb-1">Work Order</p>
+                  <p className="font-medium text-foreground">
                     #{typeof estimate.work_order === 'object' && estimate.work_order !== null
                       ? estimate.work_order.id
                       : estimate.work_order}
@@ -232,8 +232,8 @@ export default function EstimateDetailPage() {
 
               {estimate.notes && (
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Notes</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                  <p className="text-sm text-card-foreground whitespace-pre-wrap">
                     {estimate.notes}
                   </p>
                 </div>
@@ -248,20 +248,20 @@ export default function EstimateDetailPage() {
                 <CardTitle>Line Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="border border-border rounded-lg overflow-hidden">
                   <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
+                    <thead className="bg-muted">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Description
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Quantity
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Unit Price
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           Total
                         </th>
                       </tr>
@@ -269,16 +269,16 @@ export default function EstimateDetailPage() {
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {estimate.line_items.map((item: any, index: number) => (
                         <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                          <td className="px-4 py-3 text-sm text-foreground">
                             {item.description}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
+                          <td className="px-4 py-3 text-sm text-right text-muted-foreground">
                             {item.quantity || "-"}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
+                          <td className="px-4 py-3 text-sm text-right text-muted-foreground">
                             {formatCurrency(item.unit_price || 0)}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">
+                          <td className="px-4 py-3 text-sm text-right font-medium text-foreground">
                             {formatCurrency(item.total || 0)}
                           </td>
                         </tr>
@@ -303,16 +303,16 @@ export default function EstimateDetailPage() {
             <CardContent className="space-y-4">
               {estimate.subtotal && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                  <span className="text-gray-900 dark:text-gray-100">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-foreground">
                     {formatCurrency(estimate.subtotal)}
                   </span>
                 </div>
               )}
               {estimate.tax_amount && parseFloat(estimate.tax_amount) > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Tax</span>
-                  <span className="text-gray-900 dark:text-gray-100">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="text-foreground">
                     {formatCurrency(estimate.tax_amount)}
                   </span>
                 </div>
@@ -325,9 +325,9 @@ export default function EstimateDetailPage() {
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-gray-900 dark:text-gray-100">Total</span>
-                <span className="text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
+                <span className="text-foreground">Total</span>
+                <span className="text-foreground">
                   {formatCurrency(estimate.total || 0)}
                 </span>
               </div>

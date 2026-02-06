@@ -157,8 +157,8 @@ export default function AddVehiclePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Add Vehicle</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Register a new vehicle</p>
+          <h1 className="text-3xl font-bold text-foreground">Add Vehicle</h1>
+          <p className="text-sm text-muted-foreground mt-1">Register a new vehicle</p>
         </div>
       </div>
 
@@ -205,14 +205,14 @@ export default function AddVehiclePage() {
               {errors.vin && (
                 <p className="text-sm text-red-600 dark:text-red-400">{errors.vin.message}</p>
               )}
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 The VIN is usually found on the driver's side dashboard or door frame
               </p>
             </div>
 
             {/* Other Information (from VIN) */}
             {vinOtherInfo && (
-              <Card className="bg-gray-50 dark:bg-gray-900/20">
+              <Card className="bg-muted/20">
                 <CardHeader>
                   <CardTitle className="text-base">Other Information (from VIN)</CardTitle>
                   <CardDescription>
@@ -238,7 +238,7 @@ export default function AddVehiclePage() {
                   </div>
 
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Airbags</p>
+                    <p className="text-sm font-medium text-card-foreground mb-2">Airbags</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                       <div><span className="text-gray-500">Front:</span> {vinOtherInfo.airbags?.front || "-"}</div>
                       <div><span className="text-gray-500">Knee:</span> {vinOtherInfo.airbags?.knee || "-"}</div>
@@ -247,7 +247,7 @@ export default function AddVehiclePage() {
                       <div><span className="text-gray-500">Seat Cushion:</span> {vinOtherInfo.airbags?.seat_cushion || "-"}</div>
                     </div>
                     {vinOtherInfo.airbags?.other_restraint_info && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      <p className="text-xs text-muted-foreground mt-2">
                         Other Restraint Info: {vinOtherInfo.airbags.other_restraint_info}
                       </p>
                     )}
@@ -355,7 +355,7 @@ export default function AddVehiclePage() {
             </div>
 
             {/* Submit Buttons */}
-            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
               <Link href="/portal/vehicles">
                 <Button type="button" variant="secondary" disabled={isSubmitting}>
                   Cancel

@@ -381,29 +381,29 @@ export default function PurchaseOrderDetailPage() {
 
       {/* Summary Widgets */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</label>
           <div className="flex items-center justify-between">
-            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <span className="text-xl font-bold text-foreground">
               <Badge variant={getStatusVariant(purchaseOrder.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent m-0 p-0 h-auto">
                 {getStatusLabel(purchaseOrder.status)}
               </Badge>
             </span>
           </div>
         </div>
-        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</label>
           <div className="flex items-center justify-between">
-            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <span className="text-xl font-bold text-foreground">
               {purchaseOrder.total ? `${formatCurrency(parseFloat(purchaseOrder.total))}` : "$0.00"}
             </span>
           </div>
         </div>
-        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Supplier</label>
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+              <span className="text-sm font-bold text-foreground truncate">
                 {supplier?.name || "N/A"}
               </span>
               {supplier?.supplier_code && (
@@ -412,13 +412,13 @@ export default function PurchaseOrderDetailPage() {
             </div>
           </div>
         </div>
-        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dates</label>
           <div className="flex flex-col">
-            <span className="text-xs text-gray-700 dark:text-gray-300">
+            <span className="text-xs text-card-foreground">
               Ord: {purchaseOrder.order_date ? format(new Date(purchaseOrder.order_date), "MMM dd") : "-"}
             </span>
-            <span className="text-xs text-gray-700 dark:text-gray-300">
+            <span className="text-xs text-card-foreground">
               Exp: {purchaseOrder.expected_delivery_date ? format(new Date(purchaseOrder.expected_delivery_date), "MMM dd") : "-"}
             </span>
           </div>
@@ -487,7 +487,7 @@ export default function PurchaseOrderDetailPage() {
         {/* Items List - Full Width on Mobile, 2 cols on Desktop */}
         <div className="lg:col-span-2 space-y-6">
           {purchaseOrder.status === 'draft' ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4">
+            <div className="bg-card rounded-lg border shadow-sm p-4">
               <PurchaseOrderItemsManager purchaseOrder={purchaseOrder} />
             </div>
           ) : (
@@ -512,10 +512,10 @@ export default function PurchaseOrderDetailPage() {
                         <TableRow key={item.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0">
                           <TableCell className="px-4 py-2">
                             <div>
-                              <span className="font-mono text-xs font-medium text-gray-700 dark:text-gray-300 block">
+                              <span className="font-mono text-xs font-medium text-card-foreground block">
                                 {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
                               </span>
-                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              <span className="text-sm font-medium text-foreground">
                                 {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
                               </span>
                             </div>

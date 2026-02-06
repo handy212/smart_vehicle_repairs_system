@@ -62,7 +62,7 @@ export default function BranchDetailPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <div className="h-9 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className="h-9 w-48 bg-border rounded animate-pulse"></div>
         </div>
         <Card>
           <CardContent className="pt-6">
@@ -86,7 +86,7 @@ export default function BranchDetailPage() {
           <CardContent className="pt-6">
             <div className="text-center py-12">
               <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">Branch not found</p>
+              <p className="text-muted-foreground">Branch not found</p>
             </div>
           </CardContent>
         </Card>
@@ -105,7 +105,7 @@ export default function BranchDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{branch.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{branch.name}</h1>
               {branch.is_headquarters && (
                 <Badge variant="default" className="bg-primary">
                   Headquarters
@@ -115,7 +115,7 @@ export default function BranchDetailPage() {
                 {branch.is_active ? "Active" : "Inactive"}
               </Badge>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Branch Code: <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs font-mono">{branch.code}</code>
             </p>
           </div>
@@ -135,23 +135,23 @@ export default function BranchDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Work Orders
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-2xl font-bold text-foreground">
                 {stats.work_orders.total}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {stats.work_orders.active} active, {stats.work_orders.completed} completed
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
                 Total Revenue
               </CardTitle>
@@ -163,39 +163,39 @@ export default function BranchDetailPage() {
                   maximumFractionDigits: 2,
                 })}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 From completed work orders
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 Appointments
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-2xl font-bold text-foreground">
                 {stats.appointments.total}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {stats.appointments.upcoming} upcoming
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Staff
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-2xl font-bold text-foreground">
                 {stats.staff.total_staff}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {stats.staff.total_managers} managers
               </div>
             </CardContent>
@@ -213,17 +213,17 @@ export default function BranchDetailPage() {
             <CardContent className="space-y-4">
               {branch.description && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</label>
-                  <p className="mt-1 text-gray-900 dark:text-gray-100">{branch.description}</p>
+                  <label className="text-sm font-medium text-muted-foreground">Description</label>
+                  <p className="mt-1 text-foreground">{branch.description}</p>
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
                     Address
                   </label>
-                  <p className="mt-1 text-gray-900 dark:text-gray-100">
+                  <p className="mt-1 text-foreground">
                     {branch.address}
                     <br />
                     {branch.city}, {branch.state} {branch.zip_code}
@@ -232,11 +232,11 @@ export default function BranchDetailPage() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Phone className="w-4 h-4" />
                     Contact
                   </label>
-                  <p className="mt-1 text-gray-900 dark:text-gray-100">
+                  <p className="mt-1 text-foreground">
                     {branch.phone}
                     {branch.fax && (
                       <>
@@ -261,11 +261,11 @@ export default function BranchDetailPage() {
               </div>
               {(branch.opening_time || branch.closing_time) && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Operating Hours
                   </label>
-                  <p className="mt-1 text-gray-900 dark:text-gray-100">
+                  <p className="mt-1 text-foreground">
                     {branch.opening_time && branch.closing_time
                       ? `${branch.opening_time} - ${branch.closing_time}`
                       : branch.opening_time || branch.closing_time}
@@ -294,13 +294,13 @@ export default function BranchDetailPage() {
                   {staff.map((member: any) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     >
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                        <p className="font-medium text-foreground">
                           {member.full_name || `${member.first_name} ${member.last_name}`}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           {member.role?.replace("_", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())}
                         </p>
                       </div>
@@ -313,7 +313,7 @@ export default function BranchDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No staff assigned</p>
+                <p className="text-center text-muted-foreground py-4">No staff assigned</p>
               )}
             </CardContent>
           </Card>
@@ -336,13 +336,13 @@ export default function BranchDetailPage() {
                   {managers.map((manager: any) => (
                     <div
                       key={manager.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     >
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                        <p className="font-medium text-foreground">
                           {manager.full_name || `${manager.first_name} ${manager.last_name}`}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Manager</p>
+                        <p className="text-sm text-muted-foreground">Manager</p>
                       </div>
                       <Link href={`/admin/users/${manager.id}`}>
                         <Button variant="ghost" size="sm">
@@ -353,7 +353,7 @@ export default function BranchDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No managers assigned</p>
+                <p className="text-center text-muted-foreground py-4">No managers assigned</p>
               )}
             </CardContent>
           </Card>
@@ -369,11 +369,11 @@ export default function BranchDetailPage() {
               {stats && (
                 <>
                   <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Package className="w-4 h-4" />
                       Inventory
                     </label>
-                    <p className="mt-1 text-gray-900 dark:text-gray-100">
+                    <p className="mt-1 text-foreground">
                       {stats.inventory.total_parts} parts
                       {stats.inventory.low_stock_parts > 0 && (
                         <Badge variant="danger" className="ml-2">
@@ -385,8 +385,8 @@ export default function BranchDetailPage() {
                 </>
               )}
               <div>
-                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Created</label>
-                <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <label className="text-sm font-medium text-muted-foreground">Created</label>
+                <p className="mt-1 text-sm text-foreground">
                   {branch.created_at
                     ? format(new Date(branch.created_at), "MMMM d, yyyy")
                     : "Unknown"}
@@ -394,8 +394,8 @@ export default function BranchDetailPage() {
               </div>
               {branch.updated_at && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                  <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                  <p className="mt-1 text-sm text-foreground">
                     {format(new Date(branch.updated_at), "MMMM d, yyyy 'at' h:mm a")}
                   </p>
                 </div>

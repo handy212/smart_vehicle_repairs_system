@@ -42,9 +42,9 @@ export default function InspectionTemplatesPage() {
             <span>/</span>
             <Link href="/inspections" className="hover:text-primary transition-colors">Inspections</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Templates</span>
+            <span className="text-foreground font-medium">Templates</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Inspection Templates</h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Inspection Templates</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/inspections">
@@ -62,7 +62,7 @@ export default function InspectionTemplatesPage() {
         </div>
       </div>
 
-      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+      <Card className="border-none shadow-sm bg-muted/50">
         <CardContent className="p-0">
           {templates.length === 0 ? (
             <div className="text-center py-12">
@@ -81,10 +81,10 @@ export default function InspectionTemplatesPage() {
               </div>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <div className="overflow-hidden rounded-md border border-border bg-card">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-50/50">
+                  <TableRow className="bg-muted/50 hover:bg-gray-50/50">
                     <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Name</TableHead>
                     <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Description</TableHead>
                     <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Categories</TableHead>
@@ -97,7 +97,7 @@ export default function InspectionTemplatesPage() {
                 <TableBody>
                   {templates.map((template) => (
                     <TableRow key={template.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                      <TableCell className="font-medium text-sm text-gray-900 dark:text-gray-100 py-2.5">
+                      <TableCell className="font-medium text-sm text-foreground py-2.5">
                         {template.name}
                         {template.is_default && (
                           <Badge variant="outline" className="ml-2 bg-primary/10 text-orange-700 border-orange-200 text-[10px] px-1.5 py-0">Default</Badge>
@@ -106,7 +106,7 @@ export default function InspectionTemplatesPage() {
                       <TableCell className="text-gray-500 text-xs py-2.5 max-w-[200px] truncate">
                         {template.description || "-"}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-700 dark:text-gray-300 py-2.5">{template.category_count || 0}</TableCell>
+                      <TableCell className="text-sm text-card-foreground py-2.5">{template.category_count || 0}</TableCell>
                       <TableCell className="py-2.5">
                         <Badge
                           variant="outline"
@@ -118,8 +118,8 @@ export default function InspectionTemplatesPage() {
                           {template.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-gray-600 dark:text-gray-400 py-2.5">{template.created_by_name || "N/A"}</TableCell>
-                      <TableCell className="text-xs text-gray-600 dark:text-gray-400 py-2.5">
+                      <TableCell className="text-xs text-muted-foreground py-2.5">{template.created_by_name || "N/A"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground py-2.5">
                         {format(new Date(template.created_at), "MMM dd, yyyy")}
                       </TableCell>
                       <TableCell className="text-right py-2.5">

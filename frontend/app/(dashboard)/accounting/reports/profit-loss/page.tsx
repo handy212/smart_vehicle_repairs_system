@@ -130,7 +130,7 @@ export default function ProfitLossPage() {
             {/* Compact Header */}
             <div className="flex justify-between items-center pt-2">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Profit & Loss</h1>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Profit & Loss</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Income statement for the selected period
                     </p>
@@ -178,7 +178,7 @@ export default function ProfitLossPage() {
                 <>
                     {/* Income Section - Compact */}
                     <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-green-50/50 dark:bg-green-900/10">
+                        <CardHeader className="pb-3 border-b border-border bg-green-50/50 dark:bg-green-900/10">
                             <CardTitle className="text-base text-green-700 dark:text-green-400">Income</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -191,11 +191,11 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report?.income?.map((item: any) => (
-                                        <TableRow key={item.code} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                                            <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        <TableRow key={item.code} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                            <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 text-right font-mono">
+                                            <TableCell className="px-4 py-2 text-sm text-foreground text-right font-mono">
                                                 {formatCurrency(parseFloat(item.balance || 0))}
                                             </TableCell>
                                         </TableRow>
@@ -215,7 +215,7 @@ export default function ProfitLossPage() {
 
                     {/* Expenses Section - Compact */}
                     <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-red-50/50 dark:bg-red-900/10">
+                        <CardHeader className="pb-3 border-b border-border bg-red-50/50 dark:bg-red-900/10">
                             <CardTitle className="text-base text-red-700 dark:text-red-400">Expenses</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -228,11 +228,11 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report?.expenses?.map((item: any) => (
-                                        <TableRow key={item.code} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                                            <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        <TableRow key={item.code} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                            <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 text-right font-mono">
+                                            <TableCell className="px-4 py-2 text-sm text-foreground text-right font-mono">
                                                 {formatCurrency(parseFloat(item.balance || 0))}
                                             </TableCell>
                                         </TableRow>

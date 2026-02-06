@@ -144,8 +144,8 @@ export default function MySubscriptionsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Subscriptions</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-3xl font-bold text-foreground">My Subscriptions</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your subscription packages
           </p>
         </div>
@@ -174,7 +174,7 @@ export default function MySubscriptionsPage() {
               <CardContent className="p-12 text-center">
                 <PackageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Active Subscriptions</h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   You don't have any active subscriptions yet.
                 </p>
                 <Button onClick={() => setViewMode("available-packages")}>
@@ -297,7 +297,7 @@ export default function MySubscriptionsPage() {
                                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                                     : isLow
                                       ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-                                      : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                      : 'bg-muted border-border'
                                   }`}
                               >
                                 <div className="flex justify-between items-center">
@@ -373,7 +373,7 @@ export default function MySubscriptionsPage() {
               <CardContent className="p-12 text-center">
                 <PackageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Packages Available</h3>
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   There are no subscription packages available at this time.
                 </p>
               </CardContent>

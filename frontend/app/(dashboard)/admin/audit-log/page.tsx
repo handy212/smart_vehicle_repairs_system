@@ -174,7 +174,7 @@ export default function AuditLogPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Audit Log</h1>
+              <h1 className="text-3xl font-bold text-foreground">Audit Log</h1>
               <p className="text-sm text-gray-500 mt-1">View system activity and audit trail</p>
             </div>
           </div>
@@ -457,7 +457,7 @@ export default function AuditLogPage() {
                         {selectedLog.user_name?.charAt(0) || "S"}
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900 dark:text-gray-100">{selectedLog.user_name}</div>
+                        <div className="font-medium text-foreground">{selectedLog.user_name}</div>
                         <div className="text-sm text-gray-500">{selectedLog.user_email}</div>
                       </div>
                     </div>
@@ -481,11 +481,11 @@ export default function AuditLogPage() {
                 <div className="p-6">
                   {/* Entity Info */}
                   <div className="mb-8">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
                       <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
                       Affected Entity
                     </h4>
-                    <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-gray-800">
+                    <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-border">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <span className="text-xs text-gray-500 block">Model</span>
@@ -507,12 +507,12 @@ export default function AuditLogPage() {
 
                   {/* Changes Table */}
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                    <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
                       <span className="w-1 h-4 bg-orange-500 rounded-full mr-2"></span>
                       Changes Log
                     </h4>
                     {selectedLog.changes && Object.keys(selectedLog.changes).length > 0 ? (
-                      <div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden shadow-sm">
+                      <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-gray-50 dark:bg-slate-900">

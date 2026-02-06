@@ -31,12 +31,12 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
     return (
         <div className="space-y-4">
             {/* Today's Appointments */}
-            <Card className="border-t shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
+            <Card className="border-t shadow-sm bg-card overflow-hidden">
                 <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-primary" />
-                            <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                            <CardTitle className="text-sm font-semibold text-foreground uppercase tracking-wider">
                                 Today's Agenda
                             </CardTitle>
                         </div>
@@ -59,7 +59,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                     className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group"
                                 >
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
+                                        <p className="text-sm font-bold text-foreground truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                                             {apt.customer_name || "Guest Customer"}
                                         </p>
                                         <div className="flex items-center gap-2 mt-0.5">
@@ -90,7 +90,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         </div>
                     ) : (
                         <div className="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
-                            <div className="p-2 rounded-full bg-gray-50 dark:bg-gray-800">
+                            <div className="p-2 rounded-full bg-muted">
                                 <Calendar className="w-5 h-5 text-gray-200 dark:text-gray-700" />
                             </div>
                             <p className="text-xs font-medium text-gray-400">
@@ -102,12 +102,12 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
             </Card>
 
             {/* Recent Work Orders */}
-            <Card className="border-t shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
+            <Card className="border-t shadow-sm bg-card overflow-hidden">
                 <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Wrench className="w-4 h-4 text-purple-500" />
-                            <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                            <CardTitle className="text-sm font-semibold text-foreground uppercase tracking-wider">
                                 Recent Activity
                             </CardTitle>
                         </div>
@@ -134,7 +134,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                             <span className="font-mono text-[10px] font-bold text-gray-400 group-hover:text-primary transition-colors">
                                                 #{wo.wo_number}
                                             </span>
-                                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
+                                            <p className="text-sm font-bold text-foreground truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                                                 {wo.customer || "N/A"}
                                             </p>
                                         </div>
@@ -159,7 +159,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         </div>
                     ) : (
                         <div className="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
-                            <div className="p-2 rounded-full bg-gray-50 dark:bg-gray-800">
+                            <div className="p-2 rounded-full bg-muted">
                                 <Wrench className="w-5 h-5 text-gray-200 dark:text-gray-700" />
                             </div>
                             <p className="text-xs font-medium text-gray-400">

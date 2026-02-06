@@ -68,7 +68,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
+      <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
         <DollarSign className="w-12 h-12 mb-2 opacity-50" />
         <p className="text-sm font-medium">No revenue data available</p>
         <p className="text-xs mt-1">Revenue data for the last 7 days will appear here</p>
@@ -93,13 +93,13 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
       }
 
       return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
-          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-2">
+        <div className="bg-card border border-border rounded-lg shadow-lg p-3">
+          <p className="font-semibold text-sm text-foreground mb-2">
             {data.dateLabel || format(date, "MMM d, yyyy")}
           </p>
           <div className="space-y-1">
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Revenue: <span className="font-semibold text-gray-900 dark:text-gray-100">
+            <p className="text-xs text-muted-foreground">
+              Revenue: <span className="font-semibold text-foreground">
                 {formatMoney(revenue)}
               </span>
             </p>

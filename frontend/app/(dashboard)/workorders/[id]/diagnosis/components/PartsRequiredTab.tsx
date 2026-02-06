@@ -146,8 +146,8 @@ export function PartsRequiredTab({
 
     return (
         <>
-            <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+            <Card className="border-none shadow-sm bg-muted/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
                     <div className="space-y-1">
                         <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Parts Required</CardTitle>
                         <CardDescription className="text-xs">
@@ -184,7 +184,7 @@ export function PartsRequiredTab({
                     ) : parts.length === 0 ? (
                         <div className="text-center py-16">
                             <Package className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">No parts requested</h3>
+                            <h3 className="text-sm font-medium text-foreground mb-1">No parts requested</h3>
                             <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">
                                 Add parts needed for this repair.
                             </p>
@@ -202,7 +202,7 @@ export function PartsRequiredTab({
                     ) : (
                         <Table>
                             <TableHeader>
-                                <TableRow className="border-b border-gray-100 dark:border-gray-800">
+                                <TableRow className="border-b border-border">
                                     <TableHead className="w-[300px]">Part Name / Description</TableHead>
                                     <TableHead>Part Number</TableHead>
                                     <TableHead className="text-center">Qty</TableHead>
@@ -219,7 +219,7 @@ export function PartsRequiredTab({
                                     const canEdit = !isDisabled && (part.status === 'draft' || part.status === 'pending');
 
                                     return (
-                                        <TableRow key={part.id} className="group border-gray-100 dark:border-gray-800">
+                                        <TableRow key={part.id} className="group border-border">
                                             <TableCell className="font-medium">
                                                 <div className="flex flex-col">
                                                     <span>{part.part_name}</span>
@@ -454,7 +454,7 @@ function PartFormDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
+            <DialogContent className="max-w-2xl bg-card border border-border shadow-xl sm:rounded-xl">
                 <DialogHeader className="pb-2 border-b">
                     <DialogTitle className="text-lg">{initialData ? "Edit Part Request" : "Request Part"}</DialogTitle>
                     <DialogDescription className="text-xs text-gray-500">
@@ -465,9 +465,9 @@ function PartFormDialog({
                 <div className="py-4 space-y-4">
                     {/* Items Queue List (Only for new requests) */}
                     {!initialData && queuedParts.length > 0 && (
-                        <div className="rounded-md border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 overflow-hidden">
-                            <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-100/50 dark:bg-gray-800/50 flex justify-between items-center">
-                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Parts to Submit ({queuedParts.length})</span>
+                        <div className="rounded-md border border-border bg-gray-50/50 dark:bg-gray-800/20 overflow-hidden">
+                            <div className="px-3 py-2 border-b border-border bg-gray-100/50 dark:bg-gray-800/50 flex justify-between items-center">
+                                <span className="text-xs font-semibold text-card-foreground">Parts to Submit ({queuedParts.length})</span>
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -479,7 +479,7 @@ function PartFormDialog({
                             </div>
                             <div className="max-h-[150px] overflow-y-auto">
                                 <table className="w-full text-xs text-left">
-                                    <thead className="text-gray-500 bg-gray-50 dark:bg-gray-800 sticky top-0">
+                                    <thead className="text-gray-500 bg-muted sticky top-0">
                                         <tr>
                                             <th className="px-3 py-2 font-medium">Name</th>
                                             <th className="px-3 py-2 font-medium">Qty</th>
@@ -490,7 +490,7 @@ function PartFormDialog({
                                         {queuedParts.map((item, idx) => (
                                             <tr key={idx} className="group hover:bg-white dark:hover:bg-gray-800/50">
                                                 <td className="px-3 py-2">
-                                                    <div className="font-medium text-gray-900 dark:text-gray-100">{item.part_name}</div>
+                                                    <div className="font-medium text-foreground">{item.part_name}</div>
                                                     <div className="text-[10px] text-gray-500 truncate max-w-[200px]">{item.description}</div>
                                                 </td>
                                                 <td className="px-3 py-2 text-gray-600">{item.quantity}</td>

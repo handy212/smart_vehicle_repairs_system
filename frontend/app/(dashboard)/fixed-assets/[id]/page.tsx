@@ -71,14 +71,14 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                     </Link>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
+                            <h1 className="text-2xl font-black tracking-tight text-foreground">
                                 {asset.name}
                             </h1>
                             <Badge className={getStatusColor(asset.status)} variant="outline">
                                 {asset.status.toUpperCase()}
                             </Badge>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-mono">
+                        <p className="text-xs text-muted-foreground mt-0.5 font-mono">
                             {asset.asset_number}
                         </p>
                     </div>
@@ -132,7 +132,7 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                         {asset.description && (
                             <div className="col-span-1 sm:col-span-2 space-y-1 pt-2 border-t">
                                 <span className="text-sm font-medium text-gray-500">Description</span>
-                                <p className="text-sm text-gray-700 dark:text-gray-300">
+                                <p className="text-sm text-card-foreground">
                                     {asset.description}
                                 </p>
                             </div>
@@ -155,7 +155,7 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                         </div>
                         <div className="flex justify-between items-center py-2 border-b">
                             <span className="text-sm text-gray-500">Salvage Value</span>
-                            <span className="font-medium text-gray-700 dark:text-gray-300">
+                            <span className="font-medium text-card-foreground">
                                 {formatCurrency(asset.salvage_value || 0)}
                             </span>
                         </div>

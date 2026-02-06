@@ -209,7 +209,7 @@ export default function GatePassDetailPage() {
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 mt-3">Vehicle</p>
                 <div className="flex items-start gap-3 mt-1">
                   <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    <Car className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <Car className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div>
                     <p className="text-base font-medium">{gatePass.vehicle_info || "N/A"}</p>
@@ -233,7 +233,7 @@ export default function GatePassDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Picked Up By</p>
-                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  <p className="text-lg font-medium text-foreground">
                     {gatePass.pickup_person_display || "N/A"}
                   </p>
                   {gatePass.picked_up_by_customer && (
@@ -274,11 +274,11 @@ export default function GatePassDetailPage() {
               </div>
 
               {gatePass.pickup_notes && (
-                <div className="mt-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-100 dark:border-gray-800">
+                <div className="mt-4 bg-muted/50 p-4 rounded-lg border border-border">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
                     <FileText className="w-3 h-3" /> Notes
                   </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{gatePass.pickup_notes}"</p>
+                  <p className="text-sm text-card-foreground italic">"{gatePass.pickup_notes}"</p>
                 </div>
               )}
             </CardContent>
@@ -291,7 +291,7 @@ export default function GatePassDetailPage() {
 
           {/* Status & Timeline */}
           <Card className="shadow-sm h-fit">
-            <CardHeader className="bg-gray-50 dark:bg-gray-800/50 pb-4">
+            <CardHeader className="bg-muted/50 pb-4">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Clock className="w-4 h-4" />
                 Timeline

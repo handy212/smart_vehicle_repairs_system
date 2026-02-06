@@ -243,7 +243,7 @@ export default function PaymentDetailPage() {
                             {payment.notes && (
                                 <div className="col-span-2">
                                     <h3 className="text-sm font-medium text-gray-500 mb-1">Notes</h3>
-                                    <p className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                                    <p className="text-card-foreground bg-muted p-3 rounded-md">
                                         {payment.notes}
                                     </p>
                                 </div>

@@ -121,8 +121,8 @@ export default function MyEstimatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Estimates</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-3xl font-bold text-foreground">My Estimates</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           View and approve your service estimates
         </p>
       </div>
@@ -175,28 +175,28 @@ export default function MyEstimatesPage() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <FileText className="w-5 h-5 text-primary" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      <h3 className="text-lg font-semibold text-foreground">
                         Estimate #{estimate.estimate_number}
                       </h3>
                     </div>
                     <div className="ml-8 space-y-1">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         Date: {format(new Date(estimate.estimate_date || estimate.created_at), "MMM d, yyyy")}
                       </p>
                       {estimate.expiration_date && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Expires: {format(new Date(estimate.expiration_date), "MMM d, yyyy")}
                         </p>
                       )}
                       {estimate.work_order && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Work Order: #{typeof estimate.work_order === "object" ? estimate.work_order.work_order_number : estimate.work_order}
                         </p>
                       )}
                     </div>
                   </div>
                   <div className="text-right space-y-2">
-                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <div className="text-2xl font-bold text-foreground">
                       {formatCurrency(estimate.total || 0)}
                     </div>
                     <Badge variant={getStatusVariant(estimate.status)}>{estimate.status}</Badge>
@@ -240,11 +240,11 @@ export default function MyEstimatesPage() {
       ) : (
         <Card>
           <CardContent className="py-12 text-center">
-            <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               No estimates found
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               {statusFilter !== "all"
                 ? `No estimates with status "${statusFilter}" found.`
                 : "You don't have any estimates yet. Estimates will appear here when services are quoted."}

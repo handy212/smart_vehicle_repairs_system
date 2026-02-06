@@ -64,7 +64,7 @@ export default function MyVehiclesPage() {
                     <Car className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100">
+                    <div className="font-semibold text-foreground">
                       {vehicle.year} {vehicle.make} {vehicle.model}
                     </div>
                     {vehicle.color && (
@@ -78,7 +78,7 @@ export default function MyVehiclesPage() {
               header: "License / VIN",
               cell: (vehicle) => (
                 <div className="text-sm">
-                  <div className="font-medium text-gray-900 dark:text-gray-100">{vehicle.license_plate || "N/A"}</div>
+                  <div className="font-medium text-foreground">{vehicle.license_plate || "N/A"}</div>
                   <div className="text-xs text-gray-500 font-mono">{vehicle.vin || "N/A"}</div>
                 </div>
               )
@@ -86,7 +86,7 @@ export default function MyVehiclesPage() {
             {
               header: "Mileage",
               cell: (vehicle) => (
-                <span className="text-gray-600 dark:text-gray-300">
+                <span className="text-muted-foreground">
                   {vehicle.mileage ? `${parseInt(vehicle.mileage).toLocaleString()} miles` : "N/A"}
                 </span>
               )

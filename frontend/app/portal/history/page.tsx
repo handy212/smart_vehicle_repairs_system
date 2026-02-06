@@ -115,8 +115,8 @@ export default function ServiceHistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Service History</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-3xl font-bold text-foreground">Service History</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           View complete service history for your vehicles
         </p>
       </div>
@@ -169,19 +169,19 @@ export default function ServiceHistoryPage() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <Wrench className="w-5 h-5 text-primary" />
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-lg font-semibold text-foreground">
                             Work Order #{wo.work_order_number}
                           </h3>
                         </div>
                         <div className="ml-8 space-y-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             Date: {format(new Date(wo.created_at), "MMM d, yyyy")}
                           </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             Vehicle: {wo.vehicle_name || "N/A"}
                           </p>
                           {wo.total_amount && (
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-2">
+                            <p className="text-sm font-medium text-foreground mt-2">
                               Total: {formatCurrency(wo.total_amount)}
                             </p>
                           )}
@@ -198,7 +198,7 @@ export default function ServiceHistoryPage() {
               <Card>
                 <CardContent className="py-12 text-center">
                   <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">No work orders found</p>
+                  <p className="text-muted-foreground">No work orders found</p>
                 </CardContent>
               </Card>
             )}
@@ -214,24 +214,24 @@ export default function ServiceHistoryPage() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <Search className="w-5 h-5 text-green-500" />
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          <h3 className="text-lg font-semibold text-foreground">
                             Inspection #{inspection.inspection_number}
                           </h3>
                         </div>
                         <div className="ml-8 space-y-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             Date: {format(new Date(inspection.inspection_date), "MMM d, yyyy")}
                           </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             Vehicle: {inspection.vehicle_name || "N/A"}
                           </p>
                           {inspection.template_name && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-muted-foreground">
                               Type: {inspection.template_name}
                             </p>
                           )}
                           {inspection.overall_result && (
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-2">
+                            <p className="text-sm font-medium text-foreground mt-2">
                               Result: {inspection.overall_result.replace(/_/g, " ")}
                             </p>
                           )}
@@ -250,7 +250,7 @@ export default function ServiceHistoryPage() {
               <Card>
                 <CardContent className="py-12 text-center">
                   <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">No inspections found</p>
+                  <p className="text-muted-foreground">No inspections found</p>
                 </CardContent>
               </Card>
             )}

@@ -47,7 +47,7 @@ export default function VehicleHistoryPage() {
   if (!vehicle) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 dark:text-gray-400">Vehicle not found.</p>
+        <p className="text-muted-foreground">Vehicle not found.</p>
         <Link href="/vehicles">
           <Button className="mt-4"variant="secondary">
             Back to Vehicles
@@ -134,8 +134,8 @@ export default function VehicleHistoryPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Service History</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Service History</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate || vehicle.vin}
           </p>
         </div>
@@ -147,8 +147,8 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Services</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{vehicleWorkOrders.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Services</p>
+                <p className="text-2xl font-bold text-foreground">{vehicleWorkOrders.length}</p>
               </div>
               <Wrench className="w-8 h-8 text-primary dark:text-primary" />
             </div>
@@ -158,8 +158,8 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Appointments</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{vehicleAppointments.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Appointments</p>
+                <p className="text-2xl font-bold text-foreground">{vehicleAppointments.length}</p>
               </div>
               <Calendar className="w-8 h-8 text-green-500 dark:text-green-400" />
             </div>
@@ -169,8 +169,8 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Mileage</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-muted-foreground">Current Mileage</p>
+                <p className="text-2xl font-bold text-foreground">
                   {vehicle.current_mileage
                     ? `${vehicle.current_mileage.toLocaleString()} mi`
                     : "-"}
@@ -184,8 +184,8 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Spent</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
+                <p className="text-2xl font-bold text-foreground">
                   $
                   {vehicleWorkOrders
                     .reduce((sum, wo) => {
@@ -225,10 +225,10 @@ export default function VehicleHistoryPage() {
                 <TableBody>
                   {vehicleWorkOrders.map((wo) => (
                     <TableRow key={wo.id}>
-                      <TableCell className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <TableCell className="font-mono text-sm font-medium text-foreground">
                         {wo.work_order_number}
                       </TableCell>
-                      <TableCell className="text-gray-900 dark:text-gray-100">
+                      <TableCell className="text-foreground">
                         {wo.created_at
                           ? format(new Date(wo.created_at), "MMM dd, yyyy")
                           : "-"}
@@ -241,7 +241,7 @@ export default function VehicleHistoryPage() {
                       <TableCell>
                         <Badge variant="secondary">{wo.priority || "-"}</Badge>
                       </TableCell>
-                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                      <TableCell className="font-medium text-foreground">
                         {wo.total_cost
                           ? `${formatCurrency(parseFloat(wo.total_cost.toString()))}`
                           : "-"}
@@ -259,7 +259,7 @@ export default function VehicleHistoryPage() {
               </Table>
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No work orders found for this vehicle.</p>
+            <p className="text-muted-foreground text-center py-8">No work orders found for this vehicle.</p>
           )}
         </CardContent>
       </Card>
@@ -286,16 +286,16 @@ export default function VehicleHistoryPage() {
                 <TableBody>
                   {vehicleAppointments.map((apt) => (
                     <TableRow key={apt.id}>
-                      <TableCell className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <TableCell className="font-mono text-sm font-medium text-foreground">
                         {apt.appointment_number}
                       </TableCell>
-                      <TableCell className="text-gray-900 dark:text-gray-100">
+                      <TableCell className="text-foreground">
                         {apt.appointment_date
                           ? format(new Date(apt.appointment_date), "MMM dd, yyyy")
                           : "-"}
                       </TableCell>
-                      <TableCell className="text-gray-900 dark:text-gray-100">{apt.appointment_time || "-"}</TableCell>
-                      <TableCell className="text-gray-900 dark:text-gray-100">{apt.service_type || "-"}</TableCell>
+                      <TableCell className="text-foreground">{apt.appointment_time || "-"}</TableCell>
+                      <TableCell className="text-foreground">{apt.service_type || "-"}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(apt.status) as any}>
                           {apt.status?.replace("_", " ") || "-"}
@@ -314,7 +314,7 @@ export default function VehicleHistoryPage() {
               </Table>
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No appointments found for this vehicle.</p>
+            <p className="text-muted-foreground text-center py-8">No appointments found for this vehicle.</p>
           )}
         </CardContent>
       </Card>
@@ -344,20 +344,20 @@ export default function VehicleHistoryPage() {
                       )}
                     </div>
                     {index < timelineItems.length - 1 && (
-                      <div className="w-0.5 h-full bg-gray-200 dark:bg-gray-700 ml-5 -mt-2" style={{ height: "40px" }} />
+                      <div className="w-0.5 h-full bg-border ml-5 -mt-2" style={{ height: "40px" }} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                        <p className="text-sm font-medium text-foreground">{item.title}</p>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant={getStatusVariant(item.status) as any}>
                           {item.status?.replace("_", " ")}
                         </Badge>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="text-sm text-muted-foreground">
                           {format(new Date(item.date), "MMM dd, yyyy")}
                         </span>
                       </div>

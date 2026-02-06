@@ -165,7 +165,7 @@ export function NotesView({ customerId }: NotesViewProps) {
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{note.content}</p>
+                                <p className="text-sm text-card-foreground whitespace-pre-wrap">{note.content}</p>
                             </CardContent>
                         </Card>
                     ))

@@ -112,7 +112,7 @@ export default function NewInspectionPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-xl font-bold text-foreground">
           New Inspection
         </h2>
         <div className="w-10" /> {/* Spacer */}
@@ -142,7 +142,7 @@ export default function NewInspectionPage() {
             onChange={(e) =>
               setFormData({ ...formData, inspection_type: e.target.value })
             }
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-card text-foreground"
           >
             <option value="pre_service">Pre-Service</option>
             <option value="post_service">Post-Service</option>

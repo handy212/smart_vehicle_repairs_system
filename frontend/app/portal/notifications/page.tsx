@@ -143,8 +143,8 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Notifications</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-3xl font-bold text-foreground">Notifications</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Stay updated with your account activity
           </p>
         </div>
@@ -166,13 +166,13 @@ export default function NotificationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Notifications
             </CardTitle>
             <Bell className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-2xl font-bold text-foreground">
               {notifications.length}
             </div>
           </CardContent>
@@ -180,13 +180,13 @@ export default function NotificationsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Unread
             </CardTitle>
             <Circle className="h-5 w-5 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-2xl font-bold text-foreground">
               {unreadCount}
             </div>
           </CardContent>
@@ -194,13 +194,13 @@ export default function NotificationsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Read
             </CardTitle>
             <CheckCircle className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-2xl font-bold text-foreground">
               {notifications.length - unreadCount}
             </div>
           </CardContent>
@@ -266,7 +266,7 @@ export default function NotificationsPage() {
                           "w-5 h-5",
                           !isRead
                             ? "text-primary dark:text-primary"
-                            : "text-gray-600 dark:text-gray-400"
+                            : "text-muted-foreground"
                         )}
                       />
                     </div>
@@ -276,7 +276,7 @@ export default function NotificationsPage() {
                           <div className="flex items-center space-x-2 mb-1">
                             <h3
                               className={cn(
-                                "font-semibold text-gray-900 dark:text-gray-100",
+                                "font-semibold text-foreground",
                                 !isRead && "font-bold"
                               )}
                             >
@@ -291,10 +291,10 @@ export default function NotificationsPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <p className="text-sm text-muted-foreground mb-2">
                             {notification.message}
                           </p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span>
                               {formatDistanceToNow(new Date(notification.created_at), {
                                 addSuffix: true,
@@ -334,7 +334,7 @@ export default function NotificationsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 mb-2">No notifications found</p>
+            <p className="text-muted-foreground mb-2">No notifications found</p>
             <p className="text-sm text-gray-500 dark:text-gray-500">
               {filter === "unread"
                 ? "You're all caught up! No unread notifications."

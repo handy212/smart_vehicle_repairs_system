@@ -247,7 +247,7 @@ export default function PackagesPage() {
       accessor: "name" as const,
       cell: (pkg: Package) => (
         <div className="flex flex-col">
-          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{pkg.name}</span>
+          <span className="font-medium text-sm text-foreground">{pkg.name}</span>
           <span className="text-xs text-gray-500">{pkg.description}</span>
         </div>
       )
@@ -263,14 +263,14 @@ export default function PackagesPage() {
       header: "Price",
       accessor: "price" as const,
       cell: (pkg: Package) => (
-        <span className="font-mono font-medium text-gray-900 dark:text-gray-100">{formatCurrency(parseFloat(pkg.price))}</span>
+        <span className="font-mono font-medium text-foreground">{formatCurrency(parseFloat(pkg.price))}</span>
       )
     },
     {
       header: "Duration",
       accessor: "duration_months" as const,
       cell: (pkg: Package) => (
-        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <Calendar className="w-3.5 h-3.5" />
           <span>{pkg.duration_months} months</span>
         </div>
@@ -355,8 +355,8 @@ export default function PackagesPage() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Subscription Packages</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Subscription Packages</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               Manage subscription packages and their features
             </p>
           </div>
@@ -378,12 +378,12 @@ export default function PackagesPage() {
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Packages</p>
-                  <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{packages.length}</p>
+                  <p className="text-2xl font-black text-foreground mt-1">{packages.length}</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-950/20 flex items-center justify-center">
                   <PackageIcon className="w-5 h-5 text-primary dark:text-primary" />
@@ -391,7 +391,7 @@ export default function PackagesPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -404,15 +404,15 @@ export default function PackagesPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Inactive</p>
-                  <p className="text-2xl font-black text-gray-500 dark:text-gray-400 mt-1">{packages.filter((p) => !p.is_active).length}</p>
+                  <p className="text-2xl font-black text-muted-foreground mt-1">{packages.filter((p) => !p.is_active).length}</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  <Archive className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <Archive className="w-5 h-5 text-muted-foreground" />
                 </div>
               </div>
             </CardContent>
@@ -420,7 +420,7 @@ export default function PackagesPage() {
         </div>
 
         {/* Filters and Search */}
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+        <Card className="border-border shadow-sm">
           <CardContent className="p-4 space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
@@ -436,7 +436,7 @@ export default function PackagesPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -681,7 +681,7 @@ export default function PackagesPage() {
               <DialogTitle>Delete Package</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Are you sure you want to delete package{" "}
                 <span className="font-semibold">{packageToDelete?.name}</span>?
                 This action cannot be undone.

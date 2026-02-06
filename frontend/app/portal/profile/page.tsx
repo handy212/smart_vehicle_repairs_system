@@ -20,16 +20,16 @@ export default function ProfilePage() {
         return (
             <div className="space-y-6">
                 <div>
-                    <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
-                    <div className="h-4 w-96 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="h-8 w-48 bg-border rounded mb-2 animate-pulse" />
+                    <div className="h-4 w-96 bg-border rounded animate-pulse" />
                 </div>
                 <Card>
                     <CardContent className="p-6">
                         <div className="space-y-4">
                             {[1, 2, 3, 4].map((i) => (
                                 <div key={i} className="space-y-2">
-                                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                                    <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                                    <div className="h-4 w-24 bg-border rounded animate-pulse" />
+                                    <div className="h-10 w-full bg-border rounded animate-pulse" />
                                 </div>
                             ))}
                         </div>
@@ -66,7 +66,7 @@ export default function ProfilePage() {
                                             id="first_name"
                                             value={user?.first_name || ""}
                                             disabled
-                                            className="bg-gray-50 dark:bg-gray-900"
+                                            className="bg-muted"
                                         />
                                     </div>
 
@@ -76,7 +76,7 @@ export default function ProfilePage() {
                                             id="last_name"
                                             value={user?.last_name || ""}
                                             disabled
-                                            className="bg-gray-50 dark:bg-gray-900"
+                                            className="bg-muted"
                                         />
                                     </div>
                                 </div>
@@ -90,7 +90,7 @@ export default function ProfilePage() {
                                             type="email"
                                             value={user?.email || ""}
                                             disabled
-                                            className="pl-10 bg-gray-50 dark:bg-gray-900"
+                                            className="pl-10 bg-muted"
                                         />
                                     </div>
                                 </div>
@@ -104,7 +104,7 @@ export default function ProfilePage() {
                                             type="tel"
                                             value={user?.phone || ""}
                                             disabled
-                                            className="pl-10 bg-gray-50 dark:bg-gray-900"
+                                            className="pl-10 bg-muted"
                                         />
                                     </div>
                                 </div>

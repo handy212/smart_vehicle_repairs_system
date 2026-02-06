@@ -105,10 +105,10 @@ export default function AssetValuationReportPage() {
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
+                        <h1 className="text-2xl font-black tracking-tight text-foreground">
                             Asset Valuation Report
                         </h1>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                             Financial summary of active fixed assets
                         </p>
                     </div>
