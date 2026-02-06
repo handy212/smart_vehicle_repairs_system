@@ -38,7 +38,7 @@ export function DashboardHeader() {
                 <Button
                     size="sm"
                     variant="outline"
-                    className="h-9 bg-card/50 dark:bg-gray-800/50 backdrop-blur-sm border-border/50 hover:bg-card dark:hover:bg-gray-800 transition-all"
+                    className="h-9 bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card hover:bg-muted transition-all"
                     onClick={() => router.push("/appointments/new")}
                 >
                     <PremiumIcons.Calendar className="h-4 w-4 mr-2 text-muted-foreground" />

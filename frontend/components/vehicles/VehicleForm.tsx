@@ -214,7 +214,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                     </div>
                     <div className="p-4">
                         <label className="block w-full">
-                            <div className="flex items-center justify-center w-full px-4 py-2 border border-dashed border-border border-border rounded-md cursor-pointer hover:bg-muted dark:hover:bg-gray-800/50 transition-colors">
+                            <div className="flex items-center justify-center w-full px-4 py-2 border border-dashed border-border border-border rounded-md cursor-pointer hover:bg-muted hover:bg-muted/50 transition-colors">
                                 <span className="text-sm text-muted-foreground text-muted-foreground">
                                     {imagePreview ? "Change Photo" : "Upload Photo"}
                                 </span>

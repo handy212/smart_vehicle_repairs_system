@@ -288,7 +288,7 @@ export default function PartsRequestsPage() {
                                             return (
                                                 <TableRow
                                                     key={woId}
-                                                    className="group hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border cursor-pointer transition-colors"
+                                                    className="group hover:bg-muted/50 hover:bg-muted/50 border-b border-border cursor-pointer transition-colors"
                                                     onClick={() => handleViewDetails(woId)}
                                                 >
                                                     <TableCell className="font-mono text-xs font-medium text-primary px-4 py-2">

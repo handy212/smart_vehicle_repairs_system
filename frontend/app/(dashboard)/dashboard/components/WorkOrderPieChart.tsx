@@ -179,7 +179,7 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
             return (
               <div
                 key={index}
-                className="flex items-center gap-2 p-2 rounded hover:bg-muted dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-2 p-2 rounded hover:bg-muted hover:bg-muted transition-colors"
               >
                 <div
                   className="w-3 h-3 rounded-full flex-shrink-0"

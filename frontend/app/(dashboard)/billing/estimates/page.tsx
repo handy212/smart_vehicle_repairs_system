@@ -417,7 +417,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'sent' ? 'ring-2 ring-primary bg-primary/10 dark:bg-gray-800' : 'bg-card'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'sent' ? 'ring-2 ring-primary bg-primary/10 bg-muted' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'sent' ? null : 'sent';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -433,7 +433,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-green-500 bg-success/10 dark:bg-gray-800' : 'bg-card'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-green-500 bg-success/10 bg-muted' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'approved' ? null : 'approved';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -449,7 +449,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'declined' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-gray-800' : 'bg-card'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'declined' ? 'ring-2 ring-red-500 bg-red-50 bg-muted' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'declined' ? null : 'declined';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -465,7 +465,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-primary bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-primary bg-orange-50 bg-muted' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'expired' ? null : 'expired';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });

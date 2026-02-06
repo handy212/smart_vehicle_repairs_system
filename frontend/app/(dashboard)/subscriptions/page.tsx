@@ -469,7 +469,7 @@ export default function SubscriptionsPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -481,7 +481,7 @@ export default function SubscriptionsPage() {
                 <select
                   value={paymentFilter}
                   onChange={(e) => setPaymentFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Payments</option>
                   <option value="paid">Paid</option>

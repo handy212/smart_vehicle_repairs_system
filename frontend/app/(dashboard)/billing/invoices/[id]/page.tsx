@@ -256,7 +256,7 @@ export default function InvoiceDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground dark:bg-gray-800/50 border-border text-foreground">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground bg-muted/50 border-border text-foreground">
                   Invoice #{invoice.invoice_number}
                 </span>
                 <Badge className={cn("capitalize px-3 py-1", getStatusVariant(localStatus || invoice.status))}>
@@ -355,7 +355,7 @@ export default function InvoiceDetailPage() {
         </div>
 
         <Tabs defaultValue="invoice" className="w-full">
-          <TabsList className="w-full justify-start h-auto p-1 bg-gray-100/50 dark:bg-gray-800/50 mb-6 flex-wrap">
+          <TabsList className="w-full justify-start h-auto p-1 bg-gray-100/50 bg-muted/50 mb-6 flex-wrap">
             <TabsTrigger value="invoice" className="gap-2">
               <FileText className="w-4 h-4" /> Invoice
             </TabsTrigger>

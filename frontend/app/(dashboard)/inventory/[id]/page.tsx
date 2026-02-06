@@ -327,12 +327,12 @@ export default function PartDetailPage() {
                                   case 'use':
                                   case 'damage':
                                   case 'adjustment_out': return 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
-                                  default: return 'bg-muted text-foreground border-border dark:bg-gray-800 text-muted-foreground border-border';
+                                  default: return 'bg-muted text-foreground border-border bg-muted text-muted-foreground border-border';
                                 }
                               };
 
                               return (
-                                <tr key={txn.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/30 transition-colors">
+                                <tr key={txn.id} className="hover:bg-muted/50 hover:bg-muted/30 transition-colors">
                                   <td className="px-4 py-3">
                                     <div className="flex flex-col gap-1">
                                       <Badge variant="outline" className={`w-fit text-[10px] h-4 px-1.5 font-medium border uppercase ${getBadgeColor(txn.transaction_type)}`}>

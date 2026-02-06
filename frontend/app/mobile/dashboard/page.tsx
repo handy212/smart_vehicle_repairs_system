@@ -224,7 +224,7 @@ export default function MobileDashboardPage() {
           <CardContent className="space-y-2">
             {activeWorkOrders.map((wo) => (
               <Link key={wo.id} href={`/mobile/workorders/${wo.id}`}>
-                <div className="p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800 transition-colors">
+                <div className="p-3 rounded-lg border border-border hover:bg-muted hover:bg-muted transition-colors">
                   <div className="flex items-start justify-between mb-1">
                     <div className="font-medium text-sm text-foreground">
                       {wo.work_order_number || `WO #${wo.id}`}
@@ -362,7 +362,7 @@ export default function MobileDashboardPage() {
                 <Link
                   key={wo.id}
                   href={`/mobile/workorders/${wo.id}`}
-                  className="block p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800 transition-colors"
+                  className="block p-3 rounded-lg border border-border hover:bg-muted hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">

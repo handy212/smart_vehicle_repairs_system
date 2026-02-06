@@ -130,7 +130,7 @@ export default function TillDashboardPage() {
                             {todayTills.results.map((till: Till) => (
                                 <div
                                     key={till.id}
-                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted dark:hover:bg-gray-800/50"
+                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted hover:bg-muted/50"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="flex flex-col">

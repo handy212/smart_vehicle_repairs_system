@@ -449,7 +449,7 @@ export default function AuditLogPage() {
             {selectedLog && (
               <div className="flex-1 overflow-y-auto">
                 {/* Top Meta Section */}
-                <div className="grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-800 border-b">
+                <div className="grid grid-cols-2 gap-px bg-gray-200 bg-muted border-b">
                   <div className="bg-card bg-background p-6">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User / Actor</h4>
                     <div className="flex items-center space-x-3">

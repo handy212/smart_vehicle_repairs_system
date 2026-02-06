@@ -32,7 +32,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
         <div className="space-y-4">
             {/* Today's Appointments */}
             <Card className="border-t shadow-sm bg-card overflow-hidden">
-                <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-primary" />
@@ -56,7 +56,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                 <Link
                                     key={apt.id}
                                     href={`/appointments/${apt.id}`}
-                                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors group"
+                                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 hover:bg-muted/50 transition-colors group"
                                 >
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-foreground truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
@@ -103,7 +103,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
 
             {/* Recent Work Orders */}
             <Card className="border-t shadow-sm bg-card overflow-hidden">
-                <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Wrench className="w-4 h-4 text-purple-500" />
@@ -127,7 +127,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                 <Link
                                     key={wo.id}
                                     href={`/workorders/${wo.id}`}
-                                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors group"
+                                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 hover:bg-muted/50 transition-colors group"
                                 >
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">

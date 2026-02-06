@@ -36,7 +36,7 @@ export function FilterBar({ onSearch, placeholder = "Search...", className, filt
     };
 
     return (
-        <Card className={cn("border-none shadow-sm bg-muted/50 dark:bg-gray-800/50 mb-4", className)}>
+        <Card className={cn("border-none shadow-sm bg-muted/50 bg-muted/50 mb-4", className)}>
             <CardContent className="p-3 flex flex-col sm:flex-row gap-3 items-center">
                 <div className="relative w-full sm:max-w-xs">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground text-muted-foreground" />

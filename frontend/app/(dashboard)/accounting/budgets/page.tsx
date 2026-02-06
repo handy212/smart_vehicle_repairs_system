@@ -238,7 +238,7 @@ export default function BudgetsPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {budgets.map((budget: any) => (
-                                        <TableRow key={budget.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                        <TableRow key={budget.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {budget.name}
                                             </TableCell>

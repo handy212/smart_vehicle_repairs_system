@@ -392,7 +392,7 @@ export default function ReconciliationDetailPage() {
                                     key={line.id}
                                     className={cn(
                                         "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center group relative",
-                                        selectedBankLine?.id === line.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted dark:hover:bg-gray-800"
+                                        selectedBankLine?.id === line.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted hover:bg-muted"
                                     )}
                                     onClick={() => setSelectedBankLine(selectedBankLine?.id === line.id ? null : line)}
                                 >
@@ -433,7 +433,7 @@ export default function ReconciliationDetailPage() {
                                             key={tx.id}
                                             className={cn(
                                                 "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center",
-                                                selectedSysTx?.id === tx.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted dark:hover:bg-gray-800"
+                                                selectedSysTx?.id === tx.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted hover:bg-muted"
                                             )}
                                             onClick={() => setSelectedSysTx(selectedSysTx?.id === tx.id ? null : tx)}
                                         >

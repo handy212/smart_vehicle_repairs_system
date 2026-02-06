@@ -368,7 +368,7 @@ export default function WorkOrderDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
-                className="flex items-center h-9 dark:bg-gray-800 text-foreground border-border backdrop-blur-sm"
+                className="flex items-center h-9 bg-muted text-foreground border-border backdrop-blur-sm"
               >
                 <PremiumIcons.Receipt className="w-3.5 h-3.5 mr-2" />
                 Print
@@ -392,7 +392,7 @@ export default function WorkOrderDetailPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowPrintMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-card/90 backdrop-blur-xl dark:bg-gray-800/90 rounded-xl shadow-xl border border-border/50 border-border/50 z-20 overflow-hidden ring-1 ring-black/5">
+                  <div className="absolute right-0 mt-2 w-48 bg-card/90 backdrop-blur-xl bg-muted/90 rounded-xl shadow-xl border border-border/50 border-border/50 z-20 overflow-hidden ring-1 ring-black/5">
                     <div
                       className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={() => {

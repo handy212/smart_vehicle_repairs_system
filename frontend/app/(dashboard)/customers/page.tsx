@@ -60,7 +60,7 @@ const CustomerRow = memo(function CustomerRow({
   onDelete,
 }: CustomerRowProps) {
   return (
-    <TableRow key={customer.id} className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/customers/${customer.id}`)}>
+    <TableRow key={customer.id} className="group hover:bg-muted/80 hover:bg-muted/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/customers/${customer.id}`)}>
       {visibleColumns.has("checkbox") && (
         <TableCell className="px-4 py-2 whitespace-nowrap">
           <input
@@ -158,7 +158,7 @@ const CustomerRow = memo(function CustomerRow({
             className={cn(
               "text-[10px] px-2 py-0.5 font-medium border shadow-none",
               customer.status === "active" && "border-green-200 text-green-700 bg-success/10 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
-              customer.status === "inactive" && "border-border text-foreground bg-muted/50 border-border text-foreground dark:bg-gray-800",
+              customer.status === "inactive" && "border-border text-foreground bg-muted/50 border-border text-foreground bg-muted",
               customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
             )}
           >
@@ -171,7 +171,7 @@ const CustomerRow = memo(function CustomerRow({
           <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-gray-100 hover:bg-muted">
                   <div className="flex gap-0.5">
                     <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
                     <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
@@ -750,7 +750,7 @@ export default function CustomersPage() {
       />
 
       {/* Customers Table */}
-      <Card className="border-t shadow-sm dark:bg-gray-800 border-border">
+      <Card className="border-t shadow-sm bg-muted border-border">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6">

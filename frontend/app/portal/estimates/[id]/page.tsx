@@ -268,7 +268,7 @@ export default function EstimateDetailPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {estimate.line_items.map((item: any, index: number) => (
-                        <tr key={index} className="hover:bg-muted dark:hover:bg-gray-800">
+                        <tr key={index} className="hover:bg-muted hover:bg-muted">
                           <td className="px-4 py-3 text-sm text-foreground">
                             {item.description}
                           </td>

@@ -69,7 +69,7 @@ export default function InspectionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/inspections/templates">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 text-foreground border-border">
+            <Button variant="outline" size="sm" className="h-9 bg-muted text-foreground border-border">
               <FileText className="w-3.5 h-3.5 mr-2" />
               Templates
             </Button>
@@ -191,7 +191,7 @@ export default function InspectionsPage() {
                   {inspections.map((inspection) => (
                     <TableRow
                       key={inspection.id}
-                      className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 cursor-pointer"
+                      className="group hover:bg-muted/80 hover:bg-muted/50 cursor-pointer"
                       onDoubleClick={() => router.push(`/inspections/${inspection.id}`)}
                     >
                       <TableCell className="py-2 font-mono text-xs font-medium text-primary">
@@ -259,7 +259,7 @@ export default function InspectionsPage() {
                         <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100 hover:bg-muted">
                                 <div className="flex gap-0.5">
                                   <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
                                   <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
@@ -299,7 +299,7 @@ export default function InspectionsPage() {
           )}
 
           {data && data.count > 0 && (
-            <div className="flex items-center justify-between p-4 border-t bg-muted/30 dark:bg-gray-800/30">
+            <div className="flex items-center justify-between p-4 border-t bg-muted/30">
               <div className="text-xs text-muted-foreground">
                 Showing {inspections.length} of {data.count} records
               </div>

@@ -143,7 +143,7 @@ export default function JobProfitabilityPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report.jobs.map((job: any) => (
-                                        <TableRow key={job.work_order_id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                        <TableRow key={job.work_order_id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                             <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                 {job.work_order_number}
                                             </TableCell>

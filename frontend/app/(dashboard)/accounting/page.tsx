@@ -52,11 +52,11 @@ export default function AccountingDashboardPage() {
     if (isLoading) {
         return (
             <div className="p-8 space-y-8 animate-pulse">
-                <div className="h-12 w-1/3 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                <div className="h-12 w-1/3 bg-gray-200 bg-muted rounded"></div>
                 <div className="grid grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-200 dark:bg-gray-800 rounded"></div>)}
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-200 bg-muted rounded"></div>)}
                 </div>
-                <div className="h-96 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                <div className="h-96 bg-gray-200 bg-muted rounded"></div>
             </div>
         );
     }

@@ -139,7 +139,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                         isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
                         isActive
                           ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-                          : "text-muted-foreground text-muted-foreground hover:bg-muted/80 dark:hover:bg-gray-800/50 hover:text-foreground dark:hover:text-gray-100"
+                          : "text-muted-foreground text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground dark:hover:text-gray-100"
                       )}
                       style={isActive ? {
                         backgroundColor: `${branding.primary_color}15`, // 10% opacity hex

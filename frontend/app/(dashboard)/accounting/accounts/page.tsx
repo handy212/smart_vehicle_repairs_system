@@ -314,7 +314,7 @@ export default function ChartOfAccountsPage() {
                                         </h3>
                                     </div>
                                     <Table>
-                                        <TableHeader className="bg-muted/30 dark:bg-gray-800/30">
+                                        <TableHeader className="bg-muted/30">
                                             <TableRow className="hover:bg-transparent border-none">
                                                 <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Code</TableHead>
                                                 <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
@@ -326,7 +326,7 @@ export default function ChartOfAccountsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {typeAccounts.map((account: any) => (
-                                                <TableRow key={account.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                                <TableRow key={account.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                                     <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                         {account.code}
                                                     </TableCell>

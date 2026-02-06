@@ -571,7 +571,7 @@ export default function NewWorkOrderPage() {
       {appointment && (
         <Card className="bg-primary/10 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
           <CardContent className="pt-6">
-            <p className="text-sm text-orange-800 dark:text-primary">
+            <p className="text-sm text-orange-800 text-primary">
               Creating work order from appointment: <strong>{appointment.appointment_number}</strong>
             </p>
           </CardContent>
@@ -715,7 +715,7 @@ export default function NewWorkOrderPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Customer & Vehicle */}
             <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-card/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
+              <CardHeader className="bg-card/40 bg-muted/40 backdrop-blur-sm border-b border-border/50">
                 <CardTitle className="flex items-center gap-2">
                   <PremiumIcons.Users className="w-5 h-5 text-muted-foreground" />
                   Customer & Vehicle
@@ -889,7 +889,7 @@ export default function NewWorkOrderPage() {
 
             {/* Work Order Details */}
             <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-card/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
+              <CardHeader className="bg-card/40 bg-muted/40 backdrop-blur-sm border-b border-border/50">
                 <CardTitle className="flex items-center gap-2">
                   <PremiumIcons.FileText className="w-5 h-5 text-muted-foreground" />
                   Work Order Details
@@ -1013,7 +1013,7 @@ export default function NewWorkOrderPage() {
                           {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
                             <label
                               key={concern.value}
-                              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded"
+                              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 hover:bg-muted p-1.5 rounded"
                             >
                               <input
                                 type="checkbox"
@@ -1119,7 +1119,7 @@ export default function NewWorkOrderPage() {
             <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-card/60 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
               <CardContent className="p-0">
                 {/* Header / Toggle Area */}
-                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted dark:hover:bg-gray-800/50 border border-dashed border-border border-border'}`}
+                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted hover:bg-muted/50 border border-dashed border-border border-border'}`}
                   onClick={() => {
                     const newState = !isWarrantyRework;
                     setIsWarrantyRework(newState);
@@ -1130,7 +1130,7 @@ export default function NewWorkOrderPage() {
                     }
                   }}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-muted-foreground dark:bg-gray-800 text-muted-foreground'}`}>
+                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-muted-foreground bg-muted text-muted-foreground'}`}>
                       <AlertCircle className="w-5 h-5" />
                     </div>
                     <div>

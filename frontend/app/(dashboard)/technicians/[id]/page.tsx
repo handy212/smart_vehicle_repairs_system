@@ -71,7 +71,7 @@ function TechnicianProfileContent() {
     const getStatusColor = (status: Technician['current_status']) => {
         switch (status) {
             case 'available': return "text-success bg-green-100 dark:bg-green-900/30 dark:text-green-400";
-            case 'busy': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-primary";
+            case 'busy': return "text-primary bg-orange-100 dark:bg-orange-900/30 text-primary";
             case 'break': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400";
             case 'offline': return "text-muted-foreground bg-border text-muted-foreground";
             default: return "";

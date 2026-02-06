@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  completed: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-primary border-orange-200 dark:border-orange-800",
+  completed: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 text-primary border-orange-200 dark:border-orange-800",
   approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
   rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
 };
@@ -32,7 +32,7 @@ const itemResultColors: Record<string, string> = {
   pass: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200",
   fail: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200",
   advisory: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200",
-  na: "bg-gray-100 text-foreground dark:bg-gray-800 text-muted-foreground hover:bg-gray-200",
+  na: "bg-gray-100 text-foreground bg-muted text-muted-foreground hover:bg-gray-200",
 };
 
 export default function InspectionDetailPage() {
@@ -264,7 +264,7 @@ export default function InspectionDetailPage() {
                     <CardContent className="p-0">
                       <div className="divide-y divide-gray-100 dark:divide-gray-800">
                         {results.map((result) => (
-                          <div key={result.id} className="p-4 hover:bg-muted dark:hover:bg-gray-800/30 transition-colors">
+                          <div key={result.id} className="p-4 hover:bg-muted hover:bg-muted/30 transition-colors">
                             <div className="flex items-start gap-4">
                               <div className={cn(
                                 "w-2 h-2 rounded-full mt-2 flex-shrink-0",

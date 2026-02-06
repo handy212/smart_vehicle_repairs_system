@@ -87,7 +87,7 @@ export function FinancialTable({
                     {sections.map((section, sectionIndex) => (
                         <React.Fragment key={sectionIndex}>
                             {section.title && (
-                                <TableRow className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <TableRow className="bg-gray-100 bg-muted hover:bg-gray-100 hover:bg-muted">
                                     <TableCell
                                         colSpan={columns.length}
                                         className={cn(
@@ -104,7 +104,7 @@ export function FinancialTable({
                                     key={rowIndex}
                                     className={cn(
                                         "border-b border-border border-border",
-                                        rowIndex % 2 === 0 ? "bg-card dark:bg-gray-950" : "bg-muted/50 bg-background/50",
+                                        rowIndex % 2 === 0 ? "bg-card bg-background" : "bg-muted/50 bg-background/50",
                                         section.className
                                     )}
                                 >
@@ -125,7 +125,7 @@ export function FinancialTable({
                                 </TableRow>
                             ))}
                             {section.showTotal && section.data.length > 0 && (
-                                <TableRow className="bg-gray-100 dark:bg-gray-800 font-bold border-t-2 border-border border-border">
+                                <TableRow className="bg-gray-100 bg-muted font-bold border-t-2 border-border border-border">
                                     <TableCell
                                         className={cn(
                                             "font-bold text-foreground text-foreground",

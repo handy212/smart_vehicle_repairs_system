@@ -68,7 +68,7 @@ export function DataTable<T>({
                                     key={index}
                                     className={cn(
                                         "px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground select-none",
-                                        col.sortable && "cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-800/50",
+                                        col.sortable && "cursor-pointer hover:bg-gray-100/50 hover:bg-muted/50",
                                         col.className
                                     )}
                                     onClick={() => col.sortable && col.accessorKey && onSort && onSort(col.accessorKey as string)}

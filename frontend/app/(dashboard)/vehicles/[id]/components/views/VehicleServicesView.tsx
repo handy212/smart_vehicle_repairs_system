@@ -245,7 +245,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
               </TableHeader>
               <TableBody>
                 {schedules.map((schedule) => (
-                  <TableRow key={schedule.id} className="hover:bg-muted dark:hover:bg-gray-800/50 transition-colors">
+                  <TableRow key={schedule.id} className="hover:bg-muted hover:bg-muted/50 transition-colors">
                     <TableCell>
                       <div className="font-medium text-foreground">{schedule.service_type_name || "N/A"}</div>
                       {schedule.notes && (

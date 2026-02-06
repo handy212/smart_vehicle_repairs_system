@@ -70,7 +70,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   if (!mounted || isLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-muted bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -86,7 +86,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const totalMargin = isDesktop ? sidebarWidth : 0;
 
   return (
-    <div className="min-h-screen bg-muted dark:bg-gray-950">
+    <div className="min-h-screen bg-muted bg-background">
       <PortalNavbar
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}

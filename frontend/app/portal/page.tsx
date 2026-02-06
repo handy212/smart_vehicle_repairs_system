@@ -100,7 +100,7 @@ export default function PortalHomePage() {
                 {recent_appointments.length > 0 ? (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {recent_appointments.map((apt: any) => (
-                      <div key={apt.id} className="p-4 hover:bg-muted dark:hover:bg-gray-800/50 transition-colors flex items-center justify-between group">
+                      <div key={apt.id} className="p-4 hover:bg-muted hover:bg-muted/50 transition-colors flex items-center justify-between group">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center text-primary font-bold text-xs">
                             {format(new Date(apt.appointment_date), "d")}
@@ -145,7 +145,7 @@ export default function PortalHomePage() {
                       <Link
                         key={inv.id}
                         href={`/portal/invoices/${inv.id}`}
-                        className="block p-4 hover:bg-muted dark:hover:bg-gray-800/50 transition-colors group"
+                        className="block p-4 hover:bg-muted hover:bg-muted/50 transition-colors group"
                       >
                         <div className="flex justify-between items-start mb-1">
                           <p className="font-mono text-xs font-medium text-muted-foreground">#{inv.invoice_number}</p>

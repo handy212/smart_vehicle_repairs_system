@@ -304,12 +304,12 @@ export default function EstimateDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground dark:bg-gray-800/50 border-border text-foreground">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground bg-muted/50 border-border text-foreground">
                   Estimate #{estimate.estimate_number}
                 </span>
                 {estimate.work_order && estimate.work_order_number && (
                   <Link href={`/workorders/${typeof estimate.work_order === 'object' ? estimate.work_order.id : estimate.work_order}`}>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-orange-100 transition-colors dark:bg-orange-950/20 dark:border-orange-800 dark:text-primary">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-orange-100 transition-colors dark:bg-orange-950/20 dark:border-orange-800 text-primary">
                       <span className="h-2 w-2 rounded-full bg-primary" />
                       Work Order #{estimate.work_order_number}
                     </span>

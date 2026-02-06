@@ -465,8 +465,8 @@ function PartFormDialog({
                 <div className="py-4 space-y-4">
                     {/* Items Queue List (Only for new requests) */}
                     {!initialData && queuedParts.length > 0 && (
-                        <div className="rounded-md border border-border bg-muted/50 dark:bg-gray-800/20 overflow-hidden">
-                            <div className="px-3 py-2 border-b border-border bg-gray-100/50 dark:bg-gray-800/50 flex justify-between items-center">
+                        <div className="rounded-md border border-border bg-muted/50 bg-muted/20 overflow-hidden">
+                            <div className="px-3 py-2 border-b border-border bg-gray-100/50 bg-muted/50 flex justify-between items-center">
                                 <span className="text-xs font-semibold text-card-foreground">Parts to Submit ({queuedParts.length})</span>
                                 <Button
                                     variant="ghost"
@@ -488,7 +488,7 @@ function PartFormDialog({
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                         {queuedParts.map((item, idx) => (
-                                            <tr key={idx} className="group hover:bg-card dark:hover:bg-gray-800/50">
+                                            <tr key={idx} className="group hover:bg-card hover:bg-muted/50">
                                                 <td className="px-3 py-2">
                                                     <div className="font-medium text-foreground">{item.part_name}</div>
                                                     <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{item.description}</div>

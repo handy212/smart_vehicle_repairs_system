@@ -47,7 +47,7 @@ export function KeyboardShortcutsDialog({
               {allShortcuts.map((shortcut, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border border-border hover:bg-muted dark:hover:bg-gray-800 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border border-border border-border hover:bg-muted hover:bg-muted transition-colors"
                 >
                   <span className="text-sm text-foreground text-foreground">
                     {shortcut.description || 'Custom shortcut'}
@@ -61,7 +61,7 @@ export function KeyboardShortcutsDialog({
           </div>
           <div className="pt-4 border-t border-border border-border">
             <p className="text-xs text-muted-foreground text-muted-foreground">
-              Tip: Press <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">?</kbd> to open this dialog
+              Tip: Press <kbd className="px-2 py-1 bg-gray-100 bg-muted rounded text-xs">?</kbd> to open this dialog
             </p>
           </div>
         </div>

@@ -136,7 +136,7 @@ export default function BankReconciliationPage() {
                                 </TableRow>
                             ) : (
                                 (Array.isArray(statements) ? statements : (statements as any)?.results || []).map((statement: any) => (
-                                    <TableRow key={statement.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                    <TableRow key={statement.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                         <TableCell className="px-4 py-2 text-sm text-foreground">
                                             <div className="flex items-center">
                                                 <FileText className="w-4 h-4 mr-2 text-muted-foreground" />

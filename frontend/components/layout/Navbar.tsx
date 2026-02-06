@@ -209,7 +209,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {/* Mobile Menu Toggle */}
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="lg:hidden p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Toggle menu"
             >
               {isSidebarOpen ? (
@@ -223,7 +223,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >

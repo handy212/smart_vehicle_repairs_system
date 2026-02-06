@@ -33,7 +33,7 @@ export function StatsGrid({ stats, className, columns = 4 }: StatsGridProps) {
             {stats.map((stat, index) => (
                 <Card
                     key={index}
-                    className="shadow-none border border-border border-border bg-muted/50 dark:bg-gray-800/20 p-3 flex flex-col justify-between"
+                    className="shadow-none border border-border border-border bg-muted/50 bg-muted/20 p-3 flex flex-col justify-between"
                 >
                     <div className="flex justify-between items-start">
                         <div>

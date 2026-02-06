@@ -151,7 +151,7 @@ export function StatementView({ customerId }: StatementViewProps) {
                                     <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No transactions found</td></tr>
                                 ) : (
                                     transactions.map((t: any) => (
-                                        <tr key={`${t.type}-${t.id}`} className="hover:bg-muted/50 dark:hover:bg-gray-800/50">
+                                        <tr key={`${t.type}-${t.id}`} className="hover:bg-muted/50 hover:bg-muted/50">
                                             <td className="px-4 py-3">
                                                 {t.date ? (
                                                     // specific check for invalid date string

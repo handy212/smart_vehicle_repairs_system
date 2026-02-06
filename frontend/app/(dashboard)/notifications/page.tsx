@@ -294,7 +294,7 @@ export default function NotificationsPage() {
                   isUnread
                     ? "bg-primary/5 dark:bg-orange-950/20 border-r border-t border-b border-orange-200/50 dark:border-orange-800/50"
                     : "bg-card/50 border-r border-t border-b border-border",
-                  isClickable && "cursor-pointer hover:shadow-sm hover:scale-[1.01] dark:hover:bg-gray-800"
+                  isClickable && "cursor-pointer hover:shadow-sm hover:scale-[1.01] hover:bg-muted"
                 )}
                 onClick={() => isClickable && handleNotificationClick(notification)}
               >

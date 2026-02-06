@@ -236,7 +236,7 @@ export default function TransfersPage() {
                                     {transfers.map((transfer: any) => (
                                         <TableRow
                                             key={transfer.id}
-                                            className="group hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border cursor-pointer transition-colors"
+                                            className="group hover:bg-muted/50 hover:bg-muted/50 border-b border-border cursor-pointer transition-colors"
                                             onClick={() => router.push(`/inventory/transfers/${transfer.id}`)}
                                         >
                                             <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">

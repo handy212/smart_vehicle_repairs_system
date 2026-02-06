@@ -53,7 +53,7 @@ export default function TechnicianLayout({
 
     if (!mounted || !isAuthenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-gray-950">
+            <div className="min-h-screen flex items-center justify-center bg-muted bg-background">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                     <p className="mt-4 text-muted-foreground">Loading...</p>
@@ -63,12 +63,12 @@ export default function TechnicianLayout({
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col">
+        <div className="min-h-screen bg-gray-100 bg-background flex flex-col">
             {/* Technician Header */}
             <header className="bg-card border-b border-border h-16 px-4 flex items-center justify-between shadow-sm sticky top-0 z-50">
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-gray-100 hover:bg-muted">
                             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                         </Button>
                     </Link>

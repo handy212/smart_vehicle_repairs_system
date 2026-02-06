@@ -87,7 +87,7 @@ export function PortalList<T extends { id: string | number }>({
                                 key={item.id}
                                 className={cn(
                                     "transition-colors",
-                                    onRowClick ? "cursor-pointer hover:bg-muted dark:hover:bg-gray-800/50" : "hover:bg-muted/50"
+                                    onRowClick ? "cursor-pointer hover:bg-muted hover:bg-muted/50" : "hover:bg-muted/50"
                                 )}
                                 onClick={() => onRowClick?.(item)}
                             >

@@ -371,7 +371,7 @@ export default function InvoicesPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-primary bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-primary bg-orange-50 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'unpaid' ? null : 'unpaid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -387,7 +387,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-green-500 bg-success/10 dark:bg-gray-800' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-green-500 bg-success/10 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'paid' ? null : 'paid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -403,7 +403,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'partial' ? 'ring-2 ring-primary bg-primary/10 dark:bg-gray-800' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'partial' ? 'ring-2 ring-primary bg-primary/10 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'partial' ? null : 'partial';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -419,7 +419,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-gray-800' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-red-500 bg-red-50 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'overdue' ? null : 'overdue';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });

@@ -126,7 +126,7 @@ export default function ServiceBundlesPage() {
                                     {bundles.map((bundle) => (
                                         <TableRow
                                             key={bundle.id}
-                                            className="group hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border cursor-pointer transition-colors"
+                                            className="group hover:bg-muted/50 hover:bg-muted/50 border-b border-border cursor-pointer transition-colors"
                                         >
                                             <TableCell className="px-4 py-3">
                                                 <div className="flex items-center">

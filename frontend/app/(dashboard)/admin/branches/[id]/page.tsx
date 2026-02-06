@@ -294,7 +294,7 @@ export default function BranchDetailPage() {
                   {staff.map((member: any) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800/50"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted hover:bg-muted/50"
                     >
                       <div>
                         <p className="font-medium text-foreground">
@@ -336,7 +336,7 @@ export default function BranchDetailPage() {
                   {managers.map((manager: any) => (
                     <div
                       key={manager.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800/50"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted hover:bg-muted/50"
                     >
                       <div>
                         <p className="font-medium text-foreground">

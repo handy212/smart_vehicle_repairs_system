@@ -256,7 +256,7 @@ export default function DiagnosisListPage() {
                   return (
                     <TableRow
                       key={diagnosis.id}
-                      className="group cursor-pointer hover:bg-muted/80 dark:hover:bg-gray-800/80 transition-colors"
+                      className="group cursor-pointer hover:bg-muted/80 hover:bg-muted/80 transition-colors"
                       onDoubleClick={handleRowClick}
                     >
                       <TableCell className="py-2.5 font-medium">
@@ -313,8 +313,8 @@ export default function DiagnosisListPage() {
                             diagnosis.status === "completed"
                               ? "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
                               : diagnosis.status === "on_hold"
-                                ? "bg-muted text-foreground border-border dark:bg-gray-800 text-muted-foreground border-border"
-                                : "bg-primary/10 text-primary border-orange-200 dark:bg-orange-900/20 dark:text-primary dark:border-orange-800"
+                                ? "bg-muted text-foreground border-border bg-muted text-muted-foreground border-border"
+                                : "bg-primary/10 text-primary border-orange-200 dark:bg-orange-900/20 text-primary dark:border-orange-800"
                           )}
                         >
                           {diagnosis.status_display || diagnosis.status}

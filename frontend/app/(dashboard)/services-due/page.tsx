@@ -272,7 +272,7 @@ export default function ServicesDuePage() {
                 </TableHeader>
                 <TableBody>
                   {filteredServices.map((schedule) => (
-                    <TableRow key={schedule.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50">
+                    <TableRow key={schedule.id} className="hover:bg-muted/50 hover:bg-muted/50">
                       <TableCell>
                         <input
                           type="checkbox"

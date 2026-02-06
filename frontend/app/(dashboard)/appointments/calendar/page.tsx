@@ -164,7 +164,7 @@ export default function AppointmentCalendarPage() {
         </div>
         <div className="flex items-center space-x-2">
           <Link href="/appointments">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 text-foreground border-border">
+            <Button variant="outline" size="sm" className="h-9 bg-muted text-foreground border-border">
               <ArrowLeft className="w-3.5 h-3.5 mr-2" />
               List View
             </Button>

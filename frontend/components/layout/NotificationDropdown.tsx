@@ -193,7 +193,7 @@ export function NotificationDropdown() {
                     size="sm"
                     className={cn(
                         "relative p-2.5 rounded-lg transition-all h-auto",
-                        "text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
+                        "text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted",
                         "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                         unreadCount > 0 && "text-primary"
                     )}
@@ -225,7 +225,7 @@ export function NotificationDropdown() {
                                 e.preventDefault();
                                 markAllAsReadMutation.mutate();
                             }}
-                            className="h-7 text-xs text-primary hover:text-orange-700 dark:text-primary dark:hover:text-orange-300"
+                            className="h-7 text-xs text-primary hover:text-orange-700 text-primary dark:hover:text-orange-300"
                         >
                             Mark all read
                         </Button>

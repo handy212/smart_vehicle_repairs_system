@@ -131,7 +131,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
             </div>
 
             {isOpen && search && (
-                <div className="absolute z-50 w-full mt-1 bg-card dark:bg-gray-950 text-foreground rounded-md border border-border shadow-lg animate-in fade-in-0 zoom-in-95">
+                <div className="absolute z-50 w-full mt-1 bg-card bg-background text-foreground rounded-md border border-border shadow-lg animate-in fade-in-0 zoom-in-95">
                     <ScrollArea className="max-h-[300px]">
                         <div className="p-1 space-y-1">
                             {/* Raw Phone Option */}

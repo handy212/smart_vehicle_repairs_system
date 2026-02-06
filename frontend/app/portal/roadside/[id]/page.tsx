@@ -371,7 +371,7 @@ export default function RoadsideRequestDetailPage() {
                 {req.customer_feedback ? (
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Your Feedback:</p>
-                    <div className="p-4 bg-card/50 dark:bg-gray-800/50 rounded-xl italic text-sm">
+                    <div className="p-4 bg-card/50 rounded-xl italic text-sm">
                       "{req.customer_feedback}"
                     </div>
                   </div>
@@ -396,7 +396,7 @@ export default function RoadsideRequestDetailPage() {
                         placeholder="What did you like? What can we improve?"
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
-                        className="bg-card/50 dark:bg-gray-800/50"
+                        className="bg-card/50"
                       />
                     </div>
                     <Button

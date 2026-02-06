@@ -350,7 +350,7 @@ export default function UserDetailPage() {
             Back
           </Button>
         </Link>
-        <Card className="dark:bg-gray-800 border-border">
+        <Card className="bg-muted border-border">
           <CardContent className="pt-6">
             <p className="text-red-600 dark:text-red-400">User not found</p>
           </CardContent>
@@ -435,7 +435,7 @@ export default function UserDetailPage() {
       {isEditing ? (
         <form id="user-edit-form" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-6">
-            <Card className="dark:bg-gray-800 border-border">
+            <Card className="bg-muted border-border">
               <CardHeader>
                 <CardTitle className="text-foreground text-lg">Basic Information</CardTitle>
               </CardHeader>
@@ -560,7 +560,7 @@ export default function UserDetailPage() {
 
             {/* Branch Assignment and Employment Information - Combined */}
             {(isManager || isStaff) && (
-              <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
+              <Card className="bg-muted border-border border-l-4 border-l-primary">
                 <CardHeader>
                   <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                     <Building2 className="w-5 h-5 text-primary" />
@@ -712,7 +712,7 @@ export default function UserDetailPage() {
             )}
 
             {/* Password Reset Section */}
-            <Card className="dark:bg-gray-800 border-border border-l-4 border-l-orange-500">
+            <Card className="bg-muted border-border border-l-4 border-l-orange-500">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                   <KeyRound className="w-5 h-5 text-primary" />
@@ -859,7 +859,7 @@ export default function UserDetailPage() {
             </Card>
 
             {/* User Details Sidebar */}
-            <Card className="dark:bg-gray-800 border-border">
+            <Card className="bg-muted border-border">
               <CardHeader>
                 <CardTitle className="text-foreground text-lg">Account Details</CardTitle>
               </CardHeader>
@@ -893,7 +893,7 @@ export default function UserDetailPage() {
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Status Card */}
-            <Card className="dark:bg-gray-800 border-border">
+            <Card className="bg-muted border-border">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -918,7 +918,7 @@ export default function UserDetailPage() {
             </Card>
 
             {/* Role Card */}
-            <Card className="dark:bg-gray-800 border-border">
+            <Card className="bg-muted border-border">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -935,7 +935,7 @@ export default function UserDetailPage() {
             </Card>
 
             {/* Branch Card */}
-            <Card className="dark:bg-gray-800 border-border">
+            <Card className="bg-muted border-border">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
@@ -957,7 +957,7 @@ export default function UserDetailPage() {
           {/* Main Information Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Personal Information */}
-            <Card className="dark:bg-gray-800 border-border lg:col-span-2">
+            <Card className="bg-muted border-border lg:col-span-2">
               <CardHeader>
                 <CardTitle className="text-foreground text-lg font-semibold">Personal Information</CardTitle>
               </CardHeader>
@@ -988,7 +988,7 @@ export default function UserDetailPage() {
             </Card>
 
             {/* Account Details */}
-            <Card className="dark:bg-gray-800 border-border">
+            <Card className="bg-muted border-border">
               <CardHeader>
                 <CardTitle className="text-foreground text-lg font-semibold">Account Details</CardTitle>
               </CardHeader>
@@ -1029,7 +1029,7 @@ export default function UserDetailPage() {
           </div>
 
           {/* Branch & Employment Information */}
-          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
+          <Card className="bg-muted border-border border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 <Building2 className="w-5 h-5 text-primary" />
@@ -1099,7 +1099,7 @@ export default function UserDetailPage() {
           </Card>
 
           {/* Password Reset Section */}
-          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-orange-500">
+          <Card className="bg-muted border-border border-l-4 border-l-orange-500">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 <KeyRound className="w-5 h-5 text-primary" />

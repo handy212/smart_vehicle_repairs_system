@@ -25,7 +25,7 @@ export function ProfileView({ customer }: ProfileViewProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Primary Contact Information */}
                 <Card className="shadow-sm border border-border">
-                    <CardHeader className="bg-muted/30 dark:bg-gray-800/20 pb-4 border-b border-border">
+                    <CardHeader className="bg-muted/30 bg-muted/20 pb-4 border-b border-border">
                         <CardTitle className="text-base font-semibold">Primary Contact</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-4">
@@ -67,7 +67,7 @@ export function ProfileView({ customer }: ProfileViewProps) {
 
                 {/* Address & Business Info */}
                 <Card className="shadow-sm border border-border">
-                    <CardHeader className="bg-muted/30 dark:bg-gray-800/20 pb-4 border-b border-border">
+                    <CardHeader className="bg-muted/30 bg-muted/20 pb-4 border-b border-border">
                         <CardTitle className="text-base font-semibold">Address & Details</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-4">

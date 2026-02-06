@@ -343,7 +343,7 @@ export default function AppointmentsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 dark:bg-gray-800 text-foreground border-border backdrop-blur-sm bg-card/50"
+                className="h-9 bg-muted text-foreground border-border backdrop-blur-sm bg-card/50"
               >
                 Actions
                 <PremiumIcons.ChevronDown className="w-3.5 h-3.5 ml-2" />
@@ -363,7 +363,7 @@ export default function AppointmentsPage() {
           </DropdownMenu>
 
           <Link href="/appointments/calendar">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 text-foreground border-border backdrop-blur-sm bg-card/50">
+            <Button variant="outline" size="sm" className="h-9 bg-muted text-foreground border-border backdrop-blur-sm bg-card/50">
               <PremiumIcons.CalendarDays className="w-3.5 h-3.5 mr-2" />
               Calendar View
             </Button>
@@ -502,7 +502,7 @@ export default function AppointmentsPage() {
 
       {/* Appointments Table */}
       <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-        <CardHeader className="py-4 px-6 border-b border-border/50 bg-card/40 dark:bg-gray-800/40 backdrop-blur-sm">
+        <CardHeader className="py-4 px-6 border-b border-border/50 bg-card/40 bg-muted/40 backdrop-blur-sm">
           <CardTitle className="text-base font-semibold text-foreground tracking-tight">
             All Appointments ({data?.count || 0})
           </CardTitle>

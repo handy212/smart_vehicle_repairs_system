@@ -276,13 +276,13 @@ function TechniciansContent() {
                         </div>
                     ) : (
                         <Card className="border-t shadow-sm">
-                            <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
+                            <CardHeader className="py-3 px-4 border-b bg-muted/30">
                                 <CardTitle className="text-sm font-semibold">All Technicians ({data?.results?.length || 0})</CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-muted/50 hover:bg-muted/50 dark:hover:bg-gray-800/50">
+                                        <TableRow className="bg-muted/50 hover:bg-muted/50 hover:bg-muted/50">
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Technician</TableHead>
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contact</TableHead>
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Skills</TableHead>
@@ -296,7 +296,7 @@ function TechniciansContent() {
                                             data.results.map((tech) => (
                                                 <TableRow
                                                     key={tech.id}
-                                                    className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 transition-colors border-b border-border cursor-pointer"
+                                                    className="group hover:bg-muted/80 hover:bg-muted/50 transition-colors border-b border-border cursor-pointer"
                                                     onDoubleClick={() => router.push(`/technicians/${tech.id}`)}
                                                 >
                                                     <TableCell className="px-3 py-1.5">

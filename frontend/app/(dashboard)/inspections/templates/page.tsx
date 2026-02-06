@@ -96,7 +96,7 @@ export default function InspectionTemplatesPage() {
                 </TableHeader>
                 <TableBody>
                   {templates.map((template) => (
-                    <TableRow key={template.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50">
+                    <TableRow key={template.id} className="hover:bg-muted/50 hover:bg-muted/50">
                       <TableCell className="font-medium text-sm text-foreground py-2.5">
                         {template.name}
                         {template.is_default && (

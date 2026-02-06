@@ -98,7 +98,7 @@ export default function MobileInspectionsPage() {
             <Link
               key={inspection.id}
               href={`/mobile/inspections/${inspection.id}`}
-              className="block p-4 rounded-lg border border-border bg-card hover:bg-muted dark:hover:bg-gray-800 transition-colors"
+              className="block p-4 rounded-lg border border-border bg-card hover:bg-muted hover:bg-muted transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">

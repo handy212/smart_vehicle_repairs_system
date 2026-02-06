@@ -77,7 +77,7 @@ export function InspectionItemRow({
             isLast && "border-b-0"
         )}>
             {/* Main Row */}
-            <div className="flex items-center gap-4 p-3 hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors">
+            <div className="flex items-center gap-4 p-3 hover:bg-muted/50 hover:bg-muted/50 transition-colors">
                 {/* Item Info */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -189,7 +189,7 @@ export function InspectionItemRow({
                     <select
                         value={result.condition || ""}
                         onChange={(e) => onUpdate("condition", e.target.value || null)}
-                        className="h-8 w-32 rounded-md border border-border border-border bg-card dark:bg-gray-950 px-2 text-xs shadow-sm"
+                        className="h-8 w-32 rounded-md border border-border border-border bg-card bg-background px-2 text-xs shadow-sm"
                     >
                         <option value="">Select...</option>
                         <option value="excellent">Excellent</option>
@@ -267,7 +267,7 @@ export function InspectionItemRow({
                                 placeholder="Additional findings or technician notes..."
                                 value={result.notes || ""}
                                 onChange={(e) => onUpdate("notes", e.target.value)}
-                                className="text-sm min-h-[60px] bg-card dark:bg-gray-950"
+                                className="text-sm min-h-[60px] bg-card bg-background"
                             />
                         </div>
                     )}

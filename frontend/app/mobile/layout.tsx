@@ -58,7 +58,7 @@ export default function MobileLayout({
 
   if (!mounted || !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-muted bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading...</p>
@@ -96,7 +96,7 @@ export default function MobileLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-muted dark:bg-gray-950 flex flex-col">
+    <div className="min-h-screen bg-muted bg-background flex flex-col">
       <SyncStatusBanner />
       <header className="bg-card border-b border-border h-14 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">

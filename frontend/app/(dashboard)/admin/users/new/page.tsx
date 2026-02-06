@@ -348,7 +348,7 @@ export default function NewUserPage() {
 
       <form id="user-create-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-6">
-          <Card className="dark:bg-gray-800 border-border">
+          <Card className="bg-muted border-border">
             <CardHeader>
               <CardTitle className="text-foreground text-lg">Basic Information</CardTitle>
             </CardHeader>
@@ -553,7 +553,7 @@ export default function NewUserPage() {
           </Card>
 
           {/* Branch Assignment and Employment Information - Combined */}
-          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
+          <Card className="bg-muted border-border border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                 <Building2 className="w-5 h-5 text-primary" />

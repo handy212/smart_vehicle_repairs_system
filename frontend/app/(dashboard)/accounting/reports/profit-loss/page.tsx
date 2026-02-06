@@ -183,7 +183,7 @@ export default function ProfitLossPage() {
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
-                                <TableHeader className="bg-muted/30 dark:bg-gray-800/30">
+                                <TableHeader className="bg-muted/30">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Account</TableHead>
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Amount</TableHead>
@@ -191,7 +191,7 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report?.income?.map((item: any) => (
-                                        <TableRow key={item.code} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                        <TableRow key={item.code} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}
                                             </TableCell>
@@ -220,7 +220,7 @@ export default function ProfitLossPage() {
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
-                                <TableHeader className="bg-muted/30 dark:bg-gray-800/30">
+                                <TableHeader className="bg-muted/30">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Account</TableHead>
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Amount</TableHead>
@@ -228,7 +228,7 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report?.expenses?.map((item: any) => (
-                                        <TableRow key={item.code} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                        <TableRow key={item.code} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}
                                             </TableCell>

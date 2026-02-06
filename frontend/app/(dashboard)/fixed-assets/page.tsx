@@ -322,7 +322,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="active">Active</option>
                                     <option value="">All Statuses</option>
@@ -334,7 +334,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={categoryFilter}
                                     onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="">All Categories</option>
                                     {categories?.map((cat) => (

@@ -147,7 +147,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                         isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
                         isActive
                           ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-                          : "text-muted-foreground text-muted-foreground hover:bg-muted/80 dark:hover:bg-gray-800/50 hover:text-foreground dark:hover:text-gray-100"
+                          : "text-muted-foreground text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground dark:hover:text-gray-100"
                       )}
                       style={isActive ? {
                         backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
@@ -207,7 +207,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
             <div className="space-y-2">
               <Link
                 href="/help"
-                className="flex items-center px-3 py-2 text-sm text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="flex items-center px-3 py-2 text-sm text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-100 hover:bg-gray-100 hover:bg-muted rounded-lg transition-colors"
               >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Help & Support
@@ -222,7 +222,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
           <div className="flex-shrink-0 p-2 border-t border-border border-border bg-muted/50 bg-background/50">
             <button
               title="Help & Support"
-              className="w-full flex items-center justify-center p-2 text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="w-full flex items-center justify-center p-2 text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-100 hover:bg-gray-100 hover:bg-muted rounded-lg transition-colors"
             >
               <HelpCircle className="w-5 h-5" />
             </button>

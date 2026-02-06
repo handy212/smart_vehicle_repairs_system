@@ -213,7 +213,7 @@ export function InspectionItemCard({
                             <select
                                 value={result.condition || ""}
                                 onChange={(e) => onUpdate("condition", e.target.value || null)}
-                                className="flex-1 h-9 rounded-md border border-border border-border bg-card dark:bg-gray-950 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex-1 h-9 rounded-md border border-border border-border bg-card bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="">Select condition...</option>
                                 <option value="excellent">Excellent</option>
@@ -250,7 +250,7 @@ export function InspectionItemCard({
                             placeholder="Additional findings or technician notes..."
                             value={result.notes || ""}
                             onChange={(e) => onUpdate("notes", e.target.value)}
-                            className="text-sm min-h-[60px] bg-muted/50 dark:bg-gray-800/50"
+                            className="text-sm min-h-[60px] bg-muted/50 bg-muted/50"
                         />
                     </div>
                 )}

@@ -324,7 +324,7 @@ export default function PaymentDetailPage() {
                                 <CardTitle className="text-base">Primary Invoice</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <Link href={`/billing/invoices/${payment.invoice}`} className="flex items-center justify-between p-3 border rounded-md hover:bg-muted dark:hover:bg-gray-800 transition-colors">
+                                <Link href={`/billing/invoices/${payment.invoice}`} className="flex items-center justify-between p-3 border rounded-md hover:bg-muted hover:bg-muted transition-colors">
                                     <div className="flex items-center gap-3">
                                         <FileText className="h-5 w-5 text-muted-foreground" />
                                         <span className="font-medium">{payment.invoice_number}</span>

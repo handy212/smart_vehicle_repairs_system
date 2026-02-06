@@ -141,14 +141,14 @@ export default function WorkOrderOverviewTab({
                       {typeof workOrder.customer === "object" && workOrder.customer !== null ? (
                         <Link
                           href={`/customers/${workOrder.customer.id}`}
-                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
                         >
                           {workOrder.customer.full_name || workOrder.customer_name || "View Customer"}
                         </Link>
                       ) : (
             <Link
                           href={`/customers/${workOrder.customer}`}
-                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
             >
               {workOrder.customer_name || "View Customer"}
             </Link>
@@ -201,14 +201,14 @@ export default function WorkOrderOverviewTab({
                       {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null ? (
                         <Link
                           href={`/vehicles/${workOrder.vehicle.id}`}
-                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
                         >
                           {workOrder.vehicle.year} {workOrder.vehicle.make} {workOrder.vehicle.model}
                         </Link>
                       ) : (
             <Link
                           href={`/vehicles/${workOrder.vehicle}`}
-                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
             >
               {workOrder.vehicle_info || "View Vehicle"}
             </Link>

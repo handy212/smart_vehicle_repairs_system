@@ -29,7 +29,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
 
     return (
         <Card className="border-t shadow-sm overflow-hidden bg-card">
-            <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
+            <CardHeader className="py-3 px-4 border-b bg-muted/30">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="p-1 rounded bg-primary/10 text-primary">
@@ -64,7 +64,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                                 <div className={cn(
                                     "flex items-center justify-center w-14 h-14 rounded-full border-2 transition-all duration-300",
                                     count > 0
-                                        ? "bg-card dark:bg-gray-950 border-primary shadow-lg shadow-primary/10 scale-110"
+                                        ? "bg-card bg-background border-primary shadow-lg shadow-primary/10 scale-110"
                                         : "bg-muted border-border group-hover:border-border"
                                 )}>
                                     <span className={cn(

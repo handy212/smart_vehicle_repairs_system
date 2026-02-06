@@ -136,7 +136,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
           <div className="flex items-center space-x-4">
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-md text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="lg:hidden p-2 rounded-md text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted"
               aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
               aria-expanded={isSidebarOpen}
             >
@@ -147,7 +147,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
@@ -192,7 +192,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             <div className="relative ml-2" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-muted-foreground text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-transparent hover:border-border dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-muted-foreground text-muted-foreground hover:bg-gray-100 hover:bg-muted transition-all border border-transparent hover:border-border dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-sm text-white text-xs font-bold tracking-wider ring-2 ring-white dark:ring-gray-900">
                   {user?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
@@ -208,7 +208,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
               {/* User Dropdown Menu */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-64 bg-card rounded-xl shadow-xl border border-border border-border py-2 z-50 transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-5 py-3 border-b border-border border-border mb-1 bg-muted/50 dark:bg-gray-800/50">
+                  <div className="px-5 py-3 border-b border-border border-border mb-1 bg-muted/50 bg-muted/50">
                     <p className="text-sm font-semibold text-foreground text-foreground">Signed in as</p>
                     <p className="text-xs text-muted-foreground text-muted-foreground truncate mt-0.5 font-medium">{user?.email}</p>
                   </div>

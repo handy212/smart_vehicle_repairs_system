@@ -77,7 +77,7 @@ export function UserMenu() {
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
-                    className="flex items-center space-x-2 h-auto px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="flex items-center space-x-2 h-auto px-3 py-2 hover:bg-gray-100 hover:bg-muted"
                 >
                     <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center text-white font-semibold shadow-sm">
                         {user?.first_name?.[0] || user?.email?.[0] || "U"}

@@ -341,7 +341,7 @@ export default function EditCustomerPage() {
             Back
           </Button>
         </Link>
-        <Card className="dark:bg-gray-800 border-border">
+        <Card className="bg-muted border-border">
           <CardContent className="pt-6">
             <p className="text-red-600 dark:text-red-400">Customer not found.</p>
           </CardContent>
@@ -395,7 +395,7 @@ export default function EditCustomerPage() {
       </div>
 
       {serverError && (
-        <Card className="border-l-4 border-l-red-500 dark:bg-gray-800 border-border">
+        <Card className="border-l-4 border-l-red-500 bg-muted border-border">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3 text-red-700 dark:text-red-400">
               <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -408,7 +408,7 @@ export default function EditCustomerPage() {
       <form id="customer-edit-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-6">
           {/* Personal Information */}
-          <Card className="dark:bg-gray-800 border-border">
+          <Card className="bg-muted border-border">
             <CardHeader>
               <CardTitle className="text-foreground text-lg">Personal Information</CardTitle>
             </CardHeader>
@@ -483,7 +483,7 @@ export default function EditCustomerPage() {
           </Card>
 
           {/* Customer Type & Business Information */}
-          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
+          <Card className="bg-muted border-border border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                 <Building2 className="w-5 h-5 text-primary" />
@@ -604,7 +604,7 @@ export default function EditCustomerPage() {
 
           {/* Portal Access & Password Management */}
           {customer && (
-            <Card className="dark:bg-gray-800 border-border border-l-4 border-l-orange-500">
+            <Card className="bg-muted border-border border-l-4 border-l-orange-500">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                   <KeyRound className="w-5 h-5 text-primary" />

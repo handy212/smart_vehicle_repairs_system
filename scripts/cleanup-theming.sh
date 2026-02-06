@@ -23,148 +23,70 @@ echo "---"
 
 # Function to replace in TSX/TS files
 replace_in_tsx() {
+    # Match both text and background grays more aggressively
+    # Uses sed with basic regex, but handles common variations
     find frontend -type f \( -name "*.tsx" -o -name "*.ts" \) -exec sed -i "$1" {} +
 }
 
-# 1. Background Colors - Cards and Containers
-echo "  ✓ Replacing bg-white dark:bg-gray-800 with bg-card..."
-replace_in_tsx 's/bg-white dark:bg-gray-800/bg-card/g'
-replace_in_tsx 's/className="bg-white dark:bg-gray-800/className="bg-card/g'
-
-echo "  ✓ Replacing bg-white dark:bg-gray-900 with bg-background..."
-replace_in_tsx 's/bg-white dark:bg-gray-900/bg-card/g'
-
-echo "  ✓ Replacing dark:bg-gray-900 with bg-background..."
-replace_in_tsx 's/dark:bg-gray-900/bg-background/g'
-
-echo "  ✓ Replacing dark:bg-gray-950 with bg-background..."
-replace_in_tsx 's/dark:bg-gray-950/bg-background/g'
-
-echo "  ✓ Replacing dark:bg-slate-900 with bg-background..."
-replace_in_tsx 's/dark:bg-slate-900/bg-background/g'
-
-echo "  ✓ Replacing dark:bg-slate-950 with bg-background..."
-replace_in_tsx 's/dark:bg-slate-950/bg-background/g'
-
-echo "  ✓ Replacing bg-white (without dark variant) with bg-card..."
-# Only replace bg-white if it doesn't already have a dark variant and isn't part of one
-# This uses a negative lookahead/lookbehind simulation in sed or just replacements
-# For simplicity, we'll replace bg-white with bg-card as bg-card is bg-white in light mode
+# 1. Background Colors
+echo "  ✓ Replacing hardcoded backgrounds with semantic tokens..."
 replace_in_tsx 's/\bbg-white\b/bg-card/g'
-
-echo "  ✓ Replacing transparent card backgrounds..."
-replace_in_tsx 's/bg-white\/60 dark:bg-gray-900\/40/bg-card\/60/g'
-replace_in_tsx 's/bg-white\/50 dark:bg-gray-800\/50/bg-card\/50/g'
-replace_in_tsx 's/bg-card\/50 dark:bg-gray-800\/50/bg-card\/50/g'
-replace_in_tsx 's/bg-muted\/30 dark:bg-gray-800\/30/bg-muted\/30/g'
-
-echo "  ✓ Replacing bg-gray-50 dark:bg-gray-900 with bg-muted/50..."
-replace_in_tsx 's/bg-gray-50 dark:bg-gray-900/bg-muted\/50/g'
-
-echo "  ✓ Replacing bg-gray-50 dark:bg-gray-800 with bg-muted..."
-replace_in_tsx 's/bg-gray-50 dark:bg-gray-800/bg-muted/g'
-
-echo "  ✓ Replacing bg-gray-50/50 with bg-muted/50..."
-replace_in_tsx 's/bg-gray-50\/50/bg-muted\/50/g'
-
-echo "  ✓ Replacing bg-gray-50 (without dark variant) with bg-muted..."
 replace_in_tsx 's/\bbg-gray-50\b/bg-muted/g'
+replace_in_tsx 's/\bbg-gray-100\b/bg-muted/g'
+replace_in_tsx 's/\bbg-gray-200\b/bg-muted/g'
+replace_in_tsx 's/\bbg-slate-50\b/bg-muted/g'
+replace_in_tsx 's/\bbg-slate-100\b/bg-muted/g'
 
-echo "  ✓ Replacing dark:bg-gray-700 (often in inputs) with bg-muted..."
-replace_in_tsx 's/dark:bg-gray-700/bg-muted/g'
+echo "  ✓ Cleaning up dark:bg-gray/slate overrides..."
+replace_in_tsx 's/dark:bg-gray-[0-9][0-9][0-9]\/?[0-9]*//g'
+replace_in_tsx 's/dark:bg-slate-[0-9][0-9][0-9]\/?[0-9]*//g'
+replace_in_tsx 's/dark:bg-zinc-[0-9][0-9][0-9]\/?[0-9]*//g'
 
-echo "  ✓ Replacing dark:bg-gray-800 with bg-muted..."
-replace_in_tsx 's/dark:bg-gray-800/bg-muted/g'
+# 2. Text Colors
+echo "  ✓ Replacing text colors with text-foreground/muted-foreground..."
+replace_in_tsx 's/text-gray-[789]00/text-foreground/g'
+replace_in_tsx 's/text-slate-[789]00/text-foreground/g'
+replace_in_tsx 's/text-zinc-[789]00/text-foreground/g'
 
-echo "  ✓ Replacing dark:bg-slate-800 with bg-muted..."
-replace_in_tsx 's/dark:bg-slate-800/bg-muted/g'
+replace_in_tsx 's/text-gray-[456]00/text-muted-foreground/g'
+replace_in_tsx 's/text-slate-[456]00/text-muted-foreground/g'
+replace_in_tsx 's/text-zinc-[456]00/text-muted-foreground/g'
 
-echo "  ✓ Replacing dark:bg-gray-700\/50 with bg-muted/50..."
-replace_in_tsx 's/dark:bg-gray-700\/50/bg-muted\/50/g'
-
-# 2. Text Colors - Headings and Body
-echo "  ✓ Replacing text-gray-900/slate-900/zinc-900 with text-foreground..."
-replace_in_tsx 's/text-gray-900/text-foreground/g'
-replace_in_tsx 's/text-slate-900/text-foreground/g'
-replace_in_tsx 's/text-zinc-900/text-foreground/g'
-
-echo "  ✓ Replacing text-gray-800/slate-800/zinc-800 with text-foreground..."
-replace_in_tsx 's/text-gray-800/text-foreground/g'
-replace_in_tsx 's/text-slate-800/text-foreground/g'
-replace_in_tsx 's/text-zinc-800/text-foreground/g'
-
-echo "  ✓ Replacing text-gray-700/slate-700/zinc-700 with text-foreground..."
-replace_in_tsx 's/text-gray-700/text-foreground/g'
-replace_in_tsx 's/text-slate-700/text-foreground/g'
-replace_in_tsx 's/text-zinc-700/text-foreground/g'
-
-echo "  ✓ Replacing dark:text-gray-100/dark:text-white with text-foreground..."
-replace_in_tsx 's/dark:text-gray-100/text-foreground/g'
-replace_in_tsx 's/dark:text-white/text-foreground/g'
-replace_in_tsx 's/dark:text-gray-200/text-foreground/g'
-replace_in_tsx 's/dark:text-gray-300/text-foreground/g'
-
-echo "  ✓ Replacing text-gray-500/gray-400 with text-muted-foreground..."
-replace_in_tsx 's/text-gray-500/text-muted-foreground/g'
-replace_in_tsx 's/text-gray-400/text-muted-foreground/g'
-replace_in_tsx 's/text-slate-500/text-muted-foreground/g'
-replace_in_tsx 's/text-slate-400/text-muted-foreground/g'
-replace_in_tsx 's/text-gray-600/text-muted-foreground/g'
-replace_in_tsx 's/text-slate-600/text-muted-foreground/g'
-
-# Clean up redundant dark: overrides now that we use semantic tokens
-echo "  ✓ Cleaning up redundant dark: overrides..."
+echo "  ✓ Cleaning up dark:text-gray/slate/white overrides..."
+replace_in_tsx 's/dark:text-gray-[0-9][0-9][0-9]\/?[0-9]*//g'
+replace_in_tsx 's/dark:text-slate-[0-9][0-9][0-9]\/?[0-9]*//g'
+replace_in_tsx 's/dark:text-white//g'
 replace_in_tsx 's/dark:text-foreground/text-foreground/g'
-replace_in_tsx 's/dark:text-muted-foreground/text-muted-foreground/g'
 
 # 3. Border Colors
-echo "  ✓ Replacing all hardcoded borders with border-border..."
-replace_in_tsx 's/border-gray-200/border-border/g'
-replace_in_tsx 's/border-gray-100/border-border/g'
-replace_in_tsx 's/border-gray-300/border-border/g'
-replace_in_tsx 's/border-slate-200/border-border/g'
-replace_in_tsx 's/border-slate-100/border-border/g'
-replace_in_tsx 's/dark:border-gray-700/border-border/g'
-replace_in_tsx 's/dark:border-gray-800/border-border/g'
-replace_in_tsx 's/dark:border-slate-800/border-border/g'
-replace_in_tsx 's/dark:border-slate-700/border-border/g'
+echo "  ✓ Replacing borders with border-border..."
+replace_in_tsx 's/border-gray-[123]00/border-border/g'
+replace_in_tsx 's/border-slate-[123]00/border-border/g'
+replace_in_tsx 's/dark:border-gray-[0-9][0-9][0-9]\/?[0-9]*//g'
+replace_in_tsx 's/dark:border-slate-[0-9][0-9][0-9]\/?[0-9]*//g'
 
-# 4. Input/Form Elements
-echo "  ✓ Replacing input semantic styles..."
-replace_in_tsx 's/bg-white dark:bg-gray-800/bg-input/g'
+# 4. Semantic cleanup for hover states
+echo "  ✓ Cleaning up dark:hover: overrides..."
+replace_in_tsx 's/dark:hover:text-gray-[0-9][0-9][0-9]//g'
+replace_in_tsx 's/dark:hover:bg-gray-[0-9][0-9][0-9]//g'
 
-# 5. Semantic Color Fixes (cleaning up pairs)
-echo "  ✓ Consolidating semantic color pairs..."
-replace_in_tsx 's/text-primary dark:text-primary/text-primary/g'
-replace_in_tsx 's/text-info dark:text-info/text-info/g'
-replace_in_tsx 's/text-success dark:text-success/text-success/g'
-replace_in_tsx 's/text-warning dark:text-warning/text-warning/g'
-replace_in_tsx 's/dark:text-primary/text-primary/g'
-replace_in_tsx 's/dark:text-success/text-success/g'
-replace_in_tsx 's/dark:text-warning/text-warning/g'
-replace_in_tsx 's/dark:text-info/text-info/g'
+# 5. Clean up duplicate classes that might have been created
+echo "  ✓ Cleaning up duplicate/redundant classes..."
+replace_in_tsx 's/text-foreground text-foreground/text-foreground/g'
+replace_in_tsx 's/text-muted-foreground text-muted-foreground/text-muted-foreground/g'
+replace_in_tsx 's/bg-card bg-card/bg-card/g'
+replace_in_tsx 's/bg-muted bg-muted/bg-muted/g'
+replace_in_tsx 's/border-border border-border/border-border/g'
 
-# 6. Specific cleanup for dashboard components found in investigation
-echo "  ✓ Fixing DashboardHeader and ShopPulse specific issues..."
-replace_in_tsx 's/border-gray-200\/50/border-border\/50/g'
-replace_in_tsx 's/dark:hover:bg-gray-800/hover:bg-muted/g'
-
-# Final check for any remaining dark grays that should be semantic
-echo "  ✓ Final pass on remaining dark grays..."
-replace_in_tsx 's/dark:bg-gray-800/bg-card/g'
-replace_in_tsx 's/dark:bg-slate-800/bg-card/g'
+# Final tidy up for any remaining specific patterns found
+replace_in_tsx 's/bg-white\/50/bg-card\/50/g'
+replace_in_tsx 's/bg-white\/60/bg-card\/60/g'
 
 # Count instances after
 AFTER_COUNT=$(find frontend -name "*.tsx" -o -name "*.ts" | xargs grep -o "dark:bg-gray-" 2>/dev/null | wc -l)
-AFTER_TEXT_COUNT=$(find frontend -name "*.tsx" -o -name "*.ts" | xargs grep -o "text-gray-900" 2>/dev/null | wc -l)
 
 echo ""
 echo "================================================"
 echo "✅ Theming cleanup complete!"
-echo ""
-echo "📊 Statistics:"
-echo "   Hardcoded backgrounds (dark:bg-gray-) remaining: $AFTER_COUNT"
-echo "   Hardcoded text (text-gray-900) remaining: $AFTER_TEXT_COUNT"
-echo ""
-echo "📝 Manual review recommended for remaining edge cases."
+echo "📊 Statistics: $AFTER_COUNT dark:bg-gray- left"
 echo ""

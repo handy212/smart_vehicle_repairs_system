@@ -170,7 +170,7 @@ export function CommandPalette() {
                                                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                 isSelected
                                                     ? "bg-primary/10 dark:bg-orange-900/20 text-primary"
-                                                    : "hover:bg-muted dark:hover:bg-gray-800 text-foreground text-foreground"
+                                                    : "hover:bg-muted hover:bg-muted text-foreground text-foreground"
                                             )}
                                             onMouseEnter={() => setSelectedIndex(idx)}
                                         >
@@ -210,7 +210,7 @@ export function CommandPalette() {
                                                     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                     isSelected
                                                         ? "bg-primary/10 dark:bg-orange-900/20 text-primary"
-                                                        : "hover:bg-muted dark:hover:bg-gray-800 text-foreground text-foreground"
+                                                        : "hover:bg-muted hover:bg-muted text-foreground text-foreground"
                                                 )}
                                                 onMouseEnter={() => setSelectedIndex(globalIdx)}
                                             >
@@ -268,7 +268,7 @@ export function CommandPalette() {
                                                     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                     isSelected
                                                         ? "bg-primary/10 dark:bg-orange-900/20 text-primary"
-                                                        : "hover:bg-muted dark:hover:bg-gray-800 text-foreground text-foreground"
+                                                        : "hover:bg-muted hover:bg-muted text-foreground text-foreground"
                                                 )}
                                                 onMouseEnter={() => setSelectedIndex(results.indexOf(item))}
                                             >

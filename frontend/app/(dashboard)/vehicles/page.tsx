@@ -478,7 +478,7 @@ export default function VehiclesPage() {
       />
 
       {/* Vehicles Table */}
-      <Card className="border-t shadow-sm dark:bg-gray-800 border-border">
+      <Card className="border-t shadow-sm bg-muted border-border">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6">
@@ -553,7 +553,7 @@ export default function VehiclesPage() {
                 </thead>
                 <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
                   {data.results.map((vehicle) => (
-                    <tr key={vehicle.id} className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 transition-colors duration-150 cursor-pointer" onDoubleClick={() => router.push(`/vehicles/${vehicle.id}`)}>
+                    <tr key={vehicle.id} className="group hover:bg-muted/80 hover:bg-muted/50 transition-colors duration-150 cursor-pointer" onDoubleClick={() => router.push(`/vehicles/${vehicle.id}`)}>
                       <td className="px-4 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"

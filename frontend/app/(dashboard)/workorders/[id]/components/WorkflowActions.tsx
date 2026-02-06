@@ -1052,7 +1052,7 @@ export default function WorkflowActions({
       variant={primaryAction.variant || "default"}
       onClick={primaryAction.onClick}
       disabled={primaryAction.disabled}
-      className={inline ? "dark:bg-gray-800 text-foreground dark:hover:bg-gray-700" : "w-full h-12 text-base font-medium dark:bg-gray-800 text-foreground dark:hover:bg-gray-700"}
+      className={inline ? "bg-muted text-foreground dark:hover:bg-gray-700" : "w-full h-12 text-base font-medium bg-muted text-foreground dark:hover:bg-gray-700"}
       size={inline ? "default" : "lg"}
     >
       <PrimaryIcon className={inline ? "w-4 h-4 mr-2" : "w-5 h-5 mr-2"} />
@@ -1065,7 +1065,7 @@ export default function WorkflowActions({
     <>
       {/* Complete Diagnosis Dialog */}
       <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Complete Diagnosis</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1082,7 +1082,7 @@ export default function WorkflowActions({
 
       {/* Request Approval Dialog */}
       <Dialog open={showRequestApprovalDialog} onOpenChange={setShowRequestApprovalDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Request Customer Approval</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1091,7 +1091,7 @@ export default function WorkflowActions({
           </DialogHeader>
           <div className="px-6 pb-6 space-y-3">
             <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
-              <p className="text-sm text-orange-800 dark:text-primary">
+              <p className="text-sm text-orange-800 text-primary">
                 <AlertCircle className="w-4 h-4 inline mr-1" />
                 This requires diagnosis notes and an estimated total greater than $0. The work order will move to "Awaiting Approval" status and notify the customer.
               </p>
@@ -1135,7 +1135,7 @@ export default function WorkflowActions({
 
       {/* Additional Work Found Dialog */}
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-primary">
               <AlertTriangle className="w-5 h-5" />
@@ -1155,7 +1155,7 @@ export default function WorkflowActions({
 
       {/* Approve Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Approve Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1172,7 +1172,7 @@ export default function WorkflowActions({
 
       {/* Quality Check Dialog */}
       <Dialog open={showQualityCheckDialog} onOpenChange={setShowQualityCheckDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Perform Quality Check</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1190,7 +1190,7 @@ export default function WorkflowActions({
 
       {/* Complete Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Complete Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1207,7 +1207,7 @@ export default function WorkflowActions({
 
       {/* Mark Invoiced Dialog */}
       <Dialog open={showMarkInvoicedDialog} onOpenChange={setShowMarkInvoicedDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Mark Work Order as Invoiced</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1225,7 +1225,7 @@ export default function WorkflowActions({
 
       {/* Close Work Order Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Close Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1243,7 +1243,7 @@ export default function WorkflowActions({
 
       {/* Pause Dialog */}
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Pause Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1260,7 +1260,7 @@ export default function WorkflowActions({
 
       {/* Create Inspection Dialog */}
       <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Create Initial Inspection</DialogTitle>
           </DialogHeader>
@@ -1275,7 +1275,7 @@ export default function WorkflowActions({
 
       {/* Assign Service Coordinator Dialog */}
       <Dialog open={showAssignServiceCoordinatorDialog} onOpenChange={setShowAssignServiceCoordinatorDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Assign Service Coordinator</DialogTitle>
           </DialogHeader>
@@ -1290,7 +1290,7 @@ export default function WorkflowActions({
 
       {/* Start Diagnosis Dialog */}
       <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Start Diagnosis</DialogTitle>
 
@@ -1327,7 +1327,7 @@ export default function WorkflowActions({
                     disabled={action.disabled}
                     title={action.description}
                     size="sm"
-                    className="dark:bg-gray-800 text-foreground dark:hover:bg-gray-700"
+                    className="bg-muted text-foreground dark:hover:bg-gray-700"
                   >
                     <Icon className="w-4 h-4 mr-1" />
                     {action.label}
@@ -1370,7 +1370,7 @@ export default function WorkflowActions({
                     disabled={action.disabled}
                     title={action.description}
                     size="sm"
-                    className="dark:bg-gray-800 text-foreground dark:hover:bg-gray-700"
+                    className="bg-muted text-foreground dark:hover:bg-gray-700"
                   >
                     <Icon className="w-4 h-4 mr-1" />
                     {action.label}
@@ -1384,7 +1384,7 @@ export default function WorkflowActions({
 
       {/* Complete Diagnosis Dialog */}
       <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Complete Diagnosis</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1401,7 +1401,7 @@ export default function WorkflowActions({
 
       {/* Additional Work Found Dialog */}
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-primary">
               <AlertTriangle className="w-5 h-5" />
@@ -1421,7 +1421,7 @@ export default function WorkflowActions({
 
       {/* Approve Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Approve Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1438,7 +1438,7 @@ export default function WorkflowActions({
 
       {/* Quality Check Dialog */}
       <Dialog open={showQualityCheckDialog} onOpenChange={setShowQualityCheckDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Perform Quality Check</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1456,7 +1456,7 @@ export default function WorkflowActions({
 
       {/* Complete Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Complete Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1473,7 +1473,7 @@ export default function WorkflowActions({
 
       {/* Mark Invoiced Dialog */}
       <Dialog open={showMarkInvoicedDialog} onOpenChange={setShowMarkInvoicedDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Mark Work Order as Invoiced</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1491,7 +1491,7 @@ export default function WorkflowActions({
 
       {/* Close Work Order Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Close Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1509,7 +1509,7 @@ export default function WorkflowActions({
 
       {/* Pause Dialog */}
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Pause Work Order</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1526,7 +1526,7 @@ export default function WorkflowActions({
 
       {/* Create Inspection Dialog */}
       <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Create Initial Inspection</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1544,7 +1544,7 @@ export default function WorkflowActions({
 
       {/* Assign Service Coordinator Dialog */}
       <Dialog open={showAssignServiceCoordinatorDialog} onOpenChange={setShowAssignServiceCoordinatorDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Assign Service Coordinator</DialogTitle>
           </DialogHeader>
@@ -1559,7 +1559,7 @@ export default function WorkflowActions({
 
       {/* Start Diagnosis Dialog */}
       <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 border-border">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Start Diagnosis</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -2180,7 +2180,7 @@ function MarkInvoicedForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
-            <p className="text-sm text-orange-800 dark:text-primary">
+            <p className="text-sm text-orange-800 text-primary">
               <AlertCircle className="w-4 h-4 inline mr-1" />
               Odometer reading is required before marking as invoiced.
             </p>
@@ -2402,7 +2402,7 @@ function StartDiagnosisForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
-            <p className="text-sm text-orange-800 dark:text-primary">
+            <p className="text-sm text-orange-800 text-primary">
               <CheckCircle className="w-4 h-4 inline mr-1" />
               <strong>Assign to Mechanic/Technician:</strong>
             </p>
