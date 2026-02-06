@@ -121,181 +121,178 @@ export default function RecordPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Record Payment - Invoice #{invoice.invoice_number}</DialogTitle>
+      <DialogContent className="max-w-lg">
+        <DialogHeader className="pb-3">
+          <DialogTitle className="text-lg">Record Payment</DialogTitle>
+          <p className="text-sm text-muted-foreground">Invoice #{invoice.invoice_number}</p>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
-          <div className="space-y-4">
-            {serverError && (
-              <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded text-sm">
-                {serverError}
-              </div>
-            )}
 
-            <div className="bg-gray-50 p-4 rounded">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Invoice Total</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(parseFloat(invoice.total || "0"))}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Balance Due</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(balanceDue)}
-                  </p>
-                </div>
-              </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {serverError && (
+            <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded text-sm">
+              {serverError}
+            </div>
+          )}
+
+          {/* Invoice Summary - Compact */}
+          <div className="bg-muted/50 p-3 rounded-lg grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Invoice Total</p>
+              <p className="text-lg font-bold">
+                {formatCurrency(parseFloat(invoice.total || "0"))}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Balance Due</p>
+              <p className="text-lg font-bold text-orange-600">
+                {formatCurrency(balanceDue)}
+              </p>
+            </div>
+          </div>
+
+          {/* Form Fields - Compact Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label htmlFor="payment_method" className="block text-sm font-medium">
+                Payment Method *
+              </label>
+              <Select
+                value={watch("payment_method")}
+                onValueChange={(val: any) => setValue("payment_method", val, { shouldValidate: true })}
+              >
+                <SelectTrigger id="payment_method" className={`h-9 ${errors.payment_method ? "border-red-500" : ""}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="check">Check</SelectItem>
+                  <SelectItem value="credit_card">Credit Card</SelectItem>
+                  <SelectItem value="debit_card">Debit Card</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="online">Online Payment</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.payment_method && (
+                <p className="text-xs text-red-600">{errors.payment_method.message}</p>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="payment_method" className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Method *
+            <div className="space-y-1.5">
+              <label htmlFor="payment_date" className="block text-sm font-medium">
+                Date *
+              </label>
+              <Input
+                id="payment_date"
+                type="date"
+                {...register("payment_date")}
+                className={`h-9 ${errors.payment_date ? "border-red-500" : ""}`}
+              />
+              {errors.payment_date && (
+                <p className="text-xs text-red-600">{errors.payment_date.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="amount" className="block text-sm font-medium">
+              Amount *
+            </label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              {...register("amount", { valueAsNumber: true })}
+              className={`h-9 ${errors.amount ? "border-red-500" : ""}`}
+              placeholder="0.00"
+            />
+            {errors.amount && (
+              <p className="text-xs text-red-600">{errors.amount.message}</p>
+            )}
+            {isOverPayment && (
+              <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-xs font-medium text-amber-900">
+                  Overpayment: {formatCurrency(overPaymentAmount)} will be applied as customer credit
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Conditional Fields */}
+          {(paymentMethod === "check" || paymentMethod === "bank_transfer" || paymentMethod === "online") && (
+            <div className="space-y-1.5">
+              <label htmlFor="reference_number" className="block text-sm font-medium">
+                Reference Number
+              </label>
+              <Input
+                id="reference_number"
+                {...register("reference_number")}
+                className="h-9"
+                placeholder="Check #, Transaction ID, etc."
+              />
+            </div>
+          )}
+
+          {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label htmlFor="card_last_four" className="block text-sm font-medium">
+                  Last 4 Digits
+                </label>
+                <Input
+                  id="card_last_four"
+                  {...register("card_last_four")}
+                  className="h-9"
+                  placeholder="1234"
+                  maxLength={4}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="card_type" className="block text-sm font-medium">
+                  Card Type
                 </label>
                 <Select
-                  value={watch("payment_method")}
-                  onValueChange={(val: any) => setValue("payment_method", val, { shouldValidate: true })}
+                  value={watch("card_type") || ""}
+                  onValueChange={(val) => setValue("card_type", val)}
                 >
-                  <SelectTrigger id="payment_method" className={errors.payment_method ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select payment method" />
+                  <SelectTrigger id="card_type" className="h-9">
+                    <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="check">Check</SelectItem>
-                    <SelectItem value="credit_card">Credit Card</SelectItem>
-                    <SelectItem value="debit_card">Debit Card</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="online">Online Payment</SelectItem>
+                    <SelectItem value="visa">Visa</SelectItem>
+                    <SelectItem value="mastercard">Mastercard</SelectItem>
+                    <SelectItem value="amex">Amex</SelectItem>
+                    <SelectItem value="discover">Discover</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.payment_method && (
-                  <p className="mt-1 text-sm text-red-600">{errors.payment_method.message}</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="payment_date" className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Date *
-                </label>
-                <Input
-                  id="payment_date"
-                  type="date"
-                  {...register("payment_date")}
-                  className={`w-full ${errors.payment_date ? "border-red-500" : ""}`}
-                />
-                {errors.payment_date && (
-                  <p className="mt-1 text-sm text-red-600">{errors.payment_date.message}</p>
-                )}
               </div>
             </div>
+          )}
 
-            <div>
-              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Amount *
-              </label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                {...register("amount", { valueAsNumber: true })}
-                className={`w-full ${errors.amount ? "border-red-500" : ""}`}
-                placeholder="0.00"
-              />
-              {errors.amount && (
-                <p className="mt-1 text-sm text-red-600">{errors.amount.message}</p>
-              )}
-              {isOverPayment && (
-                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                  <p className="text-sm font-medium text-amber-800">
-                    Overpayment Detected
-                  </p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    Payment amount ({formatCurrency(amount)}) exceeds balance due ({formatCurrency(balanceDue)}).
-                  </p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    Overpayment of <strong>{formatCurrency(overPaymentAmount)}</strong> will be applied as customer credit.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {(paymentMethod === "check" || paymentMethod === "bank_transfer" || paymentMethod === "online") && (
-              <div>
-                <label htmlFor="reference_number" className="block text-sm font-medium text-gray-700 mb-2">
-                  Reference Number
-                </label>
-                <Input
-                  id="reference_number"
-                  {...register("reference_number")}
-                  className="w-full"
-                  placeholder="Check number, transaction ID, etc."
-                />
-              </div>
-            )}
-
-            {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="card_last_four" className="block text-sm font-medium text-gray-700 mb-2">
-                    Card Last 4 Digits
-                  </label>
-                  <Input
-                    id="card_last_four"
-                    {...register("card_last_four")}
-                    className="w-full"
-                    placeholder="1234"
-                    maxLength={4}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="card_type" className="block text-sm font-medium text-gray-700 mb-2">
-                    Card Type
-                  </label>
-                  <Select
-                    value={watch("card_type") || ""}
-                    onValueChange={(val) => setValue("card_type", val)}
-                  >
-                    <SelectTrigger id="card_type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="visa">Visa</SelectItem>
-                      <SelectItem value="mastercard">Mastercard</SelectItem>
-                      <SelectItem value="amex">American Express</SelectItem>
-                      <SelectItem value="discover">Discover</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-                Notes
-              </label>
-              <Textarea
-                id="notes"
-                {...register("notes")}
-                rows={3}
-                className="w-full"
-                placeholder="Additional payment notes..."
-              />
-            </div>
+          <div className="space-y-1.5">
+            <label htmlFor="notes" className="block text-sm font-medium">
+              Notes (Optional)
+            </label>
+            <Textarea
+              id="notes"
+              {...register("notes")}
+              rows={2}
+              className="resize-none text-sm"
+              placeholder="Additional payment notes..."
+            />
           </div>
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="secondary" onClick={onClose}>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} className="h-9">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className={isOverPayment ? "bg-amber-600 hover:bg-amber-700" : ""}
+              className={`h-9 ${isOverPayment ? "bg-amber-600 hover:bg-amber-700" : ""}`}
             >
-              {isSubmitting ? "Recording..." : isOverPayment ? `Record Payment (Credit: ${formatCurrency(overPaymentAmount)})` : "Record Payment"}
+              {isSubmitting ? "Recording..." : "Record Payment"}
             </Button>
           </DialogFooter>
         </form>

@@ -152,6 +152,15 @@ export default function NotificationsPage() {
           return `/vehicles/${id}`;
         case "inspection":
           return `/inspections/${id}`;
+        case "transfer":
+        case "inventory_transfer":
+          return `/inventory/transfers/${id}`;
+        case "purchase_order":
+        case "purchase-order":
+          return `/inventory/purchase-orders/${id}`;
+        case "part":
+        case "inventory":
+          return `/inventory/${id}`;
         default:
           return null;
       }

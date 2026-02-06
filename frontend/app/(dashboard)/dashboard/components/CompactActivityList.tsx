@@ -16,9 +16,9 @@ interface Appointment {
 
 interface WorkOrder {
     id: number;
-    work_order_number: string;
-    customer_name?: string;
-    vehicle_info?: string;
+    wo_number: string;      // From dashboard API recent_activity
+    customer?: string;      // From dashboard API recent_activity
+    vehicle?: string;       // From dashboard API recent_activity
     status: string;
 }
 
@@ -108,7 +108,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         <div className="flex items-center gap-2">
                             <Wrench className="w-4 h-4 text-purple-500" />
                             <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
-                                Active Orders
+                                Recent Activity
                             </CardTitle>
                         </div>
                         <Link
@@ -132,21 +132,21 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <span className="font-mono text-[10px] font-bold text-gray-400 group-hover:text-primary transition-colors">
-                                                #{wo.work_order_number}
+                                                #{wo.wo_number}
                                             </span>
                                             <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
-                                                {wo.customer_name || "N/A"}
+                                                {wo.customer || "N/A"}
                                             </p>
                                         </div>
                                         <p className="text-[10px] text-gray-400 mt-0.5 truncate uppercase tracking-tight font-medium">
-                                            {wo.vehicle_info || "No Vehicle Info"}
+                                            {wo.vehicle || "No Vehicle Info"}
                                         </p>
                                     </div>
                                     <Badge
                                         variant={
                                             wo.status === "in_progress"
                                                 ? "default"
-                                                : wo.status === "pending"
+                                                : wo.status === "assigned"
                                                     ? "warning"
                                                     : "secondary"
                                         }

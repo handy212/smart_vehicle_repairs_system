@@ -1,16 +1,16 @@
-
 "use client";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Subscription, subscriptionsApi } from "@/lib/api/subscriptions";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useQuery } from "@tanstack/react-query";
-import { Download, User, Car, Calendar, CreditCard, Activity, CheckCircle2, AlertTriangle, XCircle, Clock, FileText, ChevronRight, Fuel, Key, Wrench, Shield, Zap } from "lucide-react";
+import { Download, User, Car, Calendar, CreditCard, Activity, CheckCircle2, AlertTriangle, XCircle, Clock, FileText, Wrench, Fuel, Key, Shield, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 
 interface SubscriptionDetailsDialogProps {
     subscription: Subscription | null;
@@ -31,21 +31,21 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case "active": return <CheckCircle2 className="w-5 h-5" />;
-            case "expired": return <AlertTriangle className="w-5 h-5" />;
-            case "cancelled": return <XCircle className="w-5 h-5" />;
-            case "pending": return <Clock className="w-5 h-5" />;
+            case "active": return <CheckCircle2 className="w-4 h-4" />;
+            case "expired": return <AlertTriangle className="w-4 h-4" />;
+            case "cancelled": return <XCircle className="w-4 h-4" />;
+            case "pending": return <Clock className="w-4 h-4" />;
             default: return null;
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusVariant = (status: string) => {
         switch (status) {
-            case "active": return "bg-green-100 text-green-700 border-green-200";
-            case "expired": return "bg-red-100 text-red-700 border-red-200";
-            case "cancelled": return "bg-slate-100 text-slate-700 border-slate-200";
-            case "pending": return "bg-amber-100 text-amber-700 border-amber-200";
-            default: return "bg-gray-100 text-gray-700 border-gray-200";
+            case "active": return "success";
+            case "expired": return "danger";
+            case "cancelled": return "secondary";
+            case "pending": return "warning";
+            default: return "outline";
         }
     };
 
@@ -63,241 +63,205 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
     };
 
     const iconMap: Record<string, React.ReactNode> = {
-        roadside_first_aid: <Wrench className="w-4 h-4" />,
-        towing_services_km: <Car className="w-4 h-4" />,
-        emergency_fuel: <Fuel className="w-4 h-4" />,
-        key_lock_out: <Key className="w-4 h-4" />,
-        battery_boosts: <Zap className="w-4 h-4" />,
-        default: <Shield className="w-4 h-4" />
+        roadside_first_aid: <Wrench className="w-3.5 h-3.5" />,
+        towing_services_km: <Car className="w-3.5 h-3.5" />,
+        emergency_fuel: <Fuel className="w-3.5 h-3.5" />,
+        key_lock_out: <Key className="w-3.5 h-3.5" />,
+        battery_boosts: <Zap className="w-3.5 h-3.5" />,
+        default: <Shield className="w-3.5 h-3.5" />
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-2xl overflow-hidden bg-slate-50 border-0 shadow-2xl">
-
-                {/* Extended Hero Header */}
-                <div className="bg-white border-b relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-orange-50 to-transparent opacity-50 pointer-events-none" />
-
-                    <div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                                <div className={cn("p-2 rounded-lg border", getStatusColor(subscription.status))}>
-                                    {getStatusIcon(subscription.status)}
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                                        {subscription.package_name}
-                                    </h2>
-                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                        <span className="font-mono bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-xs">
-                                            {subscription.subscription_number}
-                                        </span>
-                                        <span>•</span>
-                                        <span>Since {format(new Date(subscription.start_date), "MMM yyyy")}</span>
-                                    </div>
+            <DialogContent className="max-w-2xl p-0 gap-0 rounded-xl overflow-hidden shadow-2xl border-none">
+                <DialogHeader className="p-5 bg-slate-50/50 border-b">
+                    <div className="flex justify-between items-center pr-6">
+                        <div className="flex items-center gap-3">
+                            <div className={cn(
+                                "p-2 rounded-lg",
+                                subscription.status === 'active' ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
+                            )}>
+                                {getStatusIcon(subscription.status)}
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">
+                                    {subscription.package_name}
+                                </DialogTitle>
+                                <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                    <span className="font-mono font-medium">{subscription.subscription_number}</span>
+                                    <span>•</span>
+                                    <span>Member since {format(new Date(subscription.start_date), "MMM yyyy")}</span>
                                 </div>
                             </div>
                         </div>
-
-                        <div className="flex items-center gap-4">
-                            <div className="text-right hidden md:block">
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status</div>
-                                <div className={cn("font-bold capitalize", subscription.status === 'active' ? "text-green-600" : "text-slate-600")}>
-                                    {subscription.status}
-                                </div>
-                            </div>
-                            <div className="h-8 w-px bg-slate-200 hidden md:block" />
-                            <div className="text-right">
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Days Left</div>
-                                <div className={cn("text-2xl font-black", subscription.days_remaining && subscription.days_remaining < 30 ? "text-red-500" : "text-slate-900")}>
-                                    {subscription.days_remaining}
-                                </div>
-                            </div>
-                        </div>
+                        <Badge variant={getStatusVariant(subscription.status) as any} className="capitalize px-3 py-1">
+                            {subscription.status}
+                        </Badge>
                     </div>
-                </div>
+                </DialogHeader>
 
-                <div className="p-8 space-y-8">
-
-                    {/* Main Info Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                        {/* Card 1: Timeline */}
-                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-50 pb-3">
-                                <div className="p-1.5 bg-primary/10 text-primary rounded-md">
-                                    <Calendar className="w-4 h-4" />
-                                </div>
-                                Subscription Period
-                            </div>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center group">
-                                    <span className="text-sm text-slate-500">Start Date</span>
-                                    <span className="text-sm font-semibold text-slate-700">{format(new Date(subscription.start_date), "MMM dd, yyyy")}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm text-slate-500">Expiration</span>
-                                    <span className="text-sm font-semibold text-slate-700">{format(new Date(subscription.end_date), "MMM dd, yyyy")}</span>
-                                </div>
-                                <div className="pt-3 flex justify-between items-center">
-                                    <span className="text-sm text-slate-500">Auto-Renew</span>
-                                    <Badge variant={subscription.auto_renew ? "outline" : "secondary"} className={subscription.auto_renew ? "bg-green-50 text-green-700 border-green-200" : ""}>
-                                        {subscription.auto_renew ? "Enabled" : "Disabled"}
-                                    </Badge>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Card 2: Customer */}
-                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-50 pb-3">
-                                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md">
-                                    <User className="w-4 h-4" />
-                                </div>
+                <div className="p-5 space-y-6 bg-white max-h-[70vh] overflow-y-auto">
+                    {/* Primary Info Row */}
+                    <div className="grid grid-cols-2 gap-8 px-2">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                <User className="w-3.5 h-3.5" />
                                 Customer & Vehicle
                             </div>
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200">
-                                        {subscription.customer_name?.substring(0, 2).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-slate-900 text-sm">{subscription.customer_full_name}</div>
-                                        <div className="text-xs text-slate-500">CUST-{subscription.customer}</div>
-                                    </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200 text-xs">
+                                    {subscription.customer_name?.substring(0, 2).toUpperCase()}
                                 </div>
-                                {subscription.vehicle && (
-                                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
-                                        <Car className="w-8 h-8 text-slate-300" />
-                                        <div>
-                                            <div className="text-xs font-bold text-slate-500 uppercase">Vehicle ID</div>
-                                            <div className="text-sm font-mono font-medium text-slate-700">{subscription.vehicle}</div>
-                                        </div>
-                                    </div>
-                                )}
+                                <div className="min-w-0">
+                                    <div className="font-bold text-slate-900 text-sm truncate">{subscription.customer_full_name}</div>
+                                    <div className="text-[11px] text-slate-500 font-mono">ID: {subscription.customer}</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 py-1.5 px-2 bg-slate-50/80 rounded-lg border border-slate-100">
+                                <Car className="w-4 h-4 text-slate-400" />
+                                <div className="min-w-0">
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase leading-none">Vehicle ID</div>
+                                    <div className="text-[12px] font-mono font-medium text-slate-700 mt-0.5 truncate">{subscription.vehicle || 'N/A'}</div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Card 3: Financials */}
-                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-4 hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-50 pb-3">
-                                <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-md">
-                                    <CreditCard className="w-4 h-4" />
-                                </div>
-                                Payment Details
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                <Calendar className="w-3.5 h-3.5" />
+                                Subscription Period
                             </div>
-                            <div className="space-y-1 text-center py-2">
-                                <div className="text-3xl font-black text-slate-900 tracking-tight">
-                                    {formatCurrency(parseFloat(subscription.purchase_price))}
+                            <div className="space-y-2.5">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[12px] text-slate-500">Period</span>
+                                    <span className="text-[12px] font-semibold text-slate-800">
+                                        {format(new Date(subscription.start_date), "MMM dd")} - {format(new Date(subscription.end_date), "MMM dd, yyyy")}
+                                    </span>
                                 </div>
-                                <Badge variant={subscription.payment_status === "paid" ? "outline" : "secondary"} className={cn("mt-2", subscription.payment_status === "paid" ? "bg-green-50 text-green-700 border-green-200" : "")}>
-                                    {subscription.payment_status === 'paid' ? 'Paid in Full' : subscription.payment_status}
-                                </Badge>
+                                <div className="flex justify-between items-center px-2 py-1 bg-slate-50 rounded-md">
+                                    <span className="text-[12px] font-medium text-slate-600">Remaining</span>
+                                    <span className={cn(
+                                        "text-sm font-black",
+                                        subscription.days_remaining && subscription.days_remaining < 30 ? "text-red-500" : "text-slate-900"
+                                    )}>
+                                        {subscription.days_remaining} Days
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-[12px]">
+                                    <span className="text-slate-500">Auto-Renew</span>
+                                    <span className={cn("font-medium", subscription.auto_renew ? "text-green-600" : "text-slate-400")}>
+                                        {subscription.auto_renew ? "On" : "Off"}
+                                    </span>
+                                </div>
                             </div>
-                            {subscription.activation_date && (
-                                <div className="text-center text-xs text-slate-400 pt-2 border-t border-dashed">
-                                    Activated {format(new Date(subscription.activation_date), "MMM dd, yyyy")}
-                                </div>
-                            )}
                         </div>
                     </div>
 
-                    {/* Allowances */}
+                    <Separator className="opacity-50" />
+
+                    {/* Financials & Allowances Header */}
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <Activity className="w-3.5 h-3.5" />
+                            Allowances & Usage
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-medium text-slate-500">Service Fee:</span>
+                            <span className="text-sm font-black text-slate-900">{formatCurrency(parseFloat(subscription.purchase_price))}</span>
+                        </div>
+                    </div>
+
+                    {/* Allowances Compact Grid */}
                     {subscription.remaining_allowances && Object.keys(subscription.remaining_allowances).length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest px-1">
-                                <Activity className="w-4 h-4" />
-                                Balance & Allowances
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                {Object.entries(subscription.remaining_allowances).map(([key, value]) => (
-                                    <div key={key} className="bg-white border rounded-xl p-4 hover:border-orange-300 hover:shadow-md transition-all group">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="p-1.5 rounded-md bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                                {iconMap[key] || iconMap.default}
-                                            </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 px-2">
+                            {Object.entries(subscription.remaining_allowances).map(([key, value]) => (
+                                <div key={key} className="p-2.5 bg-slate-50/50 rounded-lg border border-slate-100 hover:border-primary/30 transition-colors group">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="p-1 rounded bg-white text-slate-400 group-hover:text-primary transition-colors border border-slate-100">
+                                            {iconMap[key] || iconMap.default}
                                         </div>
-                                        <div className="text-2xl font-black text-slate-800 group-hover:text-orange-700 transition-colors">{value}</div>
-                                        <div className="text-[10px] uppercase font-bold text-slate-400 mt-1 truncate" title={labelMap[key] || key}>
-                                            {labelMap[key] || key.replace(/_/g, " ")}
-                                        </div>
+                                        <div className="text-[16px] font-black text-slate-800 line-clamp-1">{value}</div>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="text-[10px] uppercase font-bold text-slate-400 truncate leading-tight" title={labelMap[key] || key}>
+                                        {labelMap[key] || key.replace(/_/g, " ")}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
 
-                    {/* Usage History */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                <FileText className="w-4 h-4" />
-                                Usage History
+                    {/* Usage History Section */}
+                    <div className="space-y-2.5 pt-2">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                <FileText className="w-3.5 h-3.5" />
+                                Recent Activity
                             </div>
                             {usageHistory && usageHistory.length > 0 && (
-                                <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{usageHistory.length} records</span>
+                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{usageHistory.length} Total</span>
                             )}
                         </div>
 
-                        <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+                        <div className="border rounded-lg overflow-hidden bg-white">
                             {isLoadingUsage ? (
-                                <div className="p-12 text-center text-slate-400 text-sm">Loading usage history...</div>
+                                <div className="p-8 text-center text-slate-400 text-xs">Loading history...</div>
                             ) : usageHistory && usageHistory.length > 0 ? (
                                 <Table>
                                     <TableHeader className="bg-slate-50/50">
-                                        <TableRow>
-                                            <TableHead className="w-[180px] font-semibold text-slate-600">Date</TableHead>
-                                            <TableHead className="font-semibold text-slate-600">Service Type</TableHead>
-                                            <TableHead className="font-semibold text-slate-600">Details</TableHead>
-                                            <TableHead className="text-right font-semibold text-slate-600">Usage</TableHead>
+                                        <TableRow className="h-9">
+                                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase h-9">Date</TableHead>
+                                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase h-9">Service</TableHead>
+                                            <TableHead className="text-right text-[11px] font-bold text-slate-500 uppercase h-9">Used</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {usageHistory.map((usage: any) => (
-                                            <TableRow key={usage.id} className="hover:bg-slate-50/50">
-                                                <TableCell className="font-medium text-slate-700 text-xs">
-                                                    {format(new Date(usage.service_date), "MMM dd, yyyy")}
-                                                    <div className="text-[10px] text-slate-400">{format(new Date(usage.service_date), "h:mm a")}</div>
+                                        {usageHistory.slice(0, 5).map((usage: any) => (
+                                            <TableRow key={usage.id} className="hover:bg-slate-50/30 h-10 border-slate-50">
+                                                <TableCell className="p-2 align-middle">
+                                                    <div className="text-[11px] font-medium text-slate-700">{format(new Date(usage.service_date), "MMM dd, yyyy")}</div>
+                                                    <div className="text-[9px] text-slate-400">{format(new Date(usage.service_date), "h:mm a")}</div>
                                                 </TableCell>
-                                                <TableCell className="capitalize text-xs font-medium text-slate-800">
-                                                    <div className="flex items-center gap-2">
+                                                <TableCell className="p-2 align-middle">
+                                                    <div className="capitalize text-[11px] font-semibold text-slate-800 truncate max-w-[120px]">
                                                         {usage.usage_type?.replace(/_/g, " ")}
                                                     </div>
+                                                    <div className="text-[9px] text-slate-500">#{usage.reference_id || 'N/A'}</div>
                                                 </TableCell>
-                                                <TableCell className="text-xs text-slate-500">
-                                                    {usage.reference_type} <span className="font-mono text-slate-400">#{usage.reference_id || 'N/A'}</span>
+                                                <TableCell className="p-2 align-middle text-right font-bold text-[11px] text-slate-900">
+                                                    -{usage.quantity_used}
                                                 </TableCell>
-                                                <TableCell className="text-right font-bold text-xs text-slate-900">-{usage.quantity_used}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             ) : (
-                                <div className="p-12 flex flex-col items-center justify-center text-center text-slate-400 space-y-2">
-                                    <FileText className="w-8 h-8 stroke-1 text-slate-200" />
-                                    <p className="text-sm">No services used yet</p>
+                                <div className="p-8 flex flex-col items-center justify-center text-center text-slate-300 space-y-2">
+                                    <FileText className="w-6 h-6 stroke-1" />
+                                    <p className="text-[11px]">No services used yet</p>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Footer Actions */}
-                <div className="p-4 bg-white border-t flex items-center justify-between">
-                    <Button
-                        variant="outline"
-                        className="gap-2 text-slate-600 hover:text-slate-900 border-slate-200"
-                        onClick={() => subscriptionsApi.downloadCard(subscription.id, subscription.subscription_number)}
-                    >
-                        <Download className="w-4 h-4" />
-                        <span className="hidden sm:inline">Members Card</span>
-                    </Button>
-                    <Button onClick={() => onOpenChange(false)} className="min-w-[100px]">
+                <div className="p-4 bg-slate-50 border-t flex items-center justify-between">
+                    {subscription.payment_status === "paid" ? (
+                        <Button
+                            variant="link"
+                            size="sm"
+                            className="h-8 gap-2 text-slate-500 px-1 hover:text-slate-900"
+                            onClick={() => subscriptionsApi.downloadCard(subscription.id, subscription.subscription_number)}
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            <span className="text-xs font-semibold">Download Member Card</span>
+                        </Button>
+                    ) : (
+                        <div />
+                    )}
+                    <Button onClick={() => onOpenChange(false)} variant="secondary" className="h-9 px-6 text-sm font-bold">
                         Close
                     </Button>
                 </div>
-
             </DialogContent>
         </Dialog>
     );

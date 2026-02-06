@@ -39,9 +39,13 @@ export default function EstimateDetailPage() {
   const [activeTab, setActiveTab] = useState("estimate");
   const { user: currentUser } = useAuthStore();
 
+  // Validate estimateId to prevent NaN API calls
+  const isValidId = !isNaN(estimateId) && estimateId > 0;
+
   const { data: estimate, isLoading, error } = useQuery({
     queryKey: ["estimate", estimateId],
     queryFn: () => billingApi.estimates.get(estimateId),
+    enabled: isValidId,
   });
 
   // Update local status when estimate data changes
@@ -198,6 +202,24 @@ export default function EstimateDetailPage() {
     setShowApproveDialog(false);
     approveEstimateMutation.mutate();
   };
+
+  // Handle invalid estimate ID
+  if (!isValidId) {
+    return (
+      <div className="space-y-4">
+        <Button variant="secondary" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-red-800">Invalid Estimate ID</p>
+            <p className="text-sm text-red-700 mt-1">The estimate ID in the URL is invalid.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

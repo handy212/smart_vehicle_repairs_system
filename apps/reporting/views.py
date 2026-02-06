@@ -116,8 +116,12 @@ def dashboard_overview(request):
             )
         )['total'] or Decimal('0')
         
+        # Active work orders: any status before completed
+        # Based on WorkOrder.STATUS_CHOICES: draft, inspection, intake, assigned, diagnosis,
+        # awaiting_approval, approved, in_progress, additional_work_found, paused, quality_check
         active_work_orders = work_orders_qs.filter(
-            status__in=['pending', 'in_progress', 'on_hold']
+            status__in=['assigned', 'diagnosis', 'awaiting_approval', 'approved', 
+                       'in_progress', 'additional_work_found', 'paused', 'quality_check']
         ).count()
         
         # Week revenue: payments received since week start (net of refunds)
@@ -698,12 +702,15 @@ def work_order_statistics(request):
             'total_work_orders': total_work_orders,
             'completed': completed.count(),
             'average_completion_hours': float(avg_completion_time) if avg_completion_time else None,
+            # Active: work orders currently being worked on
             'active_count': work_orders.filter(
-                status__in=['approved', 'in_progress', 'assigned']
+                status__in=['approved', 'in_progress']
             ).count(),
+            # Pending: work orders awaiting action or assignment
             'pending_count': work_orders.filter(
-                status__in=['draft', 'inspection', 'intake', 'diagnosis', 'awaiting_approval']
+                status__in=['draft', 'inspection', 'intake', 'assigned', 'diagnosis', 'awaiting_approval']
             ).count(),
+            # Attention: work orders that need special attention
             'attention_count': work_orders.filter(
                 status__in=['paused', 'quality_check', 'additional_work_found']
             ).count(),

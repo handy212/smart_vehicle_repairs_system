@@ -38,16 +38,19 @@ export default function PaymentDetailPage() {
     const [refundReason, setRefundReason] = useState("");
     const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
 
+    // Validate ID to prevent NaN API calls
+    const isValidId = !isNaN(id) && id > 0;
+
     const { data: payment, isLoading, error } = useQuery({
         queryKey: ['payment', id],
         queryFn: () => billingApi.payments.get(id),
-        enabled: !isNaN(id),
+        enabled: isValidId,
     });
 
     const { data: allocations } = useQuery({
         queryKey: ['payment-allocations', id],
         queryFn: () => billingApi.payments.allocations(id),
-        enabled: !isNaN(id),
+        enabled: isValidId && !!payment,
     });
 
     const refundMutation = useMutation({
@@ -80,6 +83,23 @@ export default function PaymentDetailPage() {
             refund_reason: refundReason
         });
     };
+
+    if (!isValidId) {
+        return (
+            <div className="p-8 space-y-4">
+                <Button variant="ghost" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                </Button>
+                <Card className="border-red-200 bg-red-50">
+                    <CardContent className="pt-6">
+                        <p className="text-sm font-medium text-red-800">Invalid Payment ID</p>
+                        <p className="text-sm text-red-700 mt-1">The payment ID in the URL is invalid.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return <div className="p-8 flex justify-center">Loading payment details...</div>;

@@ -443,6 +443,8 @@ class InvoiceListSerializer(serializers.ModelSerializer):
         ]
     
     def get_vehicle_display(self, obj):
+        if not obj.vehicle:
+            return None
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
 
 
@@ -509,6 +511,8 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
         ]
     
     def get_vehicle_display(self, obj):
+        if not obj.vehicle:
+            return None
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
     
     def get_customer_name(self, obj):

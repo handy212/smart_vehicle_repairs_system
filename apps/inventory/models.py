@@ -408,7 +408,8 @@ class Transfer(models.Model):
     """
     STATUS_CHOICES = [
         ('draft', 'Draft'),
-        ('requested', 'Requested'),
+        ('pending_approval', 'Pending Approval'),
+        ('requested', 'Requested'), # Kept for backward compatibility
         ('approved', 'Approved'),
         ('in_transit', 'In Transit'),
         ('received', 'Received'),
@@ -446,7 +447,12 @@ class Transfer(models.Model):
     
     # Tracking
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='transfers_created')
+    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers_submitted')
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    assigned_approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers_assigned', help_text='User selected to approve this transfer')
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers_approved')
+    rejected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers_rejected')
+    rejected_at = models.DateTimeField(null=True, blank=True)
     received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers_received')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -454,8 +460,6 @@ class Transfer(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['transfer_number']),
-            models.Index(fields=['status']),
             models.Index(fields=['source_branch', 'destination_branch']),
         ]
         

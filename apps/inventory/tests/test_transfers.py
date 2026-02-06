@@ -40,7 +40,7 @@ class TransferServiceTests(TestCase):
         self.assertEqual(self.stock_a.quantity_in_stock, 100)
 
     def test_full_transfer_lifecycle(self):
-        """Test the full lifecycle of a transfer: Request -> Approve -> Ship -> Receive"""
+        """Test the full lifecycle of a transfer: Draft -> Submit -> Approve -> Ship -> Receive"""
         
         # 1. Initiate Transfer (Branch A -> Branch B, 10 units)
         items = [{'part_id': self.part.id, 'quantity': 10}]
@@ -52,11 +52,17 @@ class TransferServiceTests(TestCase):
             notes='Test Transfer'
         )
         
-        self.assertEqual(transfer.status, 'requested')
+        self.assertEqual(transfer.status, 'draft')
         self.assertEqual(transfer.items.count(), 1)
         self.assertEqual(transfer.items.first().quantity_requested, 10)
         
-        # 2. Approve Transfer
+        # 2. Submit for Approval
+        InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.user)
+        self.assertEqual(transfer.status, 'pending_approval')
+        self.assertEqual(transfer.assigned_approver, self.user)
+        self.assertTrue(transfer.submitted_at is not None)
+        
+        # 3. Approve Transfer
         # Should reserve stock at Branch A
         InventoryService.approve_transfer(transfer, user=self.user)
         
@@ -64,6 +70,7 @@ class TransferServiceTests(TestCase):
         self.assertEqual(self.stock_a.quantity_reserved, 10)
         self.assertEqual(self.stock_a.available_quantity, 90) # 100 - 10
         self.assertEqual(transfer.status, 'approved')
+        self.assertTrue(transfer.approved_date is not None)
         
         # 3. Ship Transfer
         # Should release reservation and deduct stock at Branch A
@@ -91,3 +98,28 @@ class TransferServiceTests(TestCase):
         # 1 adjustment + 1 reserve + 1 release + 1 transfer (out) + 1 transfer (in)
         transactions = InventoryTransaction.objects.filter(part=self.part)
         self.assertEqual(transactions.count(), 5)
+
+    def test_transfer_rejection(self):
+        """Test rejecting a transfer"""
+        items = [{'part_id': self.part.id, 'quantity': 5}]
+        transfer = InventoryService.initiate_transfer(
+            source_branch=self.branch_a,
+            destination_branch=self.branch_b,
+            items=items,
+            user=self.user
+        )
+        
+        InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.user)
+        self.assertEqual(transfer.status, 'pending_approval')
+        
+        reason = 'Not needed right now'
+        InventoryService.reject_transfer(transfer, reason=reason, user=self.user)
+        
+        self.assertEqual(transfer.status, 'rejected')
+        self.assertEqual(transfer.rejection_reason, reason)
+        self.assertEqual(transfer.rejected_by, self.user)
+        self.assertTrue(transfer.rejected_at is not None)
+        
+        # Verify no stock was reserved
+        self.stock_a.refresh_from_db()
+        self.assertEqual(self.stock_a.quantity_reserved, 0)

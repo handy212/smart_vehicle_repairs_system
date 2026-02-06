@@ -183,7 +183,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   ],
   billing: [
     { name: "Invoices", href: "/billing/invoices", permission: "view_invoices" },
-    // { name: "Invoices", href: "/billing" },
+    { name: "Proforma Invoices", href: "/billing/proformas", permission: "view_invoices" },
     { name: "Estimates", href: "/billing/estimates", permission: "view_estimates" },
     { name: "Credit Notes", href: "/billing/credit-notes", permission: "view_credit_notes" },
     { name: "Till Management", href: "/billing/tills", permission: "view_tills" },

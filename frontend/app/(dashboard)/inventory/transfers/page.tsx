@@ -52,6 +52,7 @@ export default function TransfersPage() {
     const getStatusVariant = (status: string) => {
         switch (status) {
             case "draft": return "secondary";
+            case "pending_approval": return "warning";
             case "requested": return "warning";
             case "approved": return "info";
             case "in_transit": return "primary";
@@ -73,6 +74,7 @@ export default function TransfersPage() {
             type: "select",
             options: [
                 { value: "draft", label: "Draft" },
+                { value: "pending_approval", label: "Pending Approval" },
                 { value: "requested", label: "Requested" },
                 { value: "approved", label: "Approved" },
                 { value: "in_transit", label: "In Transit" },

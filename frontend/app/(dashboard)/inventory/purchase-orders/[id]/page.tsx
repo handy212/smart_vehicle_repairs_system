@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
 import { adminApi } from "@/lib/api/admin";
+import { authApi } from "@/lib/api/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useBranchStore } from "@/store/branchStore";
 import ReceiveItemsDialog from "../components/ReceiveItemsDialog";
 import PurchaseOrderItemsManager from "../components/PurchaseOrderItemsManager";
 import { useState } from "react";
@@ -49,6 +51,17 @@ export default function PurchaseOrderDetailPage() {
     queryKey: ["purchase-order", id],
     queryFn: () => inventoryApi.getPurchaseOrder(id),
   });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => authApi.getCurrentUser(),
+  });
+
+  const { activeBranchId } = useBranchStore();
+  const isSubmitter = currentUser?.id === purchaseOrder?.created_by;
+  const isApprover = currentUser?.id === purchaseOrder?.assigned_approver || currentUser?.role === "admin";
+  const canApprove = isApprover && !isSubmitter;
+  const isBranchUser = activeBranchId === purchaseOrder?.branch;
 
   const { data: usersResponse } = useQuery({
     queryKey: ["users", "approvers"],
@@ -281,7 +294,7 @@ export default function PurchaseOrderDetailPage() {
                     Edit
                   </Button>
                 </Link>
-                {purchaseOrder.items && purchaseOrder.items.length > 0 && (
+                {purchaseOrder.items && purchaseOrder.items.length > 0 && isBranchUser && (
                   <Button
                     size="sm"
                     className="h-9"
@@ -309,7 +322,7 @@ export default function PurchaseOrderDetailPage() {
                 )}
               </>
             )}
-            {purchaseOrder.status === "pending_approval" && (
+            {purchaseOrder.status === "pending_approval" && canApprove && (
               <Button
                 size="sm"
                 className="h-9"
@@ -324,7 +337,7 @@ export default function PurchaseOrderDetailPage() {
                 Approve
               </Button>
             )}
-            {purchaseOrder.status === "approved" && (
+            {purchaseOrder.status === "approved" && isBranchUser && (
               <Button
                 size="sm"
                 className="h-9"
@@ -339,7 +352,7 @@ export default function PurchaseOrderDetailPage() {
                 Confirm with Supplier
               </Button>
             )}
-            {["confirmed", "partially_received"].includes(purchaseOrder.status) && (
+            {["confirmed", "partially_received"].includes(purchaseOrder.status) && isBranchUser && (
               <ReceiveItemsDialog
                 purchaseOrder={purchaseOrder}
                 key={purchaseOrder.status}
@@ -411,6 +424,64 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {canApprove && purchaseOrder.status === "pending_approval" && (
+        <Card className="border-primary/20 bg-primary/5 shadow-md">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Decision Required</h3>
+                <p className="text-xs text-gray-600">You are the assigned approver for this purchase order. Please review and take action.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50"
+                onClick={() => {
+                  if (confirm("Reject this purchase order?")) {
+                    cancelMutation.mutate();
+                  }
+                }}
+                disabled={cancelMutation.isPending}
+              >
+                Reject Order
+              </Button>
+              <Button
+                size="sm"
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => {
+                  if (confirm("Approve this purchase order?")) {
+                    approveMutation.mutate();
+                  }
+                }}
+                disabled={approveMutation.isPending}
+              >
+                {approveMutation.isPending && <CheckCircle className="w-4 h-4 mr-2 animate-spin" />}
+                Approve Purchase
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isSubmitter && purchaseOrder.status === "pending_approval" && (
+        <Card className="border-yellow-200 bg-yellow-50/50 shadow-sm mb-6">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
+              <Package className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-yellow-800">Awaiting Approval</p>
+              <p className="text-xs text-yellow-700">This purchase order is currently pending approval. You cannot approve orders you created yourself.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Items List - Full Width on Mobile, 2 cols on Desktop */}

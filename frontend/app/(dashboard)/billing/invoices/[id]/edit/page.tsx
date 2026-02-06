@@ -78,9 +78,13 @@ export default function EditInvoicePage() {
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
   const [partSearchTerm, setPartSearchTerm] = useState("");
 
+  // Validate invoiceId to prevent NaN API calls
+  const isValidId = !isNaN(invoiceId) && invoiceId > 0;
+
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", invoiceId],
     queryFn: () => billingApi.invoices.get(invoiceId),
+    enabled: isValidId,
   });
 
   const { data: customersData } = useQuery({
@@ -150,10 +154,23 @@ export default function EditInvoicePage() {
   // Initialize Form with Invoice Data
   useEffect(() => {
     if (invoice && !isLoading) {
-      const customerId = typeof invoice.customer === 'object' ? invoice.customer.id : invoice.customer;
-      const vehicleId = typeof invoice.vehicle === 'object' && invoice.vehicle ? invoice.vehicle.id : invoice.vehicle;
+      // Extract IDs from objects, handling both nested objects and direct IDs
+      const customerId = typeof invoice.customer === 'object' && invoice.customer
+        ? (invoice.customer as any).id
+        : invoice.customer;
 
-      setSelectedCustomer(customerId);
+      const vehicleId = typeof invoice.vehicle === 'object' && invoice.vehicle
+        ? (invoice.vehicle as any).id
+        : invoice.vehicle;
+
+      const salesAgentId = typeof invoice.sales_agent === 'object' && invoice.sales_agent
+        ? (invoice.sales_agent as any).id
+        : invoice.sales_agent;
+
+      // Only set selected customer if we have a valid ID
+      if (customerId) {
+        setSelectedCustomer(customerId);
+      }
 
       let termsValue = "custom";
       if (invoice.terms || invoice.payment_terms) {
@@ -180,14 +197,14 @@ export default function EditInvoicePage() {
       const dType = dPercent > 0 ? "before_tax" : "none";
 
       reset({
-        customer: customerId,
-        vehicle: vehicleId,
+        customer: customerId || 0,
+        vehicle: vehicleId || undefined,
         invoice_date: invoice.invoice_date ? invoice.invoice_date.split("T")[0] : "",
         due_date: invoice.due_date ? invoice.due_date.split("T")[0] : "",
         payment_terms: termsValue,
         notes: invoice.notes || "",
         customer_notes: invoice.customer_notes || "",
-        sales_agent: invoice.sales_agent,
+        sales_agent: salesAgentId || undefined,
         discount_percentage: dPercent,
         discount_type: (invoice as any).discount_type || dType,
         discount_reason: invoice.discount_reason || "",
@@ -316,16 +333,37 @@ export default function EditInvoicePage() {
     setServerError(null);
     updateMutation.mutateAsync({ ...data, status })
       .then((res) => {
+        // Use the existing invoiceId since we're editing, not creating
+        const id = res?.id || invoiceId;
         if (redirectMode === 'payment') {
-          router.push(`/billing/invoices/${res.id}?action=record_payment`);
+          router.push(`/billing/invoices/${id}?action=record_payment`);
         } else {
-          router.push(`/billing/invoices/${res.id}`);
+          router.push(`/billing/invoices/${id}`);
         }
       })
       .catch((err) => {
         // Handled by onError
       });
   };
+
+  // Handle invalid invoice ID
+  if (!isValidId) {
+    return (
+      <div className="p-8">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">Invalid Invoice ID</p>
+                <p className="text-sm text-red-700 mt-1">The invoice ID in the URL is invalid.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
@@ -368,7 +406,12 @@ export default function EditInvoicePage() {
                 <label className="text-sm font-medium">Customer *</label>
                 <Select
                   value={watch("customer")?.toString() || ""}
-                  onValueChange={(val) => setValue("customer", parseInt(val), { shouldValidate: true })}
+                  onValueChange={(val) => {
+                    const parsed = parseInt(val);
+                    if (!isNaN(parsed)) {
+                      setValue("customer", parsed, { shouldValidate: true });
+                    }
+                  }}
                 >
                   <SelectTrigger className={errors.customer ? "border-red-600" : ""}>
                     <SelectValue placeholder="Select customer..." />
@@ -388,7 +431,12 @@ export default function EditInvoicePage() {
                 <label className="text-sm font-medium">Vehicle</label>
                 <Select
                   value={watch("vehicle")?.toString() || ""}
-                  onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
+                  onValueChange={(val) => {
+                    const parsed = parseInt(val);
+                    if (!isNaN(parsed)) {
+                      setValue("vehicle", parsed, { shouldValidate: true });
+                    }
+                  }}
                   disabled={!selectedCustomer}
                 >
                   <SelectTrigger disabled={!selectedCustomer}>
@@ -408,7 +456,12 @@ export default function EditInvoicePage() {
                 <label className="text-sm font-medium">Sales Agent</label>
                 <Select
                   value={watch("sales_agent")?.toString() || ""}
-                  onValueChange={(val) => setValue("sales_agent", parseInt(val), { shouldValidate: true })}
+                  onValueChange={(val) => {
+                    const parsed = parseInt(val);
+                    if (!isNaN(parsed)) {
+                      setValue("sales_agent", parsed, { shouldValidate: true });
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Agent" />

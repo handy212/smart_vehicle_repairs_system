@@ -21,10 +21,13 @@ export default function RefundDetailPage() {
     const { toast } = useToast();
     const id = parseInt(params.id as string);
 
+    // Validate ID to prevent NaN API calls
+    const isValidId = !isNaN(id) && id > 0;
+
     const { data: refund, isLoading, error } = useQuery({
         queryKey: ['refund', id],
         queryFn: () => refundApi.get(id),
-        enabled: !isNaN(id),
+        enabled: isValidId,
     });
 
     const approveMutation = useMutation({
@@ -74,6 +77,23 @@ export default function RefundDetailPage() {
             });
         }
     });
+
+    if (!isValidId) {
+        return (
+            <div className="p-8 space-y-4">
+                <Button variant="ghost" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                </Button>
+                <Card className="border-red-200 bg-red-50">
+                    <CardContent className="pt-6">
+                        <p className="text-sm font-medium text-red-800">Invalid Refund ID</p>
+                        <p className="text-sm text-red-700 mt-1">The refund ID in the URL is invalid.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return <div className="p-8 flex justify-center">Loading refund details...</div>;

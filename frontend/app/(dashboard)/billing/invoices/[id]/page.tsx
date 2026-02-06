@@ -50,9 +50,13 @@ export default function InvoiceDetailPage() {
   const { toast } = useToast();
   const { downloadPDF, isDownloading } = usePrint();
 
+  // Validate invoiceId to prevent NaN API calls
+  const isValidId = !isNaN(invoiceId) && invoiceId > 0;
+
   const { data: invoice, isLoading, error } = useQuery({
     queryKey: ["invoice", invoiceId],
     queryFn: () => billingApi.invoices.get(invoiceId),
+    enabled: isValidId,
   });
 
   // Update local status when invoice data changes
@@ -152,6 +156,24 @@ export default function InvoiceDetailPage() {
   const handlePrint = () => {
     window.print();
   };
+
+  // Handle invalid invoice ID
+  if (!isValidId) {
+    return (
+      <div className="space-y-4">
+        <Button variant="secondary" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-red-800">Invalid Invoice ID</p>
+            <p className="text-sm text-red-700 mt-1">The invoice ID in the URL is invalid.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

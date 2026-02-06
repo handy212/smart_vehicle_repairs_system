@@ -257,11 +257,10 @@ export default function DashboardPage() {
         <div className="lg:col-span-1">
           <CompactActivityList
             appointments={todayAppointments}
-            workOrders={activeWorkOrders}
+            workOrders={dashboardData?.recent_activity?.work_orders}
           />
         </div>
       </div>
     </div>
   );
 }
-

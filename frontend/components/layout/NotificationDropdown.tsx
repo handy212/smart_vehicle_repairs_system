@@ -158,6 +158,15 @@ export function NotificationDropdown() {
                     return `/inspections/${id}`;
                 case "payment":
                     return `/billing/payments/${id}`;
+                case "transfer":
+                case "inventory_transfer":
+                    return `/inventory/transfers/${id}`;
+                case "purchase_order":
+                case "purchase-order":
+                    return `/inventory/purchase-orders/${id}`;
+                case "part":
+                case "inventory":
+                    return `/inventory/${id}`;
                 case "subscription":
                     return `/subscriptions/${id}`;
                 case "roadside":

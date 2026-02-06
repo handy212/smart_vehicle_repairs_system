@@ -15,9 +15,13 @@ export default function InvoicePrintPage() {
   const invoiceId = parseInt(params.id as string);
   const { downloadPDF, isDownloading } = usePrint();
 
+  // Validate invoiceId to prevent NaN API calls
+  const isValidId = !isNaN(invoiceId) && invoiceId > 0;
+
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoice", invoiceId],
     queryFn: () => billingApi.invoices.get(invoiceId),
+    enabled: isValidId,
   });
 
   const { data: payments } = useQuery({
@@ -34,6 +38,15 @@ export default function InvoicePrintPage() {
       documentNumber: invoice.invoice_number
     });
   };
+
+  if (!isValidId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen p-8">
+        <div className="text-red-600 text-lg font-semibold">Invalid Invoice ID</div>
+        <p className="text-gray-600 mt-2">The invoice ID in the URL is invalid.</p>
+      </div>
+    );
+  }
 
   if (isLoading || !invoice) {
     return (
@@ -84,7 +97,7 @@ export default function InvoicePrintPage() {
             )}
             <div className="mb-1">
               <span className="font-bold text-gray-700">Status:</span> <span className={`uppercase font-semibold ${invoice.status === 'overdue' ? 'text-red-600' :
-                  invoice.status === 'paid' ? 'text-green-600' : ''
+                invoice.status === 'paid' ? 'text-green-600' : ''
                 }`}>{invoice.status}</span>
             </div>
           </div>

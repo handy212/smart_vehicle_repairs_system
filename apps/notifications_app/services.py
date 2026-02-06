@@ -815,6 +815,27 @@ class NotificationHelper:
         )
 
     @staticmethod
+    def stock_transfer_approval_request(transfer, recipient):
+        """Create stock transfer approval request notification"""
+        return Notification.objects.create(
+            recipient=recipient,
+            notification_type='inventory',
+            channel='email',
+            priority='high',
+            title=f'Approval Required: Transfer {transfer.transfer_number}',
+            message=f'Stock Transfer {transfer.transfer_number} from {transfer.source_branch.name} to {transfer.destination_branch.name} requires your approval.',
+            data={
+                'transfer_id': transfer.id,
+                'transfer_number': transfer.transfer_number,
+                'source_branch': transfer.source_branch.name,
+                'destination_branch': transfer.destination_branch.name,
+                'requested_by': transfer.created_by.get_full_name() if transfer.created_by else 'Unknown'
+            },
+            related_object_type='transfer',
+            related_object_id=transfer.id
+        )
+
+    @staticmethod
     def invoice_generated(invoice, recipient):
         """Create invoice generated notification"""
         return Notification.objects.create(

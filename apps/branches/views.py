@@ -26,6 +26,8 @@ class BranchViewSet(viewsets.ModelViewSet):
     """
     queryset = Branch.objects.all()
     permission_classes = [IsAuthenticated]
+    filterset_fields = ['is_active', 'is_headquarters']
+    search_fields = ['name', 'code', 'city', 'state']
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""

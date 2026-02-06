@@ -12,10 +12,13 @@ interface ShopPulseProps {
 }
 
 export function ShopPulse({ workOrderStats }: ShopPulseProps) {
+    // Updated to match actual WorkOrder.STATUS_CHOICES from backend:
+    // draft, inspection, intake, assigned, diagnosis, awaiting_approval, approved,
+    // in_progress, additional_work_found, paused, quality_check, completed, invoiced, closed
     const statusFlow = [
-        { key: "pending", label: "Pending" },
-        { key: "in_progress", label: "In Progress" },
-        { key: "ready_for_pickup", label: "Ready" },
+        { key: "assigned", label: "Assigned" },       // Waiting for technician to start
+        { key: "in_progress", label: "In Progress" }, // Actively being worked on
+        { key: "quality_check", label: "Quality Check" }, // Ready for final check before completion
     ];
 
     const getStatusCount = (statusKey: string) => {

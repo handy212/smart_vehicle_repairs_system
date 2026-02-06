@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw, Building2 } from "lucide-react";
+import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw, Building2, User, Hash, FileText } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import StockAdjustmentDialog from "./components/StockAdjustmentDialog";
@@ -289,55 +289,105 @@ export default function PartDetailPage() {
 
             {/* History Tab */}
             <TabsContent value="history" className="mt-4">
-              <Card>
+              <Card className="border-none shadow-none bg-transparent">
                 <CardContent className="p-0">
-                  <div className="rounded-md border border-gray-100 dark:border-gray-800 overflow-hidden">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-gray-50 dark:bg-gray-800 text-muted-foreground font-medium">
-                        <tr>
-                          <th className="px-4 py-3">Date</th>
-                          <th className="px-4 py-3">Type</th>
-                          <th className="px-4 py-3 text-right">Qty</th>
-                          <th className="px-4 py-3 text-right">Balance</th>
-                          <th className="px-4 py-3">User</th>
-                          <th className="px-4 py-3">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {transactions?.length === 0 ? (
+                  <div className="rounded-lg border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-gray-50/50 dark:bg-gray-800/50 text-gray-500 font-semibold uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
                           <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                              No transaction history found.
-                            </td>
+                            <th className="px-4 py-2.5 font-bold">Event</th>
+                            <th className="px-4 py-2.5">Reference</th>
+                            <th className="px-4 py-2.5 text-right">Change</th>
+                            <th className="px-4 py-2.5 text-right">Balance</th>
+                            <th className="px-4 py-2.5">User</th>
+                            <th className="px-4 py-2.5">Details</th>
                           </tr>
-                        ) : (
-                          transactions?.map((txn) => (
-                            <tr key={txn.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {format(new Date(txn.created_at), "MMM dd, HH:mm")}
-                              </td>
-                              <td className="px-4 py-3 capitalize">
-                                <Badge variant="outline" className="text-xs font-normal">
-                                  {txn.transaction_type.replace('_', ' ')}
-                                </Badge>
-                              </td>
-                              <td className={`px-4 py-3 text-right font-medium ${txn.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {txn.quantity > 0 ? '+' : ''}{txn.quantity}
-                              </td>
-                              <td className="px-4 py-3 text-right text-muted-foreground">
-                                {txn.balance_after}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {txn.created_by_name || '-'}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">
-                                {txn.reason || txn.notes || '-'}
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {transactions?.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground bg-gray-50/20">
+                                <div className="flex flex-col items-center justify-center opacity-40">
+                                  <RotateCcw className="w-8 h-8 mb-2" />
+                                  <p>No transaction history found.</p>
+                                </div>
                               </td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                          ) : (
+                            transactions?.map((txn) => {
+                              const isPositive = txn.quantity > 0;
+                              const getBadgeColor = (type: string) => {
+                                switch (type.toLowerCase()) {
+                                  case 'adjustment': return 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
+                                  case 'purchase':
+                                  case 'receive':
+                                  case 'return': return 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
+                                  case 'sale':
+                                  case 'use':
+                                  case 'damage':
+                                  case 'adjustment_out': return 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+                                  default: return 'bg-gray-50 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
+                                }
+                              };
+
+                              return (
+                                <tr key={txn.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                  <td className="px-4 py-3">
+                                    <div className="flex flex-col gap-1">
+                                      <Badge variant="outline" className={`w-fit text-[10px] h-4 px-1.5 font-medium border uppercase ${getBadgeColor(txn.transaction_type)}`}>
+                                        {txn.transaction_type.replace('_', ' ')}
+                                      </Badge>
+                                      <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {format(new Date(txn.created_at), "MMM dd, HH:mm")}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {txn.reference_number ? (
+                                      <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                                        <Hash className="w-3 h-3 opacity-60" />
+                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-100 dark:border-gray-700">
+                                          {txn.reference_number}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                                    )}
+                                  </td>
+                                  <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    <div className="flex flex-col items-end">
+                                      <span>{isPositive ? '+' : ''}{txn.quantity}</span>
+                                      <span className="text-[9px] font-normal uppercase opacity-60">{part.unit || 'units'}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{txn.balance_after}</span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-1.5 text-gray-500">
+                                      <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                        <User className="w-3 h-3 opacity-60" />
+                                      </div>
+                                      <span className="text-[11px] truncate max-w-[80px]">{txn.created_by_name?.split(' ')[0] || 'System'}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 min-w-[150px]">
+                                    <div className="flex items-start gap-1.5 italic text-gray-500 leading-tight">
+                                      <FileText className="w-3 h-3 mt-0.5 shrink-0 opacity-40" />
+                                      <span className="text-[10px] line-clamp-2" title={txn.reason || txn.notes}>
+                                        {txn.reason || txn.notes || 'No description provided'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

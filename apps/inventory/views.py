@@ -2378,7 +2378,7 @@ class TransferViewSet(viewsets.ModelViewSet):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
             return [IsAuthenticated(), HasPermission('view_inventory')]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'approve', 'ship', 'receive']:
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'approve', 'ship', 'receive', 'submit_for_approval', 'reject']:
             return [IsAuthenticated(), HasPermission('transfer_inventory')]
         return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
@@ -2428,12 +2428,51 @@ class TransferViewSet(viewsets.ModelViewSet):
         # Assign the created transfer to serializer.instance so it's returned
         serializer.instance = transfer
 
+    @action(detail=True, methods=['post'], url_path='submit-for-approval')
+    def submit_for_approval(self, request, pk=None):
+        transfer = self.get_object()
+        approver_id = request.data.get('approver_id')
+        approver = None
+        if approver_id:
+            from apps.accounts.models import User
+            try:
+                approver = User.objects.get(id=approver_id)
+            except User.DoesNotExist:
+                return Response({'error': 'Approver not found'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            InventoryService.submit_transfer_for_approval(transfer, approver=approver, user=request.user)
+            
+            # Send notification to assigned approver if exists
+            if transfer.assigned_approver:
+                try:
+                    from apps.notifications_app.services import NotificationHelper, NotificationService
+                    notification = NotificationHelper.stock_transfer_approval_request(transfer, transfer.assigned_approver)
+                    NotificationService().send_notification(notification)
+                except Exception as e:
+                    # Log but don't fail
+                    logger.warning(f"Failed to send transfer approval notification: {e}")
+            
+            return Response({'status': 'Transfer submitted for approval'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         transfer = self.get_object()
         try:
             InventoryService.approve_transfer(transfer, user=request.user)
             return Response({'status': 'Transfer approved'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        transfer = self.get_object()
+        reason = request.data.get('reason', '')
+        try:
+            InventoryService.reject_transfer(transfer, reason=reason, user=request.user)
+            return Response({'status': 'Transfer rejected'})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -409,7 +409,7 @@ class InventoryService:
     @classmethod
     def initiate_transfer(cls, source_branch, destination_branch, items, user=None, notes=''):
         """
-        Create a new transfer request.
+        Create a new transfer request in 'draft' status.
         items: list of dict {'part_id': int, 'quantity': int, 'notes': str}
         """
         try:
@@ -417,8 +417,7 @@ class InventoryService:
                 transfer = Transfer.objects.create(
                     source_branch=source_branch,
                     destination_branch=destination_branch,
-                    status='requested',
-                    requested_date=timezone.now(),
+                    status='draft',
                     created_by=user,
                     notes=notes
                 )
@@ -431,10 +430,37 @@ class InventoryService:
                         notes=item.get('notes', '')
                     )
                 
-                logger.info(f"Initiated transfer {transfer.transfer_number}")
+                logger.info(f"Initiated draft transfer {transfer.transfer_number}")
                 return transfer
         except Exception as e:
             logger.error(f"Failed to initiate transfer: {e}")
+            raise e
+
+    @classmethod
+    def submit_transfer_for_approval(cls, transfer, approver=None, user=None):
+        """
+        Submit transfer request for approval.
+        """
+        try:
+            if transfer.status != 'draft':
+                raise ValueError("Only draft transfers can be submitted for approval")
+            
+            if not transfer.items.exists():
+                raise ValueError("Cannot submit transfer with no items")
+
+            transfer.status = 'pending_approval'
+            transfer.submitted_by = user
+            transfer.submitted_at = timezone.now()
+            if approver:
+                transfer.assigned_approver = approver
+            transfer.save()
+
+            # Notification logic can be added here or in the viewset
+            
+            logger.info(f"Submitted transfer {transfer.transfer_number} for approval")
+            return transfer
+        except Exception as e:
+            logger.error(f"Failed to submit transfer {transfer.id} for approval: {e}")
             raise e
 
     @classmethod
@@ -443,8 +469,8 @@ class InventoryService:
         Approve transfer and reserve stock at source branch.
         """
         try:
-            if transfer.status != 'requested':
-                raise ValueError("Transfer must be in 'requested' status to approve")
+            if transfer.status not in ['requested', 'pending_approval']:
+                raise ValueError("Transfer must be in 'pending_approval' or 'requested' status to approve")
                 
             with transaction.atomic():
                 # 1. Reserve stock at source branch
@@ -471,6 +497,27 @@ class InventoryService:
                 return transfer
         except Exception as e:
             logger.error(f"Failed to approve transfer {transfer.id}: {e}")
+            raise e
+
+    @classmethod
+    def reject_transfer(cls, transfer, reason='', user=None):
+        """
+        Reject transfer request.
+        """
+        try:
+            if transfer.status != 'pending_approval':
+                raise ValueError("Only transfers pending approval can be rejected")
+
+            transfer.status = 'rejected'
+            transfer.rejected_by = user
+            transfer.rejected_at = timezone.now()
+            transfer.rejection_reason = reason
+            transfer.save()
+
+            logger.info(f"Rejected transfer {transfer.transfer_number}")
+            return transfer
+        except Exception as e:
+            logger.error(f"Failed to reject transfer {transfer.id}: {e}")
             raise e
 
     @classmethod

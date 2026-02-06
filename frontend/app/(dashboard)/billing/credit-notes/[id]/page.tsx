@@ -30,10 +30,13 @@ export default function CreditNoteDetailPage() {
     const queryClient = useQueryClient();
     const id = parseInt(params.id as string);
 
+    // Validate ID to prevent NaN API calls
+    const isValidId = !isNaN(id) && id > 0;
+
     const { data: creditNote, isLoading, error } = useQuery({
         queryKey: ["creditNote", id],
         queryFn: () => billingApi.creditNotes.get(id),
-        enabled: !isNaN(id),
+        enabled: isValidId,
     });
 
     const approveMutation = useMutation({
@@ -53,6 +56,25 @@ export default function CreditNoteDetailPage() {
             });
         },
     });
+
+    if (!isValidId) {
+        return (
+            <div className="space-y-4 p-8">
+                <Link href="/billing/credit-notes">
+                    <Button variant="secondary">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back
+                    </Button>
+                </Link>
+                <Card className="border-red-200 bg-red-50">
+                    <CardContent className="pt-6">
+                        <p className="text-sm font-medium text-red-800">Invalid Credit Note ID</p>
+                        <p className="text-sm text-red-700 mt-1">The credit note ID in the URL is invalid.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

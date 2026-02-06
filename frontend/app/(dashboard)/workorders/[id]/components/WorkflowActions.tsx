@@ -44,8 +44,8 @@ interface WorkflowActionsProps {
 }
 
 export default function WorkflowActions({
-    workOrderId, status, workOrder, onStatusChange, onStartRepairs, inline = false }: WorkflowActionsProps) {
-    const { formatCurrency } = useCurrency();
+  workOrderId, status, workOrder, onStatusChange, onStartRepairs, inline = false }: WorkflowActionsProps) {
+  const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -70,7 +70,7 @@ export default function WorkflowActions({
   });
 
   const currentWorkOrder = workOrder || workOrderData;
-  
+
   // Fetch diagnosis to check completion status
   const { data: diagnosisData } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
@@ -81,7 +81,7 @@ export default function WorkflowActions({
 
   // Check if diagnosis is completed
   const isDiagnosisCompleted = diagnosisData?.status === "completed" || diagnosisData?.is_completed === true;
-  
+
   // Fetch inspections for this work order
   const { data: inspectionsData } = useQuery({
     queryKey: ["inspections", "workorder", workOrderId],
@@ -117,13 +117,13 @@ export default function WorkflowActions({
         console.log("Response type:", typeof response);
         console.log("Response keys:", response ? Object.keys(response) : "null");
         console.log("Response ID:", response?.id);
-        
+
         // Check if response is empty
         if (!response || (typeof response === 'object' && Object.keys(response).length === 0)) {
           console.error("Empty response received from inspection creation");
           throw new Error("Inspection creation returned an empty response. Please check server logs.");
         }
-        
+
         return response;
       } catch (error: any) {
         console.error("Inspection creation error details:", error);
@@ -136,7 +136,7 @@ export default function WorkflowActions({
     },
     onSuccess: (inspection) => {
       console.log("Inspection creation success callback, inspection:", inspection);
-      
+
       // Validate inspection response has an ID
       if (!inspection) {
         console.error("Inspection creation response is null or undefined");
@@ -150,7 +150,7 @@ export default function WorkflowActions({
       }
 
       const inspectionId = inspection.id;
-      
+
       if (!inspectionId || inspectionId === null || inspectionId === undefined) {
         console.error("Inspection creation response missing ID:", inspection);
         toast({
@@ -165,7 +165,7 @@ export default function WorkflowActions({
 
       // Ensure inspectionId is a number
       const numericId = typeof inspectionId === 'number' ? inspectionId : parseInt(String(inspectionId));
-      
+
       if (isNaN(numericId) || numericId <= 0) {
         console.error("Invalid inspection ID:", inspectionId, "numericId:", numericId);
         toast({
@@ -185,8 +185,8 @@ export default function WorkflowActions({
         queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
         queryClient.invalidateQueries({ queryKey: ["inspections", "workorder", workOrderId] });
         setShowInspectionDialog(false);
-        toast({ 
-          title: "Success", 
+        toast({
+          title: "Success",
           description: "Inspection created. Please complete it before proceeding to intake.",
           variant: "success",
         });
@@ -212,9 +212,9 @@ export default function WorkflowActions({
       console.error("Inspection creation error:", error);
       console.error("Error response:", error.response);
       console.error("Error response data:", error.response?.data);
-      
+
       let errorMessage = "Failed to create inspection";
-      
+
       if (error.response?.data) {
         const data = error.response.data;
         if (typeof data === 'string') {
@@ -237,7 +237,7 @@ export default function WorkflowActions({
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -256,9 +256,9 @@ export default function WorkflowActions({
       return workordersApi.startIntake(workOrderId, { service_coordinator: serviceCoordinatorId });
     },
     onSuccess: () => {
-      toast({ 
-        title: "Success", 
-        description: "Service Coordinator assigned. Work order moved to 'Assigned' status." 
+      toast({
+        title: "Success",
+        description: "Service Coordinator assigned. Work order moved to 'Assigned' status."
       });
       setShowAssignServiceCoordinatorDialog(false);
       refreshWorkOrder();
@@ -281,7 +281,7 @@ export default function WorkflowActions({
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to start intake";
-      
+
       // Check if error is about missing inspection
       if (errorMessage.includes("inspection") || !hasApprovedInspection) {
         toast({
@@ -290,11 +290,11 @@ export default function WorkflowActions({
           variant: "destructive",
         });
       } else {
-      toast({
-        title: "Error",
+        toast({
+          title: "Error",
           description: errorMessage,
-        variant: "destructive",
-      });
+          variant: "destructive",
+        });
       }
     },
   });
@@ -306,7 +306,7 @@ export default function WorkflowActions({
       if (!currentWorkOrder?.service_coordinator) {
         throw new Error('A Service Coordinator must be assigned before diagnosis can be carried out. Please assign a Service Coordinator during intake.');
       }
-      
+
       // Retrieve initial observations from localStorage if stored during Service Coordinator assignment
       let initialObservations: string | undefined;
       try {
@@ -319,10 +319,10 @@ export default function WorkflowActions({
       } catch (error) {
         console.error("Failed to retrieve initial observations from storage:", error);
       }
-      
+
       // Check if diagnosis already exists for this work order
       let diagnosis = await diagnosisApi.getByWorkOrder(workOrderId);
-      
+
       if (!diagnosis) {
         // Create new Diagnosis record using the new diagnosis system
         const customerComplaint = currentWorkOrder?.customer_concerns || "No complaint specified";
@@ -333,25 +333,25 @@ export default function WorkflowActions({
           initial_observations: initialObservations,
         });
       }
-      
+
       // Update work order status to diagnosis
       await workordersApi.startDiagnosis(workOrderId);
-      
+
       // Update work order with additional info if provided
       if (data && (data.primary_technician || data.priority)) {
         const updateData: any = {};
         if (data.primary_technician) updateData.primary_technician = data.primary_technician;
         if (data.priority) updateData.priority = data.priority;
-        
+
         await workordersApi.update(workOrderId, updateData);
       }
-      
+
       return diagnosis;
     },
     onSuccess: (diagnosis) => {
-      toast({ 
-        title: "Success", 
-        description: "Diagnosis started. Redirecting to diagnosis page..." 
+      toast({
+        title: "Success",
+        description: "Diagnosis started. Redirecting to diagnosis page..."
       });
       setShowStartDiagnosisDialog(false);
       refreshWorkOrder();
@@ -380,9 +380,9 @@ export default function WorkflowActions({
       console.error("Complete diagnosis error - Full error object:", error);
       console.error("Complete diagnosis error - Response:", error.response);
       console.error("Complete diagnosis error - Response data:", error.response?.data);
-      
+
       let errorMessage = "Failed to complete diagnosis";
-      
+
       if (error.response?.data) {
         const data = error.response.data;
         if (typeof data === 'string') {
@@ -406,7 +406,7 @@ export default function WorkflowActions({
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -420,12 +420,12 @@ export default function WorkflowActions({
     mutationFn: () => workordersApi.requestApproval(workOrderId),
     onSuccess: (data: any) => {
       const estimateNumber = data?.estimate_number || data?.estimate?.estimate_number;
-      const message = estimateNumber 
+      const message = estimateNumber
         ? `Estimate #${estimateNumber} submitted for customer approval. Customer will be notified.`
         : "Work order moved to 'Awaiting Approval' status. Customer will be notified.";
-      
-      toast({ 
-        title: "Approval requested successfully", 
+
+      toast({
+        title: "Approval requested successfully",
         description: message
       });
       setShowRequestApprovalDialog(false);
@@ -433,7 +433,7 @@ export default function WorkflowActions({
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || error.response?.data?.detail || error.message || "Failed to request approval";
-      
+
       // Provide helpful error messages for common validation failures
       let description = errorMessage;
       if (errorMessage.includes("diagnosis notes")) {
@@ -441,7 +441,7 @@ export default function WorkflowActions({
       } else if (errorMessage.includes("estimated total") || errorMessage.includes("greater than 0")) {
         description = "Please ensure the estimated total cost is greater than $0. This is calculated from repair recommendations in the diagnosis.";
       }
-      
+
       toast({
         title: "Failed to request approval",
         description: description,
@@ -473,7 +473,7 @@ export default function WorkflowActions({
     onSuccess: (data: any) => {
       const tasksCreated = data?.tasks_created || 0;
       const partsLinked = data?.parts_linked || 0;
-      
+
       let description = "Repairs started. Switched to Tasks view.";
       if (tasksCreated > 0) {
         description += ` Created ${tasksCreated} task(s) from approved recommendations.`;
@@ -481,10 +481,10 @@ export default function WorkflowActions({
           description += ` Linked ${partsLinked} part(s) to tasks.`;
         }
       }
-      
-      toast({ 
-        title: "Success", 
-        description: description 
+
+      toast({
+        title: "Success",
+        description: description
       });
       refreshWorkOrder();
       onStartRepairs?.();
@@ -493,24 +493,24 @@ export default function WorkflowActions({
       console.error("Start work error:", error);
       console.error("Error response:", error.response);
       console.error("Error response data:", error.response?.data);
-      
+
       // Extract error message from various possible locations
       let errorMessage = "Failed to start repairs";
-      
+
       if (error.response?.data) {
         const data = error.response.data;
         errorMessage = data.error || data.detail || data.message || JSON.stringify(data);
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       // If it's still empty or just an object, try to stringify
       if (!errorMessage || errorMessage === "{}" || errorMessage === "[object Object]") {
-        errorMessage = error.response?.data 
+        errorMessage = error.response?.data
           ? JSON.stringify(error.response.data)
           : "An unexpected error occurred. Please check the console for details.";
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -611,14 +611,14 @@ export default function WorkflowActions({
       // Check if QC passed or failed based on the data sent
       const passed = variables?.passed ?? false;
       if (passed) {
-        toast({ 
-          title: "Success", 
+        toast({
+          title: "Success",
           description: "Quality check passed! Work order marked as completed.",
           variant: "success",
         });
       } else {
-        toast({ 
-          title: "Quality Check Failed", 
+        toast({
+          title: "Quality Check Failed",
           description: "Quality check failed. Work order returned to 'In Progress' status. Technicians have been notified to fix the issues.",
           variant: "warning",
         });
@@ -673,11 +673,11 @@ export default function WorkflowActions({
 
   // Close (Phase 5: Vehicle Handover Complete)
   const closeMutation = useMutation({
-    mutationFn: (data?: { payment_received?: boolean; closing_notes?: string }) => 
+    mutationFn: (data?: { payment_received?: boolean; closing_notes?: string }) =>
       workordersApi.close(workOrderId, data),
     onSuccess: () => {
-      toast({ 
-        title: "Success", 
+      toast({
+        title: "Success",
         description: "Work order closed successfully. Vehicle has been handed over to customer.",
         variant: "success",
       });
@@ -711,11 +711,11 @@ export default function WorkflowActions({
 
   // Determine which actions are available based on status
   const getAvailableActions = () => {
-    const actions: Array<{ 
-      label: string; 
-      icon: any; 
-      onClick: () => void; 
-      variant?: "default" | "outline" | "destructive" | "secondary"; 
+    const actions: Array<{
+      label: string;
+      icon: any;
+      onClick: () => void;
+      variant?: "default" | "outline" | "destructive" | "secondary";
       disabled?: boolean;
       description?: string;
     }> = [];
@@ -737,8 +737,8 @@ export default function WorkflowActions({
             icon: Play,
             onClick: () => startIntakeMutation.mutate(),
             disabled: startIntakeMutation.isPending || !hasApprovedInspection,
-            description: hasApprovedInspection 
-              ? "Begin customer intake process" 
+            description: hasApprovedInspection
+              ? "Begin customer intake process"
               : "Inspection must be completed and approved before starting intake",
           }
         );
@@ -750,8 +750,8 @@ export default function WorkflowActions({
           icon: Play,
           onClick: () => startIntakeMutation.mutate(),
           disabled: startIntakeMutation.isPending || !hasApprovedInspection,
-          description: hasApprovedInspection 
-            ? "Move to intake after initial inspection" 
+          description: hasApprovedInspection
+            ? "Move to intake after initial inspection"
             : "Inspection must be completed and approved before starting intake",
         });
         break;
@@ -768,7 +768,7 @@ export default function WorkflowActions({
       case "assigned":
         // Only Service Coordinator or managers/admins can trigger diagnosis
         const isServiceCoordinator = currentWorkOrder?.service_coordinator && (
-          typeof currentWorkOrder.service_coordinator === 'object' 
+          typeof currentWorkOrder.service_coordinator === 'object'
             ? currentWorkOrder.service_coordinator.id === (currentWorkOrder as any).current_user_id
             : currentWorkOrder.service_coordinator === (currentWorkOrder as any).current_user_id
         );
@@ -787,7 +787,7 @@ export default function WorkflowActions({
           // Diagnosis is complete - show next stage action as primary
           // Check if we should show "Request Approval" or other next step
           const requiresApproval = diagnosisData?.requires_approval ?? currentWorkOrder?.requires_approval ?? true;
-          
+
           if (requiresApproval) {
             // Primary action: Request Approval (next stage)
             actions.push(
@@ -892,14 +892,14 @@ export default function WorkflowActions({
           // the correct next step is to request/perform QC (which transitions to completed).
           ...(!currentWorkOrder?.quality_check_required
             ? [
-                {
-                  label: "Complete",
-                  icon: CheckCircle,
-                  onClick: () => setShowCompleteDialog(true),
-                  disabled: completeMutation.isPending,
-                  description: "Mark work as completed",
-                },
-              ]
+              {
+                label: "Complete",
+                icon: CheckCircle,
+                onClick: () => setShowCompleteDialog(true),
+                disabled: completeMutation.isPending,
+                description: "Mark work as completed",
+              },
+            ]
             : [])
         );
         break;
@@ -920,8 +920,8 @@ export default function WorkflowActions({
               try {
                 await workordersApi.updateStatus(workOrderId, "in_progress");
                 refreshWorkOrder();
-                toast({ 
-                  title: "Warning", 
+                toast({
+                  title: "Warning",
                   description: "Work continued without approval",
                   variant: "default",
                 });
@@ -1023,21 +1023,21 @@ export default function WorkflowActions({
       'invoiced',           // Invoiced - can show other actions
       'closed',             // Closed - can show other actions
     ];
-    
+
     // For "in_progress", "diagnosis", and "inspection" - these are active workflow steps
     // Only show other actions if there are truly secondary actions (like in_progress has pause, etc.)
     // For now, we'll hide for active workflow steps: draft, inspection, intake, diagnosis
     const activeWorkflowSteps = ['draft', 'inspection', 'intake', 'diagnosis'];
-    
+
     if (activeWorkflowSteps.includes(status)) {
       return false; // Don't show other actions during active workflow steps
     }
-    
+
     // For "in_progress" and "additional_work_found", we allow secondary actions since they're part of active work management
     if (status === 'in_progress' || status === 'additional_work_found') {
       return true; // Allow secondary actions for work management
     }
-    
+
     return completedStates.includes(status);
   })();
 
@@ -1107,23 +1107,23 @@ export default function WorkflowActions({
               <div className="flex items-center justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Estimated Total:</span>
                 <span className={`font-medium ${parseFloat(currentWorkOrder?.estimated_total || '0') > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {parseFloat(currentWorkOrder?.estimated_total || '0') > 0 
-                    ? `✓ ${formatCurrency(parseFloat(currentWorkOrder?.estimated_total || '0'))}` 
+                  {parseFloat(currentWorkOrder?.estimated_total || '0') > 0
+                    ? `✓ ${formatCurrency(parseFloat(currentWorkOrder?.estimated_total || '0'))}`
                     : '✗ $0.00'}
                 </span>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button"variant="secondary" onClick={() => setShowRequestApprovalDialog(false)}>
+            <Button type="button" variant="secondary" onClick={() => setShowRequestApprovalDialog(false)}>
               Cancel
             </Button>
-            <Button 
-              type="button" 
-              onClick={() => requestApprovalMutation.mutate()} 
+            <Button
+              type="button"
+              onClick={() => requestApprovalMutation.mutate()}
               disabled={
-                requestApprovalMutation.isPending || 
-                !currentWorkOrder?.diagnosis_notes || 
+                requestApprovalMutation.isPending ||
+                !currentWorkOrder?.diagnosis_notes ||
                 parseFloat(currentWorkOrder?.estimated_total || '0') <= 0
               }
             >
@@ -1262,7 +1262,7 @@ export default function WorkflowActions({
       <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>           
+            <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>
           </DialogHeader>
           <CreateInspectionForm
             workOrder={currentWorkOrder}
@@ -1293,7 +1293,7 @@ export default function WorkflowActions({
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Start Diagnosis</DialogTitle>
-      
+
           </DialogHeader>
           <StartDiagnosisForm
             workOrder={currentWorkOrder}
@@ -1310,7 +1310,7 @@ export default function WorkflowActions({
   if (inline) {
     // For active work statuses, show secondary actions even in inline mode
     const showSecondaryInInline = status === 'in_progress' || status === 'additional_work_found';
-    
+
     return (
       <>
         <div className="flex flex-col gap-2">
@@ -1598,23 +1598,23 @@ function CompleteDiagnosisForm({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setValidationError(null);
-    
+
     // Validate: If requires approval, must have at least one cost estimate
     if (requiresApproval) {
       const hasLaborCost = estimatedLaborCost && estimatedLaborCost.trim() !== '' && parseFloat(estimatedLaborCost) > 0;
       const hasPartsCost = estimatedPartsCost && estimatedPartsCost.trim() !== '' && parseFloat(estimatedPartsCost) > 0;
-      
+
       if (!hasLaborCost && !hasPartsCost) {
         setValidationError("When customer approval is required, you must provide at least one cost estimate (labor cost or parts cost).");
         return;
       }
     }
-    
+
     const data: any = {
       diagnosis_notes: diagnosisNotes,
       requires_approval: requiresApproval,
     };
-    
+
     // Only include fields that have values
     if (estimatedLaborHours && estimatedLaborHours.trim() !== '') {
       data.estimated_labor_hours = parseFloat(estimatedLaborHours);
@@ -1625,7 +1625,7 @@ function CompleteDiagnosisForm({
     if (estimatedPartsCost && estimatedPartsCost.trim() !== '') {
       data.estimated_parts_cost = estimatedPartsCost;
     }
-    
+
     onSubmit(data);
   };
 
@@ -1707,7 +1707,7 @@ function CompleteDiagnosisForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
@@ -1761,7 +1761,7 @@ function AdditionalWorkForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" onClick={handleSubmit} disabled={isSubmitting || !notes.trim()}>
@@ -1827,7 +1827,7 @@ function ApproveForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
@@ -1872,13 +1872,13 @@ function QualityCheckForm({
     if (workOrder) {
       // Check if all tasks are completed
       const tasks = (workOrder as any).tasks || [];
-      const allTasksDone = tasks.length > 0 && tasks.every((t: any) => 
+      const allTasksDone = tasks.length > 0 && tasks.every((t: any) =>
         t.status === 'completed' || t.status === 'skipped'
       );
-      
+
       // Check if all parts are installed
       const parts = (workOrder as any).parts || [];
-      const allPartsInstalled = parts.length === 0 || parts.every((p: any) => 
+      const allPartsInstalled = parts.length === 0 || parts.every((p: any) =>
         p.status === 'installed' || p.status === 'returned'
       );
 
@@ -1898,12 +1898,12 @@ function QualityCheckForm({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     // Auto-set passed based on checklist if not manually overridden
     const finalPassed = allChecksPassed && passed;
-    
-    onSubmit({ 
-      passed: finalPassed, 
+
+    onSubmit({
+      passed: finalPassed,
       notes,
       checklist: checklist,
     });
@@ -1936,7 +1936,7 @@ function QualityCheckForm({
                   )}
                 </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1954,7 +1954,7 @@ function QualityCheckForm({
                   )}
                 </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1967,7 +1967,7 @@ function QualityCheckForm({
                   Vehicle cleaned and presentable
                 </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1980,7 +1980,7 @@ function QualityCheckForm({
                   No new damage or scratches
                 </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1993,7 +1993,7 @@ function QualityCheckForm({
                   Test drive passed (if applicable)
                 </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -2007,7 +2007,7 @@ function QualityCheckForm({
                 </Label>
               </div>
             </div>
-            
+
             {/* {!allChecksPassed && (
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
                 <p className="text-sm text-yellow-800 dark:text-yellow-400">
@@ -2059,12 +2059,12 @@ function QualityCheckForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
+        <Button
+          type="button"
+          onClick={handleSubmit}
           disabled={isSubmitting}
           variant={passed ? "default" : "destructive"}
         >
@@ -2127,7 +2127,7 @@ function CompleteForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
@@ -2165,11 +2165,11 @@ function MarkInvoicedForm({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     if (!odometerOut) {
       return; // Validation will prevent submission
     }
-    
+
     onSubmit({
       odometer_out: parseInt(odometerOut),
     });
@@ -2185,7 +2185,7 @@ function MarkInvoicedForm({
               Odometer reading is required before marking as invoiced.
             </p>
           </div>
-          
+
           <div>
             <Label htmlFor="mark_invoiced_odometer_out" className="block mb-2 dark:text-gray-300">
               Odometer Out (miles) <span className="text-red-500">*</span>
@@ -2209,12 +2209,12 @@ function MarkInvoicedForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
+        <Button
+          type="button"
+          onClick={handleSubmit}
           disabled={isSubmitting || !odometerOut}
         >
           {isSubmitting ? "Marking..." : "Mark as Invoiced"}
@@ -2256,7 +2256,7 @@ function CloseWorkOrderForm({
               This will mark the work order as closed. Make sure the vehicle has been handed over to the customer.
             </p>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -2269,7 +2269,7 @@ function CloseWorkOrderForm({
               Payment received
             </Label>
           </div>
-          
+
           <div>
             <Label htmlFor="closing_notes" className="block mb-2 dark:text-gray-300">
               Closing Notes <span className="text-gray-500">(Optional)</span>
@@ -2286,12 +2286,12 @@ function CloseWorkOrderForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
+        <Button
+          type="button"
+          onClick={handleSubmit}
           disabled={isSubmitting}
           variant="default"
         >
@@ -2338,10 +2338,10 @@ function PauseForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={isSubmitting}variant="secondary">
+        <Button type="button" onClick={handleSubmit} disabled={isSubmitting} variant="secondary">
           {isSubmitting ? "Pausing..." : "Pause"}
         </Button>
       </DialogFooter>
@@ -2384,16 +2384,16 @@ function StartDiagnosisForm({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     const data: { primary_technician?: number; priority?: string } = {};
-    
+
     if (primaryTechnician && primaryTechnician !== "") {
       data.primary_technician = Number(primaryTechnician);
     }
     if (priority && priority !== workOrder?.priority) {
       data.priority = priority;
     }
-    
+
     onSubmit(data);
   };
 
@@ -2407,7 +2407,7 @@ function StartDiagnosisForm({
               <strong>Assign to Mechanic/Technician:</strong>
             </p>
           </div>
-          
+
           <div>
             <Label htmlFor="primary_technician" className="block mb-2 dark:text-gray-300">
               Assign to:
@@ -2421,7 +2421,7 @@ function StartDiagnosisForm({
               <option value="">Select Mechanic/Technician</option>
               {techniciansList.map((tech: any) => (
                 <option key={tech.id} value={String(tech.id)}>
-                  {tech.first_name} {tech.last_name}
+                  {tech.full_name || `${tech.first_name || ''} ${tech.last_name || ''}`.trim() || `User ${tech.id}`}
                 </option>
               ))}
             </select>
@@ -2447,12 +2447,12 @@ function StartDiagnosisForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
+        <Button
+          type="button"
+          onClick={handleSubmit}
           disabled={isSubmitting}
         >
           {isSubmitting ? "Starting..." : "Start Diagnosis"}
@@ -2489,7 +2489,7 @@ function AssignServiceCoordinatorForm({
     if (!serviceCoordinatorId) {
       return;
     }
-    onSubmit({ 
+    onSubmit({
       serviceCoordinatorId: Number(serviceCoordinatorId),
       initialObservations: initialObservations.trim() || undefined
     });
@@ -2540,12 +2540,12 @@ function AssignServiceCoordinatorForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
+        <Button
+          type="button"
+          onClick={handleSubmit}
           disabled={isSubmitting || !serviceCoordinatorId || serviceCoordinatorsList.length === 0}
         >
           {isSubmitting ? "Assigning..." : "Assign & Continue"}
@@ -2576,13 +2576,13 @@ function CreateInspectionForm({
   });
 
   const templates = templatesData || [];
-  const vehicleId = workOrder?.vehicle 
+  const vehicleId = workOrder?.vehicle
     ? (typeof workOrder.vehicle === "object" ? workOrder.vehicle.id : workOrder.vehicle)
     : null;
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     if (!templateId || !vehicleId) {
       return;
     }
@@ -2652,12 +2652,12 @@ function CreateInspectionForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button"variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button 
-          type="button" 
-          onClick={handleSubmit} 
+        <Button
+          type="button"
+          onClick={handleSubmit}
           disabled={isSubmitting || !templateId || !vehicleId || templates.length === 0}
         >
           {isSubmitting ? "Creating..." : "Create Inspection"}

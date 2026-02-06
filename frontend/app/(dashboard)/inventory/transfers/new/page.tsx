@@ -86,7 +86,7 @@ export default function NewTransferPage() {
 
         setIsSubmitting(true);
         try {
-            await inventoryApi.createTransfer({
+            const transfer = await inventoryApi.createTransfer({
                 source_branch: parseInt(sourceBranchId),
                 destination_branch: parseInt(destBranchId),
                 notes,
@@ -96,8 +96,8 @@ export default function NewTransferPage() {
                 }))
             } as any);
 
-            toast({ title: "Success", description: "Transfer requested successfully" });
-            router.push("/inventory/transfers");
+            toast({ title: "Success", description: "Transfer created successfully" });
+            router.push(`/inventory/transfers/${transfer.id}`);
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to create transfer", variant: "destructive" });
         } finally {

@@ -83,9 +83,13 @@ export default function EditEstimatePage() {
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
   const [partSearchTerm, setPartSearchTerm] = useState("");
 
+  // Validate estimateId to prevent NaN API calls
+  const isValidId = !isNaN(estimateId) && estimateId > 0;
+
   const { data: estimate, isLoading } = useQuery({
     queryKey: ["estimate", estimateId],
     queryFn: () => billingApi.estimates.get(estimateId),
+    enabled: isValidId,
   });
 
   const workOrderId = estimate?.work_order
@@ -145,10 +149,23 @@ export default function EditEstimatePage() {
 
   useEffect(() => {
     if (estimate && !isLoading) {
-      const customerId = typeof estimate.customer === 'object' ? estimate.customer.id : estimate.customer;
-      const vehicleId = typeof estimate.vehicle === 'object' && estimate.vehicle ? estimate.vehicle.id : estimate.vehicle;
+      // Extract IDs from objects, handling both nested objects and direct IDs
+      const customerId = typeof estimate.customer === 'object' && estimate.customer
+        ? (estimate.customer as any).id
+        : estimate.customer;
 
-      setSelectedCustomer(customerId);
+      const vehicleId = typeof estimate.vehicle === 'object' && estimate.vehicle
+        ? (estimate.vehicle as any).id
+        : estimate.vehicle;
+
+      const salesAgentId = typeof estimate.sales_agent === 'object' && estimate.sales_agent
+        ? (estimate.sales_agent as any).id
+        : estimate.sales_agent;
+
+      // Only set selected customer if we have a valid ID
+      if (customerId) {
+        setSelectedCustomer(customerId);
+      }
 
       const loadedLineItems = (estimate.line_items || []).map((item: any) => ({
         item_type: item.item_type || "other",
@@ -169,7 +186,7 @@ export default function EditEstimatePage() {
       const dType = dPercent > 0 ? "before_tax" : "none";
 
       reset({
-        customer: customerId,
+        customer: customerId || 0,
         vehicle: vehicleId || undefined,
         title: estimate.title || "",
         description: estimate.description || "",
@@ -177,7 +194,7 @@ export default function EditEstimatePage() {
         customer_notes: estimate.customer_notes || "",
         estimate_date: estimate.estimate_date ? estimate.estimate_date.split("T")[0] : "",
         valid_until: estimate.valid_until ? estimate.valid_until.split("T")[0] : "",
-        sales_agent: estimate.sales_agent,
+        sales_agent: salesAgentId || undefined,
         discount_percentage: dPercent,
         discount_type: (estimate as any).discount_type || dType,
         discount_reason: estimate.discount_reason || "",
@@ -323,6 +340,25 @@ export default function EditEstimatePage() {
       });
   };
 
+  // Handle invalid estimate ID
+  if (!isValidId) {
+    return (
+      <div className="p-8">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">Invalid Estimate ID</p>
+                <p className="text-sm text-red-700 mt-1">The estimate ID in the URL is invalid.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   }
@@ -399,7 +435,12 @@ export default function EditEstimatePage() {
                 </label>
                 <Select
                   value={watch("customer")?.toString() || ""}
-                  onValueChange={(val) => setValue("customer", parseInt(val), { shouldValidate: true })}
+                  onValueChange={(val) => {
+                    const parsed = parseInt(val);
+                    if (!isNaN(parsed)) {
+                      setValue("customer", parsed, { shouldValidate: true });
+                    }
+                  }}
                 >
                   <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
                     <SelectValue placeholder="Select customer..." />
@@ -426,7 +467,12 @@ export default function EditEstimatePage() {
                 </label>
                 <Select
                   value={watch("vehicle")?.toString() || ""}
-                  onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
+                  onValueChange={(val) => {
+                    const parsed = parseInt(val);
+                    if (!isNaN(parsed)) {
+                      setValue("vehicle", parsed, { shouldValidate: true });
+                    }
+                  }}
                   disabled={!selectedCustomer}
                 >
                   <SelectTrigger className={!selectedCustomer ? "opacity-50" : ""}>
@@ -446,7 +492,12 @@ export default function EditEstimatePage() {
                 <label className="text-sm font-medium">Sales Agent</label>
                 <Select
                   value={watch("sales_agent")?.toString() || ""}
-                  onValueChange={(val) => setValue("sales_agent", parseInt(val), { shouldValidate: true })}
+                  onValueChange={(val) => {
+                    const parsed = parseInt(val);
+                    if (!isNaN(parsed)) {
+                      setValue("sales_agent", parsed, { shouldValidate: true });
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Agent" />

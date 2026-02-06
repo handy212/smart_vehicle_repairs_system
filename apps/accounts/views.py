@@ -121,15 +121,29 @@ class UserViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def technicians(self, request):
-        """Get list of technicians"""
+        """Get list of technicians filtered by accessible branches"""
+        from apps.branches.utils import get_user_accessible_branches
+        
         technicians = User.objects.filter(role='technician', is_active=True)
+        
+        # Apply branch filtering to show only technicians from accessible branches
+        accessible_branches = get_user_accessible_branches(request.user)
+        technicians = technicians.filter(branch__in=accessible_branches)
+        
         serializer = PublicUserSerializer(technicians, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def service_coordinators(self, request):
-        """Get list of service coordinators and managers"""
+        """Get list of service coordinators and managers filtered by accessible branches"""
+        from apps.branches.utils import get_user_accessible_branches
+        
         coordinators = User.objects.filter(role__in=['service_coordinator', 'manager'], is_active=True)
+        
+        # Apply branch filtering to show only coordinators from accessible branches
+        accessible_branches = get_user_accessible_branches(request.user)
+        coordinators = coordinators.filter(branch__in=accessible_branches)
+        
         serializer = PublicUserSerializer(coordinators, many=True)
         return Response(serializer.data)
     

@@ -384,14 +384,15 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
     part_number = serializers.SerializerMethodField()
     part_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    reference_number = serializers.SerializerMethodField()
 
     class Meta:
         model = InventoryTransaction
         fields = [
             'id', 'part', 'part_number', 'part_name', 'transaction_type',
             'quantity', 'balance_after', 'unit_cost', 'total_cost',
-            'purchase_order', 'work_order', 'reason', 'notes',
-            'transaction_date', 'created_by_name', 'created_at'
+            'purchase_order', 'work_order', 'transfer', 'reason', 'notes',
+            'transaction_date', 'created_by_name', 'reference_number', 'created_at'
         ]
 
     def get_part_number(self, obj):
@@ -402,6 +403,15 @@ class InventoryTransactionSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         return obj.created_by.get_full_name() if obj.created_by else None
+
+    def get_reference_number(self, obj):
+        if obj.purchase_order:
+            return obj.purchase_order.po_number
+        if obj.work_order:
+            return obj.work_order.work_order_number
+        if obj.transfer:
+            return obj.transfer.transfer_number
+        return None
 
 
 class InventoryTransactionCreateSerializer(serializers.ModelSerializer):
@@ -548,7 +558,10 @@ class TransferSerializer(serializers.ModelSerializer):
     source_branch_name = serializers.ReadOnlyField(source='source_branch.name')
     destination_branch_name = serializers.ReadOnlyField(source='destination_branch.name')
     created_by_name = serializers.SerializerMethodField()
+    submitted_by_name = serializers.SerializerMethodField()
     approved_by_name = serializers.SerializerMethodField()
+    assigned_approver_name = serializers.SerializerMethodField()
+    rejected_by_name = serializers.SerializerMethodField()
     items = TransferItemSerializer(many=True, read_only=True)
     
     class Meta:
@@ -558,15 +571,32 @@ class TransferSerializer(serializers.ModelSerializer):
             'destination_branch', 'destination_branch_name', 'status',
             'requested_date', 'approved_date', 'shipped_date', 'received_date',
             'notes', 'rejection_reason', 'created_by', 'created_by_name',
-            'approved_by', 'approved_by_name', 'items', 'created_at', 'updated_at'
+            'submitted_by', 'submitted_by_name', 'submitted_at',
+            'assigned_approver', 'assigned_approver_name',
+            'approved_by', 'approved_by_name', 
+            'rejected_by', 'rejected_by_name', 'rejected_at',
+            'items', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['transfer_number', 'status', 'created_by', 'approved_by', 'received_by']
+        read_only_fields = [
+            'transfer_number', 'status', 'created_by', 'submitted_by', 
+            'submitted_at', 'approved_by', 'approved_date', 'rejected_by', 
+            'rejected_at', 'received_by', 'received_date'
+        ]
 
     def get_created_by_name(self, obj):
         return obj.created_by.get_full_name() if obj.created_by else None
 
+    def get_submitted_by_name(self, obj):
+        return obj.submitted_by.get_full_name() if obj.submitted_by else None
+
     def get_approved_by_name(self, obj):
         return obj.approved_by.get_full_name() if obj.approved_by else None
+        
+    def get_assigned_approver_name(self, obj):
+        return obj.assigned_approver.get_full_name() if obj.assigned_approver else None
+        
+    def get_rejected_by_name(self, obj):
+        return obj.rejected_by.get_full_name() if obj.rejected_by else None
 
 
 class TransferCreateSerializer(serializers.ModelSerializer):
@@ -577,7 +607,8 @@ class TransferCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Transfer
-        fields = ['source_branch', 'destination_branch', 'notes', 'items']
+        fields = ['id', 'transfer_number', 'source_branch', 'destination_branch', 'notes', 'items']
+        read_only_fields = ['id', 'transfer_number']
 
 
 class BulkStockAdjustmentItemSerializer(serializers.Serializer):

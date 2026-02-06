@@ -236,7 +236,7 @@ export interface Transfer {
   source_branch_name?: string;
   destination_branch: number;
   destination_branch_name?: string;
-  status: 'draft' | 'requested' | 'approved' | 'in_transit' | 'received' | 'rejected' | 'cancelled';
+  status: 'draft' | 'pending_approval' | 'requested' | 'approved' | 'in_transit' | 'received' | 'rejected' | 'cancelled';
   requested_date: string;
   approved_date?: string;
   shipped_date?: string;
@@ -245,8 +245,16 @@ export interface Transfer {
   rejection_reason?: string;
   created_by: number;
   created_by_name?: string;
+  submitted_by?: number;
+  submitted_by_name?: string;
+  submitted_at?: string;
+  assigned_approver?: number;
+  assigned_approver_name?: string;
   approved_by?: number;
   approved_by_name?: string;
+  rejected_by?: number;
+  rejected_by_name?: string;
+  rejected_at?: string;
   items: TransferItem[];
   created_at: string;
   updated_at: string;
@@ -594,8 +602,20 @@ export const inventoryApi = {
     return response.data;
   },
 
+  submitTransferForApproval: async (id: number, approverId?: number): Promise<any> => {
+    const response = await apiClient.post(`/inventory/transfers/${id}/submit-for-approval/`, {
+      approver_id: approverId
+    });
+    return response.data;
+  },
+
   approveTransfer: async (id: number): Promise<any> => {
     const response = await apiClient.post(`/inventory/transfers/${id}/approve/`);
+    return response.data;
+  },
+
+  rejectTransfer: async (id: number, reason?: string): Promise<any> => {
+    const response = await apiClient.post(`/inventory/transfers/${id}/reject/`, { reason });
     return response.data;
   },
 
