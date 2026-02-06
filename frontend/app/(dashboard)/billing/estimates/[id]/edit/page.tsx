@@ -384,7 +384,7 @@ export default function EditEstimatePage() {
               </p>
               {workOrderId && workOrderNumber && (
                 <Link href={`/workorders/${workOrderId}`}>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-orange-100 transition-colors">
                     <span className="h-2 w-2 rounded-full bg-primary" />
                     Work Order #{workOrderNumber}
                   </span>

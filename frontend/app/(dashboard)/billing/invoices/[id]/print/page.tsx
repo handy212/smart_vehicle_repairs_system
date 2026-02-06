@@ -97,7 +97,7 @@ export default function InvoicePrintPage() {
             )}
             <div className="mb-1">
               <span className="font-bold text-gray-700">Status:</span> <span className={`uppercase font-semibold ${invoice.status === 'overdue' ? 'text-red-600' :
-                invoice.status === 'paid' ? 'text-green-600' : ''
+                invoice.status === 'paid' ? 'text-success' : ''
                 }`}>{invoice.status}</span>
             </div>
           </div>

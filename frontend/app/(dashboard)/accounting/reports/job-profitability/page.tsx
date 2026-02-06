@@ -105,11 +105,11 @@ export default function JobProfitabilityPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Net Profit</p>
-                                    <p className="text-lg font-bold text-green-600 mt-1">
+                                    <p className="text-lg font-bold text-success mt-1">
                                         {formatCurrency(report.summary?.net_profit || 0)}
                                     </p>
                                 </div>
-                                <TrendingUp className="w-8 h-8 text-green-600" />
+                                <TrendingUp className="w-8 h-8 text-success" />
                             </div>
                         </CardContent>
                     </Card>
@@ -162,10 +162,10 @@ export default function JobProfitabilityPage() {
                                             <TableCell className="px-4 py-2 text-xs text-muted-foreground text-right font-mono">
                                                 {formatCurrency(job.parts_cost || 0)}
                                             </TableCell>
-                                            <TableCell className={`px-4 py-2 text-xs text-right font-mono font-medium ${(job.profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            <TableCell className={`px-4 py-2 text-xs text-right font-mono font-medium ${(job.profit || 0) >= 0 ? 'text-success' : 'text-red-600'}`}>
                                                 {formatCurrency(job.profit || 0)}
                                             </TableCell>
-                                            <TableCell className={`px-4 py-2 text-xs text-right font-medium ${(job.margin || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            <TableCell className={`px-4 py-2 text-xs text-right font-medium ${(job.margin || 0) >= 0 ? 'text-success' : 'text-red-600'}`}>
                                                 {job.margin !== undefined ? `${job.margin.toFixed(1)}%` : '-'}
                                             </TableCell>
                                         </TableRow>

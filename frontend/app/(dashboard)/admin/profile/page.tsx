@@ -415,7 +415,7 @@ export default function ProfilePage() {
               <CardContent className="pt-4 space-y-3">
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Employee ID</Label>
-                  <div className="font-mono text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                  <div className="font-mono text-xs text-muted-foreground bg-border px-2 py-1 rounded">
                     {user?.employee_id || "Not Assigned"}
                   </div>
                 </div>
@@ -444,7 +444,7 @@ export default function ProfilePage() {
             <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
-                  <KeyRound className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  <KeyRound className="w-4 h-4 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-foreground">Security</CardTitle>

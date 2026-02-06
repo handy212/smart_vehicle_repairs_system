@@ -151,7 +151,7 @@ export default function RefundDetailPage() {
                             <Button
                                 onClick={() => approveMutation.mutate()}
                                 disabled={approveMutation.isPending}
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-success hover:bg-green-700"
                             >
                                 <CheckCircle className="mr-2 h-4 w-4" />
                                 Approve
@@ -269,14 +269,14 @@ export default function RefundDetailPage() {
                             <h4 className="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2">Audit Trail</h4>
                             <div className="space-y-2 text-xs">
                                 <div className="flex justify-between">
-                                    <span className="text-orange-700 dark:text-orange-300">Requested</span>
+                                    <span className="text-primary dark:text-orange-300">Requested</span>
                                     <span className="text-orange-900 dark:text-orange-100">
                                         {format(new Date(refund.requested_at), 'MMM dd, HH:mm')} by {refund.requested_by_name}
                                     </span>
                                 </div>
                                 {refund.approved_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-orange-700 dark:text-orange-300">Approved</span>
+                                        <span className="text-primary dark:text-orange-300">Approved</span>
                                         <span className="text-orange-900 dark:text-orange-100">
                                             {format(new Date(refund.approved_at), 'MMM dd, HH:mm')} by {refund.approved_by_name}
                                         </span>
@@ -284,7 +284,7 @@ export default function RefundDetailPage() {
                                 )}
                                 {refund.processed_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-orange-700 dark:text-orange-300">Processed</span>
+                                        <span className="text-primary dark:text-orange-300">Processed</span>
                                         <span className="text-orange-900 dark:text-orange-100">
                                             {format(new Date(refund.processed_at), 'MMM dd, HH:mm')} by {refund.processed_by_name}
                                         </span>

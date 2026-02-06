@@ -170,7 +170,7 @@ export default function InvoicePrintPage() {
           {amountPaid > 0 && (
             <div className="flex justify-between py-2 border-b border-gray-200">
               <span className="text-gray-700">Amount Paid:</span>
-              <span className="font-medium text-green-600">{formatCurrency(amountPaid)}</span>
+              <span className="font-medium text-success">{formatCurrency(amountPaid)}</span>
             </div>
           )}
           <div className="flex justify-between py-3 border-t-2 border-gray-300 mt-2">

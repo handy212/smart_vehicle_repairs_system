@@ -71,7 +71,7 @@ export default function MyInvoicesPage() {
 
       {/* Compact Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-yellow-50 dark:bg-yellow-900/10">
+        <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-warning/10 dark:bg-yellow-900/10">
           <CardContent className="p-4 flex flex-col justify-center h-full">
             <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Pending Amount</p>
             <div className="text-2xl font-bold text-foreground mt-1">

@@ -193,7 +193,7 @@ export default function RolesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Active</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.activeRoles}</p>
+              <p className="text-xl font-bold text-success">{stats.activeRoles}</p>
             </div>
             <Shield className="w-5 h-5 text-green-500 opacity-80" />
           </CardContent>
@@ -344,7 +344,7 @@ export default function RolesPage() {
                         <div className="flex items-center gap-2">
                           {role.is_active ? (
                             <div className="flex items-center space-x-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-success/100"></span>
                               <span className="text-xs text-green-700 font-medium">Active</span>
                             </div>
                           ) : (
@@ -378,7 +378,7 @@ export default function RolesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setEditingRole(role)}
-                              className="h-7 w-7 p-0 text-gray-500 hover:text-green-600"
+                              className="h-7 w-7 p-0 text-gray-500 hover:text-success"
                               title="Edit Role"
                             >
                               <Edit className="w-3.5 h-3.5" />
@@ -421,7 +421,7 @@ export default function RolesPage() {
             {recentAuditLogs.map((log) => (
               <div key={log.id} className="px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-green-500' :
+                  <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-success/100' :
                     log.action === 'update' ? 'bg-primary' :
                       log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
                     }`}></span>
@@ -763,7 +763,7 @@ function PermissionsDialog({
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="flex items-center justify-between">
             <span>Manage Permissions <span className="text-gray-400 font-normal mx-2">|</span> {role.name}</span>
-            <span className="text-xs font-normal bg-primary/10 text-orange-700 px-2 py-0.5 rounded-full border border-orange-100">
+            <span className="text-xs font-normal bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-orange-100">
               {selectedCount} Selected
             </span>
           </DialogTitle>

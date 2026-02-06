@@ -418,7 +418,7 @@ function TestDialog({
                                                     onClick={() => handleSelectTemplate(template)}
                                                     className="w-full text-left p-3 hover:bg-primary/10 dark:hover:bg-orange-900/20 border-b border-gray-50 dark:border-gray-800 last:border-b-0 transition-colors group"
                                                 >
-                                                    <div className="font-semibold text-sm text-foreground group-hover:text-orange-700 dark:group-hover:text-orange-300">
+                                                    <div className="font-semibold text-sm text-foreground group-hover:text-primary dark:group-hover:text-orange-300">
                                                         {template.name}
                                                     </div>
                                                     <div className="text-xs text-gray-500 mt-1 line-clamp-1">

@@ -347,7 +347,7 @@ export default function WorkOrderKanbanPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex items-center space-x-2 border-r border-gray-200 pr-6 mr-2">

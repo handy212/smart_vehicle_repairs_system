@@ -206,7 +206,7 @@ export default function ProformaDetailPage() {
                                                 setShowActionsMenu(false);
                                             }}
                                             disabled={convertToInvoiceMutation.isPending}
-                                            className="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center gap-2 disabled:opacity-50 font-medium"
+                                            className="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-success/10 flex items-center gap-2 disabled:opacity-50 font-medium"
                                         >
                                             <FileCheck className="w-4 h-4" />
                                             {convertToInvoiceMutation.isPending ? "Converting..." : "Convert to Invoice"}

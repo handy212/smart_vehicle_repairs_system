@@ -217,7 +217,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                         <div className="space-y-1">
                                             <h3 className="font-bold text-slate-900">{pkg.name}</h3>
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-xl font-black text-orange-700">{formatCurrency(parseFloat(pkg.price))}</span>
+                                                <span className="text-xl font-black text-primary">{formatCurrency(parseFloat(pkg.price))}</span>
                                                 <span className="text-xs text-slate-400 font-medium">/ {pkg.duration_months} months</span>
                                             </div>
                                         </div>

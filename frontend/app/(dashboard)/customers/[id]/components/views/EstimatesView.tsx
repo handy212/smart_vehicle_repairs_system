@@ -34,9 +34,9 @@ export function EstimatesView({ customerId }: EstimatesViewProps) {
     const stats = [
         { label: "Draft", value: counts.draft, icon: FileText },
         { label: "Sent", value: counts.sent, icon: Send, color: "text-primary" },
-        { label: "Accepted", value: counts.accepted, icon: CheckCircle, color: "text-green-600" },
+        { label: "Accepted", value: counts.accepted, icon: CheckCircle, color: "text-success" },
         { label: "Declined", value: counts.declined, icon: XCircle, color: "text-red-600" },
-        { label: "Expired", value: counts.expired, icon: Clock, color: "text-orange-600" },
+        { label: "Expired", value: counts.expired, icon: Clock, color: "text-primary" },
     ];
 
     const columns = [

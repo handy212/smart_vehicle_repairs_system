@@ -171,7 +171,7 @@ export function InvoiceReminders({ invoice, currentUser }: InvoiceRemindersProps
                                                     Yes
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                                <Badge variant="outline" className="bg-warning/10 text-yellow-700 border-yellow-200">
                                                     No
                                                 </Badge>
                                             )}

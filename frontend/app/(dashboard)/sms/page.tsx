@@ -393,9 +393,9 @@ export default function SMSConsolePage() {
                                 {/* Enhanced Character Counter */}
                                 <div className="flex items-center justify-between mt-2 text-xs">
                                     <div className="flex items-center gap-3">
-                                        <span className={`font-medium ${smsInfo.count === 1 ? 'text-green-600 dark:text-green-400' :
+                                        <span className={`font-medium ${smsInfo.count === 1 ? 'text-success' :
                                             smsInfo.count === 2 ? 'text-yellow-600 dark:text-yellow-400' :
-                                                'text-orange-600 dark:text-orange-400'
+                                                'text-primary'
                                             }`}>
                                             {smsInfo.chars} chars
                                         </span>

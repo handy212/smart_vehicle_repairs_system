@@ -70,10 +70,10 @@ function TechnicianProfileContent() {
 
     const getStatusColor = (status: Technician['current_status']) => {
         switch (status) {
-            case 'available': return "text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400";
+            case 'available': return "text-success bg-green-100 dark:bg-green-900/30 dark:text-green-400";
             case 'busy': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-primary";
-            case 'break': return "text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400";
-            case 'offline': return "text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
+            case 'break': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400";
+            case 'offline': return "text-gray-600 bg-border dark:text-gray-400";
             default: return "";
         }
     };
@@ -232,12 +232,12 @@ function TechnicianProfileContent() {
                                 <CardContent>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="bg-primary/10 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800">
-                                            <div className="text-2xl font-bold text-orange-700 dark:text-primary">0</div>
+                                            <div className="text-2xl font-bold text-primary dark:text-primary">0</div>
                                             <div className="text-sm text-primary dark:text-orange-300">Active Jobs</div>
                                         </div>
-                                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
+                                        <div className="bg-success/10 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
                                             <div className="text-2xl font-bold text-green-700 dark:text-green-400">0</div>
-                                            <div className="text-sm text-green-600 dark:text-green-300">Completed This Week</div>
+                                            <div className="text-sm text-success dark:text-green-300">Completed This Week</div>
                                         </div>
                                         <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800">
                                             <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">0%</div>
@@ -308,7 +308,7 @@ function TechnicianProfileContent() {
                                 </CardHeader>
                                 <CardContent>
                                     {technician.last_latitude && technician.last_longitude ? (
-                                        <div className="bg-gray-100 dark:bg-gray-800 h-64 rounded-lg flex items-center justify-center">
+                                        <div className="bg-border h-64 rounded-lg flex items-center justify-center">
                                             {/* Map placeholder */}
                                             <div className="text-center">
                                                 <MapIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />

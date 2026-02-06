@@ -501,8 +501,8 @@ export default function AppointmentsPage() {
       />
 
       {/* Appointments Table */}
-      <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
-        <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm">
+      <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+        <CardHeader className="py-4 px-6 border-b border-border/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm">
           <CardTitle className="text-base font-semibold text-foreground tracking-tight">
             All Appointments ({data?.count || 0})
           </CardTitle>

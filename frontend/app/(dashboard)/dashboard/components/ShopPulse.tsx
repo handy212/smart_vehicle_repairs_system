@@ -51,7 +51,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
             <CardContent className="p-6">
                 <div className="grid grid-cols-3 gap-8 relative">
                     {/* Progress Connectors */}
-                    <div className="absolute top-[35%] left-[20%] right-[20%] h-px bg-gray-100 dark:bg-gray-800 -z-0 hidden md:block" />
+                    <div className="absolute top-[35%] left-[20%] right-[20%] h-px bg-border -z-0 hidden md:block" />
 
                     {statusFlow.map((status) => {
                         const count = getStatusCount(status.key);

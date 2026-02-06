@@ -178,7 +178,7 @@ export default function ProfitLossPage() {
                 <>
                     {/* Income Section - Compact */}
                     <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                        <CardHeader className="pb-3 border-b border-border bg-green-50/50 dark:bg-green-900/10">
+                        <CardHeader className="pb-3 border-b border-border bg-success/10/50 dark:bg-green-900/10">
                             <CardTitle className="text-base text-green-700 dark:text-green-400">Income</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -200,7 +200,7 @@ export default function ProfitLossPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    <TableRow className="bg-green-50/50 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800">
+                                    <TableRow className="bg-success/10/50 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800">
                                         <TableCell className="px-4 py-2 text-sm font-bold text-green-700 dark:text-green-400">
                                             Total Income
                                         </TableCell>
@@ -251,7 +251,7 @@ export default function ProfitLossPage() {
                     </Card>
 
                     {/* Net Income Summary - Compact */}
-                    <Card className={`border-2 ${netIncome >= 0 ? 'border-green-200 bg-green-50 dark:bg-green-900/20' : 'border-red-200 bg-red-50 dark:bg-red-900/20'}`}>
+                    <Card className={`border-2 ${netIncome >= 0 ? 'border-green-200 bg-success/10 dark:bg-green-900/20' : 'border-red-200 bg-red-50 dark:bg-red-900/20'}`}>
                         <CardContent className="p-4">
                             <div className="flex justify-between items-center">
                                 <span className={`text-lg font-bold ${netIncome >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>

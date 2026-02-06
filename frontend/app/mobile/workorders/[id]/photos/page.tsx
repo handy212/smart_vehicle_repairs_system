@@ -242,7 +242,7 @@ export default function WorkOrderPhotosPage() {
                             </div>
 
                             {!isOnline && (
-                                <p className="text-xs text-orange-600 dark:text-orange-400 text-center">
+                                <p className="text-xs text-primary text-center">
                                     Offline - Photos will upload when connection restored
                                 </p>
                             )}
@@ -269,7 +269,7 @@ export default function WorkOrderPhotosPage() {
                         {photos.map((photo) => (
                             <div
                                 key={photo.timestamp}
-                                className="relative group rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800"
+                                className="relative group rounded-lg overflow-hidden bg-border"
                             >
                                 <div className="aspect-square relative">
                                     <img
@@ -279,7 +279,7 @@ export default function WorkOrderPhotosPage() {
                                     />
                                     {!photo.uploaded && (
                                         <div className="absolute top-2 right-2">
-                                            <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                            <div className="bg-primary text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
                                                 <Upload className="h-3 w-3" />
                                                 Pending
                                             </div>

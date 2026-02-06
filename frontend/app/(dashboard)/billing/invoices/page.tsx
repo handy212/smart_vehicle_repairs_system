@@ -371,7 +371,7 @@ export default function InvoicesPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-primary bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'unpaid' ? null : 'unpaid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -381,13 +381,13 @@ export default function InvoicesPage() {
                     <CardContent className="p-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Unpaid</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-orange-600">{stats?.counts.unpaid || 0}</span>
+                            <span className="text-lg font-bold text-primary">{stats?.counts.unpaid || 0}</span>
                             <FileText className="w-4 h-4 text-orange-500/50" />
                         </div>
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-gray-800' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'paid' ? 'ring-2 ring-green-500 bg-success/10 dark:bg-gray-800' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'paid' ? null : 'paid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -397,7 +397,7 @@ export default function InvoicesPage() {
                     <CardContent className="p-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-green-600">{stats?.counts.paid || 0}</span>
+                            <span className="text-lg font-bold text-success">{stats?.counts.paid || 0}</span>
                             <CheckCircle className="w-4 h-4 text-green-500/50" />
                         </div>
                     </CardContent>
@@ -660,7 +660,7 @@ export default function InvoicesPage() {
                                             <TableCell className="px-4 py-2 text-right font-medium text-sm text-gray-700">
                                                 {formatCurrency(parseFloat(invoice.total || "0"))}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-right text-sm text-green-600">
+                                            <TableCell className="px-4 py-2 text-right text-sm text-success">
                                                 {formatCurrency(parseFloat(invoice.amount_paid || "0"))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right text-sm text-red-600 font-medium">
@@ -684,7 +684,7 @@ export default function InvoicesPage() {
                                                     {invoice.status === 'draft' && (
                                                         <PermissionGuard permission="edit_invoices">
                                                             <Link href={`/billing/invoices/${invoice.id}/edit`}>
-                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-green-600">
+                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-success">
                                                                     <Edit className="w-3.5 h-3.5" />
                                                                 </Button>
                                                             </Link>

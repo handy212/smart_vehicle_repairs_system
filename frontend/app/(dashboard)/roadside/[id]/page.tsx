@@ -32,7 +32,7 @@ import { useForm } from "react-hook-form";
 
 const RoadsideMap = dynamic(() => import("@/components/roadside/RoadsideMap"), {
     ssr: false,
-    loading: () => <div className="h-[300px] w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+    loading: () => <div className="h-[300px] w-full bg-border rounded-xl animate-pulse" />
 });
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -400,7 +400,7 @@ export default function RoadsideDetailPage() {
 
                                 {request.completed_at && (
                                     <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-green-600"></div>
+                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-success"></div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-semibold">Service Completed</span>
                                             <span className="text-xs text-muted-foreground">{format(new Date(request.completed_at), "h:mm a")}</span>
@@ -500,7 +500,7 @@ export default function RoadsideDetailPage() {
                                     {/* Requested */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-green-500 text-white'
+                                            ? 'bg-success/100 text-white'
                                             : request.status === 'requested'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-gray-400'
@@ -509,12 +509,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Request</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
                                     {/* Dispatched */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-green-500 text-white'
+                                            ? 'bg-success/100 text-white'
                                             : request.status === 'dispatched'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-gray-400'
@@ -523,12 +523,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Dispatch</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
                                     {/* En Route */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['on_site', 'in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-green-500 text-white'
+                                            ? 'bg-success/100 text-white'
                                             : request.status === 'en_route'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-gray-400'
@@ -537,12 +537,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">En Route</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
                                     {/* On Site */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['in_progress', 'completed'].includes(request.status)
-                                            ? 'bg-green-500 text-white'
+                                            ? 'bg-success/100 text-white'
                                             : ['on_site', 'arrived'].includes(request.status)
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-gray-400'
@@ -551,12 +551,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">On Site</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
                                     {/* In Progress */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
-                                            ? 'bg-green-500 text-white'
+                                            ? 'bg-success/100 text-white'
                                             : request.status === 'in_progress'
                                                 ? 'bg-primary text-white'
                                                 : 'bg-border text-gray-400'
@@ -565,12 +565,12 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Working</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
 
                                     {/* Completed */}
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
-                                            ? 'bg-green-600 text-white'
+                                            ? 'bg-success text-white'
                                             : 'bg-border text-gray-400'
                                             }`}>
                                             {request.status === 'completed' ? '✓' : '6'}

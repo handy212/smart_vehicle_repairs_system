@@ -328,7 +328,7 @@ export default function WorkOrdersPage() {
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Completed</span>
-            <span className="text-lg font-bold text-green-600 dark:text-green-400">{stats?.completed || 0}</span>
+            <span className="text-lg font-bold text-success">{stats?.completed || 0}</span>
           </CardContent>
         </Card>
         <Card className="shadow-sm border bg-card">
@@ -408,7 +408,7 @@ export default function WorkOrdersPage() {
                 : String(value);
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal border border-border">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-border text-muted-foreground font-normal border border-border">
                   {displayLabel}: {displayValue}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"

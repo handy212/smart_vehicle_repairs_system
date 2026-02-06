@@ -26,8 +26,8 @@ export function PortalQuickActions() {
             desc: "Register new car",
             icon: PlusCircle,
             href: "/portal/vehicles/new",
-            color: "text-green-600 dark:text-green-400",
-            hoverBg: "hover:bg-green-50 dark:hover:bg-green-900/20",
+            color: "text-success",
+            hoverBg: "hover:bg-success/10 dark:hover:bg-green-900/20",
             borderColor: "hover:border-green-200 dark:hover:border-green-800"
         },
         {
@@ -36,7 +36,7 @@ export function PortalQuickActions() {
             icon: Receipt,
             href: "/portal/invoices",
             color: "text-yellow-600 dark:text-yellow-400",
-            hoverBg: "hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
+            hoverBg: "hover:bg-warning/10 dark:hover:bg-yellow-900/20",
             borderColor: "hover:border-yellow-200 dark:hover:border-yellow-800"
         },
         {

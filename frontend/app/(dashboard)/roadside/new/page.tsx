@@ -350,7 +350,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                     <div className="mt-4 p-4 rounded-xl bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-700 dark:text-orange-300">
+                                                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-primary dark:text-orange-300">
                                                     <UserIcon className="w-5 h-5" />
                                                 </div>
                                                 <div>

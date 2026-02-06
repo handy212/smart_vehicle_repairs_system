@@ -32,7 +32,7 @@ function getDueStatusBadge(schedule: VehicleServiceSchedule) {
   if (!schedule.is_due) {
     if (schedule.days_until_due !== undefined && schedule.days_until_due > 0) {
       if (schedule.days_until_due <= 7) {
-        return <Badge variant="default" className="bg-yellow-500">Due Soon ({schedule.days_until_due}d)</Badge>;
+        return <Badge variant="default" className="bg-warning/100">Due Soon ({schedule.days_until_due}d)</Badge>;
       }
       return <Badge variant="secondary">Upcoming ({schedule.days_until_due}d)</Badge>;
     }

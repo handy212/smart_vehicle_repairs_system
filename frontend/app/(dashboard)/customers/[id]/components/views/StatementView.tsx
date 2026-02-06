@@ -87,13 +87,13 @@ export function StatementView({ customerId }: StatementViewProps) {
         { header: "Type", accessorKey: "type", cell: (item: any) => <span className="capitalize">{item.type}</span> },
         { header: "Number", accessorKey: "number" },
         { header: "Amount", accessorKey: "amount", cell: (item: any) => formatCurrency(parseFloat(item.amount)) },
-        { header: "Status", accessorKey: "status", cell: (item: any) => <span className="capitalize px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-xs">{item.status}</span> },
+        { header: "Status", accessorKey: "status", cell: (item: any) => <span className="capitalize px-2 py-1 rounded bg-border text-xs">{item.status}</span> },
     ];
 
     const stats = [
         { label: "Beginning Balance", value: formatCurrency(summary.beginning_balance) },
         { label: "Invoiced Amount", value: formatCurrency(summary.invoiced), color: "text-primary dark:text-primary" },
-        { label: "Payments Made", value: formatCurrency(summary.payments), color: "text-green-600 dark:text-green-400" },
+        { label: "Payments Made", value: formatCurrency(summary.payments), color: "text-success" },
         { label: "Balance Due", value: formatCurrency(summary.balance_due), color: "text-red-600 dark:text-red-400" }
     ];
 
@@ -159,14 +159,14 @@ export function StatementView({ customerId }: StatementViewProps) {
                                                 ) : '-'}
                                             </td>
                                             <td className="px-4 py-3 capitalize">
-                                                <span className={`inline-flex items-center gap-1 ${t.type === 'payment' ? 'text-green-600' : 'text-primary'}`}>
+                                                <span className={`inline-flex items-center gap-1 ${t.type === 'payment' ? 'text-success' : 'text-primary'}`}>
                                                     {t.type}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 font-medium">{t.number}</td>
                                             <td className="px-4 py-3 text-right font-medium">{formatCurrency(parseFloat(t.amount))}</td>
                                             <td className="px-4 py-3">
-                                                <span className="px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-800 capitalize">{t.status}</span>
+                                                <span className="px-2 py-0.5 rounded text-xs bg-border capitalize">{t.status}</span>
                                             </td>
                                         </tr>
                                     ))

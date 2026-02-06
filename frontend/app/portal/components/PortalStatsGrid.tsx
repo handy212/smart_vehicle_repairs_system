@@ -37,8 +37,8 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
             label: "Upcoming Service",
             value: stats.upcoming_appointments_count,
             icon: Calendar,
-            color: "text-green-600 dark:text-green-400",
-            bg: "bg-green-50 dark:bg-green-900/20",
+            color: "text-success",
+            bg: "bg-success/10 dark:bg-green-900/20",
             href: "/portal/appointments",
             alert: stats.upcoming_appointments_count > 0
         },
@@ -47,7 +47,7 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
             value: stats.pending_invoices_count,
             icon: FileText,
             color: "text-yellow-600 dark:text-yellow-400",
-            bg: "bg-yellow-50 dark:bg-yellow-900/20",
+            bg: "bg-warning/10 dark:bg-yellow-900/20",
             href: "/portal/invoices",
             alert: stats.pending_invoices_count > 0
         },

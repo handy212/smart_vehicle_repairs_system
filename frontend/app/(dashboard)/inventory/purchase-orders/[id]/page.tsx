@@ -470,7 +470,7 @@ export default function PurchaseOrderDetailPage() {
       )}
 
       {isSubmitter && purchaseOrder.status === "pending_approval" && (
-        <Card className="border-yellow-200 bg-yellow-50/50 shadow-sm mb-6">
+        <Card className="border-yellow-200 bg-warning/10/50 shadow-sm mb-6">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
               <Package className="w-4 h-4" />
@@ -620,7 +620,7 @@ export default function PurchaseOrderDetailPage() {
                     {format(new Date(purchaseOrder.submitted_at), "MMM dd, yyyy HH:mm")}
                   </p>
                   {purchaseOrder.assigned_approver_name && (
-                    <p className="text-xs text-blue-600 mt-1">Assignee: {purchaseOrder.assigned_approver_name}</p>
+                    <p className="text-xs text-info mt-1">Assignee: {purchaseOrder.assigned_approver_name}</p>
                   )}
                 </div>
               )}

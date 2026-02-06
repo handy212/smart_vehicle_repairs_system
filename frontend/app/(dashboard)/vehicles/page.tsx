@@ -409,7 +409,7 @@ export default function VehiclesPage() {
                 : String(value);
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"

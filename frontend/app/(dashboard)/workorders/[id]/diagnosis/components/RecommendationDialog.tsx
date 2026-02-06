@@ -227,7 +227,7 @@ export function RecommendationDialog({
                             </div>
                             <div>
                                 <h4 className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-0.5">Parts & Labor</h4>
-                                <p className="text-xs text-orange-700 dark:text-orange-300 leading-relaxed">
+                                <p className="text-xs text-primary dark:text-orange-300 leading-relaxed">
                                     {formData.parts_needed.length > 0 ? (
                                         <span className="font-semibold">
                                             Included: {formData.parts_needed.length} parts and {formData.estimated_labor_hours} hours labor.

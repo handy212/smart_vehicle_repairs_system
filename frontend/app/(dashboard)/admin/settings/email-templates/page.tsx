@@ -345,7 +345,7 @@ export default function EmailTemplatesPage() {
                   checked={template.is_active}
                   onCheckedChange={() => handleToggleActive(template)}
                   disabled={toggleActiveMutation.isPending || !canManage}
-                  className="scale-75 data-[state=checked]:bg-green-500"
+                  className="scale-75 data-[state=checked]:bg-success/100"
                 />
               </div>
             </CardHeader>
@@ -405,7 +405,7 @@ export default function EmailTemplatesPage() {
 
       {filteredTemplates.length === 0 && (
         <div className="text-center py-12 px-4">
-          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 bg-border rounded-full flex items-center justify-center mx-auto mb-3">
             <Mail className="w-6 h-6 text-gray-400" />
           </div>
           <h3 className="text-sm font-semibold text-foreground">No templates found</h3>
@@ -424,7 +424,7 @@ export default function EmailTemplatesPage() {
           <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0">
             <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-primary'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-green-100 text-success' : 'bg-orange-100 text-primary'}`}>
                   {creatingTemplate ? <Plus className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                 </div>
                 <div>
@@ -565,7 +565,7 @@ export default function EmailTemplatesPage() {
                   </div>
                 </ScrollArea>
                 <div className="p-3 bg-primary/10 border-t border-orange-100">
-                  <p className="text-[10px] text-orange-700 leading-tight">
+                  <p className="text-[10px] text-primary leading-tight">
                     Click to copy variables to clipboard.
                   </p>
                 </div>
@@ -606,7 +606,7 @@ export default function EmailTemplatesPage() {
           <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0">
             <DialogHeader className="px-6 py-4 border-b border-border">
               <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-green-600" />
+                <Eye className="w-4 h-4 text-success" />
                 <div>
                   <DialogTitle className="text-base font-bold">Preview: {previewTemplate.name}</DialogTitle>
                 </div>

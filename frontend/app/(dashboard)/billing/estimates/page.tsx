@@ -433,7 +433,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-gray-800' : 'bg-card'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-green-500 bg-success/10 dark:bg-gray-800' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'approved' ? null : 'approved';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -443,7 +443,7 @@ export default function EstimatesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved</span>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-green-600">{stats?.counts.approved || 0}</span>
+              <span className="text-lg font-bold text-success">{stats?.counts.approved || 0}</span>
               <CheckCircle className="w-4 h-4 text-green-500/50" />
             </div>
           </CardContent>
@@ -465,7 +465,7 @@ export default function EstimatesPage() {
           </CardContent>
         </Card>
         <Card
-          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-primary bg-orange-50 dark:bg-gray-800' : 'bg-card'}`}
           onClick={() => {
             const newStatus = advancedFilters.status === 'expired' ? null : 'expired';
             setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -475,7 +475,7 @@ export default function EstimatesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Expired</span>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-orange-600">{stats?.counts.expired || 0}</span>
+              <span className="text-lg font-bold text-primary">{stats?.counts.expired || 0}</span>
               <Clock className="w-4 h-4 text-orange-500/50" />
             </div>
           </CardContent>
@@ -715,7 +715,7 @@ export default function EstimatesPage() {
                           {estimate.status === 'draft' && (
                             <PermissionGuard permission="edit_estimates">
                               <Link href={`/billing/estimates/${estimate.id}/edit`}>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-green-600 hover:bg-green-50">
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-success hover:bg-success/10">
                                   <Edit className="w-3.5 h-3.5" />
                                 </Button>
                               </Link>

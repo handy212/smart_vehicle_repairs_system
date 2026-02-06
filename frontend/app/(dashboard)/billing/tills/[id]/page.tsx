@@ -119,7 +119,7 @@ export default function TillDetailPage() {
                                 <CardTitle className="text-sm text-muted-foreground">Variance</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className={`text-3xl font-bold ${till.is_balanced ? 'text-green-600' : 'text-red-600'}`}>
+                                <p className={`text-3xl font-bold ${till.is_balanced ? 'text-success' : 'text-red-600'}`}>
                                     {till.variance && parseFloat(till.variance) >= 0 ? '+' : ''}${parseFloat(till.variance || '0').toLocaleString()}
                                 </p>
                                 <p className="text-sm mt-2">

@@ -129,7 +129,7 @@ const CustomerRow = memo(function CustomerRow({
                   <span className={cn(
                     "text-xs",
                     customer.days_since_last_visit >= 730 ? "text-red-600 dark:text-red-400 font-semibold" :
-                      customer.days_since_last_visit >= 365 ? "text-orange-600 dark:text-orange-400" :
+                      customer.days_since_last_visit >= 365 ? "text-primary" :
                         customer.days_since_last_visit >= 180 ? "text-yellow-600 dark:text-yellow-400" :
                           "text-muted-foreground"
                   )}>
@@ -157,7 +157,7 @@ const CustomerRow = memo(function CustomerRow({
             variant="outline"
             className={cn(
               "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-              customer.status === "active" && "border-green-200 text-green-700 bg-green-50/50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
+              customer.status === "active" && "border-green-200 text-green-700 bg-success/10/50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
               customer.status === "inactive" && "border-gray-200 text-gray-700 bg-gray-50/50 dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800",
               customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
             )}
@@ -534,7 +534,7 @@ export default function CustomersPage() {
           <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
-              <span className="text-lg font-bold text-green-600 dark:text-green-400">{stats?.active_customers || 0}</span>
+              <span className="text-lg font-bold text-success">{stats?.active_customers || 0}</span>
             </CardContent>
           </Card>
           <Card className="shadow-sm border bg-card">
@@ -681,7 +681,7 @@ export default function CustomersPage() {
               if (key.includes("_to")) return null;
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {String(value)}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"

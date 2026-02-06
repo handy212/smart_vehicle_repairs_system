@@ -258,7 +258,7 @@ export default function NotificationsPage() {
                         "p-3 rounded-lg",
                         !isRead
                           ? "bg-orange-100 dark:bg-orange-900/30"
-                          : "bg-gray-100 dark:bg-gray-800"
+                          : "bg-border"
                       )}
                     >
                       <Icon

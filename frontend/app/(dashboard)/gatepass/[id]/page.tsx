@@ -208,7 +208,7 @@ export default function GatePassDetailPage() {
                 <Separator className="my-2" />
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 mt-3">Vehicle</p>
                 <div className="flex items-start gap-3 mt-1">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <div className="p-2 bg-border rounded-lg">
                     <Car className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div>
@@ -298,7 +298,7 @@ export default function GatePassDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 relative">
-              <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gray-100 dark:bg-gray-800"></div>
+              <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-border"></div>
               <div className="space-y-6 relative">
                 <div className="flex items-start gap-4">
                   <div className="w-3 h-3 rounded-full bg-primary mt-1.5 ring-4 ring-background z-10"></div>

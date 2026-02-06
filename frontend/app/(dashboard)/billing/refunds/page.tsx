@@ -209,7 +209,7 @@ export default function RefundsPage() {
                                                                 size="sm"
                                                                 onClick={() => approveMutation.mutate(refund.id)}
                                                                 disabled={approveMutation.isPending}
-                                                                className="h-7 w-7 p-0 text-gray-500 hover:text-green-600"
+                                                                className="h-7 w-7 p-0 text-gray-500 hover:text-success"
                                                             >
                                                                 <CheckCircle className="h-3.5 w-3.5" />
                                                             </Button>

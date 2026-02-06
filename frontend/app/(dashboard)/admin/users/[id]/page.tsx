@@ -658,7 +658,7 @@ export default function UserDetailPage() {
                             </p>
                           )}
                           {branches.length === 0 && (
-                            <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                            <div className="mt-3 p-3 bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                               <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-center gap-2">
                                 <Info className="w-4 h-4" />
                                 No active branches available. Create a branch first before assigning users.
@@ -715,7 +715,7 @@ export default function UserDetailPage() {
             <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
               <CardHeader>
                 <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
-                  <KeyRound className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <KeyRound className="w-5 h-5 text-primary" />
                   Password Reset
                 </CardTitle>
               </CardHeader>
@@ -793,7 +793,7 @@ export default function UserDetailPage() {
                             title="Copy password"
                           >
                             {passwordCopied ? (
-                              <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                              <span className="text-xs text-success">Copied!</span>
                             ) : (
                               <Copy className="w-4 h-4" />
                             )}
@@ -838,7 +838,7 @@ export default function UserDetailPage() {
                           resetPasswordMutation.mutate({ password: newPassword, sendEmail });
                         }}
                         disabled={resetPasswordMutation.isPending || !newPassword}
-                        className="dark:bg-orange-600 dark:hover:bg-orange-700 flex-1"
+                        className="dark:bg-primary dark:hover:bg-orange-700 flex-1"
                       >
                         {resetPasswordMutation.isPending ? (
                           <span className="flex items-center gap-2">
@@ -908,7 +908,7 @@ export default function UserDetailPage() {
                   </div>
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.is_active ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
                     {user.is_active ? (
-                      <UserCheck className={`w-6 h-6 ${user.is_active ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} />
+                      <UserCheck className={`w-6 h-6 ${user.is_active ? "text-success" : "text-red-600 dark:text-red-400"}`} />
                     ) : (
                       <UserX className="w-6 h-6 text-red-600 dark:text-red-400" />
                     )}
@@ -1102,7 +1102,7 @@ export default function UserDetailPage() {
           <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
             <CardHeader>
               <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
-                <KeyRound className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <KeyRound className="w-5 h-5 text-primary" />
                 Password Management
               </CardTitle>
             </CardHeader>
@@ -1179,7 +1179,7 @@ export default function UserDetailPage() {
                           title="Copy password"
                         >
                           {passwordCopied ? (
-                            <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                            <span className="text-xs text-success">Copied!</span>
                           ) : (
                             <Copy className="w-4 h-4" />
                           )}
@@ -1224,7 +1224,7 @@ export default function UserDetailPage() {
                         resetPasswordMutation.mutate({ password: newPassword, sendEmail });
                       }}
                       disabled={resetPasswordMutation.isPending || !newPassword}
-                      className="dark:bg-orange-600 dark:hover:bg-orange-700 flex-1"
+                      className="dark:bg-primary dark:hover:bg-orange-700 flex-1"
                     >
                       {resetPasswordMutation.isPending ? (
                         <span className="flex items-center gap-2">

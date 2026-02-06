@@ -477,7 +477,7 @@ export default function SystemSettingsPage() {
       {/* Settings Count Badge */}
       <div className="px-4">
         {settingsData && (
-          <div className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-border inline-block">
+          <div className="text-xs text-gray-500 bg-border px-2.5 py-1 rounded-full border border-border inline-block">
             {settingsData.count} settings
           </div>
         )}
@@ -1088,7 +1088,7 @@ export default function SystemSettingsPage() {
                                           size="sm"
                                           disabled={updateMutation.isPending}
                                           onClick={() => handleSaveRow(setting.id)}
-                                          className="h-7 w-7 p-0 bg-green-600 hover:bg-green-700 text-white"
+                                          className="h-7 w-7 p-0 bg-success hover:bg-green-700 text-white"
                                         >
                                           <Save className="w-3.5 h-3.5" />
                                         </Button>

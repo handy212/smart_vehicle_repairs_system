@@ -296,7 +296,7 @@ export default function UsersManagementPage() {
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         {user.is_active ? (
                           <div className="flex items-center space-x-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-success/100"></span>
                             <span className="text-xs text-green-700 dark:text-green-400 font-medium">Active</span>
                           </div>
                         ) : (

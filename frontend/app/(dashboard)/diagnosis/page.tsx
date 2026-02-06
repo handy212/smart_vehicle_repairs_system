@@ -130,7 +130,7 @@ export default function DiagnosisListPage() {
               Completed
             </span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-green-600 dark:text-green-400">
+              <span className="text-xl font-bold text-success">
                 {stats.completed}
               </span>
               <CheckCircle2 className="w-5 h-5 text-green-400 mb-0.5" />
@@ -311,10 +311,10 @@ export default function DiagnosisListPage() {
                           className={cn(
                             "text-[10px] px-2 py-0.5 font-medium border shadow-none",
                             diagnosis.status === "completed"
-                              ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                              ? "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
                               : diagnosis.status === "on_hold"
                                 ? "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
-                                : "bg-primary/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-primary dark:border-orange-800"
+                                : "bg-primary/10 text-primary border-orange-200 dark:bg-orange-900/20 dark:text-primary dark:border-orange-800"
                           )}
                         >
                           {diagnosis.status_display || diagnosis.status}

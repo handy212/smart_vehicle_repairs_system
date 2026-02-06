@@ -203,9 +203,9 @@ export default function TimeTrackingPage() {
 
       {/* Active Time Log */}
       {activeLog && (
-        <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 animate-pulse-border ring-1 ring-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+        <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 animate-pulse-border ring-1 ring-primary/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2 text-orange-700 dark:text-orange-400">
+            <CardTitle className="text-lg flex items-center gap-2 text-primary dark:text-orange-400">
               <Clock className="h-5 w-5 animate-pulse" />
               Currently Clocked In
             </CardTitle>
@@ -232,7 +232,7 @@ export default function TimeTrackingPage() {
 
             <div className="bg-card p-4 rounded-lg flex flex-col items-center justify-center border border-orange-100 dark:border-orange-900/50">
               <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Elapsed Time</div>
-              <div className="font-mono text-3xl font-bold text-orange-600 dark:text-orange-400">
+              <div className="font-mono text-3xl font-bold text-primary">
                 {formatDuration(
                   activeLog.duration_hours ||
                   calculateDuration(activeLog.clock_in, new Date().toISOString())
@@ -279,7 +279,7 @@ export default function TimeTrackingPage() {
                   <Button
                     onClick={() => handleClockIn(wo.id)}
                     disabled={loading}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-success hover:bg-green-700"
                   >
                     <Play className="h-4 w-4 mr-1 fill-current" />
                     Start
@@ -323,7 +323,7 @@ export default function TimeTrackingPage() {
                           {formatDuration(log.duration_hours)}
                         </div>
                         {!log.synced && (
-                          <div className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">
+                          <div className="text-[10px] text-primary font-medium">
                             Pending Sync
                           </div>
                         )}

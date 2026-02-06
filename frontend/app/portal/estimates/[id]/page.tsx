@@ -142,7 +142,7 @@ export default function EstimateDetailPage() {
 
       {/* Status Alert */}
       {estimate.status === "sent" && (
-        <Card className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+        <Card className="bg-warning/10 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
           <CardContent className="p-4 flex items-center space-x-3">
             <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             <div>
@@ -318,7 +318,7 @@ export default function EstimateDetailPage() {
                 </div>
               )}
               {estimate.discount_amount && parseFloat(estimate.discount_amount) > 0 && (
-                <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                <div className="flex justify-between text-sm text-success">
                   <span>Discount</span>
                   <span>
                     -{formatCurrency(estimate.discount_amount)}

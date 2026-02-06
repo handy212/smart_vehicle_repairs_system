@@ -116,7 +116,7 @@ export default function BranchDetailPage() {
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Branch Code: <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs font-mono">{branch.code}</code>
+              Branch Code: <code className="bg-border px-2 py-1 rounded text-xs font-mono">{branch.code}</code>
             </p>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function BranchDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              <div className="text-2xl font-bold text-success">
                 ${stats.work_orders.total_revenue.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,

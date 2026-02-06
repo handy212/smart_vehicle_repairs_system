@@ -109,7 +109,7 @@ export default function TechnicianWorkOrderPage() {
                                     {isWorking ? (
                                         <Button
                                             size="lg"
-                                            className="bg-yellow-500 hover:bg-yellow-600 text-white w-full md:w-auto h-12 text-lg shadow-yellow-200 dark:shadow-none"
+                                            className="bg-warning/100 hover:bg-yellow-600 text-white w-full md:w-auto h-12 text-lg shadow-yellow-200 dark:shadow-none"
                                             onClick={() => updateStatusMutation.mutate('pause')}
                                             disabled={updateStatusMutation.isPending}
                                         >
@@ -119,7 +119,7 @@ export default function TechnicianWorkOrderPage() {
                                     ) : (
                                         <Button
                                             size="lg"
-                                            className="bg-green-600 hover:bg-green-700 text-white w-full md:w-auto h-12 text-lg shadow-green-200 dark:shadow-none animate-pulse hover:animate-none"
+                                            className="bg-success hover:bg-green-700 text-white w-full md:w-auto h-12 text-lg shadow-green-200 dark:shadow-none animate-pulse hover:animate-none"
                                             onClick={() => updateStatusMutation.mutate('start')}
                                             disabled={updateStatusMutation.isPending}
                                         >
@@ -143,7 +143,7 @@ export default function TechnicianWorkOrderPage() {
 
             {/* Main Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4 h-12 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                <TabsList className="grid w-full grid-cols-4 h-12 bg-border p-1 rounded-xl">
                     <TabsTrigger value="jobs" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
                         <ListTodo className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Tasks</span>

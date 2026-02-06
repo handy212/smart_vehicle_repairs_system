@@ -403,7 +403,7 @@ export default function RegisterPage() {
                                     <form onSubmit={onVerify} className="space-y-6">
                                         <div className="space-y-4">
                                             <div className="bg-primary/10 p-4 rounded-xl text-center">
-                                                <p className="text-sm text-orange-700 mb-2">Enter the 6-digit code sent to your email</p>
+                                                <p className="text-sm text-primary mb-2">Enter the 6-digit code sent to your email</p>
                                                 <Input
                                                     value={otpCode}
                                                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}

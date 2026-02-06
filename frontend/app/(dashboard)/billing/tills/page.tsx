@@ -65,7 +65,7 @@ export default function TillDashboardPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle className="flex items-center gap-2">
-                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                    <CheckCircle className="h-5 w-5 text-success" />
                                     Till #{currentTill.id} - OPEN
                                 </CardTitle>
                                 <p className="text-sm text-muted-foreground mt-1">
@@ -154,7 +154,7 @@ export default function TillDashboardPage() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-sm text-muted-foreground">Variance</p>
-                                                    <p className={`font-mono font-semibold ${till.is_balanced ? 'text-green-600' : 'text-red-600'
+                                                    <p className={`font-mono font-semibold ${till.is_balanced ? 'text-success' : 'text-red-600'
                                                         }`}>
                                                         {till.variance && parseFloat(till.variance) >= 0 ? '+' : ''}{till.variance || '0.00'}
                                                     </p>
@@ -183,7 +183,7 @@ export default function TillDashboardPage() {
                         <CardContent className="pt-6">
                             <div className="flex items-center gap-3">
                                 <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
+                                    <CheckCircle className="h-6 w-6 text-success" />
                                 </div>
                                 <div>
                                     <p className="font-semibold">Open Tills</p>
@@ -198,7 +198,7 @@ export default function TillDashboardPage() {
                     <Card className="cursor-pointer hover:shadow-md transition-shadow">
                         <CardContent className="pt-6">
                             <div className="flex items-center gap-3">
-                                <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                <div className="p-3 bg-border rounded-lg">
                                     <Clock className="h-6 w-6 text-gray-600" />
                                 </div>
                                 <div>

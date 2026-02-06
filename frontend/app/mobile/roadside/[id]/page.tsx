@@ -128,7 +128,7 @@ export default function RoadsideDetailPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex items-start gap-3">
-                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-info dark:text-blue-300 shrink-0">
                                 <Phone className="h-4 w-4" />
                             </div>
                             <div className="flex-1">
@@ -141,7 +141,7 @@ export default function RoadsideDetailPage() {
                         </div>
 
                         <div className="flex items-start gap-3 border-t border-border pt-3">
-                            <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 dark:text-orange-300 shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-primary dark:text-orange-300 shrink-0">
                                 <Car className="h-4 w-4" />
                             </div>
                             <div>
@@ -163,8 +163,8 @@ export default function RoadsideDetailPage() {
                                 </div>
                             )}
                             {request.notes && (
-                                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded text-sm">
-                                    <h4 className="text-xs font-semibold text-yellow-700 dark:text-yellow-500 uppercase mb-1">Notes</h4>
+                                <div className="p-3 bg-warning/10 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded text-sm">
+                                    <h4 className="text-xs font-semibold text-warning uppercase mb-1">Notes</h4>
                                     <p className="text-yellow-900 dark:text-yellow-300">{request.notes}</p>
                                 </div>
                             )}
@@ -177,7 +177,7 @@ export default function RoadsideDetailPage() {
                     <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border max-w-md mx-auto">
                         {request.status === 'dispatched' && (
                             <Button
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6"
+                                className="w-full bg-info hover:bg-blue-700 text-lg py-6"
                                 onClick={() => handleStatusUpdate('en_route')}
                                 disabled={actionLoading}
                             >
@@ -187,7 +187,7 @@ export default function RoadsideDetailPage() {
 
                         {request.status === 'en_route' && (
                             <Button
-                                className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
+                                className="w-full bg-success hover:bg-green-700 text-lg py-6"
                                 onClick={() => handleStatusUpdate('arrive')}
                                 disabled={actionLoading}
                             >
@@ -197,7 +197,7 @@ export default function RoadsideDetailPage() {
 
                         {request.status === 'on_site' && (
                             <Button
-                                className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-6"
+                                className="w-full bg-primary hover:bg-orange-700 text-lg py-6"
                                 onClick={() => handleStatusUpdate('in_progress')}
                                 disabled={actionLoading}
                             >

@@ -133,7 +133,7 @@ export default function BackupsPage() {
       case "database":
         return <Database className="w-3.5 h-3.5 text-purple-600" />;
       case "media":
-        return <FileArchive className="w-3.5 h-3.5 text-orange-600" />;
+        return <FileArchive className="w-3.5 h-3.5 text-primary" />;
       default:
         return <FileArchive className="w-3.5 h-3.5 text-gray-500" />;
     }
@@ -256,7 +256,7 @@ export default function BackupsPage() {
                       <TableRow key={backup.id} className="hover:bg-gray-50/50 transition-colors group">
                         <TableCell className="px-4 py-2.5">
                           <div className="flex items-center space-x-2">
-                            <div className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-md">
+                            <div className="p-1.5 bg-border rounded-md">
                               {getBackupTypeIcon(backup.backup_type)}
                             </div>
                             <span className="text-xs font-medium text-card-foreground capitalize">{backup.backup_type}</span>
@@ -308,7 +308,7 @@ export default function BackupsPage() {
                                     title="Restore"
                                     className="h-7 w-7 p-0"
                                   >
-                                    <RotateCcw className="w-3.5 h-3.5 text-orange-600" />
+                                    <RotateCcw className="w-3.5 h-3.5 text-primary" />
                                   </Button>
                                 </PermissionGuard>
                               </>

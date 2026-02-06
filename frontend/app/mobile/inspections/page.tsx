@@ -127,7 +127,7 @@ export default function MobileInspectionsPage() {
                       inspection.status === "rejected" &&
                       "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
                       inspection.status === "in_progress" &&
-                      "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                      "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300"
                     )}
                   >
                     {inspection.status?.replace("_", " ").toUpperCase()}

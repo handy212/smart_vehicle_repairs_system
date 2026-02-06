@@ -129,7 +129,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
             case 'on_site':
                 return { label: 'Start Service', action: 'in_progress', icon: Wrench, color: 'bg-purple-600 hover:bg-purple-700' };
             case 'in_progress':
-                return { label: 'Job Completed', action: 'complete', icon: CheckCircle, color: 'bg-green-600 hover:bg-green-700' };
+                return { label: 'Job Completed', action: 'complete', icon: CheckCircle, color: 'bg-success hover:bg-green-700' };
             default:
                 return null;
         }

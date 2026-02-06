@@ -101,7 +101,7 @@ export default function ServiceBundleReportPage() {
                                         <TableCell className="text-right">
                                             {item.conversion_rate.toFixed(1)}%
                                         </TableCell>
-                                        <TableCell className="text-right font-bold font-mono text-green-600">
+                                        <TableCell className="text-right font-bold font-mono text-success">
                                             ${item.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </TableCell>
                                     </TableRow>

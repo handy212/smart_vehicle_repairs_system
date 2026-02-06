@@ -43,7 +43,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
 
   const items = [
     { label: "Total Suppliers", value: stats.total_suppliers, color: "text-primary" },
-    { label: "Active", value: stats.active_suppliers, color: "text-green-600" },
+    { label: "Active", value: stats.active_suppliers, color: "text-success" },
     { label: "Preferred", value: stats.preferred_suppliers, color: "text-amber-600" },
   ];
 
@@ -189,7 +189,7 @@ export default function SuppliersPage() {
               }
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"
@@ -272,7 +272,7 @@ export default function SuppliersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2">
-                        <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal capitalize">
+                        <Badge variant="secondary" className="bg-border text-muted-foreground font-normal capitalize">
                           {supplier.supplier_type || "N/A"}
                         </Badge>
                       </TableCell>

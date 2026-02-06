@@ -273,7 +273,7 @@ export default function BudgetsPage() {
                                                             size="sm"
                                                             onClick={() => activateMutation.mutate(budget.id)}
                                                             disabled={activateMutation.isPending}
-                                                            className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                                                            className="h-7 text-xs bg-success hover:bg-green-700"
                                                         >
                                                             <TrendingUp className="w-3 h-3 mr-1" />
                                                             Activate
@@ -286,7 +286,7 @@ export default function BudgetsPage() {
                                                         </Button>
                                                     </Link>
                                                     <Link href={`/accounting/budgets/${budget.id}`}>
-                                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-orange-700 hover:bg-primary/10">
+                                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10">
                                                             <Edit className="w-3 h-3 mr-1" />
                                                             Manage
                                                         </Button>

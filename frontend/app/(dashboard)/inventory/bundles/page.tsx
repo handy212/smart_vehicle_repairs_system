@@ -140,7 +140,7 @@ export default function ServiceBundlesPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-3">
-                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
+                                                <Badge variant="outline" className="bg-info/10 text-blue-700 border-blue-100 font-normal">
                                                     <Wrench className="w-3 h-3 mr-1" />
                                                     {bundle.service_type_name || "Unlinked"}
                                                 </Badge>

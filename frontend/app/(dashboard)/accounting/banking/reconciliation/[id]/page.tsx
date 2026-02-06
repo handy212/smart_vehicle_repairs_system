@@ -298,7 +298,7 @@ export default function ReconciliationDetailPage() {
                             {statement?.bank_account_name} &middot; {format(new Date(statement?.statement_date), 'MMMM yyyy')}
                         </h1>
                         {statement?.reconciled &&
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Reconciled</Badge>
+                            <Badge variant="outline" className="bg-success/10 text-green-700 border-green-200">Reconciled</Badge>
                         }
                     </div>
                 </div>
@@ -314,7 +314,7 @@ export default function ReconciliationDetailPage() {
                                 size="sm"
                                 onClick={handleReconcileComplete}
                                 disabled={isReconciling}
-                                className={Math.abs(difference) < 0.01 ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                                className={Math.abs(difference) < 0.01 ? "bg-success hover:bg-green-700 text-white" : ""}
                             >
                                 {isReconciling ? "Saving..." : "Finish Reconciliation"}
                             </Button>
@@ -341,7 +341,7 @@ export default function ReconciliationDetailPage() {
                         <div className="text-xl font-mono">{formatCurrency(statement?.closing_balance)}</div>
                     </CardContent>
                 </Card>
-                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-green-50 dark:bg-green-900/10 border-green-200" : "bg-white")}>
+                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-white")}>
                     <CardHeader className="p-4 pb-1">
                         <CardTitle className="text-xs font-medium text-gray-500 uppercase">Reconciled Balance</CardTitle>
                     </CardHeader>
@@ -350,12 +350,12 @@ export default function ReconciliationDetailPage() {
                         <div className="text-[10px] text-muted-foreground mt-1">Based on matched lines</div>
                     </CardContent>
                 </Card>
-                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-green-50 dark:bg-green-900/10 border-green-200" : "bg-red-50 dark:bg-red-900/10 border-red-200")}>
+                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-red-50 dark:bg-red-900/10 border-red-200")}>
                     <CardHeader className="p-4 pb-1">
                         <CardTitle className="text-xs font-medium text-gray-500 uppercase">Difference</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-1">
-                        <div className={cn("text-xl font-mono font-bold", Math.abs(difference) < 0.01 ? "text-green-600" : "text-red-600")}>
+                        <div className={cn("text-xl font-mono font-bold", Math.abs(difference) < 0.01 ? "text-success" : "text-red-600")}>
                             {formatCurrency(difference)}
                         </div>
                         <div className="text-[10px] text-muted-foreground mt-1">{Math.abs(difference) < 0.01 ? "Perfectly balanced" : "Review needed"}</div>
@@ -399,11 +399,11 @@ export default function ReconciliationDetailPage() {
                                     <div className="flex-1">
                                         <div className="text-foreground font-medium">{format(new Date(line.transaction_date), 'MMM d')}</div>
                                         <div className="text-xs text-gray-500 truncate max-w-[200px]" title={line.description}>{line.description}</div>
-                                        {line.matched && <div className="text-[10px] text-green-600 flex items-center mt-0.5"><Check className="w-3 h-3 mr-1" /> Matched</div>}
+                                        {line.matched && <div className="text-[10px] text-success flex items-center mt-0.5"><Check className="w-3 h-3 mr-1" /> Matched</div>}
                                     </div>
                                     <div className="font-mono text-right">
                                         {parseFloat(line.debit_amount) > 0 ? (
-                                            <span className="text-green-600">+{formatCurrency(line.debit_amount)}</span>
+                                            <span className="text-success">+{formatCurrency(line.debit_amount)}</span>
                                         ) : (
                                             <span className="text-gray-900">-{formatCurrency(line.credit_amount)}</span>
                                         )}
@@ -445,7 +445,7 @@ export default function ReconciliationDetailPage() {
                                             </div>
                                             <div className="font-mono text-right">
                                                 {tx.transaction_type === 'debit' ? (
-                                                    <span className="text-green-600">+{formatCurrency(tx.amount)}</span>
+                                                    <span className="text-success">+{formatCurrency(tx.amount)}</span>
                                                 ) : (
                                                     <span className="text-gray-900">-{formatCurrency(tx.amount)}</span>
                                                 )}

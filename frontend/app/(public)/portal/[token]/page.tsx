@@ -225,7 +225,7 @@ export default function PortalPage() {
                         <CardContent className="pt-6 space-y-4">
 
                             {isApproved ? (
-                                <div className="bg-green-50 text-green-800 p-4 rounded-lg flex items-start gap-3">
+                                <div className="bg-success/10 text-green-800 p-4 rounded-lg flex items-start gap-3">
                                     <CheckCircle2 className="h-5 w-5 mt-0.5" />
                                     <div>
                                         <p className="font-medium">You have approved this work.</p>

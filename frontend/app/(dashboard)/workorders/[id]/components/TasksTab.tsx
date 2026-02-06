@@ -266,7 +266,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                   Auto-completed
                 </span>
               ) : task.status === "in_progress" ? (
-                <span className="text-xs text-orange-600 dark:text-orange-400 italic flex items-center gap-1">
+                <span className="text-xs text-primary italic flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   {isCurrentPhase ? "Active Phase" : "Auto-managed"}
                 </span>

@@ -325,7 +325,7 @@ export default function NewRoadsideRequestPage() {
                           className={cn(
                             "cursor-pointer rounded-lg border-2 p-4 flex flex-col items-center gap-3 transition-all relative",
                             isDisabled
-                              ? "border-muted bg-gray-100 dark:bg-gray-800 opacity-60 cursor-not-allowed"
+                              ? "border-muted bg-border opacity-60 cursor-not-allowed"
                               : isSelected
                                 ? isPayAsYouGo
                                   ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-sm"
@@ -351,7 +351,7 @@ export default function NewRoadsideRequestPage() {
                                 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                                 : isPayAsYouGo
                                   ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                  : "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                  : "bg-green-100 text-success dark:bg-green-900/30 dark:text-green-400"
                             )}>
                               {allowanceText}
                             </span>

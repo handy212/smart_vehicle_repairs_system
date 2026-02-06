@@ -248,7 +248,7 @@ export default function AppointmentCalendarPage() {
               <span className="text-sm text-gray-700">Normal</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-green-500"></div>
+              <div className="w-4 h-4 rounded bg-success/100"></div>
               <span className="text-sm text-gray-700">Confirmed</span>
             </div>
             <div className="flex items-center space-x-2">

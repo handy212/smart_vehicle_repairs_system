@@ -613,7 +613,7 @@ export default function NewWorkOrderPage() {
       <Dialog open={showRepeatVisitDialog} onOpenChange={setShowRepeatVisitDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
+            <DialogTitle className="flex items-center space-x-2 text-primary">
               <AlertCircle className="w-5 h-5" />
               <span>Repeat Visit Detected</span>
             </DialogTitle>
@@ -642,7 +642,7 @@ export default function NewWorkOrderPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs font-medium text-orange-600 dark:text-orange-400">
+                            <p className="text-xs font-medium text-primary">
                               {Math.round(match.similarity * 100)}% similar
                             </p>
                           </div>
@@ -659,7 +659,7 @@ export default function NewWorkOrderPage() {
                               name="related_work_order"
                               checked={selectedRelatedWorkOrder === match.work_order_id}
                               onChange={() => setSelectedRelatedWorkOrder(match.work_order_id)}
-                              className="w-4 h-4 text-orange-600"
+                              className="w-4 h-4 text-primary"
                             />
                             <span className="text-sm text-card-foreground">
                               Link this work order as related
@@ -679,7 +679,7 @@ export default function NewWorkOrderPage() {
                   type="checkbox"
                   checked={isWarrantyRework}
                   onChange={(e) => setIsWarrantyRework(e.target.checked)}
-                  className="w-4 h-4 text-orange-600 rounded"
+                  className="w-4 h-4 text-primary rounded"
                 />
                 <span className="text-sm font-medium text-foreground">
                   Mark as warranty/rework case
@@ -714,8 +714,8 @@ export default function NewWorkOrderPage() {
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Customer & Vehicle */}
-            <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-gray-100/50 dark:border-gray-800/50">
+            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
                 <CardTitle className="flex items-center gap-2">
                   <PremiumIcons.Users className="w-5 h-5 text-gray-500" />
                   Customer & Vehicle
@@ -888,8 +888,8 @@ export default function NewWorkOrderPage() {
 
 
             {/* Work Order Details */}
-            <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-gray-100/50 dark:border-gray-800/50">
+            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
                 <CardTitle className="flex items-center gap-2">
                   <PremiumIcons.FileText className="w-5 h-5 text-gray-500" />
                   Work Order Details
@@ -933,7 +933,7 @@ export default function NewWorkOrderPage() {
                           Service Type
                         </label>
                         {suggestedService && (
-                          <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                          <Badge variant="outline" className="text-[10px] bg-info/10 text-blue-700 border-blue-200">
                             Suggested: {suggestedService.suggested_service_name}
                           </Badge>
                         )}
@@ -974,7 +974,7 @@ export default function NewWorkOrderPage() {
                         </SelectContent>
                       </Select>
                       {progressionWarning && (
-                        <p className="mt-1 text-xs font-medium text-orange-600 dark:text-orange-400 flex items-center animate-in fade-in slide-in-from-top-1">
+                        <p className="mt-1 text-xs font-medium text-primary flex items-center animate-in fade-in slide-in-from-top-1">
                           <AlertTriangle className="mr-1 h-3 w-3" />
                           {progressionWarning}
                         </p>
@@ -1116,7 +1116,7 @@ export default function NewWorkOrderPage() {
             </Card>
 
             {/* Return/Rework Section (Compact) */}
-            <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-white/60 dark:bg-gray-900/40 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
+            <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-card/60 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
               <CardContent className="p-0">
                 {/* Header / Toggle Area */}
                 <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-700'}`}
@@ -1130,7 +1130,7 @@ export default function NewWorkOrderPage() {
                     }
                   }}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
                       <AlertCircle className="w-5 h-5" />
                     </div>
                     <div>
@@ -1145,7 +1145,7 @@ export default function NewWorkOrderPage() {
 
                   <div className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isWarrantyRework} readOnly />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                   </div>
                 </div>
 
@@ -1161,7 +1161,7 @@ export default function NewWorkOrderPage() {
                             Select Previous Job
                           </label>
                           {selectedRelatedWorkOrder && (
-                            <button type="button" onClick={() => setShowWorkOrderSearch(!showWorkOrderSearch)} className="text-xs text-orange-600 hover:text-orange-700 font-medium">
+                            <button type="button" onClick={() => setShowWorkOrderSearch(!showWorkOrderSearch)} className="text-xs text-primary hover:text-primary font-medium">
                               Search manually
                             </button>
                           )}
@@ -1183,7 +1183,7 @@ export default function NewWorkOrderPage() {
                                   setShowWorkOrderSearch(false);
                                 }}
                                 className={`p-3 rounded-lg border text-left cursor-pointer transition-all hover:shadow-md ${selectedRelatedWorkOrder === wo.id
-                                  ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-500"
+                                  ? "border-primary bg-orange-50 dark:bg-orange-900/20 ring-1 ring-primary"
                                   : "border-border hover:border-orange-300 bg-card"
                                   }`}
                               >
@@ -1205,7 +1205,7 @@ export default function NewWorkOrderPage() {
                         ) : (
                           <div className="text-center py-6 bg-muted/20 rounded-lg border border-dashed border-border">
                             <p className="text-sm text-gray-500 mt-1">No recent history found.</p>
-                            <Button type="button" variant="link" size="sm" onClick={() => setShowWorkOrderSearch(true)} className="text-orange-600">
+                            <Button type="button" variant="link" size="sm" onClick={() => setShowWorkOrderSearch(true)} className="text-primary">
                               Search by ID instead
                             </Button>
                           </div>
@@ -1249,7 +1249,7 @@ export default function NewWorkOrderPage() {
                           onChange={(e) => setWarrantyReason(e.target.value)}
                           placeholder="Why is the vehicle returning? (e.g., Issue persisted, Part failure)"
                           rows={2}
-                          className={`resize-none ${selectedRelatedWorkOrder && !warrantyReason.trim() ? "border-orange-500 focus-visible:ring-orange-500" : ""}`}
+                          className={`resize-none ${selectedRelatedWorkOrder && !warrantyReason.trim() ? "border-primary focus-visible:ring-primary" : ""}`}
                         />
                       </div>
                     )}
@@ -1266,7 +1266,7 @@ export default function NewWorkOrderPage() {
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              <AlertTriangle className="w-5 h-5 text-primary" />
               Unapproved Recommendations Found
             </DialogTitle>
             <DialogDescription className="text-sm">
@@ -1356,7 +1356,7 @@ export default function NewWorkOrderPage() {
                   type="checkbox"
                   checked={acknowledgedUnapproved}
                   onChange={(e) => setAcknowledgedUnapproved(e.target.checked)}
-                  className="w-4 h-4 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
+                  className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
                 />
                 <span className="text-card-foreground">
                   I acknowledge these unapproved recommendations and wish to proceed

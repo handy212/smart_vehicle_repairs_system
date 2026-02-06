@@ -52,7 +52,7 @@ function GatePassSection({ workOrderId }: { workOrderId: number }) {
   }
 
   return (
-    <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+    <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
       <CardContent className="py-4 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -162,7 +162,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${stepStatus === 'completed'
-                      ? 'bg-green-500 text-white'
+                      ? 'bg-success/100 text-white'
                       : stepStatus === 'current'
                         ? 'bg-primary text-white ring-2 ring-orange-200 dark:ring-orange-900'
                         : 'bg-border text-muted-foreground'
@@ -183,7 +183,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                 </div>
                 {!isLast && (
                   <div
-                    className={`h-0.5 w-6 mx-1 ${stepStatus === 'completed' ? 'bg-green-500' : 'bg-border'
+                    className={`h-0.5 w-6 mx-1 ${stepStatus === 'completed' ? 'bg-success/100' : 'bg-border'
                       }`}
                   />
                 )}
@@ -358,7 +358,7 @@ export default function WorkOrderDetailPage() {
           </div>
           <div className="flex items-center space-x-2">
             {/* Work Order Number Badge */}
-            <div className="px-3 py-1.5 rounded-full bg-primary/10 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700/50 text-orange-700 dark:text-orange-300 font-mono text-sm font-bold shadow-sm mr-2">
+            <div className="px-3 py-1.5 rounded-full bg-primary/10 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700/50 text-primary dark:text-orange-300 font-mono text-sm font-bold shadow-sm mr-2">
               #{workOrder.work_order_number}
             </div>
 
@@ -380,7 +380,7 @@ export default function WorkOrderDetailPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowUnapprovedRecommendationsDialog(true)}
-                  className="absolute right-full mr-2 min-w-max h-9 border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                  className="absolute right-full mr-2 min-w-max h-9 border-orange-200 text-primary bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30"
                 >
                   <AlertTriangle className="w-3.5 h-3.5 mr-2" />
                   Unapproved Items
@@ -458,7 +458,7 @@ export default function WorkOrderDetailPage() {
       </div>
 
       {/* Workflow Progress Indicator with Glass Effect */}
-      <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
         <CardContent className="py-4 px-4">
           <WorkflowProgressIndicator
             status={workOrder.status}
@@ -598,7 +598,7 @@ function UnapprovedRecommendationsDialog({
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            <AlertTriangle className="w-5 h-5 text-primary" />
             Unapproved Recommendations
           </DialogTitle>
           {/* <DialogDescription className="text-xs">
@@ -630,7 +630,7 @@ function UnapprovedRecommendationsDialog({
                       <div className="flex items-center gap-2 mt-1">
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1.5 py-0 h-5 border-orange-300 text-orange-700"
+                          className="text-[10px] px-1.5 py-0 h-5 border-orange-300 text-primary"
                         >
                           {rec.priority_display || rec.priority}
                         </Badge>

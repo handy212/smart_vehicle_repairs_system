@@ -76,8 +76,8 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
                                 <span className={cn(
                                     "text-xs px-2 py-0.5 rounded-full",
                                     isActive
-                                        ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
-                                        : "bg-gray-100 dark:bg-gray-800 text-muted-foreground"
+                                        ? "bg-orange-100 dark:bg-orange-900/30 text-primary dark:text-orange-300"
+                                        : "bg-border text-muted-foreground"
                                 )}>
                                     {item.count}
                                 </span>

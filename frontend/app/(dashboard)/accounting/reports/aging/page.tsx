@@ -159,7 +159,7 @@ export default function AgingReportPage() {
                                         <div className="text-lg font-bold">{formatCurrency(report.summary.current)}</div>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-yellow-50 border-yellow-200">
+                                <Card className="bg-warning/10 border-yellow-200">
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-yellow-600">1-30 Days</CardTitle>
                                     </CardHeader>
@@ -169,10 +169,10 @@ export default function AgingReportPage() {
                                 </Card>
                                 <Card className="bg-orange-50 border-orange-200">
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-orange-600">31-60 Days</CardTitle>
+                                        <CardTitle className="text-sm font-medium text-primary">31-60 Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-bold text-orange-700">{formatCurrency(report.summary['31-60'])}</div>
+                                        <div className="text-lg font-bold text-primary">{formatCurrency(report.summary['31-60'])}</div>
                                     </CardContent>
                                 </Card>
                                 <Card className="bg-red-50 border-red-200">

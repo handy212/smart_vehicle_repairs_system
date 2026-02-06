@@ -43,6 +43,12 @@ replace_in_tsx 's/bg-gray-50 dark:bg-gray-900/bg-muted/g'
 echo "  ✓ Replacing bg-gray-50 dark:bg-gray-800 with bg-muted..."
 replace_in_tsx 's/bg-gray-50 dark:bg-gray-800/bg-muted/g'
 
+echo "  ✓ Replacing dark:bg-gray-700 (often in inputs) with bg-muted..."
+replace_in_tsx 's/dark:bg-gray-700/bg-muted/g'
+
+echo "  ✓ Replacing dark:bg-gray-700\/50 with bg-muted/50..."
+replace_in_tsx 's/dark:bg-gray-700\/50/bg-muted\/50/g'
+
 echo "  ✓ Replacing bg-gray-50\/50 dark:bg-gray-900\/50 with bg-muted/50..."
 replace_in_tsx 's/bg-gray-50\/50 dark:bg-gray-900\/50/bg-muted\/50/g'
 
@@ -74,6 +80,9 @@ replace_in_tsx 's/text-gray-700 dark:text-gray-300/text-card-foreground/g'
 echo "  ✓ Replacing text-gray-700 dark:text-gray-200 with text-foreground..."
 replace_in_tsx 's/text-gray-700 dark:text-gray-200/text-foreground/g'
 
+echo "  ✓ Replacing text-dark:text-white with text-foreground..."
+replace_in_tsx 's/dark:text-white/text-foreground/g'
+
 # 3. Border Colors
 echo "  ✓ Replacing border-gray-200 dark:border-gray-700 with border-border..."
 replace_in_tsx 's/border-gray-200 dark:border-gray-700/border-border/g'
@@ -89,6 +98,12 @@ replace_in_tsx 's/border-gray-300 dark:border-gray-600/border-border/g'
 
 echo "  ✓ Replacing border-gray-200 dark:border-gray-800 with border-border..."
 replace_in_tsx 's/border-gray-200 dark:border-gray-800/border-border/g'
+
+echo "  ✓ Replacing dark:border-gray-600 with border-border..."
+replace_in_tsx 's/dark:border-gray-600/border-border/g'
+
+echo "  ✓ Replacing dark:border-gray-700 with border-border..."
+replace_in_tsx 's/dark:border-gray-700/border-border/g'
 
 # 4. Input/Form Elements
 echo "  ✓ Replacing input backgrounds..."
@@ -131,6 +146,7 @@ echo "  ✓ Replacing icon colors..."
 replace_in_tsx 's/text-gray-400 dark:text-gray-500/text-muted-foreground/g'
 replace_in_tsx 's/text-gray-400 dark:text-gray-600/text-muted-foreground/g'
 replace_in_tsx 's/text-gray-300 dark:text-gray-700/text-muted-foreground/g'
+
 
 
 # Count instances after

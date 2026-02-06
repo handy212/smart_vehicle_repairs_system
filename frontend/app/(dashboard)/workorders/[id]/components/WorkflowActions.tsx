@@ -1100,13 +1100,13 @@ export default function WorkflowActions({
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Diagnosis Notes:</span>
-                <span className={`font-medium ${currentWorkOrder?.diagnosis_notes ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-medium ${currentWorkOrder?.diagnosis_notes ? 'text-success' : 'text-red-600 dark:text-red-400'}`}>
                   {currentWorkOrder?.diagnosis_notes ? '✓ Set' : '✗ Missing'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Estimated Total:</span>
-                <span className={`font-medium ${parseFloat(currentWorkOrder?.estimated_total || '0') > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`font-medium ${parseFloat(currentWorkOrder?.estimated_total || '0') > 0 ? 'text-success' : 'text-red-600 dark:text-red-400'}`}>
                   {parseFloat(currentWorkOrder?.estimated_total || '0') > 0
                     ? `✓ ${formatCurrency(parseFloat(currentWorkOrder?.estimated_total || '0'))}`
                     : '✗ $0.00'}
@@ -1137,7 +1137,7 @@ export default function WorkflowActions({
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
+            <DialogTitle className="flex items-center space-x-2 text-primary">
               <AlertTriangle className="w-5 h-5" />
               <span>Additional Work Found</span>
             </DialogTitle>
@@ -1403,7 +1403,7 @@ export default function WorkflowActions({
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
+            <DialogTitle className="flex items-center space-x-2 text-primary">
               <AlertTriangle className="w-5 h-5" />
               <span>Additional Work Found</span>
             </DialogTitle>
@@ -2009,7 +2009,7 @@ function QualityCheckForm({
             </div>
 
             {/* {!allChecksPassed && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
+              <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
                 <p className="text-sm text-yellow-800 dark:text-yellow-400">
                   <AlertCircle className="w-4 h-4 inline mr-1" />
                   Not all checklist items are completed. Review and complete all items before passing.
@@ -2250,7 +2250,7 @@ function CloseWorkOrderForm({
     <>
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3">
+          <div className="bg-success/10 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3">
             <p className="text-sm text-green-800 dark:text-green-400">
               <CheckCircle className="w-4 h-4 inline mr-1" />
               This will mark the work order as closed. Make sure the vehicle has been handed over to the customer.
@@ -2637,12 +2637,12 @@ function CreateInspectionForm({
               value={inspectionDate}
               readOnly
               required
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 bg-border cursor-not-allowed"
             />
           </div>
 
           {!vehicleId && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
+            <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
               <p className="text-sm text-yellow-800 dark:text-yellow-400">
                 <AlertCircle className="w-4 h-4 inline mr-1" />
                 No vehicle selected for this work order. Please ensure the work order has a vehicle assigned.

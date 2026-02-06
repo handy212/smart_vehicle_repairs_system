@@ -45,7 +45,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
     const items = [
         { label: "Pending Requests", value: stats.pending_requests, color: "text-amber-600" },
         { label: "PO Created", value: stats.ordered_requests || stats.po_created_requests, color: "text-primary" },
-        { label: "Received", value: stats.received_requests, color: "text-green-600" },
+        { label: "Received", value: stats.received_requests, color: "text-success" },
         { label: "Awaiting Stock", value: stats.awaiting_stock_requests, color: "text-purple-600" },
     ];
 
@@ -301,7 +301,7 @@ export default function PartsRequestsPage() {
                                                         {firstPart.vehicle_info || "Unknown Vehicle"}
                                                     </TableCell>
                                                     <TableCell className="text-center px-4 py-2">
-                                                        <Badge variant="secondary" className="font-mono text-xs bg-gray-100 dark:bg-gray-800 text-muted-foreground">
+                                                        <Badge variant="secondary" className="font-mono text-xs bg-border text-muted-foreground">
                                                             {woParts.length}
                                                         </Badge>
                                                     </TableCell>
@@ -309,7 +309,7 @@ export default function PartsRequestsPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-7 text-xs font-medium text-primary hover:text-orange-700 hover:bg-primary/10 dark:hover:bg-orange-900/20"
+                                                            className="h-7 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 dark:hover:bg-orange-900/20"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleViewDetails(woId);

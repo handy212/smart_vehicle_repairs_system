@@ -23,7 +23,7 @@ export default function PaymentSuccessPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {isSuccess ? (
-              <CheckCircle className="w-6 h-6 text-green-600" />
+              <CheckCircle className="w-6 h-6 text-success" />
             ) : (
               <XCircle className="w-6 h-6 text-red-600" />
             )}

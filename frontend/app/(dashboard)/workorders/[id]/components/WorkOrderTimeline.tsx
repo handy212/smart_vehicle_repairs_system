@@ -72,7 +72,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.approval_requested_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-yellow-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-warning/100 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Approval Requested
@@ -89,7 +89,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.approved_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Work Order Approved
@@ -111,7 +111,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.started_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Work Started
@@ -135,7 +135,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                             <div className="relative flex items-start">
                                 <div
                                     className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${workOrder.quality_check_passed
-                                            ? "bg-green-500"
+                                            ? "bg-success/100"
                                             : "bg-red-500"
                                         }`}
                                 ></div>
@@ -156,7 +156,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.completed_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-600 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Work Order Completed

@@ -508,7 +508,7 @@ export default function AuditLogPage() {
                   {/* Changes Table */}
                   <div>
                     <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
-                      <span className="w-1 h-4 bg-orange-500 rounded-full mr-2"></span>
+                      <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
                       Changes Log
                     </h4>
                     {selectedLog.changes && Object.keys(selectedLog.changes).length > 0 ? (
@@ -518,7 +518,7 @@ export default function AuditLogPage() {
                             <TableRow className="bg-gray-50 dark:bg-slate-900">
                               <TableHead className="w-[25%]">Field Changed</TableHead>
                               <TableHead className="w-[37.5%] text-red-600/80">From (Old Value)</TableHead>
-                              <TableHead className="w-[37.5%] text-green-600/80">To (New Value)</TableHead>
+                              <TableHead className="w-[37.5%] text-success/80">To (New Value)</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -531,7 +531,7 @@ export default function AuditLogPage() {
                               const formatValue = (val: any) => {
                                 if (val === null) return <span className="text-gray-400 italic">null</span>;
                                 if (val === "") return <span className="text-gray-400 italic">empty</span>;
-                                if (typeof val === 'boolean') return <span className={val ? "text-green-600 font-bold" : "text-red-500 font-bold"}>{String(val)}</span>;
+                                if (typeof val === 'boolean') return <span className={val ? "text-success font-bold" : "text-red-500 font-bold"}>{String(val)}</span>;
                                 if (typeof val === 'object') return <pre className="text-[10px] whitespace-pre-wrap">{JSON.stringify(val, null, 2)}</pre>;
                                 return String(val);
                               }
@@ -544,7 +544,7 @@ export default function AuditLogPage() {
                                   <TableCell className="font-mono text-xs break-all bg-red-50/30 dark:bg-red-900/10">
                                     {formatValue(oldValue)}
                                   </TableCell>
-                                  <TableCell className="font-mono text-xs break-all bg-green-50/30 dark:bg-green-900/10">
+                                  <TableCell className="font-mono text-xs break-all bg-success/10/30 dark:bg-green-900/10">
                                     {formatValue(newValue)}
                                   </TableCell>
                                 </TableRow>
@@ -570,7 +570,7 @@ export default function AuditLogPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Archive className="w-5 h-5 text-orange-600" />
+              <Archive className="w-5 h-5 text-primary" />
               Archive Audit Logs
             </DialogTitle>
             <DialogDescription className="pt-2">
@@ -594,7 +594,7 @@ export default function AuditLogPage() {
                 Logs older than {archiveDays} days will be permanently deleted.
               </p>
             </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
               <p className="text-xs text-yellow-800 dark:text-yellow-200">
                 <strong>Warning:</strong> This action cannot be undone. Make sure to download logs before archiving if you need to keep a record.
               </p>
@@ -615,7 +615,7 @@ export default function AuditLogPage() {
               size="sm"
               onClick={handleArchive}
               disabled={archiveMutation.isPending}
-              className="h-8 text-xs bg-orange-600 hover:bg-orange-700"
+              className="h-8 text-xs bg-primary hover:bg-orange-700"
             >
               {archiveMutation.isPending ? "Archiving..." : "Archive Logs"}
             </Button>

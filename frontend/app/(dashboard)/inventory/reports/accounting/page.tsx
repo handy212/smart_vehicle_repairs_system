@@ -165,7 +165,7 @@ export default function InventoryAccountingPage() {
                                 <Package className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-orange-600">
+                                <div className="text-2xl font-bold text-primary">
                                     {formatCurrency(data.cogs_analysis.cogs)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -180,7 +180,7 @@ export default function InventoryAccountingPage() {
                                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className={`text-2xl font-bold ${data.cogs_analysis.inventory_turnover_ratio >= 4 ? 'text-green-600' : data.cogs_analysis.inventory_turnover_ratio >= 2 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                <div className={`text-2xl font-bold ${data.cogs_analysis.inventory_turnover_ratio >= 4 ? 'text-success' : data.cogs_analysis.inventory_turnover_ratio >= 2 ? 'text-yellow-600' : 'text-red-600'}`}>
                                     {data.cogs_analysis.inventory_turnover_ratio.toFixed(2)}x
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -195,7 +195,7 @@ export default function InventoryAccountingPage() {
                                 <Clock className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className={`text-2xl font-bold ${data.cogs_analysis.days_inventory_outstanding <= 90 ? 'text-green-600' : data.cogs_analysis.days_inventory_outstanding <= 180 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                <div className={`text-2xl font-bold ${data.cogs_analysis.days_inventory_outstanding <= 90 ? 'text-success' : data.cogs_analysis.days_inventory_outstanding <= 180 ? 'text-yellow-600' : 'text-red-600'}`}>
                                     {data.cogs_analysis.days_inventory_outstanding.toFixed(0)} days
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -217,7 +217,7 @@ export default function InventoryAccountingPage() {
                                 </div>
                                 <div>
                                     <div className="text-sm text-muted-foreground">Potential Profit</div>
-                                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                    <div className="text-2xl font-bold text-success">
                                         {formatCurrency(data.inventory_summary.potential_profit)}
                                     </div>
                                 </div>
@@ -263,10 +263,10 @@ export default function InventoryAccountingPage() {
                                                     <TableCell className="text-right font-mono">
                                                         {formatCurrency(category.selling_value)}
                                                     </TableCell>
-                                                    <TableCell className="text-right font-mono text-green-600">
+                                                    <TableCell className="text-right font-mono text-success">
                                                         {formatCurrency(category.potential_profit)}
                                                     </TableCell>
-                                                    <TableCell className={`text-right font-bold ${category.margin_percent >= 30 ? 'text-green-600' : category.margin_percent >= 15 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                                    <TableCell className={`text-right font-bold ${category.margin_percent >= 30 ? 'text-success' : category.margin_percent >= 15 ? 'text-yellow-600' : 'text-red-600'}`}>
                                                         {category.margin_percent.toFixed(2)}%
                                                     </TableCell>
                                                 </TableRow>
@@ -313,9 +313,9 @@ export default function InventoryAccountingPage() {
                                             </div>
                                             <div className="w-full bg-border rounded-full h-2">
                                                 <div
-                                                    className={`h-2 rounded-full ${index === 0 ? 'bg-green-500' :
-                                                        index === 1 ? 'bg-yellow-500' :
-                                                            index === 2 ? 'bg-orange-500' :
+                                                    className={`h-2 rounded-full ${index === 0 ? 'bg-success/100' :
+                                                        index === 1 ? 'bg-warning/100' :
+                                                            index === 2 ? 'bg-primary' :
                                                                 'bg-red-500'
                                                         }`}
                                                     style={{ width: `${percentage}%` }}

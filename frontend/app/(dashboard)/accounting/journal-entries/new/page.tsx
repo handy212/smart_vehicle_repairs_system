@@ -252,7 +252,7 @@ export default function NewJournalEntryPage() {
                             </div>
                             <div className="flex flex-col items-end">
                                 <span className="text-gray-500 text-xs">Difference</span>
-                                <span className={isBalanced ? "text-green-600" : "text-red-600"}>
+                                <span className={isBalanced ? "text-success" : "text-red-600"}>
                                     {formatCurrency(Math.abs(totalDebits - totalCredits))}
                                 </span>
                             </div>

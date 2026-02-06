@@ -43,7 +43,7 @@ function getDueStatusBadge(schedule: VehicleServiceSchedule) {
   if (!schedule.is_due) {
     if (schedule.days_until_due !== undefined && schedule.days_until_due > 0) {
       if (schedule.days_until_due <= 7) {
-        return <Badge variant="default" className="bg-yellow-500 hover:bg-yellow-600">Due Soon</Badge>;
+        return <Badge variant="default" className="bg-warning/100 hover:bg-yellow-600">Due Soon</Badge>;
       }
       return <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400">Upcoming</Badge>;
     }
@@ -285,12 +285,12 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                     <TableCell className="text-sm">
                       <div className="flex items-center text-muted-foreground">
                         {schedule.interval_months && (
-                          <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-xs mr-2">
+                          <span className="bg-border px-2 py-0.5 rounded text-xs mr-2">
                             {schedule.interval_months} mo
                           </span>
                         )}
                         {schedule.interval_miles && (
-                          <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-xs">
+                          <span className="bg-border px-2 py-0.5 rounded text-xs">
                             {schedule.interval_miles.toLocaleString()} mi
                           </span>
                         )}
@@ -310,7 +310,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                             className="h-8 w-8 p-0"
                             title="Edit Schedule"
                           >
-                            <Edit className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                            <Edit className="w-3.5 h-3.5 text-info" />
                           </Button>
                         </PermissionGuard>
 
@@ -321,7 +321,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                             setSelectedSchedule(schedule);
                             setShowCompleteDialog(true);
                           }}
-                          className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          className="h-8 px-2 text-success hover:text-green-700 hover:bg-success/10 dark:hover:bg-green-900/20"
                         >
                           <Check className="w-3.5 h-3.5 mr-1" />
                           Complete
@@ -512,7 +512,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md flex items-start gap-3 text-sm text-blue-700 dark:text-blue-300">
+            <div className="bg-info/10 dark:bg-blue-900/20 p-3 rounded-md flex items-start gap-3 text-sm text-blue-700 dark:text-blue-300">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <p>This will update the last service date/mileage and automatically calculate the next due date.</p>
             </div>

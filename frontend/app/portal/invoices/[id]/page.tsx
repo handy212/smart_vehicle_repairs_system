@@ -289,7 +289,7 @@ export default function InvoiceDetailPage() {
                       <span className="text-sm font-medium text-card-foreground">
                         Total Paid:
                       </span>
-                      <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                      <span className="text-lg font-bold text-success">
                         {formatCurrency(payments.reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0))}
                       </span>
                     </div>
@@ -327,7 +327,7 @@ export default function InvoiceDetailPage() {
                 </div>
               )}
               {invoice.discount_amount && parseFloat(invoice.discount_amount) > 0 && (
-                <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                <div className="flex justify-between text-sm text-success">
                   <span>Discount</span>
                   <span>
                     -{formatCurrency(invoice.discount_amount)}

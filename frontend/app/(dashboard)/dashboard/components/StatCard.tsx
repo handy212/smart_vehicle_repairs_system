@@ -94,7 +94,7 @@ export const StatCard = memo(function StatCard({
                 className={cn(
                   "flex items-center gap-1 mt-2 text-xs font-medium",
                   trend.positive !== false
-                    ? "text-green-600 dark:text-green-400"
+                    ? "text-success"
                     : "text-red-600 dark:text-red-400"
                 )}
               >

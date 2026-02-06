@@ -309,7 +309,7 @@ export default function EstimateDetailPage() {
                 </span>
                 {estimate.work_order && estimate.work_order_number && (
                   <Link href={`/workorders/${typeof estimate.work_order === 'object' ? estimate.work_order.id : estimate.work_order}`}>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors dark:bg-orange-950/20 dark:border-orange-800 dark:text-primary">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-orange-100 transition-colors dark:bg-orange-950/20 dark:border-orange-800 dark:text-primary">
                       <span className="h-2 w-2 rounded-full bg-primary" />
                       Work Order #{estimate.work_order_number}
                     </span>
@@ -326,7 +326,7 @@ export default function EstimateDetailPage() {
               <Button
                 onClick={handleConvertToInvoice}
                 disabled={isConverting}
-                className="bg-green-600 hover:bg-green-700 text-white mr-2"
+                className="bg-success hover:bg-green-700 text-white mr-2"
               >
                 {isConverting ? "Converting..." : "Convert to Invoice"}
               </Button>
@@ -447,28 +447,28 @@ export default function EstimateDetailPage() {
           <TabsList className="bg-card p-1 border border-border rounded-lg w-full justify-start h-auto flex-wrap">
             <TabsTrigger
               value="estimate"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <FileCheck className="w-4 h-4" />
               Estimate Details
             </TabsTrigger>
             <TabsTrigger
               value="activity"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <Activity className="w-4 h-4" />
               Activity Log
             </TabsTrigger>
             <TabsTrigger
               value="reminders"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <Clock className="w-4 h-4" />
               Reminders
             </TabsTrigger>
             <TabsTrigger
               value="notes"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <StickyNote className="w-4 h-4" />
               Notes

@@ -192,7 +192,7 @@ export default function AccrualsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <Card className="bg-primary/5 border-orange-100">
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium text-orange-700">How Candidates Work</CardTitle>
+                                <CardTitle className="text-sm font-medium text-primary">How Candidates Work</CardTitle>
                             </CardHeader>
                             <CardContent className="text-sm text-primary">
                                 The system scans for <strong>Received but Unbilled Purchase Orders</strong> (Accrued Expense) and <strong>Completed but Uninvoiced Work Orders</strong> (Accrued Revenue). Review and create accruals to recognize them in the correct period.

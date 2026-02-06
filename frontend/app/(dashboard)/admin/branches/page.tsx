@@ -174,7 +174,7 @@ export default function BranchesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Active</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-400">
+              <p className="text-xl font-bold text-success">
                 {activeBranches}
               </p>
             </div>
@@ -337,7 +337,7 @@ export default function BranchesPage() {
                           )}
                           {branch.is_active ? (
                             <div className="flex items-center space-x-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-success/100"></span>
                               <span className="text-xs text-green-700 font-medium">Active</span>
                             </div>
                           ) : (
@@ -364,7 +364,7 @@ export default function BranchesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setEditingBranch(branch)}
-                              className="h-7 w-7 p-0 text-gray-500 hover:text-green-600"
+                              className="h-7 w-7 p-0 text-gray-500 hover:text-success"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </Button>

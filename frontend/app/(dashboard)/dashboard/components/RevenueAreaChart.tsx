@@ -105,7 +105,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
             </p>
             {dayOverDay && (
               <p className={`text-xs flex items-center gap-1 ${dayOverDay.change >= 0
-                ? 'text-green-600 dark:text-green-400'
+                ? 'text-success'
                 : 'text-red-600 dark:text-red-400'
                 }`}>
                 {dayOverDay.change >= 0 ? (
@@ -164,8 +164,8 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
           </p>
         </div>
         
-        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <p className="text-xs text-green-600 dark:text-green-400 mb-1">Average Daily</p>
+        <div className="p-3 rounded-lg bg-success/10 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <p className="text-xs text-success mb-1">Average Daily</p>
           <p className="text-lg font-bold text-green-900 dark:text-green-100">
             ${parseFloat(String(stats.average)).toLocaleString(undefined, {
               minimumFractionDigits: 2,

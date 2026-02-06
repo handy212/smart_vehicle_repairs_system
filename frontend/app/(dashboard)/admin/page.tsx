@@ -58,7 +58,7 @@ export default function AdminDashboardPage() {
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
-            <span className="text-lg font-bold text-green-600 dark:text-green-400">{activeUsers}</span>
+            <span className="text-lg font-bold text-success">{activeUsers}</span>
           </CardContent>
         </Card>
 
@@ -110,7 +110,7 @@ export default function AdminDashboardPage() {
               <Link href="/admin/audit-log">
                 <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
                   <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mb-1">
-                    <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <FileText className="h-4 w-4 text-primary" />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Audit Log</span>
@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center space-x-2">
                         <span className={cn("w-2 h-2 rounded-full",
-                          log.action === 'create' ? 'bg-green-500' :
+                          log.action === 'create' ? 'bg-success/100' :
                             log.action === 'update' ? 'bg-primary' :
                               log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
                         )}></span>

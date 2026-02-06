@@ -379,7 +379,7 @@ export default function MobileWorkOrderDetailPage() {
     const colors: Record<string, string> = {
       draft: "bg-gray-100 text-gray-700",
       pending: "bg-yellow-100 text-yellow-700",
-      ordered: "bg-orange-100 text-orange-700",
+      ordered: "bg-orange-100 text-primary",
       ready: "bg-green-100 text-green-700",
       received: "bg-green-100 text-green-700",
       installed: "bg-green-100 text-green-700",
@@ -399,7 +399,7 @@ export default function MobileWorkOrderDetailPage() {
           </Button>
         </Link>
         {!isOnline && (
-          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+          <Badge variant="outline" className="bg-orange-50 text-primary border-orange-200">
             Offline
           </Badge>
         )}
@@ -416,7 +416,7 @@ export default function MobileWorkOrderDetailPage() {
               className={cn(
                 "text-xs",
                 workOrder.status === "in_progress" &&
-                "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+                "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300",
                 workOrder.status === "assigned" &&
                 "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
                 workOrder.status === "approved" &&
@@ -424,7 +424,7 @@ export default function MobileWorkOrderDetailPage() {
                 workOrder.status === "completed" &&
                 "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
                 workOrder.status === "paused" &&
-                "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300"
               )}
             >
               {workOrder.status?.replace("_", " ").toUpperCase()}
@@ -571,7 +571,7 @@ export default function MobileWorkOrderDetailPage() {
 
           {canComplete && (
             <Button
-              className="w-full bg-green-600 hover:bg-green-700"
+              className="w-full bg-success hover:bg-green-700"
               onClick={() => handleStatusChangeAction("complete")}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -582,7 +582,7 @@ export default function MobileWorkOrderDetailPage() {
           {canFlagAdditionalWork && (
             <Button
               variant="outline"
-              className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+              className="w-full border-orange-300 text-primary hover:bg-orange-50"
               onClick={() => setShowAdditionalWorkDialog(true)}
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
@@ -666,7 +666,7 @@ export default function MobileWorkOrderDetailPage() {
                 className={cn(
                   "p-3 rounded-lg border transition-colors cursor-pointer",
                   task.status === "completed"
-                    ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800"
+                    ? "bg-success/10 border-green-200 dark:bg-green-950 dark:border-green-800"
                     : "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                 )}
                 onClick={() => handleToggleTask(task)}
@@ -674,7 +674,7 @@ export default function MobileWorkOrderDetailPage() {
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">
                     {task.status === "completed" ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CheckCircle2 className="h-5 w-5 text-success" />
                     ) : (
                       <Circle className="h-5 w-5 text-gray-400" />
                     )}
@@ -712,12 +712,12 @@ export default function MobileWorkOrderDetailPage() {
       {!isOnline && (
         <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800">
           <CardContent className="pt-4 flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
             <div className="flex-1">
               <div className="text-sm font-medium text-orange-900 dark:text-orange-200">
                 Offline Mode
               </div>
-              <div className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+              <div className="text-xs text-primary dark:text-orange-300 mt-1">
                 Changes will sync automatically when you're back online.
               </div>
             </div>
@@ -759,7 +759,7 @@ export default function MobileWorkOrderDetailPage() {
             </Button>
             <Button
               onClick={handleAdditionalWork}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-primary hover:bg-orange-700"
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
               Flag for Approval

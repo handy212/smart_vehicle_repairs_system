@@ -144,7 +144,7 @@ export default function RecordPaymentDialog({
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Balance Due</p>
-              <p className="text-lg font-bold text-orange-600">
+              <p className="text-lg font-bold text-primary">
                 {formatCurrency(balanceDue)}
               </p>
             </div>

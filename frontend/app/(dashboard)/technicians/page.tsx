@@ -60,9 +60,9 @@ function TechniciansContent() {
 
     const getStatusColor = (status: Technician['current_status']) => {
         switch (status) {
-            case 'available': return "bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
-            case 'busy': return "bg-primary/15 text-orange-700 dark:text-primary border-orange-200 dark:border-orange-800";
-            case 'break': return "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800";
+            case 'available': return "bg-success/100/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
+            case 'busy': return "bg-primary/15 text-primary dark:text-primary border-orange-200 dark:border-orange-800";
+            case 'break': return "bg-primary/15 text-primary dark:text-orange-400 border-orange-200 dark:border-orange-800";
             case 'offline': return "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-border";
             default: return "";
         }
@@ -100,7 +100,7 @@ function TechniciansContent() {
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Available</span>
-                            <span className="text-lg font-bold text-green-600 dark:text-green-400">{data.results.filter(t => t.current_status === 'available').length}</span>
+                            <span className="text-lg font-bold text-success">{data.results.filter(t => t.current_status === 'available').length}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
@@ -187,7 +187,7 @@ function TechniciansContent() {
             {isLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-64 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                        <div key={i} className="h-64 rounded-xl bg-border animate-pulse" />
                     ))}
                 </div>
             ) : (
@@ -225,7 +225,7 @@ function TechniciansContent() {
                                                 {tech.skills.length > 0 && (
                                                     <div className="flex flex-wrap gap-1">
                                                         {tech.skills.slice(0, 3).map((skill) => (
-                                                            <Badge key={skill.id} variant="secondary" className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-800">
+                                                            <Badge key={skill.id} variant="secondary" className="text-[10px] px-2 py-0.5 bg-border">
                                                                 {skill.name}
                                                             </Badge>
                                                         ))}

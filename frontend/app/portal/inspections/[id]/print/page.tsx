@@ -43,7 +43,7 @@ export default function InspectionPrintPage() {
   const getResultIcon = (result?: string) => {
     switch (result) {
       case "pass":
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-success" />;
       case "fail":
         return <XCircle className="w-4 h-4 text-red-600" />;
       case "advisory":
@@ -162,7 +162,7 @@ export default function InspectionPrintPage() {
             )}
             {passedItems.length > 0 && (
               <div>
-                <span className="font-medium text-green-600">Passed: {passedItems.length}</span>
+                <span className="font-medium text-success">Passed: {passedItems.length}</span>
               </div>
             )}
           </div>

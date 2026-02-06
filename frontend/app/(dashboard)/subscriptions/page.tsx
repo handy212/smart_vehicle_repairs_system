@@ -428,10 +428,10 @@ export default function SubscriptionsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</p>
-                  <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{activeSubscriptions}</p>
+                  <p className="text-2xl font-black text-success mt-1">{activeSubscriptions}</p>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <div className="w-10 h-10 rounded-lg bg-success/10 dark:bg-green-950/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-success" />
                 </div>
               </div>
             </CardContent>

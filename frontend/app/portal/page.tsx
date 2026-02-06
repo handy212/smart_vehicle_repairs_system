@@ -91,7 +91,7 @@ export default function PortalHomePage() {
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Upcoming Service</h2>
-              <Link href="/portal/appointments" className="text-xs font-medium text-primary hover:text-orange-700 flex items-center">
+              <Link href="/portal/appointments" className="text-xs font-medium text-primary hover:text-primary flex items-center">
                 View All <ArrowRight className="w-3 h-3 ml-1" />
               </Link>
             </div>
@@ -133,7 +133,7 @@ export default function PortalHomePage() {
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Recent Billing</h2>
-              <Link href="/portal/invoices" className="text-xs font-medium text-primary hover:text-orange-700 flex items-center">
+              <Link href="/portal/invoices" className="text-xs font-medium text-primary hover:text-primary flex items-center">
                 View All <ArrowRight className="w-3 h-3 ml-1" />
               </Link>
             </div>

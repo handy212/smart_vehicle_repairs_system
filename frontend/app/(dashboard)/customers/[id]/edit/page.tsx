@@ -607,7 +607,7 @@ export default function EditCustomerPage() {
             <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
               <CardHeader>
                 <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
-                  <KeyRound className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <KeyRound className="w-5 h-5 text-primary" />
                   Portal Access & Password Management
                 </CardTitle>
               </CardHeader>
@@ -751,7 +751,7 @@ export default function EditCustomerPage() {
                                 title="Copy password"
                               >
                                 {passwordCopied ? (
-                                  <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                                  <span className="text-xs text-success">Copied!</span>
                                 ) : (
                                   <Copy className="w-4 h-4" />
                                 )}
@@ -796,7 +796,7 @@ export default function EditCustomerPage() {
                               resetPasswordMutation.mutate({ password: newPassword, sendEmail });
                             }}
                             disabled={resetPasswordMutation.isPending || !newPassword}
-                            className="dark:bg-orange-600 dark:hover:bg-orange-700 flex-1"
+                            className="dark:bg-primary dark:hover:bg-orange-700 flex-1"
                           >
                             {resetPasswordMutation.isPending ? (
                               <span className="flex items-center gap-2">

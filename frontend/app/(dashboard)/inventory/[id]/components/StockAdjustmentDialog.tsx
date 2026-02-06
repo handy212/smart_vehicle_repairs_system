@@ -138,7 +138,7 @@ export default function StockAdjustmentDialog({
             )}
 
             {activeBranch && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 rounded">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-info/10 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 rounded">
                 <Building2 className="w-4 h-4" />
                 <span>Adjusting stock for: <strong className="text-foreground">{activeBranch.name}</strong></span>
               </div>

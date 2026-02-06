@@ -128,7 +128,7 @@ export default function MyEstimatesPage() {
       </div>
 
       {pendingEstimates.length > 0 && (
-        <Card className="border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20">
+        <Card className="border-yellow-300 bg-warning/10 dark:bg-yellow-900/20">
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
               <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />

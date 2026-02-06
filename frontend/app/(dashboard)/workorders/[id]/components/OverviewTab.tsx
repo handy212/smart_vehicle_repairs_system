@@ -298,7 +298,7 @@ export default function WorkOrderOverviewTab({
           <Card className="border-orange-200 dark:border-orange-800">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <AlertCircle className="w-5 h-5 text-primary" />
                 <span>Related Work Orders</span>
                 {(workOrder as any).is_warranty_rework && (
                   <Badge variant="warning" className="ml-2">Warranty Rework</Badge>
@@ -311,7 +311,7 @@ export default function WorkOrderOverviewTab({
                 <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      <LinkIcon className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                      <LinkIcon className="w-4 h-4 text-primary" />
                       <span className="text-sm font-medium text-foreground">
                         Original Work Order
                       </span>
@@ -452,7 +452,7 @@ export default function WorkOrderOverviewTab({
                       <span className={`font-medium ${
                         parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0")
                           ? "text-red-600 dark:text-red-400"
-                          : "text-green-600 dark:text-green-400"
+                          : "text-success"
                       }`}>
                         {parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0") ? "+" : ""}
                         {formatCurrency((parseFloat((workOrder as any).actual_total) - parseFloat((workOrder as any).estimated_total || "0")))}

@@ -209,7 +209,7 @@ export default function PartCategoriesPage() {
                         {category.full_path || category.name}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-center">
-                        <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-muted-foreground hover:bg-gray-100">
+                        <Badge variant="secondary" className="bg-border text-muted-foreground hover:bg-gray-100">
                           {category.subcategories_count || 0}
                         </Badge>
                       </TableCell>

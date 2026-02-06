@@ -136,7 +136,7 @@ export default function CreditNoteDetailPage() {
                         <Button
                             onClick={() => approveMutation.mutate()}
                             disabled={approveMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-success hover:bg-green-700"
                         >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             {approveMutation.isPending ? "Approving..." : "Approve & Issue"}

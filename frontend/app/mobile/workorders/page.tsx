@@ -177,9 +177,9 @@ export default function MobileWorkOrdersPage() {
                     className={cn(
                       "px-2 py-1 rounded text-xs font-medium mb-2",
                       wo.status === "in_progress" &&
-                      "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+                      "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300",
                       wo.status === "pending" &&
-                      "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+                      "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300",
                       wo.status === "waiting_for_parts" &&
                       "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
                       wo.status === "completed" &&

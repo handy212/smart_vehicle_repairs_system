@@ -366,7 +366,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                    <p className="text-xl sm:text-2xl font-bold text-success">
                       {formatCurrency(revenueData.summary.total_paid)}
                     </p>
                   </CardContent>
@@ -604,7 +604,7 @@ export default function ReportsPage() {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Profit Margin</p>
-                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                    <p className="text-xl sm:text-2xl font-bold text-success">
                       {profitMarginData.profit.profit_margin.toFixed(1)}%
                     </p>
                   </div>
@@ -685,7 +685,7 @@ export default function ReportsPage() {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
-                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                    <p className="text-xl sm:text-2xl font-bold text-success">
                       {workOrderStats.summary?.completed || 0}
                     </p>
                   </div>
@@ -780,7 +780,7 @@ export default function ReportsPage() {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
-                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                    <p className="text-xl sm:text-2xl font-bold text-success">
                       {appointmentStats.summary?.completed || 0}
                     </p>
                   </div>
@@ -889,7 +889,7 @@ export default function ReportsPage() {
                                 className={
                                   item.is_critical
                                     ? "text-red-600 dark:text-red-400 font-medium"
-                                    : "text-orange-600 dark:text-orange-400 font-medium"
+                                    : "text-primary font-medium"
                                 }
                               >
                                 {item.is_critical ? "Critical" : "Low Stock"}
@@ -934,7 +934,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                    <p className="text-xl sm:text-2xl font-bold text-success">
                       {customerStats.new_customers || 0}
                     </p>
                   </CardContent>
@@ -1160,7 +1160,7 @@ export default function ReportsPage() {
                           <TableCell className="font-mono text-xs sm:text-sm">{inv.invoice_number}</TableCell>
                           <TableCell className="text-xs sm:text-sm">{format(new Date(inv.invoice_date), "MMM dd, yyyy")}</TableCell>
                           <TableCell className="text-xs sm:text-sm">{formatCurrency(parseFloat(inv.subtotal || "0"))}</TableCell>
-                          <TableCell className="text-xs sm:text-sm font-bold text-orange-600">
+                          <TableCell className="text-xs sm:text-sm font-bold text-primary">
                             {inv.discount_percentage ? `${inv.discount_percentage}%` : `${formatCurrency(parseFloat(inv.discount_amount || "0"))}`}
                           </TableCell>
                           <TableCell className="text-xs sm:text-sm italic">{inv.discount_reason || "-"}</TableCell>

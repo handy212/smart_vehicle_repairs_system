@@ -55,7 +55,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
     { label: "Total Parts", value: stats.total_parts, color: "text-primary" },
     { label: "Low Stock", value: stats.low_stock, color: "text-amber-600" },
     { label: "Out of Stock", value: stats.out_of_stock, color: "text-red-600" },
-    { label: "Total Value", value: stats.total_value, isCurrency: true, color: "text-green-600" },
+    { label: "Total Value", value: stats.total_value, isCurrency: true, color: "text-success" },
   ];
 
   return (
@@ -322,7 +322,7 @@ export default function InventoryPage() {
               }
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"
@@ -338,7 +338,7 @@ export default function InventoryPage() {
             })}
             {/* Bulk Actions Badge if selection active */}
             {bulkSelection.selectedCount > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-primary/10 text-orange-700 border-orange-100 font-normal">
+              <Badge variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-primary/10 text-primary border-orange-100 font-normal">
                 {bulkSelection.selectedCount} selected
                 <X
                   className="w-3 h-3 cursor-pointer hover:text-orange-900"

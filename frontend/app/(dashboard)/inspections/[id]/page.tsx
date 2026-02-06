@@ -141,7 +141,7 @@ export default function InspectionDetailPage() {
                 <Calendar className="w-3.5 h-3.5" />
                 {format(new Date(inspection.inspection_date), "MMM dd, yyyy")}
               </span>
-              {vehicle?.license_plate && <span className="flex items-center gap-1 font-medium text-foreground px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">{vehicle.license_plate}</span>}
+              {vehicle?.license_plate && <span className="flex items-center gap-1 font-medium text-foreground px-1.5 py-0.5 bg-border rounded">{vehicle.license_plate}</span>}
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function InspectionDetailPage() {
               <Button variant="outline" size="sm" onClick={() => rejectMutation.mutate()} disabled={rejectMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                 Reject
               </Button>
-              <Button size="sm" onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending} className="bg-green-600 hover:bg-green-700">
+              <Button size="sm" onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending} className="bg-success hover:bg-green-700">
                 Approve
               </Button>
             </>
@@ -210,7 +210,7 @@ export default function InspectionDetailPage() {
             <div className="flex gap-3 text-sm">
               {(inspection.result_counts?.fail ?? 0) > 0 && <span className="text-red-600 font-medium">{inspection.result_counts?.fail} Fail</span>}
               {(inspection.result_counts?.advisory ?? 0) > 0 && <span className="text-yellow-600 font-medium">{inspection.result_counts?.advisory} Visual</span>}
-              {(inspection.result_counts?.pass ?? 0) > 0 && <span className="text-green-600 font-medium">{inspection.result_counts?.pass} Pass</span>}
+              {(inspection.result_counts?.pass ?? 0) > 0 && <span className="text-success font-medium">{inspection.result_counts?.pass} Pass</span>}
               {!inspection.result_counts?.fail && !inspection.result_counts?.advisory && !inspection.result_counts?.pass && <span className="text-muted-foreground">No data</span>}
             </div>
           </CardContent>
@@ -268,9 +268,9 @@ export default function InspectionDetailPage() {
                             <div className="flex items-start gap-4">
                               <div className={cn(
                                 "w-2 h-2 rounded-full mt-2 flex-shrink-0",
-                                result.result === 'pass' ? 'bg-green-500' :
+                                result.result === 'pass' ? 'bg-success/100' :
                                   result.result === 'fail' ? 'bg-red-500' :
-                                    result.result === 'advisory' ? 'bg-yellow-500' : 'bg-gray-300'
+                                    result.result === 'advisory' ? 'bg-warning/100' : 'bg-gray-300'
                               )} />
                               <div className="flex-1 space-y-1">
                                 <div className="flex items-start justify-between">
@@ -458,7 +458,7 @@ export default function InspectionDetailPage() {
               <div className="flex gap-3">
                 <div className="w-8 flex flex-col items-center">
                   <div className="w-2 h-2 rounded-full bg-primary" />
-                  <div className="w-0.5 h-full bg-gray-100 dark:bg-gray-800 -mb-2" />
+                  <div className="w-0.5 h-full bg-border -mb-2" />
                 </div>
                 <div className="pb-4">
                   <p className="text-xs text-muted-foreground">Created</p>
@@ -468,8 +468,8 @@ export default function InspectionDetailPage() {
               {inspection.completed_at && (
                 <div className="flex gap-3">
                   <div className="w-8 flex flex-col items-center">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    {inspection.sent_to_customer_at && <div className="w-0.5 h-full bg-gray-100 dark:bg-gray-800 -mb-2" />}
+                    <div className="w-2 h-2 rounded-full bg-success/100" />
+                    {inspection.sent_to_customer_at && <div className="w-0.5 h-full bg-border -mb-2" />}
                   </div>
                   <div className="pb-4">
                     <p className="text-xs text-muted-foreground">Completed</p>

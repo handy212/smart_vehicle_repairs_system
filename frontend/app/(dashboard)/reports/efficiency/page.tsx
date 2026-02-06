@@ -108,10 +108,10 @@ export default function TechnicianEfficiencyPage() {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <span className={efficiency >= 100 ? "text-green-600 font-bold" : efficiency < 80 ? "text-yellow-600" : ""}>
+                                                    <span className={efficiency >= 100 ? "text-success font-bold" : efficiency < 80 ? "text-yellow-600" : ""}>
                                                         {efficiency.toFixed(1)}%
                                                     </span>
-                                                    {efficiency >= 100 && <TrendingUp className="w-4 h-4 text-green-600" />}
+                                                    {efficiency >= 100 && <TrendingUp className="w-4 h-4 text-success" />}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right font-mono">

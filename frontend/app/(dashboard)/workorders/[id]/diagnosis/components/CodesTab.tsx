@@ -489,7 +489,7 @@ function CodeDialog({
                       >
                         <div className="flex items-start gap-2">
                           <div className="flex-1">
-                            <div className="font-mono font-semibold text-sm text-orange-900 group-hover:text-orange-700">
+                            <div className="font-mono font-semibold text-sm text-orange-900 group-hover:text-primary">
                               {libCode.code_number}
                             </div>
                             <div className="text-xs text-gray-700 mt-0.5 line-clamp-1 font-medium">

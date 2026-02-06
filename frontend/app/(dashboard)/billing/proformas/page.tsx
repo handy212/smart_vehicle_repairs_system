@@ -216,7 +216,7 @@ export default function ProformasPage() {
                                                     </Link>
                                                     <PermissionGuard permission="edit_invoices">
                                                         <Link href={`/billing/invoices/${invoice.id}/edit`}>
-                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-green-600">
+                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-success">
                                                                 <Edit className="w-3.5 h-3.5" />
                                                             </Button>
                                                         </Link>

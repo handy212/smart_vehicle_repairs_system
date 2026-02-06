@@ -129,7 +129,7 @@ export default function InspectionDetailPage() {
   const getResultIcon = (result?: string) => {
     switch (result) {
       case "pass":
-        return <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />;
+        return <CheckCircle className="w-3.5 h-3.5 text-success" />;
       case "fail":
         return <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />;
       case "advisory":
@@ -202,7 +202,7 @@ export default function InspectionDetailPage() {
                   size="sm"
                   onClick={() => setShowApproveDialog(true)}
                   disabled={approveMutation.isPending || rejectMutation.isPending}
-                  className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                  className="h-8 bg-success hover:bg-green-700 text-white"
                 >
                   <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
                   Approve
@@ -238,7 +238,7 @@ export default function InspectionDetailPage() {
         <Card className="border-none shadow-sm">
           <CardContent className="p-3">
             <div className="flex items-center gap-1.5 mb-1">
-              <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+              <CheckCircle className="w-3.5 h-3.5 text-success" />
               <p className="text-xs text-muted-foreground">Passed</p>
             </div>
             <p className="text-lg font-bold text-foreground">
@@ -516,7 +516,7 @@ export default function InspectionDetailPage() {
                 Cancel
               </Button>
               <Button
-                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 sm:flex-none bg-success hover:bg-green-700 text-white"
                 onClick={handleApprove}
                 disabled={!customerSignature || approveMutation.isPending}
               >

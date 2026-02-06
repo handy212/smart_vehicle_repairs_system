@@ -587,7 +587,7 @@ export default function InvoiceDetailPage() {
                 <div className="space-y-1 pt-2 border-t border-dashed border-gray-200">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Amount Paid</span>
-                    <span className="text-green-600 font-medium">{formatCurrency(parseFloat(invoice.amount_paid || "0"))}</span>
+                    <span className="text-success font-medium">{formatCurrency(parseFloat(invoice.amount_paid || "0"))}</span>
                   </div>
                   <div className="flex justify-between text-base font-semibold">
                     <span className="text-gray-700">Balance Due</span>
@@ -624,7 +624,7 @@ export default function InvoiceDetailPage() {
                       <div key={payment.id} className="p-6 hover:bg-gray-50/50 transition-colors">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-success">
                               <DollarSign className="w-6 h-6" />
                             </div>
                             <div>
@@ -668,7 +668,7 @@ export default function InvoiceDetailPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-9 px-3 text-primary hover:text-orange-700 hover:bg-primary/10 rounded-none border-r"
+                                  className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10 rounded-none border-r"
                                   onClick={() => setSelectedPaymentForAllocation(payment)}
                                 >
                                   <DollarSign className="w-4 h-4 mr-2" /> Allocate

@@ -88,7 +88,7 @@ function FixedAssetsContent() {
             cell: (asset: FixedAsset) => (
                 <Link
                     href={`/fixed-assets/${asset.id}`}
-                    className="font-mono text-xs font-bold text-primary hover:text-orange-700 hover:underline"
+                    className="font-mono text-xs font-bold text-primary hover:text-primary hover:underline"
                 >
                     {asset.asset_number}
                 </Link>
@@ -126,7 +126,7 @@ function FixedAssetsContent() {
             className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
                 <div className="flex flex-col items-end">
-                    <span className="font-mono text-xs font-bold text-green-600 dark:text-green-400">
+                    <span className="font-mono text-xs font-bold text-success">
                         {formatCurrency(asset.acquisition_cost, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
@@ -151,7 +151,7 @@ function FixedAssetsContent() {
             className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
                 <div className="flex flex-col items-end">
-                    <span className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">
+                    <span className="font-mono text-xs font-bold text-primary">
                         {formatCurrency(asset.accumulated_depreciation, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
@@ -264,7 +264,7 @@ function FixedAssetsContent() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Depreciation
                                         </p>
-                                        <p className="text-2xl font-black text-orange-600 dark:text-orange-400 mt-1">
+                                        <p className="text-2xl font-black text-primary mt-1">
                                             {formatCurrency(stats.total_accumulated_depreciation, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -273,7 +273,7 @@ function FixedAssetsContent() {
                                     </div>
                                     <div className="flex-shrink-0">
                                         <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
-                                            <TrendingDown className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                            <TrendingDown className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>
                                 </div>
@@ -287,7 +287,7 @@ function FixedAssetsContent() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Total Investment
                                         </p>
-                                        <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">
+                                        <p className="text-2xl font-black text-success mt-1">
                                             {formatCurrency(stats.total_acquisition_cost, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -295,8 +295,8 @@ function FixedAssetsContent() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                                            <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                        <div className="w-10 h-10 rounded-lg bg-success/10 dark:bg-green-900/20 flex items-center justify-center">
+                                            <DollarSign className="w-5 h-5 text-success" />
                                         </div>
                                     </div>
                                 </div>

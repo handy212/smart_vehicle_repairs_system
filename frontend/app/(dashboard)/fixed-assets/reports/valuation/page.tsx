@@ -77,7 +77,7 @@ export default function AssetValuationReportPage() {
             accessor: "accumulated_depreciation" as const,
             className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
-                <div className="text-right font-mono text-sm text-orange-600">
+                <div className="text-right font-mono text-sm text-primary">
                     {formatCurrency(asset.accumulated_depreciation)}
                 </div>
             ),
@@ -146,7 +146,7 @@ export default function AssetValuationReportPage() {
                             <TrendingDown className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-orange-600">
+                            <div className="text-2xl font-bold text-primary">
                                 {formatCurrency(stats.total_accumulated_depreciation, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </div>
                             <p className="text-xs text-muted-foreground">Total value lost to usage</p>

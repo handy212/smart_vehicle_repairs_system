@@ -298,7 +298,7 @@ export function PartRequestDetailDialog({
                                                             {!isReady && !showPO && part.part_number && (
                                                                 <div className="mt-1">
                                                                     {inStock ? (
-                                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-green-50 text-green-700 border-green-200">
+                                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-success/10 text-green-700 border-green-200">
                                                                             In Stock: {stockQty}
                                                                         </Badge>
                                                                     ) : (
@@ -325,7 +325,7 @@ export function PartRequestDetailDialog({
                                                             <Button
                                                                 size="sm"
                                                                 variant="default" // Primary action
-                                                                className="h-7 text-xs font-medium bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                                                className="h-7 text-xs font-medium bg-success hover:bg-green-700 text-white shadow-sm"
                                                                 onClick={() => allocateMutation.mutate(part.id)}
                                                                 disabled={allocateMutation.isPending}
                                                             >

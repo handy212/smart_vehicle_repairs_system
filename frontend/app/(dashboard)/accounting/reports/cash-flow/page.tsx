@@ -121,7 +121,7 @@ export default function CashFlowPage() {
             <h3 className="font-semibold text-lg">{title}</h3>
             <div className="grid grid-cols-2 gap-4 pl-4 text-sm">
                 <div className="text-muted-foreground">Cash Inflows</div>
-                <div className="text-right text-green-600 font-medium">{formatCurrency(data.inflows)}</div>
+                <div className="text-right text-success font-medium">{formatCurrency(data.inflows)}</div>
 
                 <div className="text-muted-foreground">Cash Outflows</div>
                 <div className="text-right text-red-600 font-medium">({formatCurrency(data.outflows)})</div>
@@ -214,7 +214,7 @@ export default function CashFlowPage() {
 
                         <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg border border-orange-100">
                             <span className="font-bold text-lg text-orange-900">Closing Cash Balance</span>
-                            <span className="font-bold text-xl text-orange-700">
+                            <span className="font-bold text-xl text-primary">
                                 {formatCurrency(report.closing_balance)}
                             </span>
                         </div>

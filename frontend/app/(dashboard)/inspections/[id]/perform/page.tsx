@@ -559,7 +559,7 @@ export default function PerformInspectionPage() {
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-green-600">
+              <div className="flex items-center gap-2 text-success">
                 <CheckCircle className="w-5 h-5" />
                 <span className="text-[11px] font-black uppercase tracking-tighter">All critical checks completed</span>
               </div>

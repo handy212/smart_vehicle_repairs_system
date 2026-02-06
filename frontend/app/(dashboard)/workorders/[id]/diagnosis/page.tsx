@@ -423,7 +423,7 @@ export default function DiagnosisPage() {
                 onClick={() => completeDiagnosisMutation.mutate()}
                 disabled={completeDiagnosisMutation.isPending}
                 size="sm"
-                className="h-9 bg-green-600 hover:bg-green-700 text-white"
+                className="h-9 bg-success hover:bg-green-700 text-white"
               >
                 <CheckCircle className="w-3.5 h-3.5 mr-2" />
                 {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
@@ -446,7 +446,7 @@ export default function DiagnosisPage() {
                 onClick={() => completeDiagnosisMutation.mutate()}
                 disabled={completeDiagnosisMutation.isPending}
                 size="sm"
-                className="h-9 bg-green-600 hover:bg-green-700 text-white"
+                className="h-9 bg-success hover:bg-green-700 text-white"
               >
                 <CheckCircle className="w-3.5 h-3.5 mr-2" />
                 {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
@@ -454,7 +454,7 @@ export default function DiagnosisPage() {
             </>
           )}
           {diagnosis.status === "completed" && (
-            <Button variant="outline" size="sm" className="h-9 cursor-default bg-green-50 text-green-700 border-green-200 hover:bg-green-50">
+            <Button variant="outline" size="sm" className="h-9 cursor-default bg-success/10 text-green-700 border-green-200 hover:bg-success/10">
               <CheckCircle2 className="w-3.5 h-3.5 mr-2" />
               Completed
             </Button>
@@ -469,9 +469,9 @@ export default function DiagnosisPage() {
             <div className="flex items-center gap-4">
               <Badge
                 variant="outline"
-                className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-orange-700 border-orange-200' :
-                  diagnosis.status === 'paused' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                    diagnosis.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-primary border-orange-200' :
+                  diagnosis.status === 'paused' ? 'bg-orange-50 text-primary border-orange-200' :
+                    diagnosis.status === 'completed' ? 'bg-success/10 text-green-700 border-green-200' :
                       'bg-gray-100 text-gray-700 border-gray-200'
                   }`}
               >
@@ -501,7 +501,7 @@ export default function DiagnosisPage() {
               <span className="mx-1">→</span>
               <span className={['in_progress', 'paused', 'completed'].includes(diagnosis.status) ? "text-primary" : ""}>In Progress</span>
               <span className="mx-1">→</span>
-              <span className={diagnosis.status === 'completed' ? "text-green-600" : ""}>Done</span>
+              <span className={diagnosis.status === 'completed' ? "text-success" : ""}>Done</span>
             </div>
           </div>
         </CardContent>
@@ -1046,7 +1046,7 @@ function RecommendationsTab({
                     approved: true,
                   })}
                   size="sm"
-                  className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                  className="h-8 bg-success hover:bg-green-700 text-white"
                   disabled={approveMutation.isPending}
                 >
                   <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
@@ -1219,7 +1219,7 @@ function RecommendationsTab({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-2 text-primary hover:text-orange-700 hover:bg-primary/10"
+                                className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10"
                                 onClick={() => {
                                   setEditingRecommendation(rec);
                                   setShowAddDialog(true);
@@ -1262,7 +1262,7 @@ function RecommendationsTab({
                     {approvedRecommendations
                       .filter((r: any) => !r.converted_to_task_id)
                       .map((rec: any) => (
-                        <div key={rec.id} className="p-4 bg-green-50/30 border border-green-100 dark:border-green-900/30 rounded-lg space-y-3">
+                        <div key={rec.id} className="p-4 bg-success/10/30 border border-green-100 dark:border-green-900/30 rounded-lg space-y-3">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant={rec.priority === 'critical' ? 'danger' : rec.priority === 'necessary' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 h-5 font-medium capitalize">
@@ -1271,7 +1271,7 @@ function RecommendationsTab({
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-gray-500 bg-white">
                                 {rec.recommendation_type_display || rec.recommendation_type}
                               </Badge>
-                              <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-green-600 hover:bg-green-700 border-transparent text-white">
+                              <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-success hover:bg-green-700 border-transparent text-white">
                                 ✓ Approved
                               </Badge>
                             </div>
@@ -1290,13 +1290,13 @@ function RecommendationsTab({
                             <div className="text-xs bg-white/50 rounded p-2 text-gray-600 space-y-1 border border-green-100/50">
                               {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
                                 <div className="flex items-center gap-1.5">
-                                  <Package className="w-3 h-3 text-green-600/70" />
+                                  <Package className="w-3 h-3 text-success/70" />
                                   <span>{rec.parts_needed.length} part(s) • {formatCurrency(Number(rec.estimated_parts_cost || 0))}</span>
                                 </div>
                               )}
                               {rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0 && (
                                 <div className="flex items-center gap-1.5">
-                                  <Clock className="w-3 h-3 text-green-600/70" />
+                                  <Clock className="w-3 h-3 text-success/70" />
                                   <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h • {formatCurrency(Number(rec.estimated_labor_cost || 0))}</span>
                                 </div>
                               )}
@@ -1309,7 +1309,7 @@ function RecommendationsTab({
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 px-2 text-primary hover:text-orange-700 hover:bg-primary/10"
+                              className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10"
                               onClick={() => {
                                 setEditingRecommendation(rec);
                                 setShowAddDialog(true);
@@ -1493,7 +1493,7 @@ function PhotosTab({
                   key={photo.id}
                   className="group relative border border-border rounded-lg overflow-hidden bg-card hover:shadow-lg transition-all duration-200"
                 >
-                  <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <div className="aspect-square relative overflow-hidden bg-border">
                     {photo.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -1933,7 +1933,7 @@ function SummaryTab({
               </p>
             </div>
             <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
-              <div className="p-2 mb-3 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">
+              <div className="p-2 mb-3 rounded-full bg-success/10 dark:bg-green-900/20 text-success">
                 <DollarSign className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Estimate Total</p>
@@ -1944,7 +1944,7 @@ function SummaryTab({
               </p>
             </div>
             <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
-              <div className="p-2 mb-3 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
+              <div className="p-2 mb-3 rounded-full bg-orange-50 dark:bg-orange-900/20 text-primary">
                 <Wrench className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Items</p>

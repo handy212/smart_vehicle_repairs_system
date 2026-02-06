@@ -154,11 +154,11 @@ export default function BankReconciliationPage() {
                                         </TableCell>
                                         <TableCell className="px-4 py-2">
                                             {statement.reconciled ? (
-                                                <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                                                <Badge variant="outline" className="text-[10px] bg-success/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
                                                     <Check className="w-3 h-3 mr-1" /> Reconciled
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="text-[10px] bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
+                                                <Badge variant="outline" className="text-[10px] bg-warning/10 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
                                                     <AlertCircle className="w-3 h-3 mr-1" /> Pending
                                                 </Badge>
                                             )}

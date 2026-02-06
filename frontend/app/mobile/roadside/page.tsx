@@ -104,7 +104,7 @@ export default function RoadsideListPage() {
                                 <div className="flex items-center gap-2 text-sm font-medium">
                                     {req.customer.first_name} {req.customer.last_name}
                                 </div>
-                                <Button size="sm" variant="ghost" className="h-8 pr-0 hover:bg-transparent text-orange-600">
+                                <Button size="sm" variant="ghost" className="h-8 pr-0 hover:bg-transparent text-primary">
                                     View <ChevronRight className="h-4 w-4 ml-1" />
                                 </Button>
                             </div>

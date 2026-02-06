@@ -139,7 +139,7 @@ export default function TrialBalancePage() {
                     <div className="flex justify-between items-center">
                         <CardTitle>Accounts</CardTitle>
                         {report?.is_balanced ? (
-                            <span className="text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">Balanced</span>
+                            <span className="text-success bg-success/10 px-3 py-1 rounded-full text-sm font-medium">Balanced</span>
                         ) : (
                             <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">Unbalanced</span>
                         )}

@@ -236,7 +236,7 @@ export default function AppointmentCalendarPage() {
           <div className="flex items-center space-x-6 text-sm">
             <span className="font-medium text-card-foreground">Status:</span>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-yellow-500"></div>
+              <div className="w-4 h-4 rounded bg-warning/100"></div>
               <span className="text-muted-foreground">Pending</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -248,7 +248,7 @@ export default function AppointmentCalendarPage() {
               <span className="text-muted-foreground">In Progress</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-green-500"></div>
+              <div className="w-4 h-4 rounded bg-success/100"></div>
               <span className="text-muted-foreground">Completed</span>
             </div>
             <div className="flex items-center space-x-2">

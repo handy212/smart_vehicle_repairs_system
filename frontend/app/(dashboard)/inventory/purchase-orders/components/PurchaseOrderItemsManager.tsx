@@ -229,7 +229,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                 <TableRow key={item.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0">
                                     <TableCell className="px-4 py-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-9 w-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                            <div className="h-9 w-9 rounded-lg bg-border flex items-center justify-center text-gray-400 shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                                 <Package className="h-5 w-5" />
                                             </div>
                                             <div className="min-w-0">
@@ -288,7 +288,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        className="h-7 w-7 p-0 text-success hover:text-green-700 hover:bg-success/10"
                                                         onClick={() => {
                                                             updateItemMutation.mutate({
                                                                 itemId: item.id,

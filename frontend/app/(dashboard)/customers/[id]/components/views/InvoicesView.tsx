@@ -56,7 +56,7 @@ export function InvoicesView({ customerId }: InvoicesViewProps) {
             label: "Total Paid",
             value: formatCurrency(totalPaid),
             icon: CheckCircle,
-            color: "text-green-600 dark:text-green-400"
+            color: "text-success"
         }
     ];
 

@@ -22,7 +22,7 @@ import dynamic from "next/dynamic";
 
 const RoadsideMap = dynamic(() => import("@/components/roadside/RoadsideMap"), {
   ssr: false,
-  loading: () => <div className="h-[250px] w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+  loading: () => <div className="h-[250px] w-full bg-border rounded-xl animate-pulse" />
 });
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -346,7 +346,7 @@ export default function RoadsideRequestDetailPage() {
               )}
               {req.completed_at && (
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                  <CheckCircle className="w-5 h-5 text-success mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-foreground">Completed</p>
                     <p className="text-xs text-muted-foreground">
@@ -430,12 +430,12 @@ export default function RoadsideRequestDetailPage() {
                 </p>
               </div>
               {req.is_covered_by_subscription ? (
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="p-3 bg-success/10 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                   <p className="text-sm font-medium text-green-800 dark:text-green-200">
                     Covered by Subscription
                   </p>
                   {req.subscription_number && (
-                    <p className="text-xs text-green-600 dark:text-green-300 mt-1">
+                    <p className="text-xs text-success dark:text-green-300 mt-1">
                       Subscription: {req.subscription_number}
                     </p>
                   )}

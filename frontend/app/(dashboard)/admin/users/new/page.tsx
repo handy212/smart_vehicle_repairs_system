@@ -506,7 +506,7 @@ export default function NewUserPage() {
                         title="Copy password"
                       >
                         {passwordCopied ? (
-                          <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                          <span className="text-xs text-success">Copied!</span>
                         ) : (
                           <Copy className="w-4 h-4" />
                         )}
@@ -677,7 +677,7 @@ export default function NewUserPage() {
                         </p>
                       )}
                       {branches.length === 0 && (
-                        <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                        <div className="mt-3 p-3 bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                           <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-center gap-2">
                             <Info className="w-4 h-4" />
                             No active branches available. Create a branch first before assigning users.

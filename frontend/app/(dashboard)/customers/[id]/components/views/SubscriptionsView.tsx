@@ -30,7 +30,7 @@ export function SubscriptionsView({ customerId }: SubscriptionsViewProps) {
 
     const stats = [
         { label: "Total Plans", value: carCount, icon: Mail },
-        { label: "Active", value: activeCount, icon: CheckCircle, color: "text-green-600" },
+        { label: "Active", value: activeCount, icon: CheckCircle, color: "text-success" },
         { label: "Expired", value: expiredCount, icon: XCircle, color: "text-red-600" },
     ];
 

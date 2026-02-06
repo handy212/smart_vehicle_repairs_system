@@ -296,7 +296,7 @@ export default function MySubscriptionsPage() {
                                 className={`p-2 rounded border ${isEmpty
                                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                                     : isLow
-                                      ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                                      ? 'bg-warning/10 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
                                       : 'bg-muted border-border'
                                   }`}
                               >
@@ -306,7 +306,7 @@ export default function MySubscriptionsPage() {
                                   </span>
                                   <span className={`text-sm font-bold ${isEmpty ? 'text-red-600 dark:text-red-400'
                                       : isLow ? 'text-yellow-600 dark:text-yellow-400'
-                                        : 'text-green-600 dark:text-green-400'
+                                        : 'text-success'
                                     }`}>
                                     {value}
                                   </span>
@@ -334,7 +334,7 @@ export default function MySubscriptionsPage() {
                       </div>
                     )}
                     {subscription.status === "expired" && (
-                      <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                      <div className="mt-4 p-3 bg-warning/10 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
                         <p className="text-sm text-yellow-800 dark:text-yellow-200">
                           This subscription has expired. Purchase a new subscription to continue using services.
                         </p>

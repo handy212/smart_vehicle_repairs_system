@@ -83,7 +83,7 @@ export default function TaxReportPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">Tax Collected</p>
-                                        <p className="text-2xl font-bold text-green-600">
+                                        <p className="text-2xl font-bold text-success">
                                             {formatCurrency(report.tax_collected.total)}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
@@ -91,7 +91,7 @@ export default function TaxReportPage() {
                                         </p>
                                     </div>
                                     <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                        <TrendingUp className="w-6 h-6 text-green-600" />
+                                        <TrendingUp className="w-6 h-6 text-success" />
                                     </div>
                                 </div>
                             </CardContent>
@@ -102,7 +102,7 @@ export default function TaxReportPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">Tax Paid</p>
-                                        <p className="text-2xl font-bold text-orange-600">
+                                        <p className="text-2xl font-bold text-primary">
                                             {formatCurrency(report.tax_paid.total)}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
@@ -110,7 +110,7 @@ export default function TaxReportPage() {
                                         </p>
                                     </div>
                                     <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-full">
-                                        <TrendingDown className="w-6 h-6 text-orange-600" />
+                                        <TrendingDown className="w-6 h-6 text-primary" />
                                     </div>
                                 </div>
                             </CardContent>
@@ -121,7 +121,7 @@ export default function TaxReportPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">Net Tax Liability</p>
-                                        <p className={`text-2xl font-bold ${report.net_tax_liability >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                        <p className={`text-2xl font-bold ${report.net_tax_liability >= 0 ? 'text-red-600' : 'text-success'}`}>
                                             {formatCurrency(report.net_tax_liability)}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
@@ -129,7 +129,7 @@ export default function TaxReportPage() {
                                         </p>
                                     </div>
                                     <div className={`p-3 rounded-full ${report.net_tax_liability >= 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
-                                        <FileText className={`w-6 h-6 ${report.net_tax_liability >= 0 ? 'text-red-600' : 'text-green-600'}`} />
+                                        <FileText className={`w-6 h-6 ${report.net_tax_liability >= 0 ? 'text-red-600' : 'text-success'}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -164,7 +164,7 @@ export default function TaxReportPage() {
                                 </div>
                                 <div className="flex justify-between items-center p-3 bg-primary/10 dark:bg-orange-900/30 rounded border-t-2 border-primary">
                                     <span className="font-bold text-lg">Total Collected</span>
-                                    <span className="font-bold text-lg text-green-600">{formatCurrency(report.tax_collected.total)}</span>
+                                    <span className="font-bold text-lg text-success">{formatCurrency(report.tax_collected.total)}</span>
                                 </div>
                             </div>
                         </CardContent>

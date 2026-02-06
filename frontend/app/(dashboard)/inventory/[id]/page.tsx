@@ -81,7 +81,7 @@ export default function PartDetailPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">{part.name}</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-sm font-mono text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+              <p className="text-sm font-mono text-muted-foreground bg-border px-2 py-0.5 rounded">
                 {part.part_number}
               </p>
               <Badge variant={stockStatus.variant} className="h-6 gap-1">
@@ -135,7 +135,7 @@ export default function PartDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full md:w-48 aspect-square rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-border">
+                    <div className="w-full md:w-48 aspect-square rounded-lg bg-border flex items-center justify-center border border-border">
                       <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
                     </div>
                   )}
@@ -207,7 +207,7 @@ export default function PartDetailPage() {
                 <Card>
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Available</p>
-                    <p className="text-3xl font-bold mt-1 text-green-600">{part.available_quantity || 0}</p>
+                    <p className="text-3xl font-bold mt-1 text-success">{part.available_quantity || 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">to sell</p>
                   </CardContent>
                 </Card>
@@ -319,10 +319,10 @@ export default function PartDetailPage() {
                               const isPositive = txn.quantity > 0;
                               const getBadgeColor = (type: string) => {
                                 switch (type.toLowerCase()) {
-                                  case 'adjustment': return 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
+                                  case 'adjustment': return 'bg-info/10 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
                                   case 'purchase':
                                   case 'receive':
-                                  case 'return': return 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
+                                  case 'return': return 'bg-success/10 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
                                   case 'sale':
                                   case 'use':
                                   case 'damage':
@@ -356,7 +356,7 @@ export default function PartDetailPage() {
                                       <span className="text-gray-300 dark:text-gray-600">—</span>
                                     )}
                                   </td>
-                                  <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                  <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-success' : 'text-red-600 dark:text-red-400'}`}>
                                     <div className="flex flex-col items-end">
                                       <span>{isPositive ? '+' : ''}{txn.quantity}</span>
                                       <span className="text-[9px] font-normal uppercase opacity-60">{part.unit || 'units'}</span>
@@ -367,7 +367,7 @@ export default function PartDetailPage() {
                                   </td>
                                   <td className="px-4 py-3">
                                     <div className="flex items-center gap-1.5 text-gray-500">
-                                      <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                      <div className="w-5 h-5 rounded-full bg-border flex items-center justify-center">
                                         <User className="w-3 h-3 opacity-60" />
                                       </div>
                                       <span className="text-[11px] truncate max-w-[80px]">{txn.created_by_name?.split(' ')[0] || 'System'}</span>

@@ -86,7 +86,7 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
                                 className={cn(
                                     "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                     isActive
-                                        ? "bg-primary/10 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300"
+                                        ? "bg-primary/10 text-primary dark:bg-orange-900/20 dark:text-orange-300"
                                         : "text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
                                 )}
                             >

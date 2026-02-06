@@ -97,11 +97,11 @@ export function PartsRequiredTab({
     const getStatusConfig = (status: string) => {
         switch (status) {
             case "pending":
-                return { color: "text-yellow-600 bg-yellow-50", icon: Clock };
+                return { color: "text-yellow-600 bg-warning/10", icon: Clock };
             case "ordered":
                 return { color: "text-primary bg-primary/10", icon: Package };
             case "received":
-                return { color: "text-green-600 bg-green-50", icon: CheckCircle };
+                return { color: "text-success bg-success/10", icon: CheckCircle };
             case "installed":
                 return { color: "text-gray-600 bg-gray-50", icon: CheckCircle };
             default:

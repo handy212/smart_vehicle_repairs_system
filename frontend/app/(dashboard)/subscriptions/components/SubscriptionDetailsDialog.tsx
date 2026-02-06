@@ -149,7 +149,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 </div>
                                 <div className="flex justify-between items-center text-[12px]">
                                     <span className="text-slate-500">Auto-Renew</span>
-                                    <span className={cn("font-medium", subscription.auto_renew ? "text-green-600" : "text-slate-400")}>
+                                    <span className={cn("font-medium", subscription.auto_renew ? "text-success" : "text-slate-400")}>
                                         {subscription.auto_renew ? "On" : "Off"}
                                     </span>
                                 </div>

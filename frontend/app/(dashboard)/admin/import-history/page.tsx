@@ -194,7 +194,7 @@ export default function ImportHistoryPage() {
                 </div>
               ) : !data?.results || data.results.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 bg-border rounded-full flex items-center justify-center mb-3">
                     <FileText className="w-6 h-6 text-gray-400" />
                   </div>
                   <p className="text-sm font-medium text-foreground">No import history found</p>
@@ -247,7 +247,7 @@ export default function ImportHistoryPage() {
                                 {getStatusBadge(log)}
                               </TableCell>
                               <TableCell className="px-4 py-2.5 text-right">
-                                <span className={`text-xs font-mono font-medium ${imported > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                <span className={`text-xs font-mono font-medium ${imported > 0 ? 'text-success' : 'text-gray-400'}`}>
                                   {imported}
                                 </span>
                               </TableCell>

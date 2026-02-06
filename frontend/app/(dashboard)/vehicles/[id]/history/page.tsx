@@ -334,7 +334,7 @@ export default function VehicleHistoryPage() {
                       className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         item.type === "work_order"
                           ? "bg-orange-100 dark:bg-orange-900/30 text-primary dark:text-primary"
-                          : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                          : "bg-green-100 dark:bg-green-900/30 text-success"
                       }`}
                     >
                       {item.type === "work_order" ? (

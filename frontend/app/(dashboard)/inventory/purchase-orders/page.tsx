@@ -48,7 +48,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   const items = [
     { label: "Total POs", value: stats.total_orders, color: "text-primary" },
     { label: "Pending", value: stats.pending_orders, color: "text-amber-600" },
-    { label: "Completed", value: stats.completed_orders, color: "text-green-600" },
+    { label: "Completed", value: stats.completed_orders, color: "text-success" },
     { label: "Total Value", value: stats.total_value, isCurrency: true, color: "text-indigo-600" },
   ];
 
@@ -235,7 +235,7 @@ export default function PurchaseOrdersPage() {
               }
 
               return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
                   <X
                     className="w-3 h-3 cursor-pointer hover:text-red-500"

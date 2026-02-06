@@ -213,8 +213,8 @@ export default function InspectionsPage() {
                           variant="outline"
                           className={cn(
                             "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-                            inspection.status === 'completed' && "border-green-200 text-green-700 bg-green-50/50",
-                            inspection.status === 'in_progress' && "border-orange-200 text-orange-700 bg-primary/5",
+                            inspection.status === 'completed' && "border-green-200 text-green-700 bg-success/10/50",
+                            inspection.status === 'in_progress' && "border-orange-200 text-primary bg-primary/5",
                             inspection.status === 'approved' && "border-indigo-200 text-indigo-700 bg-indigo-50/50",
                             inspection.status === 'rejected' && "border-red-200 text-red-700 bg-red-50/50",
                           )}
@@ -228,10 +228,10 @@ export default function InspectionsPage() {
                             variant="outline"
                             className={cn(
                               "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-                              inspection.overall_result === 'pass' && "border-green-200 text-green-700 bg-green-50/50",
-                              inspection.overall_result === 'pass_with_advisory' && "border-yellow-200 text-yellow-700 bg-yellow-50/50",
+                              inspection.overall_result === 'pass' && "border-green-200 text-green-700 bg-success/10/50",
+                              inspection.overall_result === 'pass_with_advisory' && "border-yellow-200 text-yellow-700 bg-warning/10/50",
                               inspection.overall_result === 'fail' && "border-red-200 text-red-700 bg-red-50/50",
-                              inspection.overall_result === 'needs_attention' && "border-orange-200 text-orange-700 bg-orange-50/50",
+                              inspection.overall_result === 'needs_attention' && "border-orange-200 text-primary bg-orange-50/50",
                             )}
                           >
                             {inspection.overall_result_display || inspection.overall_result}

@@ -180,7 +180,7 @@ export default function RoadsidePage() {
             <Card className="shadow-sm border bg-card">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Completed</span>
-                    <span className="text-lg font-bold text-green-600 dark:text-green-400">{stats?.completed_requests || 0}</span>
+                    <span className="text-lg font-bold text-success">{stats?.completed_requests || 0}</span>
                 </CardContent>
             </Card>
             <Card className="shadow-sm border bg-card">
@@ -271,7 +271,7 @@ export default function RoadsidePage() {
                             const filter = filterOptions.find((f) => f.key === key);
                             if (!filter) return null;
                             return (
-                                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-muted-foreground font-normal">
+                                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                                     {filter.label}: {String(value)}
                                     <X
                                         className="w-3 h-3 cursor-pointer hover:text-red-500"
