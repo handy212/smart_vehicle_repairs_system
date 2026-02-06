@@ -411,7 +411,7 @@ export default function WorkOrderOverviewTab({
                 {formatCurrency(parseFloat((workOrder as any).estimated_parts_cost || "0"))}
               </span>
             </div>
-            <div className="border-t dark:border-gray-700 pt-3">
+            <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-card-foreground">Estimated Total</span>
                 <span className={`text-lg font-bold ${
@@ -425,7 +425,7 @@ export default function WorkOrderOverviewTab({
             </div>
             {(workOrder as any).actual_total && parseFloat((workOrder as any).actual_total) > 0 && (
               <>
-                <div className="border-t dark:border-gray-700 pt-3 space-y-2">
+                <div className="border-t border-border pt-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-card-foreground">Actual Labor</span>
                     <span className="text-sm font-medium text-foreground">
@@ -438,7 +438,7 @@ export default function WorkOrderOverviewTab({
                       {formatCurrency(parseFloat((workOrder as any).actual_parts_cost || "0"))}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t dark:border-gray-700">
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
                     <span className="text-sm font-semibold text-foreground">Actual Total</span>
                     <span className="text-lg font-bold text-foreground">
                       {formatCurrency(parseFloat((workOrder as any).actual_total))}
@@ -522,7 +522,7 @@ export default function WorkOrderOverviewTab({
                   <select
                     value={selectedServiceCoordinator}
                     onChange={(e) => setSelectedServiceCoordinator(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border dark:text-gray-100"
                   >
                     <option value="">Select Service Coordinator</option>
                     {serviceCoordinatorsList.map((coord: any) => (

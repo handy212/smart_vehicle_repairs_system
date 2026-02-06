@@ -396,7 +396,7 @@ export default function RoadsidePage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
-                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal border-gray-200 text-gray-600 bg-muted dark:border-gray-700 dark:text-gray-400">
+                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal border-gray-200 text-gray-600 bg-muted border-border dark:text-gray-400">
                                                     {request.service_type_display}
                                                 </Badge>
                                                 {request.vehicle_display && (

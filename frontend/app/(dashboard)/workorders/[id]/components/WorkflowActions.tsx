@@ -1065,7 +1065,7 @@ export default function WorkflowActions({
     <>
       {/* Complete Diagnosis Dialog */}
       <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Complete Diagnosis</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1082,7 +1082,7 @@ export default function WorkflowActions({
 
       {/* Request Approval Dialog */}
       <Dialog open={showRequestApprovalDialog} onOpenChange={setShowRequestApprovalDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Request Customer Approval</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1135,7 +1135,7 @@ export default function WorkflowActions({
 
       {/* Additional Work Found Dialog */}
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-primary">
               <AlertTriangle className="w-5 h-5" />
@@ -1155,7 +1155,7 @@ export default function WorkflowActions({
 
       {/* Approve Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Approve Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1172,7 +1172,7 @@ export default function WorkflowActions({
 
       {/* Quality Check Dialog */}
       <Dialog open={showQualityCheckDialog} onOpenChange={setShowQualityCheckDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Perform Quality Check</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1190,7 +1190,7 @@ export default function WorkflowActions({
 
       {/* Complete Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Complete Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1207,7 +1207,7 @@ export default function WorkflowActions({
 
       {/* Mark Invoiced Dialog */}
       <Dialog open={showMarkInvoicedDialog} onOpenChange={setShowMarkInvoicedDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Mark Work Order as Invoiced</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1225,7 +1225,7 @@ export default function WorkflowActions({
 
       {/* Close Work Order Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Close Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1243,7 +1243,7 @@ export default function WorkflowActions({
 
       {/* Pause Dialog */}
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Pause Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1260,7 +1260,7 @@ export default function WorkflowActions({
 
       {/* Create Inspection Dialog */}
       <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>
           </DialogHeader>
@@ -1275,7 +1275,7 @@ export default function WorkflowActions({
 
       {/* Assign Service Coordinator Dialog */}
       <Dialog open={showAssignServiceCoordinatorDialog} onOpenChange={setShowAssignServiceCoordinatorDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Assign Service Coordinator</DialogTitle>
           </DialogHeader>
@@ -1290,7 +1290,7 @@ export default function WorkflowActions({
 
       {/* Start Diagnosis Dialog */}
       <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Start Diagnosis</DialogTitle>
 
@@ -1384,7 +1384,7 @@ export default function WorkflowActions({
 
       {/* Complete Diagnosis Dialog */}
       <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Complete Diagnosis</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1401,7 +1401,7 @@ export default function WorkflowActions({
 
       {/* Additional Work Found Dialog */}
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-primary">
               <AlertTriangle className="w-5 h-5" />
@@ -1421,7 +1421,7 @@ export default function WorkflowActions({
 
       {/* Approve Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Approve Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1438,7 +1438,7 @@ export default function WorkflowActions({
 
       {/* Quality Check Dialog */}
       <Dialog open={showQualityCheckDialog} onOpenChange={setShowQualityCheckDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Perform Quality Check</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1456,7 +1456,7 @@ export default function WorkflowActions({
 
       {/* Complete Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Complete Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1473,7 +1473,7 @@ export default function WorkflowActions({
 
       {/* Mark Invoiced Dialog */}
       <Dialog open={showMarkInvoicedDialog} onOpenChange={setShowMarkInvoicedDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Mark Work Order as Invoiced</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1491,7 +1491,7 @@ export default function WorkflowActions({
 
       {/* Close Work Order Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Close Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1509,7 +1509,7 @@ export default function WorkflowActions({
 
       {/* Pause Dialog */}
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Pause Work Order</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1526,7 +1526,7 @@ export default function WorkflowActions({
 
       {/* Create Inspection Dialog */}
       <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1544,7 +1544,7 @@ export default function WorkflowActions({
 
       {/* Assign Service Coordinator Dialog */}
       <Dialog open={showAssignServiceCoordinatorDialog} onOpenChange={setShowAssignServiceCoordinatorDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Assign Service Coordinator</DialogTitle>
           </DialogHeader>
@@ -1559,7 +1559,7 @@ export default function WorkflowActions({
 
       {/* Start Diagnosis Dialog */}
       <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
-        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+        <DialogContent className="dark:bg-gray-800 border-border">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Start Diagnosis</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
@@ -1648,7 +1648,7 @@ function CompleteDiagnosisForm({
               onChange={(e) => setDiagnosisNotes(e.target.value)}
               required
               rows={4}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1662,7 +1662,7 @@ function CompleteDiagnosisForm({
                 step="0.1"
                 value={estimatedLaborHours}
                 onChange={(e) => setEstimatedLaborHours(e.target.value)}
-                className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                className="w-full bg-muted border-border dark:text-gray-100"
               />
             </div>
             <div>
@@ -1675,7 +1675,7 @@ function CompleteDiagnosisForm({
                 step="0.01"
                 value={estimatedLaborCost}
                 onChange={(e) => setEstimatedLaborCost(e.target.value)}
-                className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                className="w-full bg-muted border-border dark:text-gray-100"
               />
             </div>
           </div>
@@ -1689,7 +1689,7 @@ function CompleteDiagnosisForm({
               step="0.01"
               value={estimatedPartsCost}
               onChange={(e) => setEstimatedPartsCost(e.target.value)}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -1698,7 +1698,7 @@ function CompleteDiagnosisForm({
               id="requires_approval"
               checked={requiresApproval}
               onChange={(e) => setRequiresApproval(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
             />
             <Label htmlFor="requires_approval" className="cursor-pointer dark:text-gray-300">
               Requires Customer Approval
@@ -1749,7 +1749,7 @@ function AdditionalWorkForm({
               required
               rows={4}
               placeholder="Describe the new problems discovered..."
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
           <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
@@ -1804,7 +1804,7 @@ function ApproveForm({
               id="approval_method"
               value={approvalMethod}
               onChange={(e) => setApprovalMethod(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border dark:text-gray-100"
             >
               <option value="phone">Phone</option>
               <option value="email">Email</option>
@@ -1821,7 +1821,7 @@ function ApproveForm({
               value={approvalNotes}
               onChange={(e) => setApprovalNotes(e.target.value)}
               rows={3}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
         </div>
@@ -1918,14 +1918,14 @@ function QualityCheckForm({
             <Label className="text-base font-semibold dark:text-gray-300">
               Quality Check Checklist
             </Label>
-            <div className="space-y-2 border rounded-lg p-4 dark:border-gray-700">
+            <div className="space-y-2 border rounded-lg p-4 border-border">
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   id="allTasksCompleted"
                   checked={checklist.allTasksCompleted}
                   onChange={() => handleChecklistChange('allTasksCompleted')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
                 <Label htmlFor="allTasksCompleted" className="cursor-pointer dark:text-gray-300 text-sm">
                   All tasks completed
@@ -1943,7 +1943,7 @@ function QualityCheckForm({
                   id="allPartsInstalled"
                   checked={checklist.allPartsInstalled}
                   onChange={() => handleChecklistChange('allPartsInstalled')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
                 <Label htmlFor="allPartsInstalled" className="cursor-pointer dark:text-gray-300 text-sm">
                   All parts installed or returned
@@ -1961,7 +1961,7 @@ function QualityCheckForm({
                   id="vehicleClean"
                   checked={checklist.vehicleClean}
                   onChange={() => handleChecklistChange('vehicleClean')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
                 <Label htmlFor="vehicleClean" className="cursor-pointer dark:text-gray-300 text-sm">
                   Vehicle cleaned and presentable
@@ -1974,7 +1974,7 @@ function QualityCheckForm({
                   id="noDamage"
                   checked={checklist.noDamage}
                   onChange={() => handleChecklistChange('noDamage')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
                 <Label htmlFor="noDamage" className="cursor-pointer dark:text-gray-300 text-sm">
                   No new damage or scratches
@@ -1987,7 +1987,7 @@ function QualityCheckForm({
                   id="testDrivePassed"
                   checked={checklist.testDrivePassed}
                   onChange={() => handleChecklistChange('testDrivePassed')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
                 <Label htmlFor="testDrivePassed" className="cursor-pointer dark:text-gray-300 text-sm">
                   Test drive passed (if applicable)
@@ -2000,7 +2000,7 @@ function QualityCheckForm({
                   id="customerSatisfied"
                   checked={checklist.customerSatisfied}
                   onChange={() => handleChecklistChange('customerSatisfied')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
                 <Label htmlFor="customerSatisfied" className="cursor-pointer dark:text-gray-300 text-sm">
                   Customer satisfaction confirmed
@@ -2029,7 +2029,7 @@ function QualityCheckForm({
                 id="passed"
                 checked={passed}
                 onChange={(e) => setPassed(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
               />
               <Label htmlFor="passed" className="cursor-pointer dark:text-gray-300">
                 Quality Check Passed
@@ -2053,7 +2053,7 @@ function QualityCheckForm({
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
               placeholder="Add any notes, observations, or issues found during quality check..."
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
         </div>
@@ -2108,7 +2108,7 @@ function CompleteForm({
               type="number"
               value={odometerOut}
               onChange={(e) => setOdometerOut(e.target.value)}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
           <div>
@@ -2121,7 +2121,7 @@ function CompleteForm({
               onChange={(e) => setCompletionNotes(e.target.value)}
               rows={4}
               placeholder="Add any notes about the completion..."
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
         </div>
@@ -2198,7 +2198,7 @@ function MarkInvoicedForm({
               placeholder={odometerIn ? `Odometer In: ${odometerIn}` : "Enter odometer reading"}
               min={odometerIn || 0}
               required
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
             {odometerIn && (
               <p className="text-xs text-muted-foreground mt-1">
@@ -2263,7 +2263,7 @@ function CloseWorkOrderForm({
               id="payment_received"
               checked={paymentReceived}
               onChange={(e) => setPaymentReceived(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
             />
             <Label htmlFor="payment_received" className="cursor-pointer dark:text-gray-300">
               Payment received
@@ -2280,7 +2280,7 @@ function CloseWorkOrderForm({
               onChange={(e) => setClosingNotes(e.target.value)}
               rows={4}
               placeholder="Add any notes about the handover, customer feedback, or final observations..."
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
         </div>
@@ -2332,7 +2332,7 @@ function PauseForm({
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               placeholder="Enter reason for pausing the work order..."
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
         </div>
@@ -2416,7 +2416,7 @@ function StartDiagnosisForm({
               id="primary_technician"
               value={primaryTechnician}
               onChange={(e) => setPrimaryTechnician(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border dark:text-gray-100"
             >
               <option value="">Select Mechanic/Technician</option>
               {techniciansList.map((tech: any) => (
@@ -2435,7 +2435,7 @@ function StartDiagnosisForm({
               id="priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border dark:text-gray-100"
             >
               <option value="low">Low</option>
               <option value="normal">Normal</option>
@@ -2508,7 +2508,7 @@ function AssignServiceCoordinatorForm({
               value={serviceCoordinatorId}
               onChange={(e) => setServiceCoordinatorId(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border dark:text-gray-100"
             >
               <option value="">Select Service Coordinator</option>
               {serviceCoordinatorsList.map((coord: any) => (
@@ -2534,7 +2534,7 @@ function AssignServiceCoordinatorForm({
               onChange={(e) => setInitialObservations(e.target.value)}
               placeholder="Quick notes or initial observations before detailed testing..."
               rows={3}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full bg-muted border-border dark:text-gray-100"
             />
           </div>
         </div>
@@ -2610,7 +2610,7 @@ function CreateInspectionForm({
               value={templateId}
               onChange={(e) => setTemplateId(parseInt(e.target.value) || "")}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border dark:text-gray-100"
             >
               <option value="">Select a template</option>
               {templates.map((template) => (
@@ -2637,7 +2637,7 @@ function CreateInspectionForm({
               value={inspectionDate}
               readOnly
               required
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 bg-border cursor-not-allowed"
+              className="w-full bg-muted border-border dark:text-gray-100 bg-border cursor-not-allowed"
             />
           </div>
 

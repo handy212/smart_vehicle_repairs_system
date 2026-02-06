@@ -326,7 +326,7 @@ export default function InvoicesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setShowActionsMenu(!showActionsMenu)}
-                            className="h-9 dark:border-gray-700 dark:text-gray-200"
+                            className="h-9 border-border dark:text-gray-200"
                         >
                             Actions
                             <ChevronDown className="w-3.5 h-3.5 ml-2" />
@@ -773,7 +773,7 @@ export default function InvoicesPage() {
                             <div className="col-span-3">
                                 <select
                                     id="status"
-                                    className="flex h-10 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="flex h-10 w-full rounded-md border border-gray-300 border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={bulkStatus}
                                     onChange={(e) => setBulkStatus(e.target.value)}
                                 >

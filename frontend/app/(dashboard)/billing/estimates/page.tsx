@@ -356,7 +356,7 @@ export default function EstimatesPage() {
               variant="outline"
               size="sm"
               onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="h-9 dark:border-gray-700 dark:text-gray-200"
+              className="h-9 border-border dark:text-gray-200"
             >
               Actions
               <ChevronDown className="w-3.5 h-3.5 ml-2" />

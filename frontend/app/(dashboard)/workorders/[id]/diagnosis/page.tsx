@@ -1334,7 +1334,7 @@ function RecommendationsTab({
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {convertedRecommendations.map((rec: any) => (
-                      <div key={rec.id} className="p-4 bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-lg space-y-3 opacity-75">
+                      <div key={rec.id} className="p-4 bg-gray-50 border border-gray-200 dark:bg-gray-800 border-border rounded-lg space-y-3 opacity-75">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
@@ -1693,7 +1693,7 @@ function PhotoUploadDialog({
                 required
               />
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-orange-200 bg-primary/5" : "border-gray-200 hover:border-orange-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-primary dark:hover:bg-gray-800"}`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-orange-200 bg-primary/5" : "border-gray-200 hover:border-orange-400 hover:bg-gray-50 border-border dark:hover:border-primary dark:hover:bg-gray-800"}`}
                 onClick={() => document.getElementById("photo")?.click()}
               >
                 {preview ? (

@@ -193,8 +193,8 @@ export default function NewPurchaseOrderPage() {
                 </div>
 
                 <div className="space-y-6">
-                    <Card className="bg-gradient-to-br from-orange-50 to-white dark:from-gray-800 dark:to-gray-900 border-orange-100 dark:border-gray-700">
-                        <CardHeader className="py-4 border-b border-orange-100/50 dark:border-gray-700/50">
+                    <Card className="bg-gradient-to-br from-orange-50 to-white dark:from-gray-800 dark:to-gray-900 border-orange-100 border-border">
+                        <CardHeader className="py-4 border-b border-orange-100/50 border-border/50">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2">
                                 <span className="p-1 bg-orange-100 dark:bg-orange-900/40 rounded text-primary">
                                     <Save className="w-3.5 h-3.5" />

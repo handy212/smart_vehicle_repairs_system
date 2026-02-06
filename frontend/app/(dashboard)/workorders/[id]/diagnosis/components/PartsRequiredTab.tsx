@@ -636,7 +636,7 @@ function PartFormDialog({
                                         size="sm"
                                         onClick={handleAddToQueue}
                                         disabled={!formData.part_name}
-                                        className="border-dashed border-gray-300 dark:border-gray-700"
+                                        className="border-dashed border-gray-300 border-border"
                                     >
                                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                                         Add to List

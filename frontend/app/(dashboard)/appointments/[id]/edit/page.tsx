@@ -163,7 +163,7 @@ export default function EditAppointmentPage() {
           <h1 className="text-xl font-bold text-foreground tracking-tight">Edit Appointment</h1>
         </div>
         <Link href={`/appointments/${appointmentId}`}>
-          <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+          <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border">
             <ArrowLeft className="w-3.5 h-3.5 mr-2" />
             Cancel
           </Button>

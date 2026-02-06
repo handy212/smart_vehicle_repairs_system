@@ -315,7 +315,7 @@ export default function NewUserPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/users">
-            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button variant="secondary" className="border-border dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -324,7 +324,7 @@ export default function NewUserPage() {
         </div>
         <div className="flex space-x-4">
           <Link href="/admin/users">
-            <Button type="button" variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button type="button" variant="secondary" className="border-border dark:text-gray-200">
               Cancel
             </Button>
           </Link>
@@ -348,9 +348,9 @@ export default function NewUserPage() {
 
       <form id="user-create-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-6">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <Card className="dark:bg-gray-800 border-border">
             <CardHeader>
-              <CardTitle className="dark:text-white text-lg">Basic Information</CardTitle>
+              <CardTitle className="text-foreground text-lg">Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {serverError && (
@@ -369,7 +369,7 @@ export default function NewUserPage() {
                     type="email"
                     placeholder="user@example.com"
                     {...register("email")}
-                    className={errors.email ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    className={errors.email ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                   />
                   {errors.email && (
                     <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -386,7 +386,7 @@ export default function NewUserPage() {
                   <Input
                     placeholder="username"
                     {...register("username")}
-                    className={errors.username ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    className={errors.username ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                   />
                   {errors.username && (
                     <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -403,7 +403,7 @@ export default function NewUserPage() {
                   <Input
                     placeholder="John"
                     {...register("first_name")}
-                    className={errors.first_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    className={errors.first_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                   />
                   {errors.first_name && (
                     <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -420,7 +420,7 @@ export default function NewUserPage() {
                   <Input
                     placeholder="Doe"
                     {...register("last_name")}
-                    className={errors.last_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    className={errors.last_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                   />
                   {errors.last_name && (
                     <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -436,7 +436,7 @@ export default function NewUserPage() {
                     type="tel"
                     placeholder="(555) 123-4567"
                     {...register("phone")}
-                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="bg-muted border-border text-foreground"
                   />
                 </div>
 
@@ -448,7 +448,7 @@ export default function NewUserPage() {
                     value={watch("role")}
                     onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
                   >
-                    <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                    <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -477,7 +477,7 @@ export default function NewUserPage() {
                         type={showPassword ? "text" : "password"}
                         placeholder="Minimum 8 characters"
                         {...register("password")}
-                        className={errors.password ? "border-red-500 dark:border-red-500 pr-10" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"}
+                        className={errors.password ? "border-red-500 dark:border-red-500 pr-10" : "bg-muted border-border text-foreground pr-10"}
                       />
                       <button
                         type="button"
@@ -492,7 +492,7 @@ export default function NewUserPage() {
                       type="button"
                       variant="secondary"
                       onClick={handleGeneratePassword}
-                      className="dark:border-gray-600 dark:text-gray-300"
+                      className="border-border dark:text-gray-300"
                       title="Generate secure password"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -502,7 +502,7 @@ export default function NewUserPage() {
                         type="button"
                         variant="secondary"
                         onClick={handleCopyPassword}
-                        className="dark:border-gray-600 dark:text-gray-300"
+                        className="border-border dark:text-gray-300"
                         title="Copy password"
                       >
                         {passwordCopied ? (
@@ -530,7 +530,7 @@ export default function NewUserPage() {
                       type={showPassword2 ? "text" : "password"}
                       placeholder="Re-enter password"
                       {...register("password2")}
-                      className={errors.password2 ? "border-red-500 dark:border-red-500 pr-10" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"}
+                      className={errors.password2 ? "border-red-500 dark:border-red-500 pr-10" : "bg-muted border-border text-foreground pr-10"}
                     />
                     <button
                       type="button"
@@ -553,9 +553,9 @@ export default function NewUserPage() {
           </Card>
 
           {/* Branch Assignment and Employment Information - Combined */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
+          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
             <CardHeader>
-              <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
+              <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                 <Building2 className="w-5 h-5 text-primary dark:text-primary" />
                 Branch Assignment & Employment Information
                 <span className="text-red-500 text-sm font-normal">*</span>
@@ -573,12 +573,12 @@ export default function NewUserPage() {
                       <p className="text-xs text-muted-foreground mb-3">
                         Select all branches this manager should oversee
                       </p>
-                      <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
+                      <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 bg-muted/50 bg-gray-50">
                         {branches.length > 0 ? (
                           branches.map((branch) => (
                             <label
                               key={branch.id}
-                              className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
+                              className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-gray-200 border-border transition-colors"
                             >
                               <input
                                 type="checkbox"
@@ -659,7 +659,7 @@ export default function NewUserPage() {
                         value={watch("branch")?.toString() || ""}
                         onValueChange={(val) => setValue("branch", val ? Number(val) : null, { shouldValidate: true })}
                       >
-                        <SelectTrigger className={errors.branch ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                        <SelectTrigger className={errors.branch ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
                           <SelectValue placeholder="-- Select a branch --" />
                         </SelectTrigger>
                         <SelectContent>
@@ -725,7 +725,7 @@ export default function NewUserPage() {
                       <Input
                         placeholder="EMP-00001"
                         {...register("employee_id")}
-                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="bg-muted border-border text-foreground"
                       />
                     </div>
                     <div>
@@ -735,7 +735,7 @@ export default function NewUserPage() {
                       <Input
                         type="date"
                         {...register("hire_date")}
-                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="bg-muted border-border text-foreground"
                       />
                     </div>
                     <div>
@@ -747,7 +747,7 @@ export default function NewUserPage() {
                         step="0.01"
                         placeholder="0.00"
                         {...register("hourly_rate")}
-                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="bg-muted border-border text-foreground"
                       />
                     </div>
                   </div>

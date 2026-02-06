@@ -69,7 +69,7 @@ export default function InspectionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/inspections/templates">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border">
               <FileText className="w-3.5 h-3.5 mr-2" />
               Templates
             </Button>
@@ -242,7 +242,7 @@ export default function InspectionsPage() {
                       </TableCell>
                       <TableCell className="py-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                          <div className="w-16 bg-gray-100 bg-muted rounded-full h-1.5">
                             <div
                               className="bg-primary h-1.5 rounded-full transition-all duration-500"
                               style={{

@@ -174,7 +174,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                         {/* Notes Timeline */}
                         {notes.length > 0 && (
                             <>
-                                <div className="border-t dark:border-gray-700 pt-6 mt-4">
+                                <div className="border-t border-border pt-6 mt-4">
                                     <p className="text-sm font-semibold text-card-foreground mb-4">
                                         Notes & Activity
                                     </p>

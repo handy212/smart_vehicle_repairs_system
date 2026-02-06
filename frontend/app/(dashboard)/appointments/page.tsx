@@ -343,7 +343,7 @@ export default function AppointmentsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 backdrop-blur-sm bg-white/50"
+                className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border backdrop-blur-sm bg-white/50"
               >
                 Actions
                 <PremiumIcons.ChevronDown className="w-3.5 h-3.5 ml-2" />
@@ -363,7 +363,7 @@ export default function AppointmentsPage() {
           </DropdownMenu>
 
           <Link href="/appointments/calendar">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 backdrop-blur-sm bg-white/50">
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border backdrop-blur-sm bg-white/50">
               <PremiumIcons.CalendarDays className="w-3.5 h-3.5 mr-2" />
               Calendar View
             </Button>

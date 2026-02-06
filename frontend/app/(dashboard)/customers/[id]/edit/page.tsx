@@ -336,12 +336,12 @@ export default function EditCustomerPage() {
     return (
       <div className="space-y-4 dark:bg-gray-900 min-h-screen p-6">
         <Link href="/customers">
-          <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+          <Button variant="secondary" className="border-border dark:text-gray-200">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
         </Link>
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <Card className="dark:bg-gray-800 border-border">
           <CardContent className="pt-6">
             <p className="text-red-600 dark:text-red-400">Customer not found.</p>
           </CardContent>
@@ -355,7 +355,7 @@ export default function EditCustomerPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button variant="secondary" className="border-border dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -369,7 +369,7 @@ export default function EditCustomerPage() {
         </div>
         <div className="flex space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button variant="secondary" className="border-border dark:text-gray-200">
               Cancel
             </Button>
           </Link>
@@ -395,7 +395,7 @@ export default function EditCustomerPage() {
       </div>
 
       {serverError && (
-        <Card className="border-l-4 border-l-red-500 dark:bg-gray-800 dark:border-gray-700">
+        <Card className="border-l-4 border-l-red-500 dark:bg-gray-800 border-border">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3 text-red-700 dark:text-red-400">
               <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -408,9 +408,9 @@ export default function EditCustomerPage() {
       <form id="customer-edit-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-6">
           {/* Personal Information */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <Card className="dark:bg-gray-800 border-border">
             <CardHeader>
-              <CardTitle className="dark:text-white text-lg">Personal Information</CardTitle>
+              <CardTitle className="text-foreground text-lg">Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -422,7 +422,7 @@ export default function EditCustomerPage() {
                     id="first_name"
                     placeholder="John"
                     {...register("first_name")}
-                    className={errors.first_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    className={errors.first_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                   />
                   {errors.first_name && (
                     <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -439,7 +439,7 @@ export default function EditCustomerPage() {
                     id="last_name"
                     placeholder="Doe"
                     {...register("last_name")}
-                    className={errors.last_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    className={errors.last_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                   />
                   {errors.last_name && (
                     <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -457,7 +457,7 @@ export default function EditCustomerPage() {
                     type="email"
                     placeholder="customer@example.com"
                     {...register("email")}
-                    className={errors.email ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    className={errors.email ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                   />
                   {errors.email && (
                     <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -475,7 +475,7 @@ export default function EditCustomerPage() {
                     type="tel"
                     placeholder="(555) 123-4567"
                     {...register("phone")}
-                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="bg-muted border-border text-foreground"
                   />
                 </div>
               </div>
@@ -483,9 +483,9 @@ export default function EditCustomerPage() {
           </Card>
 
           {/* Customer Type & Business Information */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
+          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
             <CardHeader>
-              <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
+              <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                 <Building2 className="w-5 h-5 text-primary dark:text-primary" />
                 Customer Type & Business Information
               </CardTitle>
@@ -501,7 +501,7 @@ export default function EditCustomerPage() {
                       value={watch("customer_type")}
                       onValueChange={(val: any) => setValue("customer_type", val, { shouldValidate: true })}
                     >
-                      <SelectTrigger id="customer_type" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                      <SelectTrigger id="customer_type" className="bg-muted border-border text-foreground">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -522,7 +522,7 @@ export default function EditCustomerPage() {
                           id="company_name"
                           placeholder="Acme Corporation"
                           {...register("company_name")}
-                          className={errors.company_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                          className={errors.company_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                         />
                         {errors.company_name && (
                           <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -539,7 +539,7 @@ export default function EditCustomerPage() {
                           id="business_type"
                           placeholder="e.g., Construction, Delivery, etc."
                           {...register("business_type")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="bg-muted border-border text-foreground"
                         />
                       </div>
                       <div>
@@ -550,7 +550,7 @@ export default function EditCustomerPage() {
                           id="tax_id"
                           placeholder="12-3456789"
                           {...register("tax_id")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="bg-muted border-border text-foreground"
                         />
                       </div>
                     </>
@@ -566,7 +566,7 @@ export default function EditCustomerPage() {
                       value={watch("payment_terms") || ""}
                       onValueChange={(val: any) => setValue("payment_terms", val)}
                     >
-                      <SelectTrigger id="payment_terms" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                      <SelectTrigger id="payment_terms" className="bg-muted border-border text-foreground">
                         <SelectValue placeholder="Select terms" />
                       </SelectTrigger>
                       <SelectContent>
@@ -587,7 +587,7 @@ export default function EditCustomerPage() {
                       value={watch("status")}
                       onValueChange={(val: any) => setValue("status", val)}
                     >
-                      <SelectTrigger id="status" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                      <SelectTrigger id="status" className="bg-muted border-border text-foreground">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -604,15 +604,15 @@ export default function EditCustomerPage() {
 
           {/* Portal Access & Password Management */}
           {customer && (
-            <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
+            <Card className="dark:bg-gray-800 border-border border-l-4 border-l-orange-500">
               <CardHeader>
-                <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
+                <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                   <KeyRound className="w-5 h-5 text-primary" />
                   Portal Access & Password Management
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-gray-50 bg-muted/50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-card-foreground">Portal Access Status</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -637,7 +637,7 @@ export default function EditCustomerPage() {
                         grantPortalAccessMutation.mutate({ sendEmail });
                       }}
                       disabled={grantPortalAccessMutation.isPending}
-                      className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                      className="border-border dark:text-gray-300 flex-1"
                     >
                       {grantPortalAccessMutation.isPending ? (
                         <span className="flex items-center gap-2">
@@ -659,7 +659,7 @@ export default function EditCustomerPage() {
                         type="button"
                         variant="secondary"
                         onClick={() => setShowPasswordReset(true)}
-                        className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                        className="border-border dark:text-gray-300 flex-1"
                       >
                         <KeyRound className="w-4 h-4 mr-2" />
                         Reset Password
@@ -669,7 +669,7 @@ export default function EditCustomerPage() {
                         variant="secondary"
                         onClick={() => sendResetLinkMutation.mutate()}
                         disabled={sendResetLinkMutation.isPending}
-                        className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                        className="border-border dark:text-gray-300 flex-1"
                       >
                         {sendResetLinkMutation.isPending ? (
                           <span className="flex items-center gap-2">
@@ -722,7 +722,7 @@ export default function EditCustomerPage() {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 placeholder="Enter new password or generate one"
-                                className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                                className="bg-muted border-border text-foreground pr-10"
                               />
                               <button
                                 type="button"
@@ -737,7 +737,7 @@ export default function EditCustomerPage() {
                               type="button"
                               variant="secondary"
                               onClick={generatePassword}
-                              className="dark:border-gray-600 dark:text-gray-300"
+                              className="border-border dark:text-gray-300"
                               title="Generate secure password"
                             >
                               <RefreshCw className="w-4 h-4" />
@@ -747,7 +747,7 @@ export default function EditCustomerPage() {
                                 type="button"
                                 variant="secondary"
                                 onClick={handleCopyPassword}
-                                className="dark:border-gray-600 dark:text-gray-300"
+                                className="border-border dark:text-gray-300"
                                 title="Copy password"
                               >
                                 {passwordCopied ? (
@@ -777,7 +777,7 @@ export default function EditCustomerPage() {
                               setShowPasswordReset(false);
                               setNewPassword("");
                             }}
-                            className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                            className="border-border dark:text-gray-300 flex-1"
                           >
                             Cancel
                           </Button>

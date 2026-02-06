@@ -95,7 +95,7 @@ export default function TechnicianWorkOrderPage() {
                                     {workOrder.status.replace("_", " ").toUpperCase()}
                                 </Badge>
                             </div>
-                            <h2 className="text-xl md:text-2xl font-bold dark:text-white">
+                            <h2 className="text-xl md:text-2xl font-bold text-foreground">
                                 {workOrder.vehicle_info || "Vehicle Info Unavailable"}
                             </h2>
                             <p className="text-muted-foreground mt-1">

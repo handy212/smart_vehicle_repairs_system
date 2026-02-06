@@ -478,7 +478,7 @@ export default function VehiclesPage() {
       />
 
       {/* Vehicles Table */}
-      <Card className="border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <Card className="border-t shadow-sm dark:bg-gray-800 border-border">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6">

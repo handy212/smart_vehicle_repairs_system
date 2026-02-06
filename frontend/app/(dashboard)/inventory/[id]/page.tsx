@@ -327,7 +327,7 @@ export default function PartDetailPage() {
                                   case 'use':
                                   case 'damage':
                                   case 'adjustment_out': return 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
-                                  default: return 'bg-gray-50 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
+                                  default: return 'bg-gray-50 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-400 border-border';
                                 }
                               };
 
@@ -348,7 +348,7 @@ export default function PartDetailPage() {
                                     {txn.reference_number ? (
                                       <div className="flex items-center gap-1.5 text-muted-foreground">
                                         <Hash className="w-3 h-3 opacity-60" />
-                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-muted px-1.5 py-0.5 rounded border border-gray-100 dark:border-gray-700">
+                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-muted px-1.5 py-0.5 rounded border border-gray-100 border-border">
                                           {txn.reference_number}
                                         </span>
                                       </div>

@@ -158,7 +158,7 @@ const CustomerRow = memo(function CustomerRow({
             className={cn(
               "text-[10px] px-2 py-0.5 font-medium border shadow-none",
               customer.status === "active" && "border-green-200 text-green-700 bg-success/10/50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
-              customer.status === "inactive" && "border-gray-200 text-gray-700 bg-gray-50/50 dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800",
+              customer.status === "inactive" && "border-gray-200 text-gray-700 bg-gray-50/50 border-border dark:text-gray-300 dark:bg-gray-800",
               customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
             )}
           >
@@ -750,7 +750,7 @@ export default function CustomersPage() {
       />
 
       {/* Customers Table */}
-      <Card className="border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <Card className="border-t shadow-sm dark:bg-gray-800 border-border">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6">

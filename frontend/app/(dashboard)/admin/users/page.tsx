@@ -239,7 +239,7 @@ export default function UsersManagementPage() {
       </Card>
 
       {/* Users Table */}
-      <Card className="mx-4 border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <Card className="mx-4 border-t shadow-sm dark:bg-gray-800 border-border">
         <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
           <CardTitle className="text-sm font-semibold text-card-foreground">
             Users Directory <span className="text-muted-foreground font-normal ml-1">({usersData?.count || 0})</span>

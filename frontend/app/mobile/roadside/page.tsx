@@ -63,7 +63,7 @@ export default function RoadsideListPage() {
             {/* Active Requests */}
             <div className="space-y-3">
                 {activeRequests.length === 0 && !loading && (
-                    <div className="text-center py-8 text-gray-500 bg-muted rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="text-center py-8 text-gray-500 bg-muted rounded-lg border border-dashed border-gray-300 border-border">
                         <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p>No active jobs assigned</p>
                     </div>

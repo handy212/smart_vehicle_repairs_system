@@ -494,7 +494,7 @@ export default function SystemSettingsPage() {
                 onClick={() => handleCategorySelect(cat.value)}
                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isSelected
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-muted dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-muted border-border dark:text-gray-300 dark:hover:bg-gray-700"
                   }`}
               >
                 {cat.label}

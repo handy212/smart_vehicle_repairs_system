@@ -345,12 +345,12 @@ export default function UserDetailPage() {
     return (
       <div className="space-y-4 dark:bg-gray-900 min-h-screen p-6">
         <Link href="/admin/users">
-          <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+          <Button variant="secondary" className="border-border dark:text-gray-200">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
         </Link>
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <Card className="dark:bg-gray-800 border-border">
           <CardContent className="pt-6">
             <p className="text-red-600 dark:text-red-400">User not found</p>
           </CardContent>
@@ -364,7 +364,7 @@ export default function UserDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/users">
-            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button variant="secondary" className="border-border dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -374,7 +374,7 @@ export default function UserDetailPage() {
               <h1 className="text-3xl font-bold text-foreground">
                 {user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}
               </h1>
-              <Badge variant={getRoleVariant(user.role) as any} className="dark:bg-gray-700 dark:text-white">
+              <Badge variant={getRoleVariant(user.role) as any} className="bg-muted text-foreground">
                 {getRoleLabel(user.role)}
               </Badge>
               {user.is_active ? (
@@ -399,7 +399,7 @@ export default function UserDetailPage() {
                   reset();
                   setServerError(null);
                 }}
-                className="dark:border-gray-700 dark:text-gray-200"
+                className="border-border dark:text-gray-200"
               >
                 <X className="w-4 h-4 mr-2" />
                 Cancel
@@ -435,9 +435,9 @@ export default function UserDetailPage() {
       {isEditing ? (
         <form id="user-edit-form" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-6">
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <Card className="dark:bg-gray-800 border-border">
               <CardHeader>
-                <CardTitle className="dark:text-white text-lg">Basic Information</CardTitle>
+                <CardTitle className="text-foreground text-lg">Basic Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {serverError && (
@@ -455,7 +455,7 @@ export default function UserDetailPage() {
                     <Input
                       placeholder="John"
                       {...register("first_name")}
-                      className={errors.first_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                      className={errors.first_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                     />
                     {errors.first_name && (
                       <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -472,7 +472,7 @@ export default function UserDetailPage() {
                     <Input
                       placeholder="Doe"
                       {...register("last_name")}
-                      className={errors.last_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                      className={errors.last_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
                     />
                     {errors.last_name && (
                       <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -488,7 +488,7 @@ export default function UserDetailPage() {
                       type="tel"
                       placeholder="(555) 123-4567"
                       {...register("phone")}
-                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      className="bg-muted border-border text-foreground"
                     />
                   </div>
 
@@ -500,7 +500,7 @@ export default function UserDetailPage() {
                       value={watch("role")}
                       onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
                     >
-                      <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                      <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                       <SelectContent>
@@ -560,9 +560,9 @@ export default function UserDetailPage() {
 
             {/* Branch Assignment and Employment Information - Combined */}
             {(isManager || isStaff) && (
-              <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
+              <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
                 <CardHeader>
-                  <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
+                  <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                     <Building2 className="w-5 h-5 text-primary dark:text-primary" />
                     Branch Assignment & Employment Information
                   </CardTitle>
@@ -579,14 +579,14 @@ export default function UserDetailPage() {
                           <p className="text-xs text-muted-foreground mb-3">
                             Select all branches this manager should oversee
                           </p>
-                          <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
+                          <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 bg-muted/50 bg-gray-50">
                             {branches.length > 0 ? (
                               branches.map((branch) => {
                                 const isSelected = (watch("managed_branches") || []).includes(branch.id);
                                 return (
                                   <label
                                     key={branch.id}
-                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
+                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-gray-200 border-border transition-colors"
                                   >
                                     <input
                                       type="checkbox"
@@ -640,7 +640,7 @@ export default function UserDetailPage() {
                             value={watch("branch")?.toString() || ""}
                             onValueChange={(val) => setValue("branch", val ? Number(val) : null, { shouldValidate: true })}
                           >
-                            <SelectTrigger className={errors.branch ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                            <SelectTrigger className={errors.branch ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
                               <SelectValue placeholder="-- Select a branch --" />
                             </SelectTrigger>
                             <SelectContent>
@@ -679,7 +679,7 @@ export default function UserDetailPage() {
                           <Input
                             placeholder="EMP-00001"
                             {...register("employee_id")}
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            className="bg-muted border-border text-foreground"
                           />
                         </div>
                         <div>
@@ -689,7 +689,7 @@ export default function UserDetailPage() {
                           <Input
                             type="date"
                             {...register("hire_date")}
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            className="bg-muted border-border text-foreground"
                           />
                         </div>
                         <div>
@@ -701,7 +701,7 @@ export default function UserDetailPage() {
                             step="0.01"
                             placeholder="0.00"
                             {...register("hourly_rate")}
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            className="bg-muted border-border text-foreground"
                           />
                         </div>
                       </div>
@@ -712,9 +712,9 @@ export default function UserDetailPage() {
             )}
 
             {/* Password Reset Section */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
+            <Card className="dark:bg-gray-800 border-border border-l-4 border-l-orange-500">
               <CardHeader>
-                <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
+                <CardTitle className="text-foreground flex items-center gap-2 text-lg">
                   <KeyRound className="w-5 h-5 text-primary" />
                   Password Reset
                 </CardTitle>
@@ -726,7 +726,7 @@ export default function UserDetailPage() {
                       type="button"
                       variant="secondary"
                       onClick={() => setShowPasswordReset(true)}
-                      className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                      className="border-border dark:text-gray-300 flex-1"
                     >
                       <KeyRound className="w-4 h-4 mr-2" />
                       Reset Password
@@ -736,7 +736,7 @@ export default function UserDetailPage() {
                       variant="secondary"
                       onClick={() => sendResetLinkMutation.mutate()}
                       disabled={sendResetLinkMutation.isPending}
-                      className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                      className="border-border dark:text-gray-300 flex-1"
                     >
                       {sendResetLinkMutation.isPending ? (
                         <span className="flex items-center gap-2">
@@ -764,7 +764,7 @@ export default function UserDetailPage() {
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="Enter new password or generate one"
-                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                            className="bg-muted border-border text-foreground pr-10"
                           />
                           <button
                             type="button"
@@ -779,7 +779,7 @@ export default function UserDetailPage() {
                           type="button"
                           variant="secondary"
                           onClick={handleGeneratePassword}
-                          className="dark:border-gray-600 dark:text-gray-300"
+                          className="border-border dark:text-gray-300"
                           title="Generate secure password"
                         >
                           <RefreshCw className="w-4 h-4" />
@@ -789,7 +789,7 @@ export default function UserDetailPage() {
                             type="button"
                             variant="secondary"
                             onClick={handleCopyPassword}
-                            className="dark:border-gray-600 dark:text-gray-300"
+                            className="border-border dark:text-gray-300"
                             title="Copy password"
                           >
                             {passwordCopied ? (
@@ -819,7 +819,7 @@ export default function UserDetailPage() {
                           setShowPasswordReset(false);
                           setNewPassword("");
                         }}
-                        className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                        className="border-border dark:text-gray-300 flex-1"
                       >
                         Cancel
                       </Button>
@@ -859,9 +859,9 @@ export default function UserDetailPage() {
             </Card>
 
             {/* User Details Sidebar */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <Card className="dark:bg-gray-800 border-border">
               <CardHeader>
-                <CardTitle className="dark:text-white text-lg">Account Details</CardTitle>
+                <CardTitle className="text-foreground text-lg">Account Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -893,7 +893,7 @@ export default function UserDetailPage() {
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Status Card */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <Card className="dark:bg-gray-800 border-border">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -918,12 +918,12 @@ export default function UserDetailPage() {
             </Card>
 
             {/* Role Card */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <Card className="dark:bg-gray-800 border-border">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Role</p>
-                    <Badge variant={getRoleVariant(user.role) as any} className="mt-2 dark:bg-gray-700 dark:text-white">
+                    <Badge variant={getRoleVariant(user.role) as any} className="mt-2 bg-muted text-foreground">
                       {getRoleLabel(user.role)}
                     </Badge>
                   </div>
@@ -935,7 +935,7 @@ export default function UserDetailPage() {
             </Card>
 
             {/* Branch Card */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <Card className="dark:bg-gray-800 border-border">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
@@ -957,9 +957,9 @@ export default function UserDetailPage() {
           {/* Main Information Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Personal Information */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700 lg:col-span-2">
+            <Card className="dark:bg-gray-800 border-border lg:col-span-2">
               <CardHeader>
-                <CardTitle className="dark:text-white text-lg font-semibold">Personal Information</CardTitle>
+                <CardTitle className="text-foreground text-lg font-semibold">Personal Information</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -988,9 +988,9 @@ export default function UserDetailPage() {
             </Card>
 
             {/* Account Details */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <Card className="dark:bg-gray-800 border-border">
               <CardHeader>
-                <CardTitle className="dark:text-white text-lg font-semibold">Account Details</CardTitle>
+                <CardTitle className="text-foreground text-lg font-semibold">Account Details</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl className="space-y-4">
@@ -1009,13 +1009,13 @@ export default function UserDetailPage() {
                   <div className="pt-4 border-t border-border">
                     <dt className="text-sm font-medium text-muted-foreground mb-3">Notification Preferences</dt>
                     <dd className="space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">Email</span>
                         <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.email_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">SMS</span>
                         <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.sms_notifications ? "On" : "Off"}
@@ -1029,9 +1029,9 @@ export default function UserDetailPage() {
           </div>
 
           {/* Branch & Employment Information */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
+          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
             <CardHeader>
-              <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
+              <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 <Building2 className="w-5 h-5 text-primary dark:text-primary" />
                 Branch & Employment Information
               </CardTitle>
@@ -1058,7 +1058,7 @@ export default function UserDetailPage() {
                       <p className="text-base font-semibold text-foreground">{user.branch_name}</p>
                     </div>
                   ) : (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-border">
+                    <div className="p-4 bg-gray-50 bg-muted/50 rounded-lg border border-border">
                       <p className="text-sm text-muted-foreground italic">No branch assigned</p>
                     </div>
                   )}
@@ -1099,9 +1099,9 @@ export default function UserDetailPage() {
           </Card>
 
           {/* Password Reset Section */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
+          <Card className="dark:bg-gray-800 border-border border-l-4 border-l-orange-500">
             <CardHeader>
-              <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
+              <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 <KeyRound className="w-5 h-5 text-primary" />
                 Password Management
               </CardTitle>
@@ -1112,7 +1112,7 @@ export default function UserDetailPage() {
                   type="button"
                   variant="secondary"
                   onClick={() => setShowPasswordReset(true)}
-                  className="dark:border-gray-600 dark:text-gray-300"
+                  className="border-border dark:text-gray-300"
                 >
                   <KeyRound className="w-4 h-4 mr-2" />
                   Reset Password
@@ -1122,7 +1122,7 @@ export default function UserDetailPage() {
                   variant="secondary"
                   onClick={() => sendResetLinkMutation.mutate()}
                   disabled={sendResetLinkMutation.isPending}
-                  className="dark:border-gray-600 dark:text-gray-300"
+                  className="border-border dark:text-gray-300"
                 >
                   {sendResetLinkMutation.isPending ? (
                     <span className="flex items-center gap-2">
@@ -1150,7 +1150,7 @@ export default function UserDetailPage() {
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="Enter new password or generate one"
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                          className="bg-muted border-border text-foreground pr-10"
                         />
                         <button
                           type="button"
@@ -1165,7 +1165,7 @@ export default function UserDetailPage() {
                         type="button"
                         variant="secondary"
                         onClick={handleGeneratePassword}
-                        className="dark:border-gray-600 dark:text-gray-300"
+                        className="border-border dark:text-gray-300"
                         title="Generate secure password"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -1175,7 +1175,7 @@ export default function UserDetailPage() {
                           type="button"
                           variant="secondary"
                           onClick={handleCopyPassword}
-                          className="dark:border-gray-600 dark:text-gray-300"
+                          className="border-border dark:text-gray-300"
                           title="Copy password"
                         >
                           {passwordCopied ? (
@@ -1205,7 +1205,7 @@ export default function UserDetailPage() {
                         setShowPasswordReset(false);
                         setNewPassword("");
                       }}
-                      className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                      className="border-border dark:text-gray-300 flex-1"
                     >
                       Cancel
                     </Button>

@@ -1119,7 +1119,7 @@ export default function NewWorkOrderPage() {
             <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-card/60 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
               <CardContent className="p-0">
                 {/* Header / Toggle Area */}
-                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-700'}`}
+                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border border-dashed border-gray-300 border-border'}`}
                   onClick={() => {
                     const newState = !isWarrantyRework;
                     setIsWarrantyRework(newState);
@@ -1145,7 +1145,7 @@ export default function NewWorkOrderPage() {
 
                   <div className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isWarrantyRework} readOnly />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer bg-muted peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-border peer-checked:bg-primary"></div>
                   </div>
                 </div>
 
@@ -1189,7 +1189,7 @@ export default function NewWorkOrderPage() {
                               >
                                 <div className="flex justify-between items-start mb-1">
                                   <span className="font-bold text-sm text-foreground">{wo.work_order_number}</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-muted-foreground font-medium uppercase tracking-wide">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 bg-muted text-muted-foreground font-medium uppercase tracking-wide">
                                     {wo.days_ago !== null ? `${wo.days_ago} DAYS AGO` : 'N/A'}
                                   </span>
                                 </div>

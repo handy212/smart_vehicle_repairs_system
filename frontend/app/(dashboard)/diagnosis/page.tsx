@@ -313,7 +313,7 @@ export default function DiagnosisListPage() {
                             diagnosis.status === "completed"
                               ? "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
                               : diagnosis.status === "on_hold"
-                                ? "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+                                ? "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 border-border"
                                 : "bg-primary/10 text-primary border-orange-200 dark:bg-orange-900/20 dark:text-primary dark:border-orange-800"
                           )}
                         >

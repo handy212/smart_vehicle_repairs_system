@@ -198,7 +198,7 @@ export default function InspectionDetailPage() {
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Progress</p>
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold">{inspection.completion_percentage || 0}%</span>
-              <div className="flex-1 bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden max-w-[100px]">
+              <div className="flex-1 bg-gray-100 bg-muted h-1.5 rounded-full overflow-hidden max-w-[100px]">
                 <div className="bg-primary h-full" style={{ width: `${inspection.completion_percentage || 0}%` }} />
               </div>
             </div>

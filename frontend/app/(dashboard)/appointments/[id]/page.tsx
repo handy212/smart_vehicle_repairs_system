@@ -172,7 +172,7 @@ export default function AppointmentDetailPage() {
           <h1 className="text-xl font-bold text-foreground tracking-tight">Appointment Details</h1>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={() => router.back()} className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+          <Button variant="outline" size="sm" onClick={() => router.back()} className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border">
             <ArrowLeft className="w-3.5 h-3.5 mr-2" />
             Back
           </Button>

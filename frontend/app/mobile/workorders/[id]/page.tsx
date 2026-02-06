@@ -667,7 +667,7 @@ export default function MobileWorkOrderDetailPage() {
                   "p-3 rounded-lg border transition-colors cursor-pointer",
                   task.status === "completed"
                     ? "bg-success/10 border-green-200 dark:bg-green-950 dark:border-green-800"
-                    : "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    : "bg-white border-gray-200 dark:bg-gray-900 border-border hover:bg-gray-50 dark:hover:bg-gray-800"
                 )}
                 onClick={() => handleToggleTask(task)}
               >
