@@ -69,7 +69,7 @@ export default function InspectionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/inspections/templates">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border">
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 text-foreground border-border">
               <FileText className="w-3.5 h-3.5 mr-2" />
               Templates
             </Button>
@@ -90,7 +90,7 @@ export default function InspectionsPage() {
         <CardContent className="p-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search inspections..."
                 value={search}
@@ -148,7 +148,7 @@ export default function InspectionsPage() {
             <CardTitle className="text-sm font-semibold text-card-foreground">
               Inspections List
             </CardTitle>
-            <span className="text-xs text-gray-500 font-medium">
+            <span className="text-xs text-muted-foreground font-medium">
               {data?.count || 0} records
             </span>
           </div>
@@ -156,9 +156,9 @@ export default function InspectionsPage() {
         <CardContent className="p-0">
           {inspections.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+              <FileText className="mx-auto h-12 w-12 text-gray-300 text-muted-foreground" />
               <h3 className="mt-2 text-sm font-medium text-foreground">No inspections found</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Get started by creating a new inspection or try adjusting your filters.
               </p>
               <div className="mt-6">
@@ -175,23 +175,23 @@ export default function InspectionsPage() {
           ) : (
             <div className="rounded-md">
               <Table>
-                <TableHeader className="bg-gray-50/50 hover:bg-gray-50/50">
+                <TableHeader className="bg-muted/50 hover:bg-muted/50">
                   <TableRow>
-                    <TableHead className="w-[100px] h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Number</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Vehicle</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Template</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Date</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Result</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Progress</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                    <TableHead className="w-[100px] h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Number</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Template</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Result</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Progress</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {inspections.map((inspection) => (
                     <TableRow
                       key={inspection.id}
-                      className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer"
+                      className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 cursor-pointer"
                       onDoubleClick={() => router.push(`/inspections/${inspection.id}`)}
                     >
                       <TableCell className="py-2 font-mono text-xs font-medium text-primary">
@@ -237,7 +237,7 @@ export default function InspectionsPage() {
                             {inspection.overall_result_display || inspection.overall_result}
                           </Badge>
                         ) : (
-                          <span className="text-xs text-gray-400">-</span>
+                          <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell className="py-2">
@@ -250,7 +250,7 @@ export default function InspectionsPage() {
                               }}
                             />
                           </div>
-                          <span className="text-[10px] text-gray-500 font-medium">
+                          <span className="text-[10px] text-muted-foreground font-medium">
                             {inspection.completion_percentage || 0}%
                           </span>
                         </div>
@@ -299,8 +299,8 @@ export default function InspectionsPage() {
           )}
 
           {data && data.count > 0 && (
-            <div className="flex items-center justify-between p-4 border-t bg-gray-50/30 dark:bg-gray-800/30">
-              <div className="text-xs text-gray-500">
+            <div className="flex items-center justify-between p-4 border-t bg-muted/30 dark:bg-gray-800/30">
+              <div className="text-xs text-muted-foreground">
                 Showing {inspections.length} of {data.count} records
               </div>
               <div className="flex gap-2">

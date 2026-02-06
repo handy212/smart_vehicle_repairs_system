@@ -52,7 +52,7 @@ export default function WorkOrderPartsTab({
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Parts & Materials</CardTitle>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {parts.length > 0 ? (
                 <>Total Cost: {formatCurrency(totalPartsCost)} • {parts.length} {parts.length === 1 ? 'part' : 'parts'}</>
               ) : (
@@ -68,11 +68,11 @@ export default function WorkOrderPartsTab({
         <CardContent>
           {parts.length === 0 ? (
             <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <Package className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
               <p className="text-sm font-medium text-foreground mb-1">
                 No parts added yet
               </p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Add parts and materials as they are used in the repair work.
               </p>
               <Button onClick={() => setShowAddDialog(true)}variant="secondary">
@@ -101,7 +101,7 @@ export default function WorkOrderPartsTab({
                       <div>
                         <p className="font-medium">{part.part_name}</p>
                         {part.description && (
-                          <p className="text-xs text-gray-500 mt-1">{part.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{part.description}</p>
                         )}
                       </div>
                     </TableCell>

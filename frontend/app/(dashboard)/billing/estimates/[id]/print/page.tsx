@@ -31,7 +31,7 @@ export default function EstimatePrintPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen p-8">
         <div className="text-red-600 text-lg font-semibold">Invalid Estimate ID</div>
-        <p className="text-gray-600 mt-2">The estimate ID in the URL is invalid.</p>
+        <p className="text-muted-foreground mt-2">The estimate ID in the URL is invalid.</p>
       </div>
     );
   }

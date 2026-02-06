@@ -32,7 +32,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
         <div className="space-y-4">
             {/* Today's Appointments */}
             <Card className="border-t shadow-sm bg-card overflow-hidden">
-                <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-primary" />
@@ -42,7 +42,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         </div>
                         <Link
                             href="/appointments"
-                            className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-primary hover:text-orange-800 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
+                            className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-orange-800 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
                         >
                             Full Schedule
                             <ChevronRight className="w-3 h-3" />
@@ -56,19 +56,19 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                 <Link
                                     key={apt.id}
                                     href={`/appointments/${apt.id}`}
-                                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group"
+                                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors group"
                                 >
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-foreground truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                                             {apt.customer_name || "Guest Customer"}
                                         </p>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <div className="flex items-center gap-1 text-[10px] text-gray-400 font-medium uppercase tracking-tight">
+                                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
                                                 <Clock className="w-3 h-3" />
                                                 {apt.appointment_time || "TBD"}
                                             </div>
-                                            <span className="text-gray-200 dark:text-gray-800 text-[10px]">•</span>
-                                            <span className="text-[10px] text-gray-400 truncate max-w-[120px]">
+                                            <span className="text-gray-200 text-foreground text-[10px]">•</span>
+                                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
                                                 {apt.vehicle_display || apt.vehicle_info || "No Vehicle"}
                                             </span>
                                         </div>
@@ -91,9 +91,9 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                     ) : (
                         <div className="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
                             <div className="p-2 rounded-full bg-muted">
-                                <Calendar className="w-5 h-5 text-gray-200 dark:text-gray-700" />
+                                <Calendar className="w-5 h-5 text-gray-200 text-foreground" />
                             </div>
-                            <p className="text-xs font-medium text-gray-400">
+                            <p className="text-xs font-medium text-muted-foreground">
                                 No appointments for today
                             </p>
                         </div>
@@ -103,7 +103,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
 
             {/* Recent Work Orders */}
             <Card className="border-t shadow-sm bg-card overflow-hidden">
-                <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Wrench className="w-4 h-4 text-purple-500" />
@@ -113,7 +113,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         </div>
                         <Link
                             href="/workorders"
-                            className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-primary hover:text-orange-800 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
+                            className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-orange-800 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
                         >
                             All Orders
                             <ChevronRight className="w-3 h-3" />
@@ -127,18 +127,18 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                 <Link
                                     key={wo.id}
                                     href={`/workorders/${wo.id}`}
-                                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group"
+                                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors group"
                                 >
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-[10px] font-bold text-gray-400 group-hover:text-primary transition-colors">
+                                            <span className="font-mono text-[10px] font-bold text-muted-foreground group-hover:text-primary transition-colors">
                                                 #{wo.wo_number}
                                             </span>
                                             <p className="text-sm font-bold text-foreground truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                                                 {wo.customer || "N/A"}
                                             </p>
                                         </div>
-                                        <p className="text-[10px] text-gray-400 mt-0.5 truncate uppercase tracking-tight font-medium">
+                                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate uppercase tracking-tight font-medium">
                                             {wo.vehicle || "No Vehicle Info"}
                                         </p>
                                     </div>
@@ -160,9 +160,9 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                     ) : (
                         <div className="px-4 py-8 text-center flex flex-col items-center justify-center gap-2">
                             <div className="p-2 rounded-full bg-muted">
-                                <Wrench className="w-5 h-5 text-gray-200 dark:text-gray-700" />
+                                <Wrench className="w-5 h-5 text-gray-200 text-foreground" />
                             </div>
-                            <p className="text-xs font-medium text-gray-400">
+                            <p className="text-xs font-medium text-muted-foreground">
                                 No recent work orders
                             </p>
                         </div>

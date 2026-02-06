@@ -126,7 +126,7 @@ export default function ServiceHistoryPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-4">
-              <Car className="w-5 h-5 text-gray-400" />
+              <Car className="w-5 h-5 text-muted-foreground" />
               <select
                 value={vehicleFilter}
                 onChange={(e) => setVehicleFilter(e.target.value)}
@@ -197,7 +197,7 @@ export default function ServiceHistoryPage() {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">No work orders found</p>
                 </CardContent>
               </Card>
@@ -249,7 +249,7 @@ export default function ServiceHistoryPage() {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">No inspections found</p>
                 </CardContent>
               </Card>

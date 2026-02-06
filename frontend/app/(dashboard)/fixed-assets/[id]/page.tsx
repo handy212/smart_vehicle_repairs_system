@@ -47,7 +47,7 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
             case "active":
                 return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
             case "inactive":
-                return "bg-gray-100 text-gray-800 dark:bg-gray-800 text-foreground";
+                return "bg-gray-100 text-foreground dark:bg-gray-800 text-foreground";
             case "disposed":
             case "sold":
                 return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
@@ -102,36 +102,36 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Asset Number</span>
+                            <span className="text-sm font-medium text-muted-foreground">Asset Number</span>
                             <div className="flex items-center gap-2">
-                                <Hash className="w-4 h-4 text-gray-400" />
+                                <Hash className="w-4 h-4 text-muted-foreground" />
                                 <span className="font-mono">{asset.asset_number}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Category</span>
+                            <span className="text-sm font-medium text-muted-foreground">Category</span>
                             <div className="flex items-center gap-2">
-                                <Tag className="w-4 h-4 text-gray-400" />
+                                <Tag className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.category_name || "N/A"}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Branch</span>
+                            <span className="text-sm font-medium text-muted-foreground">Branch</span>
                             <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-gray-400" />
+                                <Building2 className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.branch_name || "N/A"}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Location</span>
+                            <span className="text-sm font-medium text-muted-foreground">Location</span>
                             <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <MapPin className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.location || "Not specified"}</span>
                             </div>
                         </div>
                         {asset.description && (
                             <div className="col-span-1 sm:col-span-2 space-y-1 pt-2 border-t">
-                                <span className="text-sm font-medium text-gray-500">Description</span>
+                                <span className="text-sm font-medium text-muted-foreground">Description</span>
                                 <p className="text-sm text-card-foreground">
                                     {asset.description}
                                 </p>
@@ -150,28 +150,28 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex justify-between items-center py-2 border-b">
-                            <span className="text-sm text-gray-500">Acquisition Cost</span>
+                            <span className="text-sm text-muted-foreground">Acquisition Cost</span>
                             <span className="font-semibold">{formatCurrency(asset.acquisition_cost)}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b">
-                            <span className="text-sm text-gray-500">Salvage Value</span>
+                            <span className="text-sm text-muted-foreground">Salvage Value</span>
                             <span className="font-medium text-card-foreground">
                                 {formatCurrency(asset.salvage_value || 0)}
                             </span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b">
-                            <span className="text-sm text-gray-500">Acquisition Date</span>
+                            <span className="text-sm text-muted-foreground">Acquisition Date</span>
                             <span className="flex items-center gap-1.5 status-text">
                                 <Calendar className="w-3.5 h-3.5" />
                                 {format(new Date(asset.acquisition_date), "MMM d, yyyy")}
                             </span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b">
-                            <span className="text-sm text-gray-500">Useful Life</span>
+                            <span className="text-sm text-muted-foreground">Useful Life</span>
                             <span>{asset.useful_life_years} Years</span>
                         </div>
                         <div className="flex justify-between items-center py-2">
-                            <span className="text-sm text-gray-500">Depreciation Method</span>
+                            <span className="text-sm text-muted-foreground">Depreciation Method</span>
                             <span className="capitalize">{asset.depreciation_method.replace(/_/g, " ")}</span>
                         </div>
                     </CardContent>
@@ -187,15 +187,15 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Manufacturer</span>
+                            <span className="text-sm font-medium text-muted-foreground">Manufacturer</span>
                             <p>{asset.manufacturer || "N/A"}</p>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Model Number</span>
+                            <span className="text-sm font-medium text-muted-foreground">Model Number</span>
                             <p className="font-mono text-sm">{asset.model_number || "N/A"}</p>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-gray-500">Serial Number</span>
+                            <span className="text-sm font-medium text-muted-foreground">Serial Number</span>
                             <p className="font-mono text-sm">{asset.serial_number || "N/A"}</p>
                         </div>
                     </CardContent>

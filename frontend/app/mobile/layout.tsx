@@ -58,10 +58,10 @@ export default function MobileLayout({
 
   if (!mounted || !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-gray-950">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -96,7 +96,7 @@ export default function MobileLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+    <div className="min-h-screen bg-muted dark:bg-gray-950 flex flex-col">
       <SyncStatusBanner />
       <header className="bg-card border-b border-border h-14 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
@@ -129,20 +129,20 @@ export default function MobileLayout({
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 text-xs transition-colors",
                   isActive
-                    ? "text-primary dark:text-primary"
+                    ? "text-primary"
                     : "text-muted-foreground"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-5 w-5",
-                    isActive && "text-primary dark:text-primary"
+                    isActive && "text-primary"
                   )}
                 />
                 <span
                   className={cn(
                     "font-medium",
-                    isActive && "text-primary dark:text-primary"
+                    isActive && "text-primary"
                   )}
                 >
                   {item.label}

@@ -117,8 +117,8 @@ export default function NewSupplierPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Supplier</h1>
-          <p className="text-sm text-gray-500 mt-1">Add a new parts supplier</p>
+          <h1 className="text-3xl font-bold text-foreground">New Supplier</h1>
+          <p className="text-sm text-muted-foreground mt-1">Add a new parts supplier</p>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export default function NewSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Supplier Name *
                 </label>
                 <Input
@@ -151,7 +151,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Supplier Code *
                 </label>
                 <Input
@@ -164,12 +164,12 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Supplier Type *
                 </label>
                 <select
                   {...register("supplier_type")}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
                 >
                   <option value="manufacturer">Manufacturer</option>
                   <option value="distributor">Distributor</option>
@@ -187,17 +187,17 @@ export default function NewSupplierPage() {
                   <input
                     type="checkbox"
                     {...register("is_active")}
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                    className="rounded border-border text-primary focus:ring-primary"
                   />
-                  <label className="ml-2 text-sm text-gray-700">Active</label>
+                  <label className="ml-2 text-sm text-foreground">Active</label>
                 </div>
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     {...register("is_preferred")}
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                    className="rounded border-border text-primary focus:ring-primary"
                   />
-                  <label className="ml-2 text-sm text-gray-700">Preferred</label>
+                  <label className="ml-2 text-sm text-foreground">Preferred</label>
                 </div>
               </div>
             </CardContent>
@@ -210,7 +210,7 @@ export default function NewSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Contact Person
                 </label>
                 <Input
@@ -220,7 +220,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Email
                 </label>
                 <Input
@@ -234,7 +234,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Phone
                 </label>
                 <Input
@@ -244,7 +244,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Fax
                 </label>
                 <Input
@@ -254,7 +254,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Website
                 </label>
                 <Input
@@ -276,7 +276,7 @@ export default function NewSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Address Line 1
                 </label>
                 <Input
@@ -286,7 +286,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Address Line 2
                 </label>
                 <Input
@@ -297,7 +297,7 @@ export default function NewSupplierPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     City
                   </label>
                   <Input
@@ -306,7 +306,7 @@ export default function NewSupplierPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     State
                   </label>
                   <Input
@@ -318,7 +318,7 @@ export default function NewSupplierPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Postal Code
                   </label>
                   <Input
@@ -327,7 +327,7 @@ export default function NewSupplierPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Country
                   </label>
                   <Input
@@ -346,7 +346,7 @@ export default function NewSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tax ID / EIN
                 </label>
                 <Input
@@ -356,7 +356,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Payment Terms
                 </label>
                 <Input
@@ -366,7 +366,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Credit Limit
                 </label>
                 <Input
@@ -378,7 +378,7 @@ export default function NewSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Notes
                 </label>
                 <Textarea

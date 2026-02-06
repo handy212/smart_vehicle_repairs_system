@@ -90,7 +90,7 @@ export default function CustomerDetailPage() {
     contacts: contacts.length,
   };
 
-  if (isLoading) return <div className="p-8 text-center text-gray-500">Loading customer...</div>;
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading customer...</div>;
   if (error || !customer) return <div className="p-8 text-center text-red-500">Error loading customer</div>;
 
   const renderContent = () => {
@@ -160,12 +160,12 @@ export default function CustomerDetailPage() {
         );
 
       default:
-        return <div className="p-8 text-center text-gray-500">View not implemented yet</div>;
+        return <div className="p-8 text-center text-muted-foreground">View not implemented yet</div>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/30 bg-background">
+    <div className="min-h-screen bg-muted/30 bg-background">
       <div className="max-w-[1600px] mx-auto p-4 sm:p-6">
         <PageHeader
           title={customer.company_name || `${customer.user?.first_name} ${customer.user?.last_name}`}

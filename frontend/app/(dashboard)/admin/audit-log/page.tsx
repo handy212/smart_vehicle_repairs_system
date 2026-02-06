@@ -175,7 +175,7 @@ export default function AuditLogPage() {
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-foreground">Audit Log</h1>
-              <p className="text-sm text-gray-500 mt-1">View system activity and audit trail</p>
+              <p className="text-sm text-muted-foreground mt-1">View system activity and audit trail</p>
             </div>
           </div>
         </div>
@@ -187,25 +187,25 @@ export default function AuditLogPage() {
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
                 <div className="text-xl font-bold">{statsData.total}</div>
-                <p className="text-xs text-gray-500">Total Logs</p>
+                <p className="text-xs text-muted-foreground">Total Logs</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
                 <div className="text-xl font-bold">{statsData.by_action.length}</div>
-                <p className="text-xs text-gray-500">Action Types</p>
+                <p className="text-xs text-muted-foreground">Action Types</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
                 <div className="text-xl font-bold">{statsData.top_users.length}</div>
-                <p className="text-xs text-gray-500">Active Users</p>
+                <p className="text-xs text-muted-foreground">Active Users</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
                 <div className="text-xl font-bold">{statsData.top_models.length}</div>
-                <p className="text-xs text-gray-500">Models Tracked</p>
+                <p className="text-xs text-muted-foreground">Models Tracked</p>
               </CardContent>
             </Card>
           </div>
@@ -255,9 +255,9 @@ export default function AuditLogPage() {
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Search</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                   <Input
                     placeholder="Search logs..."
                     value={searchTerm}
@@ -270,14 +270,14 @@ export default function AuditLogPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Action</label>
+                <label className="block text-xs font-medium text-foreground mb-1">Action</label>
                 <select
                   value={actionFilter}
                   onChange={(e) => {
                     setActionFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-2 py-1 h-8 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background border-border"
+                  className="w-full px-2 py-1 h-8 text-sm border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background border-border"
                 >
                   <option value="all">All</option>
                   {ACTION_CHOICES.map((action) => (
@@ -288,7 +288,7 @@ export default function AuditLogPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
+                <label className="block text-xs font-medium text-foreground mb-1">From</label>
                 <Input
                   type="date"
                   value={dateFrom}
@@ -300,7 +300,7 @@ export default function AuditLogPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
+                <label className="block text-xs font-medium text-foreground mb-1">To</label>
                 <Input
                   type="date"
                   value={dateTo}
@@ -331,7 +331,7 @@ export default function AuditLogPage() {
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="py-2 h-9 text-xs font-semibold">Time</TableHead>
                   <TableHead className="py-2 h-9 text-xs font-semibold">User</TableHead>
                   <TableHead className="py-2 h-9 text-xs font-semibold">Action</TableHead>
@@ -357,7 +357,7 @@ export default function AuditLogPage() {
                   </TableRow>
                 ) : (
                   logs.map((log) => (
-                    <TableRow key={log.id} className="hover:bg-gray-50/50">
+                    <TableRow key={log.id} className="hover:bg-muted/50">
                       <TableCell className="whitespace-nowrap py-2 text-xs text-muted-foreground">
                         {format(new Date(log.timestamp), "MMM dd, HH:mm")}
                       </TableCell>
@@ -405,8 +405,8 @@ export default function AuditLogPage() {
 
             {/* Pagination */}
             {logsData && (logsData.next || logsData.previous || logsData.count > 0) && (
-              <div className="flex items-center justify-between p-4 border-t border-gray-200">
-                <div className="text-sm text-gray-700">
+              <div className="flex items-center justify-between p-4 border-t border-border">
+                <div className="text-sm text-foreground">
                   Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, logsData.count)} of {logsData.count} logs
                 </div>
                 <div className="flex items-center space-x-2">
@@ -450,30 +450,30 @@ export default function AuditLogPage() {
               <div className="flex-1 overflow-y-auto">
                 {/* Top Meta Section */}
                 <div className="grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-800 border-b">
-                  <div className="bg-white bg-background p-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">User / Actor</h4>
+                  <div className="bg-card bg-background p-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User / Actor</h4>
                     <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-lg">
+                      <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground font-bold text-lg">
                         {selectedLog.user_name?.charAt(0) || "S"}
                       </div>
                       <div>
                         <div className="font-medium text-foreground">{selectedLog.user_name}</div>
-                        <div className="text-sm text-gray-500">{selectedLog.user_email}</div>
+                        <div className="text-sm text-muted-foreground">{selectedLog.user_email}</div>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white bg-background p-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Action Info</h4>
+                  <div className="bg-card bg-background p-6">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Action Info</h4>
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant={getActionVariant(selectedLog.action)} className="px-3 py-1 capitalize">
                         {selectedLog.action}
                       </Badge>
-                      <span className="text-sm text-gray-500 font-mono">
+                      <span className="text-sm text-muted-foreground font-mono">
                         {format(new Date(selectedLog.timestamp), "MMM dd, HH:mm:ss")}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500 mt-2">
-                      IP: <span className="font-mono text-gray-900 text-foreground">{selectedLog.ip_address || "N/A"}</span>
+                    <div className="text-sm text-muted-foreground mt-2">
+                      IP: <span className="font-mono text-foreground text-foreground">{selectedLog.ip_address || "N/A"}</span>
                     </div>
                   </div>
                 </div>
@@ -485,18 +485,18 @@ export default function AuditLogPage() {
                       <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
                       Affected Entity
                     </h4>
-                    <div className="bg-gray-50 bg-background rounded-lg p-4 border border-border">
+                    <div className="bg-muted bg-background rounded-lg p-4 border border-border">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <span className="text-xs text-gray-500 block">Model</span>
+                          <span className="text-xs text-muted-foreground block">Model</span>
                           <span className="font-medium capitalize">{selectedLog.model_name}</span>
                         </div>
                         <div>
-                          <span className="text-xs text-gray-500 block">Object ID</span>
+                          <span className="text-xs text-muted-foreground block">Object ID</span>
                           <span className="font-mono text-sm">{selectedLog.object_id}</span>
                         </div>
                         <div>
-                          <span className="text-xs text-gray-500 block">Representation</span>
+                          <span className="text-xs text-muted-foreground block">Representation</span>
                           <span className="font-medium truncate block" title={selectedLog.object_repr}>
                             {selectedLog.object_repr}
                           </span>
@@ -515,7 +515,7 @@ export default function AuditLogPage() {
                       <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-gray-50 bg-background">
+                            <TableRow className="bg-muted bg-background">
                               <TableHead className="w-[25%]">Field Changed</TableHead>
                               <TableHead className="w-[37.5%] text-red-600/80">From (Old Value)</TableHead>
                               <TableHead className="w-[37.5%] text-success/80">To (New Value)</TableHead>
@@ -529,8 +529,8 @@ export default function AuditLogPage() {
 
                               // Format values for better readability
                               const formatValue = (val: any) => {
-                                if (val === null) return <span className="text-gray-400 italic">null</span>;
-                                if (val === "") return <span className="text-gray-400 italic">empty</span>;
+                                if (val === null) return <span className="text-muted-foreground italic">null</span>;
+                                if (val === "") return <span className="text-muted-foreground italic">empty</span>;
                                 if (typeof val === 'boolean') return <span className={val ? "text-success font-bold" : "text-red-500 font-bold"}>{String(val)}</span>;
                                 if (typeof val === 'object') return <pre className="text-[10px] whitespace-pre-wrap">{JSON.stringify(val, null, 2)}</pre>;
                                 return String(val);
@@ -538,7 +538,7 @@ export default function AuditLogPage() {
 
                               return (
                                 <TableRow key={key}>
-                                  <TableCell className="font-medium font-mono text-xs bg-gray-50/50 bg-background/30">
+                                  <TableCell className="font-medium font-mono text-xs bg-muted/50 bg-background/30">
                                     {key.replace(/_/g, " ")}
                                   </TableCell>
                                   <TableCell className="font-mono text-xs break-all bg-red-50/30 dark:bg-red-900/10">
@@ -554,7 +554,7 @@ export default function AuditLogPage() {
                         </Table>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center p-8 bg-gray-50 border border-dashed border-gray-300 rounded-lg text-gray-500">
+                      <div className="flex items-center justify-center p-8 bg-muted border border-dashed border-border rounded-lg text-muted-foreground">
                         No field changes recorded for this action.
                       </div>
                     )}
@@ -579,7 +579,7 @@ export default function AuditLogPage() {
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Archive logs older than (days)
               </label>
               <Input
@@ -590,7 +590,7 @@ export default function AuditLogPage() {
                 className="h-9"
                 placeholder="90"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Logs older than {archiveDays} days will be permanently deleted.
               </p>
             </div>

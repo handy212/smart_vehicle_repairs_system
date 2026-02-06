@@ -593,7 +593,7 @@ export default function EditWorkOrderPage() {
                           type="radio"
                           value="general"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                          className="w-4 h-4 text-primary border-border focus:ring-primary"
                         />
                         <span className="text-sm font-medium text-foreground">General Repair</span>
                       </label>
@@ -602,7 +602,7 @@ export default function EditWorkOrderPage() {
                           type="radio"
                           value="routine"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                          className="w-4 h-4 text-primary border-border focus:ring-primary"
                         />
                         <span className="text-sm font-medium text-foreground">Routine Service</span>
                       </label>
@@ -643,7 +643,7 @@ export default function EditWorkOrderPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="priority" className="block text-sm font-medium text-foreground mb-1">
                       Priority
                     </label>
                     <Select

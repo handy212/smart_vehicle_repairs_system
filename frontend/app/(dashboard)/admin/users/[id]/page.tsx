@@ -524,7 +524,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="is_active"
                       {...register("is_active")}
-                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="is_active" className="text-sm font-medium text-card-foreground">
                       User is active
@@ -536,7 +536,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="email_notifications"
                       {...register("email_notifications")}
-                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="email_notifications" className="text-sm font-medium text-card-foreground">
                       Email Notifications
@@ -548,7 +548,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="sms_notifications"
                       {...register("sms_notifications")}
-                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="sms_notifications" className="text-sm font-medium text-card-foreground">
                       SMS Notifications
@@ -563,7 +563,7 @@ export default function UserDetailPage() {
               <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
                 <CardHeader>
                   <CardTitle className="text-foreground flex items-center gap-2 text-lg">
-                    <Building2 className="w-5 h-5 text-primary dark:text-primary" />
+                    <Building2 className="w-5 h-5 text-primary" />
                     Branch Assignment & Employment Information
                   </CardTitle>
                 </CardHeader>
@@ -579,14 +579,14 @@ export default function UserDetailPage() {
                           <p className="text-xs text-muted-foreground mb-3">
                             Select all branches this manager should oversee
                           </p>
-                          <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 bg-muted/50 bg-gray-50">
+                          <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 bg-muted/50 bg-muted">
                             {branches.length > 0 ? (
                               branches.map((branch) => {
                                 const isSelected = (watch("managed_branches") || []).includes(branch.id);
                                 return (
                                   <label
                                     key={branch.id}
-                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-gray-200 border-border transition-colors"
+                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-border border-border transition-colors"
                                   >
                                     <input
                                       type="checkbox"
@@ -602,7 +602,7 @@ export default function UserDetailPage() {
                                           );
                                         }
                                       }}
-                                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
+                                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
                                     />
                                     <div className="flex-1">
                                       <span className="text-sm font-medium text-card-foreground">{branch.name}</span>
@@ -769,7 +769,7 @@ export default function UserDetailPage() {
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
                             title={showPassword ? "Hide password" : "Show password"}
                           >
                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -805,7 +805,7 @@ export default function UserDetailPage() {
                       <input
                         type="checkbox"
                         id="send_password_email"
-                        className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                        className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                       />
                       <label htmlFor="send_password_email" className="text-sm font-medium text-card-foreground">
                         Send new password to user via email
@@ -928,7 +928,7 @@ export default function UserDetailPage() {
                     </Badge>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-primary dark:text-primary" />
+                    <Building2 className="w-6 h-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -974,7 +974,7 @@ export default function UserDetailPage() {
                   <div>
                     <dt className="text-sm font-medium text-muted-foreground mb-1">Phone Number</dt>
                     <dd className="text-base text-foreground">
-                      {user.phone || <span className="text-gray-400 italic">Not provided</span>}
+                      {user.phone || <span className="text-muted-foreground italic">Not provided</span>}
                     </dd>
                   </div>
                   <div>
@@ -1009,13 +1009,13 @@ export default function UserDetailPage() {
                   <div className="pt-4 border-t border-border">
                     <dt className="text-sm font-medium text-muted-foreground mb-3">Notification Preferences</dt>
                     <dd className="space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-gray-50 bg-muted/50 rounded-md">
+                      <div className="flex items-center justify-between p-2 bg-muted bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">Email</span>
                         <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.email_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between p-2 bg-gray-50 bg-muted/50 rounded-md">
+                      <div className="flex items-center justify-between p-2 bg-muted bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">SMS</span>
                         <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.sms_notifications ? "On" : "Off"}
@@ -1032,7 +1032,7 @@ export default function UserDetailPage() {
           <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
-                <Building2 className="w-5 h-5 text-primary dark:text-primary" />
+                <Building2 className="w-5 h-5 text-primary" />
                 Branch & Employment Information
               </CardTitle>
             </CardHeader>
@@ -1058,7 +1058,7 @@ export default function UserDetailPage() {
                       <p className="text-base font-semibold text-foreground">{user.branch_name}</p>
                     </div>
                   ) : (
-                    <div className="p-4 bg-gray-50 bg-muted/50 rounded-lg border border-border">
+                    <div className="p-4 bg-muted bg-muted/50 rounded-lg border border-border">
                       <p className="text-sm text-muted-foreground italic">No branch assigned</p>
                     </div>
                   )}
@@ -1155,7 +1155,7 @@ export default function UserDetailPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
                           title={showPassword ? "Hide password" : "Show password"}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -1191,7 +1191,7 @@ export default function UserDetailPage() {
                     <input
                       type="checkbox"
                       id="send_password_email_view"
-                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="send_password_email_view" className="text-sm font-medium text-card-foreground">
                       Send new password to user via email

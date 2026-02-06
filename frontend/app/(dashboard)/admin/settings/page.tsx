@@ -358,9 +358,9 @@ export default function SystemSettingsPage() {
                     onClick={() => toggleSecretVisibility(setting.id)}
                   >
                     {showSecret[setting.id] ? (
-                      <EyeOff className="w-3 h-3 text-gray-400" />
+                      <EyeOff className="w-3 h-3 text-muted-foreground" />
                     ) : (
-                      <Eye className="w-3 h-3 text-gray-400" />
+                      <Eye className="w-3 h-3 text-muted-foreground" />
                     )}
                   </Button>
                 )}
@@ -408,7 +408,7 @@ export default function SystemSettingsPage() {
                 </Button>
               </>
             ) : (
-              <span className="text-[10px] text-gray-300 dark:text-gray-600 italic px-2">Saved</span>
+              <span className="text-[10px] text-gray-300 text-muted-foreground italic px-2">Saved</span>
             )}
           </div>
         </div>
@@ -477,7 +477,7 @@ export default function SystemSettingsPage() {
       {/* Settings Count Badge */}
       <div className="px-4">
         {settingsData && (
-          <div className="text-xs text-gray-500 bg-border px-2.5 py-1 rounded-full border border-border inline-block">
+          <div className="text-xs text-muted-foreground bg-border px-2.5 py-1 rounded-full border border-border inline-block">
             {settingsData.count} settings
           </div>
         )}
@@ -494,7 +494,7 @@ export default function SystemSettingsPage() {
                 onClick={() => handleCategorySelect(cat.value)}
                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isSelected
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-muted border-border text-foreground dark:hover:bg-gray-700"
+                  : "bg-card text-muted-foreground border-border hover:bg-muted border-border text-foreground dark:hover:bg-gray-700"
                   }`}
               >
                 {cat.label}
@@ -512,7 +512,7 @@ export default function SystemSettingsPage() {
           <Card className="mb-4 border-orange-100 bg-primary/5 dark:bg-orange-900/10 dark:border-orange-800/30 shadow-none">
             <CardContent className="p-3">
               <div className="flex items-start space-x-2">
-                <Info className="w-4 h-4 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-orange-800 dark:text-orange-200 leading-relaxed">
                   <strong>Company Information:</strong> These settings are used throughout the application, including in emails, invoices, and notifications.
                   Make sure to keep this information up to date. Changes take effect immediately.
@@ -524,7 +524,7 @@ export default function SystemSettingsPage() {
 
         {/* Settings List */}
         <Card className="shadow-sm border border-border">
-          <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+          <CardHeader className="py-3 px-4 border-b bg-muted/30">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">
                 {CATEGORIES.find((c) => c.value === selectedCategory)?.label} Settings
@@ -559,7 +559,7 @@ export default function SystemSettingsPage() {
             {settings.length > 0 ? (
               <div className="p-4 space-y-6">
                 {selectedCategory === "integration" ? (
-                  <div className="text-xs text-gray-500 mb-2">
+                  <div className="text-xs text-muted-foreground mb-2">
                     Configure third‑party services used by the app.
                   </div>
                 ) : null}
@@ -569,7 +569,7 @@ export default function SystemSettingsPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {recaptchaSettings.length > 0 ? (
                       <Card className="border shadow-none">
-                        <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
+                        <CardHeader className="py-2.5 px-3 bg-muted/50 border-b">
                           <CardTitle className="text-xs font-semibold text-foreground">
                             Google reCAPTCHA
                           </CardTitle>
@@ -589,7 +589,7 @@ export default function SystemSettingsPage() {
 
                     {firebaseSettings.length > 0 ? (
                       <Card className="border shadow-none">
-                        <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
+                        <CardHeader className="py-2.5 px-3 bg-muted/50 border-b">
                           <CardTitle className="text-xs font-semibold text-foreground">
                             Firebase Messaging
                           </CardTitle>
@@ -609,7 +609,7 @@ export default function SystemSettingsPage() {
 
                     {analyticsSettings.length > 0 ? (
                       <Card className="border shadow-none">
-                        <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
+                        <CardHeader className="py-2.5 px-3 bg-muted/50 border-b">
                           <CardTitle className="text-xs font-semibold text-foreground">
                             Analytics
                           </CardTitle>
@@ -630,7 +630,7 @@ export default function SystemSettingsPage() {
                   tableSettings.length > 0 && (
                     <div className="overflow-x-auto rounded-md border border-border">
                       <table className="w-full text-left">
-                        <thead className="bg-gray-50/80 text-[10px] uppercase text-gray-500 font-semibold border-b border-gray-100">
+                        <thead className="bg-muted/80 text-[10px] uppercase text-muted-foreground font-semibold border-b border-border">
                           <tr>
                             <th className="px-4 py-2 w-1/4">Setting</th>
                             <th className="px-4 py-2">Value</th>
@@ -642,13 +642,13 @@ export default function SystemSettingsPage() {
                           {tableSettings.map((setting) => {
                             const pendingChanges = !!rowEdits[setting.id];
                             return (
-                              <tr key={setting.id} className="group hover:bg-gray-50/50 transition-colors">
+                              <tr key={setting.id} className="group hover:bg-muted/50 transition-colors">
                                 <td className="px-4 py-3 align-top">
                                   <div className="space-y-0.5">
                                     <div className="text-xs font-medium text-foreground">
                                       {setting.display_name || setting.key}
                                     </div>
-                                    <div className="text-[10px] text-gray-400 font-mono tracking-tight">
+                                    <div className="text-[10px] text-muted-foreground font-mono tracking-tight">
                                       {setting.key}
                                     </div>
                                   </div>
@@ -691,7 +691,7 @@ export default function SystemSettingsPage() {
                                           onValueChange={(val) => handleRowChange(setting, { value: val })}
                                           disabled={!canManage}
                                         >
-                                          <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                          <SelectTrigger className="w-full h-8 text-xs bg-card">
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -707,7 +707,7 @@ export default function SystemSettingsPage() {
                                             onValueChange={(val) => handleRowChange(setting, { value: val })}
                                             disabled={!canManage}
                                           >
-                                            <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                            <SelectTrigger className="w-full h-8 text-xs bg-card">
                                               <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -724,7 +724,7 @@ export default function SystemSettingsPage() {
                                               onValueChange={(val) => handleRowChange(setting, { value: val })}
                                               disabled={!canManage}
                                             >
-                                              <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                              <SelectTrigger className="w-full h-8 text-xs bg-card">
                                                 <SelectValue />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -742,7 +742,7 @@ export default function SystemSettingsPage() {
                                                 onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                 disabled={!canManage}
                                               >
-                                                <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                <SelectTrigger className="w-full h-8 text-xs bg-card">
                                                   <SelectValue placeholder="None" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -760,7 +760,7 @@ export default function SystemSettingsPage() {
                                                   onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                   disabled={!canManage}
                                                 >
-                                                  <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                  <SelectTrigger className="w-full h-8 text-xs bg-card">
                                                     <SelectValue />
                                                   </SelectTrigger>
                                                   <SelectContent>
@@ -794,7 +794,7 @@ export default function SystemSettingsPage() {
                                                     }}
                                                     disabled={!canManage}
                                                   >
-                                                    <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                    <SelectTrigger className="w-full h-8 text-xs bg-card">
                                                       <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -817,7 +817,7 @@ export default function SystemSettingsPage() {
                                                       onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                       disabled={!canManage}
                                                     >
-                                                      <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                      <SelectTrigger className="w-full h-8 text-xs bg-card">
                                                         <SelectValue />
                                                       </SelectTrigger>
                                                       <SelectContent>
@@ -840,7 +840,7 @@ export default function SystemSettingsPage() {
                                                         onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                         disabled={!canManage}
                                                       >
-                                                        <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                        <SelectTrigger className="w-full h-8 text-xs bg-card">
                                                           <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -858,7 +858,7 @@ export default function SystemSettingsPage() {
                                                           onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                           disabled={!canManage}
                                                         >
-                                                          <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                          <SelectTrigger className="w-full h-8 text-xs bg-card">
                                                             <SelectValue />
                                                           </SelectTrigger>
                                                           <SelectContent>
@@ -898,7 +898,7 @@ export default function SystemSettingsPage() {
                                                                   value={getRowValue(setting)}
                                                                   onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                                   placeholder="Path to image file"
-                                                                  className="flex-1 h-8 text-xs bg-gray-50/50"
+                                                                  className="flex-1 h-8 text-xs bg-muted/50"
                                                                   disabled={!canManage}
                                                                 />
                                                                 <Button
@@ -957,9 +957,9 @@ export default function SystemSettingsPage() {
                                                                   className="w-full h-6"
                                                                   disabled={!canManage}
                                                                 />
-                                                                <div className="flex items-center justify-between text-[10px] text-gray-400">
+                                                                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                                                                   <span>0</span>
-                                                                  <span className="font-medium text-gray-600">{getRowValue(setting) || '0.85'}</span>
+                                                                  <span className="font-medium text-muted-foreground">{getRowValue(setting) || '0.85'}</span>
                                                                   <span>1</span>
                                                                 </div>
                                                               </div>
@@ -1000,7 +1000,7 @@ export default function SystemSettingsPage() {
                                                                         className="pr-6 h-8 text-xs"
                                                                         disabled={!canManage}
                                                                       />
-                                                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                                                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
                                                                     </div>
                                                                   ) : /* Default input */
                                                                     (
@@ -1022,7 +1022,7 @@ export default function SystemSettingsPage() {
                                                                           onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                                           min={setting.key.match(/(length|attempts|timeout|retention|buffer|count)/i) ? "0" : undefined}
                                                                           step={setting.key.match(/(rate|percentage|amount|price)/i) ? "0.01" : setting.key.match(/(duration|buffer|timeout)/i) ? "1" : undefined}
-                                                                          className={`h-8 text-xs bg-white ${setting.is_secret ? "pr-8" : ""} ${rowEdits[setting.id]?.value !== undefined &&
+                                                                          className={`h-8 text-xs bg-card ${setting.is_secret ? "pr-8" : ""} ${rowEdits[setting.id]?.value !== undefined &&
                                                                             validateSetting(setting, rowEdits[setting.id]!.value || "")
                                                                             ? "border-red-500 focus-visible:ring-red-500"
                                                                             : ""
@@ -1038,9 +1038,9 @@ export default function SystemSettingsPage() {
                                                                             onClick={() => toggleSecretVisibility(setting.id)}
                                                                           >
                                                                             {showSecret[setting.id] ? (
-                                                                              <EyeOff className="w-3.5 h-3.5 text-gray-400" />
+                                                                              <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
                                                                             ) : (
-                                                                              <Eye className="w-3.5 h-3.5 text-gray-400" />
+                                                                              <Eye className="w-3.5 h-3.5 text-muted-foreground" />
                                                                             )}
                                                                           </Button>
                                                                         )}
@@ -1079,7 +1079,7 @@ export default function SystemSettingsPage() {
                                             });
                                           }}
                                           disabled={updateMutation.isPending}
-                                          className="h-7 w-7 p-0 text-gray-500"
+                                          className="h-7 w-7 p-0 text-muted-foreground"
                                         >
                                           <span className="sr-only">Cancel</span>
                                           <span className="text-[10px]">✕</span>
@@ -1107,7 +1107,7 @@ export default function SystemSettingsPage() {
                                             }
                                           }}
                                           disabled={!canManage}
-                                          className="h-7 px-2 text-[10px] text-gray-700 bg-gray-100 hover:bg-gray-200"
+                                          className="h-7 px-2 text-[10px] text-foreground bg-gray-100 hover:bg-gray-200"
                                         >
                                           Edit
                                         </Button>
@@ -1116,7 +1116,7 @@ export default function SystemSettingsPage() {
                                           size="sm"
                                           onClick={() => handleDelete(setting)}
                                           disabled={deleteMutation.isPending || !canManage}
-                                          className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
+                                          className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
                                         </Button>

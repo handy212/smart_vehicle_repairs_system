@@ -575,7 +575,7 @@ export default function PerformInspectionPage() {
               disabled={saveMutation.isPending || saveDamageMutation.isPending}
             >
               {saveMutation.isPending || saveDamageMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+                <div className="w-4 h-4 border-2 border-border border-t-gray-600 rounded-full animate-spin mr-2" />
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}

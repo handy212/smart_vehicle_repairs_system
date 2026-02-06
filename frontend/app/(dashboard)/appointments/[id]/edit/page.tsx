@@ -163,7 +163,7 @@ export default function EditAppointmentPage() {
           <h1 className="text-xl font-bold text-foreground tracking-tight">Edit Appointment</h1>
         </div>
         <Link href={`/appointments/${appointmentId}`}>
-          <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border">
+          <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 text-foreground border-border">
             <ArrowLeft className="w-3.5 h-3.5 mr-2" />
             Cancel
           </Button>
@@ -182,7 +182,7 @@ export default function EditAppointmentPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor="customer" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="customer" className="block text-sm font-medium text-foreground mb-1">
                     Customer *
                   </label>
                   <Select
@@ -217,7 +217,7 @@ export default function EditAppointmentPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="vehicle" className="block text-sm font-medium text-foreground mb-1">
                     Vehicle *
                   </label>
                   <Select
@@ -258,7 +258,7 @@ export default function EditAppointmentPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="appointment_date" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="appointment_date" className="block text-sm font-medium text-foreground mb-1">
                       Date *
                     </label>
                     <Input
@@ -272,7 +272,7 @@ export default function EditAppointmentPage() {
                     )}
                   </div>
                   <div>
-                    <label htmlFor="appointment_time" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="appointment_time" className="block text-sm font-medium text-foreground mb-1">
                       Time *
                     </label>
                     <Input
@@ -289,7 +289,7 @@ export default function EditAppointmentPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="service_type" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="service_type" className="block text-sm font-medium text-foreground mb-1">
                       Service Type *
                     </label>
                     <Select
@@ -308,7 +308,7 @@ export default function EditAppointmentPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="priority" className="block text-sm font-medium text-foreground mb-1">
                       Priority
                     </label>
                     <Select
@@ -329,7 +329,7 @@ export default function EditAppointmentPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="estimated_duration" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="estimated_duration" className="block text-sm font-medium text-foreground mb-1">
                     Estimated Duration (minutes)
                   </label>
                   <Input
@@ -341,7 +341,7 @@ export default function EditAppointmentPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-1">
                     Notes
                   </label>
                   <Textarea

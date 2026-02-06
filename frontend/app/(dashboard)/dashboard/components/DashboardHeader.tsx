@@ -19,7 +19,7 @@ export function DashboardHeader() {
                 {/* Clean Header - Removed manual opacity breadcrumb */}
                 <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
-                        <PremiumIcons.Dashboard className="w-8 h-8 text-primary dark:text-primary" />
+                        <PremiumIcons.Dashboard className="w-8 h-8 text-primary" />
                         Dashboard
                     </h1>
                     {currentTime && (
@@ -38,10 +38,10 @@ export function DashboardHeader() {
                 <Button
                     size="sm"
                     variant="outline"
-                    className="h-9 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
+                    className="h-9 bg-card/50 dark:bg-gray-800/50 backdrop-blur-sm border-border/50 hover:bg-card dark:hover:bg-gray-800 transition-all"
                     onClick={() => router.push("/appointments/new")}
                 >
-                    <PremiumIcons.Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                    <PremiumIcons.Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                     New Appointment
                 </Button>
                 <Button

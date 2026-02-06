@@ -32,7 +32,7 @@ export function InvoiceActivityLog({ invoiceId }: InvoiceActivityLogProps) {
             case 'create': return 'bg-green-100 text-green-800 border-green-200';
             case 'update': return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'delete': return 'bg-red-100 text-red-800 border-red-200';
-            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+            default: return 'bg-gray-100 text-foreground border-border';
         }
     };
 
@@ -44,7 +44,7 @@ export function InvoiceActivityLog({ invoiceId }: InvoiceActivityLogProps) {
                     parsed = JSON.parse(changes);
                 } catch (e) {
                     // If parsing fails, it might be a plain string message
-                    return <p className="text-xs text-gray-500 italic mt-1">{changes}</p>;
+                    return <p className="text-xs text-muted-foreground italic mt-1">{changes}</p>;
                 }
             } else if (!changes) {
                 return null;
@@ -55,17 +55,17 @@ export function InvoiceActivityLog({ invoiceId }: InvoiceActivityLogProps) {
             return (
                 <div className="mt-2 space-y-1 text-xs">
                     {Object.entries(parsed).map(([field, values]: [string, any]) => (
-                        <div key={field} className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-gray-600 bg-gray-50 p-1.5 rounded">
+                        <div key={field} className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-muted-foreground bg-muted p-1.5 rounded">
                             <span className="font-medium capitalize min-w-[100px]">{field.replace(/_/g, " ")}:</span>
                             <div className="flex items-center gap-1 flex-1 flex-wrap">
                                 {Array.isArray(values) ? (
                                     <>
-                                        <span className="line-through text-gray-400">{String(values[0])}</span>
-                                        <span className="text-gray-400">→</span>
-                                        <span className="text-gray-900 font-medium">{String(values[1])}</span>
+                                        <span className="line-through text-muted-foreground">{String(values[0])}</span>
+                                        <span className="text-muted-foreground">→</span>
+                                        <span className="text-foreground font-medium">{String(values[1])}</span>
                                     </>
                                 ) : (
-                                    <span className="text-gray-900 font-medium">{String(values)}</span>
+                                    <span className="text-foreground font-medium">{String(values)}</span>
                                 )}
                             </div>
                         </div>
@@ -74,7 +74,7 @@ export function InvoiceActivityLog({ invoiceId }: InvoiceActivityLogProps) {
             );
         } catch (e) {
             console.error("Error formatting changes:", e);
-            return <p className="text-xs text-gray-500 italic mt-1">Unable to display changes</p>;
+            return <p className="text-xs text-muted-foreground italic mt-1">Unable to display changes</p>;
         }
     };
 
@@ -82,7 +82,7 @@ export function InvoiceActivityLog({ invoiceId }: InvoiceActivityLogProps) {
         <Card>
             <CardHeader>
                 <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-gray-500" />
+                    <Activity className="w-5 h-5 text-muted-foreground" />
                     <div>
                         <CardTitle>Activity Log</CardTitle>
                         <CardDescription>History of changes and actions on this invoice</CardDescription>
@@ -91,22 +91,22 @@ export function InvoiceActivityLog({ invoiceId }: InvoiceActivityLogProps) {
             </CardHeader>
             <CardContent>
                 {isLoading ? (
-                    <div className="text-center py-8 text-gray-500">Loading activity history...</div>
+                    <div className="text-center py-8 text-muted-foreground">Loading activity history...</div>
                 ) : logs && logs.length > 0 ? (
                     <ScrollArea className="h-[400px] pr-4">
                         <div className="space-y-6 relative ml-2 before:absolute before:left-[11px] before:top-2 before:h-[95%] before:w-[2px] before:bg-gray-100">
                             {logs.map((log: LogEntry) => (
                                 <div key={log.id} className="relative pl-8">
-                                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center z-10">
+                                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-card border-2 border-border flex items-center justify-center z-10">
                                         <span className="w-2 h-2 rounded-full bg-gray-400"></span>
                                     </div>
                                     <div className="flex flex-col gap-1">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-sm font-semibold text-gray-900">{log.actor}</span>
+                                            <span className="text-sm font-semibold text-foreground">{log.actor}</span>
                                             <Badge variant="outline" className={`text-xs capitalize ${getActionColor(log.action)}`}>
                                                 {log.action}
                                             </Badge>
-                                            <span className="text-xs text-gray-500 flex items-center gap-1 ml-auto">
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
                                                 <Calendar className="w-3 h-3" />
                                                 {format(new Date(log.timestamp), "MMM d, yyyy h:mm a")}
                                             </span>
@@ -121,9 +121,9 @@ export function InvoiceActivityLog({ invoiceId }: InvoiceActivityLogProps) {
                         </div>
                     </ScrollArea>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                         <History className="w-12 h-12 text-gray-300 mb-3" />
-                        <p className="text-lg font-medium text-gray-900">No Activity Yet</p>
+                        <p className="text-lg font-medium text-foreground">No Activity Yet</p>
                         <p className="text-sm max-w-sm mt-1">
                             Actions performed on this invoice will be logged here.
                         </p>

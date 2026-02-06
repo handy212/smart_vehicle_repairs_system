@@ -52,11 +52,11 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
 
     const DataField = ({ label, value, icon: Icon, className }: { label: string, value: React.ReactNode, icon?: any, className?: string }) => (
         <div className={`space-y-0.5 ${className}`}>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
                 {Icon && <Icon className="w-3 h-3" />}
                 {label}
             </span>
-            <div className="text-sm font-medium text-foreground truncate line-clamp-1">{value || <span className="text-gray-400 font-normal">-</span>}</div>
+            <div className="text-sm font-medium text-foreground truncate line-clamp-1">{value || <span className="text-muted-foreground font-normal">-</span>}</div>
         </div>
     );
 
@@ -82,7 +82,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                         unoptimized={vehicle.image?.startsWith("http")}
                                     />
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-400">
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-muted-foreground">
                                         <Car className="w-12 h-12 mb-2 opacity-50" />
                                         <span className="text-xs">No Image</span>
                                     </div>
@@ -102,9 +102,9 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                         {vinData?.trim && <Badge variant="secondary" className="font-normal text-xs">{vinData.trim}</Badge>}
                                     </h1>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <Badge variant="outline" className="text-gray-500 font-mono text-xs">{vehicle.license_plate || "No Plate"}</Badge>
+                                        <Badge variant="outline" className="text-muted-foreground font-mono text-xs">{vehicle.license_plate || "No Plate"}</Badge>
                                         <span className="text-gray-300">|</span>
-                                        <span className="text-sm text-gray-500 font-mono">{vehicle.vin || "No VIN"}</span>
+                                        <span className="text-sm text-muted-foreground font-mono">{vehicle.vin || "No VIN"}</span>
                                     </div>
                                 </div>
 
@@ -143,7 +143,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
 
                     {/* Detailed Specs Tabs */}
                     <Card>
-                        <CardHeader className="py-3 px-6 border-b bg-gray-50/30">
+                        <CardHeader className="py-3 px-6 border-b bg-muted/30">
                             <CardTitle className="text-sm font-semibold">Technical Specifications</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -185,13 +185,13 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                                 </div>
                                                 {vinData.other_restraint_info && (
                                                     <div className="mt-4 pt-4 border-t border-dashed">
-                                                        <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">Other Restraint Info</span>
-                                                        <p className="text-sm text-gray-700 mt-1">{vinData.other_restraint_info}</p>
+                                                        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Other Restraint Info</span>
+                                                        <p className="text-sm text-foreground mt-1">{vinData.other_restraint_info}</p>
                                                     </div>
                                                 )}
                                             </>
                                         ) : (
-                                            <p className="text-gray-500 text-sm">No safety data available.</p>
+                                            <p className="text-muted-foreground text-sm">No safety data available.</p>
                                         )}
                                     </TabsContent>
                                 </div>
@@ -205,8 +205,8 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
 
                     {/* Owner Card */}
                     <Card>
-                        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 flex flex-row items-center justify-between">
-                            <CardTitle className="text-sm font-semibold text-gray-700">Owner</CardTitle>
+                        <CardHeader className="py-3 px-4 border-b bg-muted/30 flex flex-row items-center justify-between">
+                            <CardTitle className="text-sm font-semibold text-foreground">Owner</CardTitle>
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -220,48 +220,48 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                         <CardContent className="p-4">
                             {vehicle.owner ? (
                                 <Link href={`/customers/${typeof vehicle.owner === 'object' ? vehicle.owner.id : vehicle.owner}`}>
-                                    <div className="flex items-center space-x-3 group hover:bg-gray-50 p-2 -m-2 rounded-md transition-colors">
+                                    <div className="flex items-center space-x-3 group hover:bg-muted p-2 -m-2 rounded-md transition-colors">
                                         <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-primary font-semibold text-sm">
                                             {vehicle.owner_name?.charAt(0) || <User className="w-5 h-5" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 group-hover:text-primary transition-colors truncate">
+                                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
                                                 {vehicle.owner_name}
                                             </p>
-                                            <p className="text-xs text-gray-500 flex items-center mt-0.5">
+                                            <p className="text-xs text-muted-foreground flex items-center mt-0.5">
                                                 View Profile <ArrowUpRight className="w-3 h-3 ml-1" />
                                             </p>
                                         </div>
                                     </div>
                                 </Link>
                             ) : (
-                                <div className="text-sm text-gray-500 italic">No owner assigned</div>
+                                <div className="text-sm text-muted-foreground italic">No owner assigned</div>
                             )}
                         </CardContent>
                     </Card>
 
                     {/* Stats Card */}
                     <Card>
-                        <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
-                            <CardTitle className="text-sm font-semibold text-gray-700">Vehicle Statistics</CardTitle>
+                        <CardHeader className="py-3 px-4 border-b bg-muted/30">
+                            <CardTitle className="text-sm font-semibold text-foreground">Vehicle Statistics</CardTitle>
                         </CardHeader>
                         <CardContent className="px-0 py-2">
                             <div className="divide-y text-sm">
                                 <div className="px-4 py-3 flex justify-between items-center">
-                                    <span className="text-gray-500">Total Spent</span>
+                                    <span className="text-muted-foreground">Total Spent</span>
                                     <span className="font-semibold">{formatCurrency(totalSpent)}</span>
                                 </div>
                                 <div className="px-4 py-3 flex justify-between items-center">
-                                    <span className="text-gray-500">Total Services</span>
+                                    <span className="text-muted-foreground">Total Services</span>
                                     <span className="font-medium">{totalServices}</span>
                                 </div>
                                 <div className="px-4 py-3 flex justify-between items-center">
-                                    <span className="text-gray-500">Appointments</span>
+                                    <span className="text-muted-foreground">Appointments</span>
                                     <span className="font-medium">{vehicleAppointments.length}</span>
                                 </div>
                                 <div className="px-4 py-3 flex justify-between items-center">
-                                    <span className="text-gray-500">Last Service</span>
-                                    <span className="font-medium text-gray-900">
+                                    <span className="text-muted-foreground">Last Service</span>
+                                    <span className="font-medium text-foreground">
                                         {lastServiceDate ? format(new Date(lastServiceDate), "MMM dd, yyyy") : "-"}
                                     </span>
                                 </div>
@@ -274,7 +274,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                         <CardContent className="p-4 space-y-3">
                             <Link href={`/appointments/new?vehicle=${vehicle.id}`} className="block">
                                 <Button variant="outline" className="w-full justify-start h-9">
-                                    <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                                     Schedule Service
                                 </Button>
                             </Link>
@@ -344,14 +344,14 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    <ArrowRight className="w-4 h-4 text-gray-400" />
+                                                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
                                                     <span className="font-medium">{record.new_owner_name}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-sm text-gray-600">
+                                            <TableCell className="text-sm text-muted-foreground">
                                                 {record.transferred_by_name}
                                             </TableCell>
-                                            <TableCell className="text-sm text-gray-500 max-w-xs truncate">
+                                            <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                                                 {record.notes || "-"}
                                             </TableCell>
                                         </TableRow>
@@ -360,8 +360,8 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                             </Table>
                         </div>
                     ) : (
-                        <div className="text-center py-8 text-gray-500">
-                            <History className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                        <div className="text-center py-8 text-muted-foreground">
+                            <History className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                             <p>No ownership history available</p>
                             <p className="text-sm mt-1">This vehicle has not been transferred to a new owner yet.</p>
                         </div>

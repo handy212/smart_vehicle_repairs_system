@@ -44,7 +44,7 @@ export function InvoicesView({ customerId }: InvoicesViewProps) {
             label: "Outstanding",
             value: formatCurrency(totalOutstanding),
             icon: CreditCard,
-            color: "text-primary dark:text-primary"
+            color: "text-primary"
         },
         {
             label: "Past Due",

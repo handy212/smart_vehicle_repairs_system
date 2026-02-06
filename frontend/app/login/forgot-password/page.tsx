@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
 
                     <div className="relative z-10 flex items-center gap-3">
                         {heroLogo ? (
-                            <div className="p-3 bg-white rounded-xl shadow-lg">
+                            <div className="p-3 bg-card rounded-xl shadow-lg">
                                 <img
                                     src={getImageUrl(heroLogo, "")}
                                     alt={branding.site_name}
@@ -118,7 +118,7 @@ export default function ForgotPasswordPage() {
                                 />
                             </div>
                         ) : (
-                            <div className="p-3 bg-white rounded-xl shadow-lg">
+                            <div className="p-3 bg-card rounded-xl shadow-lg">
                                 <Car className="w-8 h-8" style={{ color: branding.primary_color }} />
                             </div>
                         )}
@@ -136,45 +136,45 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 {/* Right side: Forgot Password Form */}
-                <div className="flex items-center justify-center p-8 bg-gray-50/50">
+                <div className="flex items-center justify-center p-8 bg-muted/50">
                     <div className="w-full max-w-sm space-y-8 animate-in fade-in duration-500">
                         <button
                             onClick={() => router.push("/login")}
-                            className="flex items-center text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors mb-4 group"
+                            className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-4 group"
                         >
                             <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
                             Back to login
                         </button>
 
                         <div className="text-center lg:text-left">
-                            <h2 className="text-3xl font-bold text-gray-900">{branding.site_name}</h2>
-                            <p className="mt-2 text-gray-600">
+                            <h2 className="text-3xl font-bold text-foreground">{branding.site_name}</h2>
+                            <p className="mt-2 text-muted-foreground">
                                 {!isSubmitted
                                     ? "No worries! We'll send you reset instructions."
                                     : `Instructions have been sent to ${email}`}
                             </p>
                         </div>
 
-                        <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-lg rounded-2xl overflow-hidden p-8">
+                        <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden p-8">
                             {!isSubmitted ? (
                                 <div className="space-y-6">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">Forgot Password</h2>
-                                        <p className="mt-2 text-sm text-gray-600">
+                                        <h2 className="text-2xl font-bold text-foreground">Forgot Password</h2>
+                                        <p className="mt-2 text-sm text-muted-foreground">
                                             No worries! We'll send you reset instructions.
                                         </p>
                                     </div>
 
                                     <form onSubmit={handleSubmit} className="space-y-4">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-gray-700 ml-1">Email Address</label>
+                                            <label className="text-sm font-semibold text-foreground ml-1">Email Address</label>
                                             <Input
                                                 type="email"
                                                 required
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
                                                 placeholder="john@example.com"
-                                                className="h-12 rounded-xl border-gray-200"
+                                                className="h-12 rounded-xl border-border"
                                             />
                                         </div>
 
@@ -193,8 +193,8 @@ export default function ForgotPasswordPage() {
                                         <MailCheck className="w-8 h-8" />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">Check your email</h2>
-                                        <p className="mt-2 text-sm text-gray-600">
+                                        <h2 className="text-2xl font-bold text-foreground">Check your email</h2>
+                                        <p className="mt-2 text-sm text-muted-foreground">
                                             Instruction have been sent to <strong>{email}</strong>
                                         </p>
                                     </div>
@@ -205,7 +205,7 @@ export default function ForgotPasswordPage() {
                                     >
                                         Return to login
                                     </Button>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-muted-foreground">
                                         Didn't receive the email?{" "}
                                         <button
                                             onClick={() => setIsSubmitted(false)}
@@ -223,8 +223,8 @@ export default function ForgotPasswordPage() {
             </div>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-gray-200 py-4 px-8">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-gray-600">
+            <footer className="bg-card border-t border-border py-4 px-8">
+                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-muted-foreground">
                     <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.</p>
                     <p>Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a></p>
                 </div>

@@ -127,8 +127,8 @@ export default function EditPurchaseOrderPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Edit Purchase Order</h1>
-                    <p className="text-sm text-gray-500 mt-1">Update purchase order details</p>
+                    <h1 className="text-3xl font-bold text-foreground">Edit Purchase Order</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Update purchase order details</p>
                 </div>
             </div>
 

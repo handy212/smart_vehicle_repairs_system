@@ -72,7 +72,7 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
                                             : "text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
                                     )}
                                 >
-                                    <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-gray-400")} />
+                                    <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
                                     {item.label}
                                 </button>
                             );
@@ -90,7 +90,7 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
                                         : "text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
                                 )}
                             >
-                                <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-gray-400")} />
+                                <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
                                 {item.label}
                             </Link>
                         );

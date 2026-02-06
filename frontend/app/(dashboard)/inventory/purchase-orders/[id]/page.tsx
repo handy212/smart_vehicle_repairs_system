@@ -200,7 +200,7 @@ export default function PurchaseOrderDetailPage() {
   if (!purchaseOrder) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Purchase order not found.</p>
+        <p className="text-muted-foreground">Purchase order not found.</p>
         <Link href="/inventory/purchase-orders">
           <Button className="mt-4" variant="secondary">
             Back to Purchase Orders
@@ -259,14 +259,14 @@ export default function PurchaseOrderDetailPage() {
       <div className="space-y-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
-              <Link href="/inventory" className="hover:text-gray-900 transition-colors">Inventory</Link>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/inventory" className="hover:text-foreground transition-colors">Inventory</Link>
               <span>/</span>
-              <Link href="/inventory/purchase-orders" className="hover:text-gray-900 transition-colors">Purchase Orders</Link>
+              <Link href="/inventory/purchase-orders" className="hover:text-foreground transition-colors">Purchase Orders</Link>
               <span>/</span>
-              <span className="text-gray-900 font-medium">{purchaseOrder.po_number}</span>
+              <span className="text-foreground font-medium">{purchaseOrder.po_number}</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Purchase Order</h1>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">Purchase Order</h1>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -382,7 +382,7 @@ export default function PurchaseOrderDetailPage() {
       {/* Summary Widgets */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</label>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</label>
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold text-foreground">
               <Badge variant={getStatusVariant(purchaseOrder.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent m-0 p-0 h-auto">
@@ -392,7 +392,7 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </div>
         <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</label>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Amount</label>
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold text-foreground">
               {purchaseOrder.total ? `${formatCurrency(parseFloat(purchaseOrder.total))}` : "$0.00"}
@@ -400,20 +400,20 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </div>
         <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Supplier</label>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</label>
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-sm font-bold text-foreground truncate">
                 {supplier?.name || "N/A"}
               </span>
               {supplier?.supplier_code && (
-                <span className="text-xs text-gray-400 font-mono">{supplier.supplier_code}</span>
+                <span className="text-xs text-muted-foreground font-mono">{supplier.supplier_code}</span>
               )}
             </div>
           </div>
         </div>
         <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dates</label>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dates</label>
           <div className="flex flex-col">
             <span className="text-xs text-card-foreground">
               Ord: {purchaseOrder.order_date ? format(new Date(purchaseOrder.order_date), "MMM dd") : "-"}
@@ -433,8 +433,8 @@ export default function PurchaseOrderDetailPage() {
                 <CheckCircle className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Decision Required</h3>
-                <p className="text-xs text-gray-600">You are the assigned approver for this purchase order. Please review and take action.</p>
+                <h3 className="text-sm font-bold text-foreground">Decision Required</h3>
+                <p className="text-xs text-muted-foreground">You are the assigned approver for this purchase order. Please review and take action.</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -492,24 +492,24 @@ export default function PurchaseOrderDetailPage() {
             </div>
           ) : (
             <Card className="border-t shadow-sm overflow-hidden">
-              <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+              <CardHeader className="py-3 px-4 border-b bg-muted/30">
                 <CardTitle className="text-sm font-semibold">Items</CardTitle>
               </CardHeader>
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-gray-50/50">
-                    <TableRow className="border-gray-100">
-                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Part Details</TableHead>
-                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Qty</TableHead>
-                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Received</TableHead>
-                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Unit Cost</TableHead>
-                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Total</TableHead>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="border-border">
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Part Details</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Qty</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Received</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Unit Cost</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {purchaseOrder.items && purchaseOrder.items.length > 0 ? (
                       purchaseOrder.items.map((item) => (
-                        <TableRow key={item.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0">
+                        <TableRow key={item.id} className="group hover:bg-muted/80 transition-colors border-b border-border last:border-0">
                           <TableCell className="px-4 py-2">
                             <div>
                               <span className="font-mono text-xs font-medium text-card-foreground block">
@@ -520,23 +520,23 @@ export default function PurchaseOrderDetailPage() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-2 text-right text-sm text-gray-900 font-medium">
+                          <TableCell className="px-4 py-2 text-right text-sm text-foreground font-medium">
                             {item.quantity}
                           </TableCell>
                           <TableCell className="text-right px-4 py-2 text-sm">
                             {item.quantity_received || 0} / {item.quantity}
                           </TableCell>
-                          <TableCell className="text-right px-4 py-2 text-sm text-gray-600">
+                          <TableCell className="text-right px-4 py-2 text-sm text-muted-foreground">
                             {item.unit_cost ? `${formatCurrency(parseFloat(item.unit_cost))}` : "-"}
                           </TableCell>
-                          <TableCell className="text-right px-4 py-2 text-sm font-bold text-gray-900">
+                          <TableCell className="text-right px-4 py-2 text-sm font-bold text-foreground">
                             {item.total ? `${formatCurrency(parseFloat(item.total))}` : "-"}
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">No items in this order</TableCell>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No items in this order</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -547,11 +547,11 @@ export default function PurchaseOrderDetailPage() {
 
           {purchaseOrder.notes && (
             <Card>
-              <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+              <CardHeader className="py-3 px-4 border-b bg-muted/30">
                 <CardTitle className="text-sm font-semibold">Notes</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                <p className="text-sm text-foreground whitespace-pre-wrap">
                   {purchaseOrder.notes}
                 </p>
               </CardContent>
@@ -562,19 +562,19 @@ export default function PurchaseOrderDetailPage() {
         {/* Sidebar Info */}
         <div className="space-y-6">
           <Card>
-            <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+            <CardHeader className="py-3 px-4 border-b bg-muted/30">
               <CardTitle className="text-sm font-semibold">Financial Summary</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
+                <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-medium">
                   {purchaseOrder.subtotal ? `${formatCurrency(parseFloat(purchaseOrder.subtotal))}` : "$0.00"}
                 </span>
               </div>
               {purchaseOrder.tax && parseFloat(purchaseOrder.tax) > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tax</span>
+                  <span className="text-muted-foreground">Tax</span>
                   <span className="font-medium">
                     {formatCurrency(parseFloat(purchaseOrder.tax))}
                   </span>
@@ -582,7 +582,7 @@ export default function PurchaseOrderDetailPage() {
               )}
               {purchaseOrder.shipping && parseFloat(purchaseOrder.shipping) > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Shipping</span>
+                  <span className="text-muted-foreground">Shipping</span>
                   <span className="font-medium">
                     {formatCurrency(parseFloat(purchaseOrder.shipping))}
                   </span>
@@ -598,16 +598,16 @@ export default function PurchaseOrderDetailPage() {
           </Card>
 
           <Card>
-            <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+            <CardHeader className="py-3 px-4 border-b bg-muted/30">
               <CardTitle className="text-sm font-semibold">Tracking</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
               {purchaseOrder.created_by_name && (
                 <div>
-                  <label className="text-xs font-medium text-gray-500">Created By</label>
+                  <label className="text-xs font-medium text-muted-foreground">Created By</label>
                   <p className="text-sm">{purchaseOrder.created_by_name}</p>
                   {purchaseOrder.created_at && (
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       {format(new Date(purchaseOrder.created_at), "MMM dd, yyyy HH:mm")}
                     </p>
                   )}
@@ -615,8 +615,8 @@ export default function PurchaseOrderDetailPage() {
               )}
               {purchaseOrder.submitted_at && (
                 <div>
-                  <label className="text-xs font-medium text-gray-500">Submitted for Approval</label>
-                  <p className="text-xs text-gray-400">
+                  <label className="text-xs font-medium text-muted-foreground">Submitted for Approval</label>
+                  <p className="text-xs text-muted-foreground">
                     {format(new Date(purchaseOrder.submitted_at), "MMM dd, yyyy HH:mm")}
                   </p>
                   {purchaseOrder.assigned_approver_name && (
@@ -626,19 +626,19 @@ export default function PurchaseOrderDetailPage() {
               )}
               {purchaseOrder.approved_at && (
                 <div>
-                  <label className="text-xs font-medium text-gray-500">Approved</label>
-                  <p className="text-xs text-gray-400">
+                  <label className="text-xs font-medium text-muted-foreground">Approved</label>
+                  <p className="text-xs text-muted-foreground">
                     {format(new Date(purchaseOrder.approved_at), "MMM dd, yyyy HH:mm")}
                   </p>
                   {purchaseOrder.approved_by_name && (
-                    <p className="text-xs text-gray-400">by {purchaseOrder.approved_by_name}</p>
+                    <p className="text-xs text-muted-foreground">by {purchaseOrder.approved_by_name}</p>
                   )}
                 </div>
               )}
               {purchaseOrder.received_date && (
                 <div>
-                  <label className="text-xs font-medium text-gray-500">Received</label>
-                  <p className="text-xs text-gray-400">
+                  <label className="text-xs font-medium text-muted-foreground">Received</label>
+                  <p className="text-xs text-muted-foreground">
                     {format(new Date(purchaseOrder.received_date), "MMM dd, yyyy")}
                   </p>
                 </div>

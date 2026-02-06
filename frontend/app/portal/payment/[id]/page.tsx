@@ -105,7 +105,7 @@ export default function PaymentPage() {
   if (!invoice) {
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground">Invoice not found</p>
         <Button onClick={() => router.push("/portal/invoices")} className="mt-4">
           Back to Invoices
@@ -263,7 +263,7 @@ export default function PaymentPage() {
                 {amountDue > 0 && (
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
                     <span className="text-foreground">Amount Due</span>
-                    <span className="text-primary dark:text-primary">
+                    <span className="text-primary">
                       {formatCurrency(amountDue)}
                     </span>
                   </div>
@@ -322,7 +322,7 @@ export default function PaymentPage() {
 
                   <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
                     <div className="flex items-start space-x-2">
-                      <AlertCircle className="w-5 h-5 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
+                      <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-orange-800 dark:text-orange-300">
                         <p className="font-medium mb-1">Secure Payment</p>
 

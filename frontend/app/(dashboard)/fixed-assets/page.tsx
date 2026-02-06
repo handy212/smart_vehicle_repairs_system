@@ -140,7 +140,7 @@ function FixedAssetsContent() {
             accessor: "net_book_value" as const,
             className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
-                <span className="font-mono text-xs font-bold text-primary dark:text-primary">
+                <span className="font-mono text-xs font-bold text-primary">
                     {formatCurrency(asset.net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
             ),
@@ -227,7 +227,7 @@ function FixedAssetsContent() {
                                     </div>
                                     <div className="flex-shrink-0">
                                         <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
-                                            <Package className="w-5 h-5 text-primary dark:text-primary" />
+                                            <Package className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>
                                 </div>
@@ -241,7 +241,7 @@ function FixedAssetsContent() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Net Book Value
                                         </p>
-                                        <p className="text-2xl font-black text-primary dark:text-primary mt-1">
+                                        <p className="text-2xl font-black text-primary mt-1">
                                             {formatCurrency(stats.total_net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -250,7 +250,7 @@ function FixedAssetsContent() {
                                     </div>
                                     <div className="flex-shrink-0">
                                         <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
-                                            <TrendingDown className="w-5 h-5 text-primary dark:text-primary" />
+                                            <TrendingDown className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>
                                 </div>
@@ -310,7 +310,7 @@ function FixedAssetsContent() {
                     <CardContent className="p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search by name, asset #, or category..."
                                     value={searchTerm}
@@ -322,7 +322,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="active">Active</option>
                                     <option value="">All Statuses</option>
@@ -334,7 +334,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={categoryFilter}
                                     onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="">All Categories</option>
                                     {categories?.map((cat) => (

@@ -144,7 +144,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
         <TableCell>
           <div className="flex items-start gap-2">
             {isWorkflow && (
-              <TaskIcon className="w-4 h-4 text-primary dark:text-primary mt-0.5 flex-shrink-0" />
+              <TaskIcon className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
             )}
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -170,13 +170,13 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
               {isWorkflow && taskInfo?.actionHint && task.status !== 'completed' && (
                 <div className="mt-1 flex items-start gap-1">
                   <Info className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-primary dark:text-primary italic">
+                  <p className="text-xs text-primary italic">
                     {taskInfo.actionHint}
                   </p>
                 </div>
               )}
               {task.detailed_notes && (
-                <p className="text-xs text-gray-500 mt-1">{task.detailed_notes}</p>
+                <p className="text-xs text-muted-foreground mt-1">{task.detailed_notes}</p>
               )}
             </div>
           </div>
@@ -187,7 +187,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
         <TableCell>
           <div className="flex items-center gap-1">
             {isWorkflow && task.workflow_phase === 'assigned' && (
-              <User className="w-3 h-3 text-gray-400" />
+              <User className="w-3 h-3 text-muted-foreground" />
             )}
             <span className="text-sm">
               {task.assigned_to_name || "-"}
@@ -206,9 +206,9 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
             ) : (task.actual_hours !== undefined && task.actual_hours !== null && task.actual_hours > 0) ? (
               <span>{Number(task.actual_hours).toFixed(2)}h</span>
             ) : (task.estimated_hours !== undefined && task.estimated_hours !== null && task.estimated_hours > 0) ? (
-              <span className="text-gray-500">Est: {Number(task.estimated_hours).toFixed(2)}h</span>
+              <span className="text-muted-foreground">Est: {Number(task.estimated_hours).toFixed(2)}h</span>
             ) : task.status === 'completed' ? (
-              <span className="text-gray-400">0.00h</span>
+              <span className="text-muted-foreground">0.00h</span>
             ) : (
               "-"
             )}
@@ -252,16 +252,16 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 </Button>
               )}
               {task.status === "completed" && (
-                <span className="text-xs text-gray-500">Completed</span>
+                <span className="text-xs text-muted-foreground">Completed</span>
               )}
               {task.status === "skipped" && (
-                <span className="text-xs text-gray-500">Skipped</span>
+                <span className="text-xs text-muted-foreground">Skipped</span>
               )}
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               {task.status === "completed" ? (
-                <span className="text-xs text-primary dark:text-primary italic flex items-center gap-1">
+                <span className="text-xs text-primary italic flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   Auto-completed
                 </span>
@@ -271,7 +271,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                   {isCurrentPhase ? "Active Phase" : "Auto-managed"}
                 </span>
               ) : (
-                <span className="text-xs text-gray-500 italic">
+                <span className="text-xs text-muted-foreground italic">
                   {isCurrentPhase ? "Waiting to start" : "Auto-managed"}
                 </span>
               )}
@@ -313,7 +313,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                     </div>
                     <span>•</span>
                     <div className="flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3 text-gray-400" />
+                      <AlertCircle className="w-3 h-3 text-muted-foreground" />
                       <span>Pending: {workflowTasks.filter(t => t.status === 'pending').length}</span>
                     </div>
                   </div>
@@ -351,11 +351,11 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           <CardContent>
             {manualTasks.length === 0 ? (
               <div className="text-center py-12">
-                <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <Wrench className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
                 <p className="text-sm font-medium text-foreground mb-1">
                   No manual tasks yet
                 </p>
-                <p className="text-sm text-gray-500 mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                   Add custom tasks for specific repair work that needs to be performed.
                 </p>
                 <Button onClick={() => setShowAddDialog(true)}variant="secondary">
@@ -388,7 +388,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
         {tasks.length === 0 && (
           <Card>
             <CardContent className="py-8">
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-muted-foreground text-center">
                 No tasks yet. Tasks will be automatically created as the work order progresses through its workflow phases.
               </p>
             </CardContent>

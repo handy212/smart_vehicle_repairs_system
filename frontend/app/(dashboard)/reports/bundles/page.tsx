@@ -37,7 +37,7 @@ export default function ServiceBundleReportPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Service Bundle Popularity</h1>
-                    <p className="text-gray-500 text-sm">Analyze service bundle usage, conversion, and revenue.</p>
+                    <p className="text-muted-foreground text-sm">Analyze service bundle usage, conversion, and revenue.</p>
                 </div>
                 <DateRangePicker
                     startDate={format(dateRange.from, "yyyy-MM-dd")}
@@ -66,7 +66,7 @@ export default function ServiceBundleReportPage() {
                 <Card className="border-none shadow-sm">
                     <CardHeader>
                         <div className="flex items-center gap-2">
-                            <Package className="w-5 h-5 text-gray-500" />
+                            <Package className="w-5 h-5 text-muted-foreground" />
                             <CardTitle>Bundle Performance</CardTitle>
                         </div>
                     </CardHeader>
@@ -87,7 +87,7 @@ export default function ServiceBundleReportPage() {
                                     <TableRow key={item.id}>
                                         <TableCell>
                                             <div className="font-medium">{item.name}</div>
-                                            <div className="text-xs text-gray-500 truncate max-w-[200px]">{item.description}</div>
+                                            <div className="text-xs text-muted-foreground truncate max-w-[200px]">{item.description}</div>
                                         </TableCell>
                                         <TableCell className="text-right font-mono">
                                             ${item.price.toFixed(2)}
@@ -108,7 +108,7 @@ export default function ServiceBundleReportPage() {
                                 ))}
                                 {data?.bundles.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center text-gray-500">
+                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                             No service bundle activity found in this period.
                                         </TableCell>
                                     </TableRow>

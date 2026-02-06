@@ -123,7 +123,7 @@ export default function MyRoadsideRequestsPage() {
             header: "Service",
             cell: (req) => (
               <div className="flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-gray-400" />
+                <Wrench className="w-4 h-4 text-muted-foreground" />
                 <span>{getServiceTypeDisplay(req.service_type)}</span>
               </div>
             )
@@ -133,7 +133,7 @@ export default function MyRoadsideRequestsPage() {
             className: "hidden md:table-cell max-w-[200px]",
             cell: (req) => (
               <div className="flex items-center gap-2" title={req.breakdown_location}>
-                <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <span className="truncate">{req.breakdown_location}</span>
               </div>
             )

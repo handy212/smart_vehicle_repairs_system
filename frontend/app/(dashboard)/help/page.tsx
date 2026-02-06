@@ -57,7 +57,7 @@ export default function HelpPage() {
                     <p className="text-muted-foreground mt-1">Documentation and guides for smart Vehicle Repairs</p>
                 </div>
                 <div className="relative w-full md:w-96">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                         type="text"
                         placeholder="Search documentation..."
@@ -91,7 +91,7 @@ export default function HelpPage() {
                                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                                 }`}
                                         >
-                                            <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-gray-500"}`} />
+                                            <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                                             {module.title}
                                             {isActive && <ChevronRight className="w-4 h-4 ml-auto opacity-50" />}
                                         </button>

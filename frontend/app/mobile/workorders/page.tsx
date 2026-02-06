@@ -81,7 +81,7 @@ export default function MobileWorkOrdersPage() {
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -106,7 +106,7 @@ export default function MobileWorkOrdersPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search work orders..."
           value={search}
@@ -133,7 +133,7 @@ export default function MobileWorkOrdersPage() {
       {/* Work Orders List */}
       {filteredWorkOrders.length === 0 ? (
         <div className="text-center py-12">
-          <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <Wrench className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
             No work orders found
           </p>
@@ -144,7 +144,7 @@ export default function MobileWorkOrdersPage() {
             <Link
               key={wo.id}
               href={`/mobile/workorders/${wo.id}`}
-              className="block p-4 rounded-lg border border-border bg-card hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="block p-4 rounded-lg border border-border bg-card hover:bg-muted dark:hover:bg-gray-800 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">

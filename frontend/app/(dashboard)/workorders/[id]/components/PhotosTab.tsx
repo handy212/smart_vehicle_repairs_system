@@ -142,7 +142,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold">Work Order Photos</h3>
-          <p className="text-sm text-gray-500">Document work progress with photos</p>
+          <p className="text-sm text-muted-foreground">Document work progress with photos</p>
         </div>
         <UploadPhotoDialog
           isOpen={isUploadDialogOpen}
@@ -166,11 +166,11 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <ImageIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <ImageIcon className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
               <p className="text-sm font-medium text-foreground mb-1">
                 No photos uploaded yet
               </p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Document work progress with before, during, and after photos.
               </p>
               <Button onClick={() => setIsUploadDialogOpen(true)} variant="secondary">
@@ -192,7 +192,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                   {typePhotos.map((photo) => (
                     <div
                       key={photo.id}
-                      className="relative group border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+                      className="relative group border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
                     >
                       <div className="aspect-square bg-gray-100 relative">
                         <img
@@ -227,15 +227,15 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                       </div>
                       {photo.caption && (
                         <div className="p-2">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {photo.caption}
                           </p>
                           {photo.taken_by_name && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               by {photo.taken_by_name}
                             </p>
                           )}
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-muted-foreground">
                             {format(new Date(photo.created_at), "MMM dd, yyyy")}
                           </p>
                         </div>
@@ -268,9 +268,9 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                   />
                 </div>
                 {selectedPhoto.description && (
-                  <p className="text-sm text-gray-600">{selectedPhoto.description}</p>
+                  <p className="text-sm text-muted-foreground">{selectedPhoto.description}</p>
                 )}
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-muted-foreground">
                   {selectedPhoto.taken_by_name && (
                     <p>Taken by: {selectedPhoto.taken_by_name}</p>
                   )}
@@ -365,7 +365,7 @@ function UploadPhotoDialog({
         <form onSubmit={handleSubmit} className="px-6 pb-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Photo <span className="text-red-500">*</span>
               </label>
               <Input
@@ -381,14 +381,14 @@ function UploadPhotoDialog({
                   <img
                     src={previewUrl}
                     alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                    className="w-full h-48 object-cover rounded-lg border border-border"
                   />
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Photo Type <span className="text-red-500">*</span>
               </label>
               <Select
@@ -410,7 +410,7 @@ function UploadPhotoDialog({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Caption
               </label>
               <Input
@@ -423,7 +423,7 @@ function UploadPhotoDialog({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Description
               </label>
               <Textarea

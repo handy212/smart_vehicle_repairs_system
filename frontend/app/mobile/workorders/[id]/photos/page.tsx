@@ -166,7 +166,7 @@ export default function WorkOrderPhotosPage() {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="min-h-screen bg-muted dark:bg-gray-950">
             {/* Header */}
             <div className="bg-card border-b border-border sticky top-0 z-10">
                 <div className="px-4 py-3 flex items-center justify-between">
@@ -253,14 +253,14 @@ export default function WorkOrderPhotosPage() {
                 {/* Photos Grid */}
                 {loading ? (
                     <div className="text-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-                        <p className="mt-2 text-sm text-gray-500">Loading photos...</p>
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">Loading photos...</p>
                     </div>
                 ) : photos.length === 0 ? (
                     <div className="text-center py-12">
-                        <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">No photos yet</p>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">No photos yet</p>
+                        <p className="text-sm text-muted-foreground mt-1">
                             Take photos to document your work
                         </p>
                     </div>

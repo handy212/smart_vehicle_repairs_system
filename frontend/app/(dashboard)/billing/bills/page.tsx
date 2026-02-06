@@ -145,36 +145,36 @@ export default function BillsPage() {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Card className="shadow-none border-none bg-gray-50/50">
+                <Card className="shadow-none border-none bg-muted/50">
                     <CardContent className="p-4 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Bills</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Bills</span>
                         <div className="flex items-end justify-between">
-                            <span className="text-xl font-bold text-gray-900">{totalBills}</span>
-                            <FileText className="w-5 h-5 text-gray-400 mb-0.5" />
+                            <span className="text-xl font-bold text-foreground">{totalBills}</span>
+                            <FileText className="w-5 h-5 text-muted-foreground mb-0.5" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-none border-none bg-gray-50/50">
+                <Card className="shadow-none border-none bg-muted/50">
                     <CardContent className="p-4 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Amount</span>
                         <div className="flex items-end justify-between">
-                            <span className="text-xl font-bold text-gray-900">{formatCurrency(totalAmount)}</span>
-                            <DollarSign className="w-5 h-5 text-gray-400 mb-0.5" />
+                            <span className="text-xl font-bold text-foreground">{formatCurrency(totalAmount)}</span>
+                            <DollarSign className="w-5 h-5 text-muted-foreground mb-0.5" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-none border-none bg-gray-50/50">
+                <Card className="shadow-none border-none bg-muted/50">
                     <CardContent className="p-4 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount Due</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount Due</span>
                         <div className="flex items-end justify-between">
                             <span className="text-xl font-bold text-yellow-600">{formatCurrency(totalDue)}</span>
                             <CreditCard className="w-5 h-5 text-yellow-500/50 mb-0.5" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="shadow-none border-none bg-gray-50/50">
+                <Card className="shadow-none border-none bg-muted/50">
                     <CardContent className="p-4 flex flex-col gap-1">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overdue</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Overdue</span>
                         <div className="flex items-end justify-between">
                             <span className="text-xl font-bold text-red-600">{overdueCount}</span>
                             <AlertCircle className="w-5 h-5 text-red-500/50 mb-0.5" />
@@ -184,12 +184,12 @@ export default function BillsPage() {
             </div>
 
             {/* Filter Bar */}
-            <Card className="border-none shadow-sm bg-gray-50/50">
+            <Card className="border-none shadow-sm bg-muted/50">
                 <CardContent className="p-3">
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3 flex-wrap">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                                 <Input
                                     type="text"
                                     placeholder="Search bills..."
@@ -224,7 +224,7 @@ export default function BillsPage() {
                                         setAdvancedFilters({});
                                         setPage(1);
                                     }}
-                                    className="h-8 text-gray-500 hover:text-red-600"
+                                    className="h-8 text-muted-foreground hover:text-red-600"
                                 >
                                     <X className="w-3.5 h-3.5 mr-1" />
                                     Clear
@@ -237,7 +237,7 @@ export default function BillsPage() {
 
             {/* Bills Table */}
             <Card className="border-t shadow-sm">
-                <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30">
                     <CardTitle className="text-sm font-semibold text-card-foreground">
                         All Bills <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
                     </CardTitle>
@@ -249,41 +249,41 @@ export default function BillsPage() {
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Bill #</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Vendor</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Ref #</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Bill Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Due Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Total</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Due</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Bill #</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vendor</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Ref #</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Bill Date</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Due Date</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Total</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Due</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {data.results.map((bill) => (
                                         <TableRow
                                             key={bill.id}
-                                            className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 cursor-pointer"
+                                            className="group hover:bg-muted/80 transition-colors border-b border-border last:border-0 cursor-pointer"
                                             onClick={() => router.push(`/billing/bills/${bill.id}`)}
                                         >
-                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700">
+                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-foreground">
                                                 {bill.bill_number}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
-                                                <span className="text-sm font-medium text-gray-900">{bill.vendor_name || "N/A"}</span>
+                                                <span className="text-sm font-medium text-foreground">{bill.vendor_name || "N/A"}</span>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {bill.reference_number || "-"}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {bill.bill_date ? format(new Date(bill.bill_date), "MMM dd, yyyy") : "-"}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {bill.due_date ? format(new Date(bill.due_date), "MMM dd, yyyy") : "-"}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-right font-medium text-sm text-gray-700">
+                                            <TableCell className="px-4 py-2 text-right font-medium text-sm text-foreground">
                                                 {formatCurrency(parseFloat(bill.total || "0"))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right text-sm text-red-600 font-medium">
@@ -298,7 +298,7 @@ export default function BillsPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </Button>
                                             </TableCell>
@@ -310,7 +310,7 @@ export default function BillsPage() {
                     ) : (
                         <div className="text-center py-12">
                             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500 text-sm">No bills found.</p>
+                            <p className="text-muted-foreground text-sm">No bills found.</p>
                             <PermissionGuard permission="create_bills">
                                 <Link href="/billing/bills/new">
                                     <Button className="mt-4" variant="outline" size="sm">
@@ -327,7 +327,7 @@ export default function BillsPage() {
             {/* Pagination */}
             {data && data.count > 20 && (
                 <div className="flex items-center justify-between px-2">
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                         Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.count)} of {data.count} bills
                     </div>
                     <div className="flex items-center gap-2">

@@ -290,31 +290,31 @@ export default function VehiclesPage() {
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
           <span className="text-lg font-bold text-foreground">{stats?.total_vehicles || 0}</span>
         </CardContent>
       </Card>
       <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
-          <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_vehicles || 0}</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
+          <span className="text-lg font-bold text-primary">{stats?.active_vehicles || 0}</span>
         </CardContent>
       </Card>
       <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">In Service</span>
-          <span className="text-lg font-bold text-primary dark:text-primary">{stats?.in_service_vehicles || 0}</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">In Service</span>
+          <span className="text-lg font-bold text-primary">{stats?.in_service_vehicles || 0}</span>
         </CardContent>
       </Card>
       <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Service</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Due Service</span>
           <span className="text-lg font-bold text-red-600 dark:text-red-400">{stats?.due_service_vehicles || 0}</span>
         </CardContent>
       </Card>
       <Card className="shadow-sm border bg-card">
         <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sold</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sold</span>
           <span className="text-lg font-bold text-muted-foreground">{stats?.sold_vehicles || 0}</span>
         </CardContent>
       </Card>
@@ -349,7 +349,7 @@ export default function VehiclesPage() {
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-64">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               type="text"
               placeholder="Search..."
@@ -388,7 +388,7 @@ export default function VehiclesPage() {
                 setAdvancedFilters({});
                 setPage(1);
               }}
-              className="h-9 w-9 p-0 text-gray-500 hover:text-red-600"
+              className="h-9 w-9 p-0 text-muted-foreground hover:text-red-600"
               title="Clear all filters"
             >
               <X className="w-4 h-4" />
@@ -487,7 +487,7 @@ export default function VehiclesPage() {
           ) : data?.results && data.results.length > 0 ? (
             <div className="rounded-md">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50/50 hover:bg-muted/50">
+                <thead className="bg-muted/50 hover:bg-muted/50">
                   <tr>
                     <th className="px-4 py-3 text-left w-12 h-10">
                       <input
@@ -497,7 +497,7 @@ export default function VehiclesPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                        className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                       />
                     </th>
                     <th className="px-4 h-10 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -553,13 +553,13 @@ export default function VehiclesPage() {
                 </thead>
                 <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
                   {data.results.map((vehicle) => (
-                    <tr key={vehicle.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors duration-150 cursor-pointer" onDoubleClick={() => router.push(`/vehicles/${vehicle.id}`)}>
+                    <tr key={vehicle.id} className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 transition-colors duration-150 cursor-pointer" onDoubleClick={() => router.push(`/vehicles/${vehicle.id}`)}>
                       <td className="px-4 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={bulkSelection.isSelected(vehicle.id)}
                           onChange={() => bulkSelection.toggleSelection(vehicle.id)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                         />
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
@@ -594,7 +594,7 @@ export default function VehiclesPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreVertical className="w-3.5 h-3.5 text-gray-500" />
+                              <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">

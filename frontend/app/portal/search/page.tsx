@@ -61,7 +61,7 @@ export default function SearchPage() {
         <CardContent className="p-6">
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search vehicles, appointments, invoices..."
@@ -310,7 +310,7 @@ export default function SearchPage() {
       ) : debouncedQuery.length >= 2 && totalResults === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2">No results found</p>
             <p className="text-sm text-muted-foreground">
               Try searching with different keywords
@@ -320,7 +320,7 @@ export default function SearchPage() {
       ) : debouncedQuery.length < 2 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2">Start searching</p>
             <p className="text-sm text-muted-foreground">
               Enter at least 2 characters to search across your vehicles, appointments, invoices,

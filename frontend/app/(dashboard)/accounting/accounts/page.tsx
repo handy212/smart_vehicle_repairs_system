@@ -193,7 +193,7 @@ export default function ChartOfAccountsPage() {
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">Account Code *</label>
+                                    <label htmlFor="code" className="block text-sm font-medium text-foreground mb-2">Account Code *</label>
                                     <Input
                                         id="code"
                                         value={formData.code}
@@ -204,7 +204,7 @@ export default function ChartOfAccountsPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Account Name *</label>
+                                    <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">Account Name *</label>
                                     <Input
                                         id="name"
                                         value={formData.name}
@@ -218,7 +218,7 @@ export default function ChartOfAccountsPage() {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label htmlFor="account_type" className="block text-sm font-medium text-gray-700 mb-2">Account Type *</label>
+                                    <label htmlFor="account_type" className="block text-sm font-medium text-foreground mb-2">Account Type *</label>
                                     <select
                                         id="account_type"
                                         className="w-full border rounded px-3 py-2 h-9 text-sm"
@@ -233,7 +233,7 @@ export default function ChartOfAccountsPage() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label htmlFor="balance_type" className="block text-sm font-medium text-gray-700 mb-2">Balance Type *</label>
+                                    <label htmlFor="balance_type" className="block text-sm font-medium text-foreground mb-2">Balance Type *</label>
                                     <select
                                         id="balance_type"
                                         className="w-full border rounded px-3 py-2 h-9 text-sm"
@@ -247,7 +247,7 @@ export default function ChartOfAccountsPage() {
                             </div>
 
                             <div>
-                                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                                <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">Description (Optional)</label>
                                 <Textarea
                                     id="description"
                                     value={formData.description}
@@ -266,7 +266,7 @@ export default function ChartOfAccountsPage() {
                                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                                     className="h-3.5 w-3.5"
                                 />
-                                <label htmlFor="is_active" className="text-sm font-medium text-gray-700">Active</label>
+                                <label htmlFor="is_active" className="text-sm font-medium text-foreground">Active</label>
                             </div>
                         </div>
 
@@ -314,19 +314,19 @@ export default function ChartOfAccountsPage() {
                                         </h3>
                                     </div>
                                     <Table>
-                                        <TableHeader className="bg-gray-50/30 dark:bg-gray-800/30">
+                                        <TableHeader className="bg-muted/30 dark:bg-gray-800/30">
                                             <TableRow className="hover:bg-transparent border-none">
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Code</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Name</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Type</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Balance</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Status</TableHead>
-                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Actions</TableHead>
+                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Code</TableHead>
+                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
+                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Type</TableHead>
+                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Balance</TableHead>
+                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {typeAccounts.map((account: any) => (
-                                                <TableRow key={account.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                                <TableRow key={account.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
                                                     <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                         {account.code}
                                                     </TableCell>
@@ -338,7 +338,7 @@ export default function ChartOfAccountsPage() {
                                                     <TableCell className="px-4 py-2">
                                                         <Badge variant="outline" className={`text-[10px] px-2 py-0 ${account.is_active
                                                             ? "text-emerald-600 border-emerald-200 bg-emerald-50"
-                                                            : "text-gray-500 border-gray-200 bg-gray-50"
+                                                            : "text-muted-foreground border-border bg-muted"
                                                             }`}>
                                                             {account.is_active ? "Active" : "Inactive"}
                                                         </Badge>
@@ -346,7 +346,7 @@ export default function ChartOfAccountsPage() {
                                                     <TableCell className="px-4 py-2 text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 text-gray-500">
+                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 text-muted-foreground">
                                                                     <MoreVertical className="w-3.5 h-3.5" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>

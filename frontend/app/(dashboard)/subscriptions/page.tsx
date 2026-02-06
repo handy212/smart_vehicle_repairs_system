@@ -248,7 +248,7 @@ export default function SubscriptionsPage() {
             {subscription.customer_name || `Customer #${subscription.customer}`}
           </span>
           {subscription.vehicle && (
-            <span className="text-xs text-gray-500">Vehicle ID: {subscription.vehicle}</span>
+            <span className="text-xs text-muted-foreground">Vehicle ID: {subscription.vehicle}</span>
           )}
         </div>
       ),
@@ -273,7 +273,7 @@ export default function SubscriptionsPage() {
           {subscription.days_remaining !== undefined && (
             <span className={cn(
               "mt-0.5",
-              subscription.days_remaining < 30 ? "text-red-600 font-medium" : "text-gray-500"
+              subscription.days_remaining < 30 ? "text-red-600 font-medium" : "text-muted-foreground"
             )}>
               {subscription.days_remaining} days left
             </span>
@@ -343,7 +343,7 @@ export default function SubscriptionsPage() {
                   setIsChangePlanDialogOpen(true);
                 }}
               >
-                <Settings className="h-4 w-4 text-gray-600" />
+                <Settings className="h-4 w-4 text-muted-foreground" />
               </Button>
               <Button
                 variant="ghost"
@@ -414,11 +414,11 @@ export default function SubscriptionsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Subscriptions</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Subscriptions</p>
                   <p className="text-2xl font-black text-foreground mt-1">{totalSubscriptions}</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-950/20 flex items-center justify-center">
-                  <PackageIcon className="w-5 h-5 text-primary dark:text-primary" />
+                  <PackageIcon className="w-5 h-5 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -427,7 +427,7 @@ export default function SubscriptionsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
                   <p className="text-2xl font-black text-success mt-1">{activeSubscriptions}</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-success/10 dark:bg-green-950/20 flex items-center justify-center">
@@ -440,7 +440,7 @@ export default function SubscriptionsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Expired</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expired</p>
                   <p className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">{expiredSubscriptions}</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
@@ -457,7 +457,7 @@ export default function SubscriptionsPage() {
             {/* Toolbar */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search subscriptions..."
                   value={search}
@@ -469,7 +469,7 @@ export default function SubscriptionsPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -481,7 +481,7 @@ export default function SubscriptionsPage() {
                 <select
                   value={paymentFilter}
                   onChange={(e) => setPaymentFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Payments</option>
                   <option value="paid">Paid</option>

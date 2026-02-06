@@ -110,11 +110,11 @@ export function FilesView({ customerId }: FilesViewProps) {
             </div>
 
             {files.length === 0 ? (
-                <Card className="border-dashed shadow-none bg-gray-50/50">
-                    <CardContent className="flex flex-col items-center justify-center p-12 text-center text-gray-500">
+                <Card className="border-dashed shadow-none bg-muted/50">
+                    <CardContent className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
                         <File className="w-12 h-12 mb-4 text-gray-300" />
                         <h4 className="font-medium text-foreground mb-1">No files uploaded</h4>
-                        <p className="text-sm text-gray-400 mb-4">Upload documents related to this customer</p>
+                        <p className="text-sm text-muted-foreground mb-4">Upload documents related to this customer</p>
                         <label htmlFor="file-upload">
                             <Button variant="outline" size="sm" className="cursor-pointer" asChild>
                                 <span>Select File</span>

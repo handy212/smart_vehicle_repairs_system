@@ -212,7 +212,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                     <DialogHeader className="px-6 py-4 border-b">
                         <DialogTitle>{triggerLabel}</DialogTitle>
                         {activeBranch && (
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 Branch: <span className="font-medium">{activeBranch.name}</span>
                             </p>
                         )}
@@ -222,22 +222,22 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                         {unreceivedItems.length === 0 ? (
                             <div className="text-center py-12">
                                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                                <p className="text-gray-500">All items have been received</p>
+                                <p className="text-muted-foreground">All items have been received</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 {/* Summary Stats */}
                                 <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
                                     <div>
-                                        <p className="text-xs text-gray-500 uppercase tracking-wider">Items Remaining</p>
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Items Remaining</p>
                                         <p className="text-2xl font-bold text-foreground">{unreceivedItems.length}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-500 uppercase tracking-wider">Total Remaining</p>
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Remaining</p>
                                         <p className="text-2xl font-bold text-foreground">{totalRemaining}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-500 uppercase tracking-wider">Ready to Receive</p>
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Ready to Receive</p>
                                         <p className="text-2xl font-bold text-primary">{totalToReceive}</p>
                                     </div>
                                 </div>
@@ -269,7 +269,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                                                                 <p className="font-medium text-sm">
                                                                     {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
                                                                 </p>
-                                                                <p className="text-xs text-gray-500 font-mono">
+                                                                <p className="text-xs text-muted-foreground font-mono">
                                                                     {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
                                                                 </p>
                                                             </div>

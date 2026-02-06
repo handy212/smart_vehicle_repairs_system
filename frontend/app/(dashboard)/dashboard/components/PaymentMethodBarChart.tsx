@@ -168,7 +168,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
         <div className="pt-3 border-t border-border">
           <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary dark:text-primary" />
+              <DollarSign className="w-5 h-5 text-primary" />
               <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
                 Total Revenue
               </span>

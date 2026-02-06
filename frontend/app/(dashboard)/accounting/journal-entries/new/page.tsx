@@ -116,14 +116,14 @@ export default function NewJournalEntryPage() {
         <div className="space-y-6 p-6 max-w-5xl mx-auto">
             <div className="flex items-center gap-4">
                 <Link href="/accounting">
-                    <Button variant="ghost" size="sm" className="h-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
+                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground text-muted-foreground dark:hover:text-gray-100">
                         <ArrowLeft className="w-4 h-4 mr-1" />
                         Back
                     </Button>
                 </Link>
                 <div>
                     <h1 className="text-2xl font-bold">New Journal Entry</h1>
-                    <p className="text-sm text-gray-500">Create a manual double-entry record</p>
+                    <p className="text-sm text-muted-foreground">Create a manual double-entry record</p>
                 </div>
             </div>
 
@@ -228,7 +228,7 @@ export default function NewJournalEntryPage() {
                                             size="icon"
                                             onClick={() => removeLine(index)}
                                             disabled={lines.length <= 2}
-                                            className="text-gray-400 hover:text-red-500"
+                                            className="text-muted-foreground hover:text-red-500"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
@@ -243,15 +243,15 @@ export default function NewJournalEntryPage() {
                         </Button>
                         <div className="flex gap-8 text-sm font-medium">
                             <div className="flex flex-col items-end">
-                                <span className="text-gray-500 text-xs">Total Debits</span>
+                                <span className="text-muted-foreground text-xs">Total Debits</span>
                                 <span>{formatCurrency(totalDebits)}</span>
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className="text-gray-500 text-xs">Total Credits</span>
+                                <span className="text-muted-foreground text-xs">Total Credits</span>
                                 <span>{formatCurrency(totalCredits)}</span>
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className="text-gray-500 text-xs">Difference</span>
+                                <span className="text-muted-foreground text-xs">Difference</span>
                                 <span className={isBalanced ? "text-success" : "text-red-600"}>
                                     {formatCurrency(Math.abs(totalDebits - totalCredits))}
                                 </span>

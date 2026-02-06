@@ -153,8 +153,8 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : codes.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Code className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+            <div className="text-center py-12 text-muted-foreground">
+              <Code className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm">No diagnostic codes yet.</p>
             </div>
           ) : (
@@ -173,9 +173,9 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
                           <span className="ml-1">{code.severity_display || code.severity}</span>
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-700 line-clamp-2 mb-2">{code.description}</p>
+                      <p className="text-sm text-foreground line-clamp-2 mb-2">{code.description}</p>
                       {code.recorded_at && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           Recorded: {format(new Date(code.recorded_at), "MMM d, yyyy h:mm a")}
                         </p>
                       )}
@@ -492,11 +492,11 @@ function CodeDialog({
                             <div className="font-mono font-semibold text-sm text-orange-900 group-hover:text-primary">
                               {libCode.code_number}
                             </div>
-                            <div className="text-xs text-gray-700 mt-0.5 line-clamp-1 font-medium">
+                            <div className="text-xs text-foreground mt-0.5 line-clamp-1 font-medium">
                               {libCode.title || libCode.description}
                             </div>
                             {libCode.common_causes && Array.isArray(libCode.common_causes) && libCode.common_causes.length > 0 && (
-                              <div className="text-xs text-gray-600 mt-1">
+                              <div className="text-xs text-muted-foreground mt-1">
                                 💡 Common: {libCode.common_causes[0]}
                               </div>
                             )}
@@ -510,7 +510,7 @@ function CodeDialog({
                   </div>
                 )}
                 {formData.code_number && formData.code_number.length >= 3 && libraryResults.length === 0 && !isSearchingLibrary && (
-                  <div className="mt-2 text-xs text-gray-500">
+                  <div className="mt-2 text-xs text-muted-foreground">
                     💡 Tip: Code not in library? You can enter details manually or try a different code type.
                   </div>
                 )}

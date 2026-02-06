@@ -149,7 +149,7 @@ export default function MyEstimatesPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center space-x-4">
-            <Filter className="w-5 h-5 text-gray-400" />
+            <Filter className="w-5 h-5 text-muted-foreground" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

@@ -52,9 +52,9 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
     ];
 
     return (
-        <div className={cn("bg-gray-50/50 dark:bg-gray-800/10 border-r border-border h-full py-4", className)}>
+        <div className={cn("bg-muted/50 dark:bg-gray-800/10 border-r border-border h-full py-4", className)}>
             <div className="px-3 mb-2">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">Menu</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">Menu</h3>
             </div>
             <div className="space-y-1 px-3">
                 {items.map((item) => {
@@ -66,11 +66,11 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                 isActive
-                                    ? "bg-card text-primary dark:text-primary shadow-sm border border-gray-100 border-border"
-                                    : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900"
+                                    ? "bg-card text-primary shadow-sm border border-border border-border"
+                                    : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-foreground"
                             )}
                         >
-                            <item.icon className={cn("w-4 h-4", isActive ? "text-primary dark:text-primary" : "text-gray-400")} />
+                            <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
                             <span className="flex-1 text-left">{item.label}</span>
                             {item.count !== undefined && item.count > 0 && (
                                 <span className={cn(

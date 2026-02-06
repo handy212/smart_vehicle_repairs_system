@@ -173,7 +173,7 @@ export default function GatePassPage() {
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-56">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search..."
@@ -214,7 +214,7 @@ export default function GatePassPage() {
                 setAdvancedFilters({});
                 setPage(1);
               }}
-              className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
               title="Clear all filters"
             >
               <X className="w-3.5 h-3.5" />
@@ -245,7 +245,7 @@ export default function GatePassPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-border">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
                     <SortableHeader
                       field="gate_pass_number"
                       sortConfig={sortConfig}
@@ -288,10 +288,10 @@ export default function GatePassPage() {
                   {data.results.map((gatePass) => (
                     <TableRow
                       key={gatePass.id}
-                      className="group hover:bg-gray-50/80 transition-colors border-b border-border cursor-pointer"
+                      className="group hover:bg-muted/80 transition-colors border-b border-border cursor-pointer"
                       onDoubleClick={() => router.push(`/gatepass/${gatePass.id}`)}
                     >
-                      <TableCell className="px-3 py-1.5 font-mono text-[11px] font-bold text-primary dark:text-primary">
+                      <TableCell className="px-3 py-1.5 font-mono text-[11px] font-bold text-primary">
                         {gatePass.gate_pass_number || "-"}
                       </TableCell>
                       <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">
@@ -323,7 +323,7 @@ export default function GatePassPage() {
                               className="h-6 w-6 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
                             >
                               <span className="sr-only">Open menu</span>
-                              <MoreVertical className="w-3.5 h-3.5 text-gray-500" />
+                              <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">

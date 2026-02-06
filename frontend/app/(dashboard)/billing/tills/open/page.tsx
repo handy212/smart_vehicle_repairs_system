@@ -76,7 +76,7 @@ export default function OpenTillPage() {
                             <div>
                                 <Label htmlFor="opening-balance">Opening Balance *</Label>
                                 <div className="relative mt-1">
-                                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                                     <Input
                                         id="opening-balance"
                                         type="number"

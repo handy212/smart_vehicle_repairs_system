@@ -99,11 +99,11 @@ export default function ImportHistoryPage() {
         <div className="flex items-center justify-between px-4 pt-4">
           <div>
             <h1 className="text-xl font-bold text-foreground tracking-tight">Import History</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Track bulk data import operations</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Track bulk data import operations</p>
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
-              <RefreshCw className="w-4 h-4 text-gray-500" />
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
             </Button>
             <Button variant="outline" size="sm" onClick={handleExport} disabled={!data?.results || data.results.length === 0} className="h-8 text-xs bg-card">
               <Download className="w-3.5 h-3.5 mr-1.5" />
@@ -117,7 +117,7 @@ export default function ImportHistoryPage() {
           <CardContent className="p-3">
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
-                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Model</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Model</Label>
                 <Select
                   value={modelFilter}
                   onValueChange={(val) => {
@@ -138,7 +138,7 @@ export default function ImportHistoryPage() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Start Date</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Start Date</Label>
                 <Input
                   type="date"
                   value={startDate}
@@ -151,7 +151,7 @@ export default function ImportHistoryPage() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">End Date</Label>
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">End Date</Label>
                 <Input
                   type="date"
                   value={endDate}
@@ -174,7 +174,7 @@ export default function ImportHistoryPage() {
                     setSearch("");
                     setPage(1);
                   }}
-                  className="h-8 text-xs text-gray-500 hover:text-gray-900"
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
                 >
                   <XCircle className="w-3.5 h-3.5 mr-1" />
                   Clear
@@ -195,25 +195,25 @@ export default function ImportHistoryPage() {
               ) : !data?.results || data.results.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="w-12 h-12 bg-border rounded-full flex items-center justify-center mb-3">
-                    <FileText className="w-6 h-6 text-gray-400" />
+                    <FileText className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm font-medium text-foreground">No import history found</p>
-                  <p className="text-xs text-gray-500 mt-1">Try adjusting your filters</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters</p>
                 </div>
               ) : (
                 <>
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="bg-gray-50/80">
+                      <TableHeader className="bg-muted/80">
                         <TableRow className="hover:bg-transparent">
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-[180px]">Date & Time</TableHead>
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">User</TableHead>
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Model</TableHead>
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">File</TableHead>
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</TableHead>
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Imported</TableHead>
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Skipped</TableHead>
-                          <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Errors</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[180px]">Date & Time</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Model</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">File</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Imported</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Skipped</TableHead>
+                          <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Errors</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -225,21 +225,21 @@ export default function ImportHistoryPage() {
                           const errorCount = changes.total_errors || 0;
 
                           return (
-                            <TableRow key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                              <TableCell className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                            <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
+                              <TableCell className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
                                 {format(new Date(log.timestamp), "MMM d, yyyy h:mm a")}
                               </TableCell>
                               <TableCell className="px-4 py-2.5 text-xs text-card-foreground font-medium">
                                 {log.user_name || log.user_email || "Unknown"}
                               </TableCell>
                               <TableCell className="px-4 py-2.5">
-                                <Badge variant={getModelBadgeVariant(log.model_name) as any} className="text-[10px] h-5 px-2 font-medium border-gray-200">
+                                <Badge variant={getModelBadgeVariant(log.model_name) as any} className="text-[10px] h-5 px-2 font-medium border-border">
                                   {log.model_name || "N/A"}
                                 </Badge>
                               </TableCell>
                               <TableCell className="px-4 py-2.5">
                                 <div className="flex items-center gap-1.5 max-w-[200px]" title={filename}>
-                                  <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                  <FileText className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                                   <span className="text-xs text-muted-foreground truncate">{filename}</span>
                                 </div>
                               </TableCell>
@@ -247,17 +247,17 @@ export default function ImportHistoryPage() {
                                 {getStatusBadge(log)}
                               </TableCell>
                               <TableCell className="px-4 py-2.5 text-right">
-                                <span className={`text-xs font-mono font-medium ${imported > 0 ? 'text-success' : 'text-gray-400'}`}>
+                                <span className={`text-xs font-mono font-medium ${imported > 0 ? 'text-success' : 'text-muted-foreground'}`}>
                                   {imported}
                                 </span>
                               </TableCell>
                               <TableCell className="px-4 py-2.5 text-right">
-                                <span className={`text-xs font-mono font-medium ${skipped > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
+                                <span className={`text-xs font-mono font-medium ${skipped > 0 ? 'text-yellow-600' : 'text-muted-foreground'}`}>
                                   {skipped}
                                 </span>
                               </TableCell>
                               <TableCell className="px-4 py-2.5 text-right">
-                                <span className={`text-xs font-mono font-medium ${errorCount > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                                <span className={`text-xs font-mono font-medium ${errorCount > 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
                                   {errorCount}
                                 </span>
                               </TableCell>
@@ -270,9 +270,9 @@ export default function ImportHistoryPage() {
 
                   {/* Pagination */}
                   {data.count > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-gray-50/50">
-                      <p className="text-xs text-gray-500">
-                        Showing <span className="font-medium text-gray-900 text-foreground">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-gray-900 text-foreground">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-gray-900 text-foreground">{data.count}</span> results
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/50">
+                      <p className="text-xs text-muted-foreground">
+                        Showing <span className="font-medium text-foreground text-foreground">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-foreground text-foreground">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-foreground text-foreground">{data.count}</span> results
                       </p>
                       <div className="flex items-center gap-2">
                         <Button
@@ -280,7 +280,7 @@ export default function ImportHistoryPage() {
                           size="sm"
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
                           disabled={!data.previous}
-                          className="h-7 text-xs bg-white"
+                          className="h-7 text-xs bg-card"
                         >
                           Previous
                         </Button>
@@ -289,7 +289,7 @@ export default function ImportHistoryPage() {
                           size="sm"
                           onClick={() => setPage((p) => p + 1)}
                           disabled={!data.next}
-                          className="h-7 text-xs bg-white"
+                          className="h-7 text-xs bg-card"
                         >
                           Next
                         </Button>

@@ -115,18 +115,18 @@ export default function BankReconciliationPage() {
                     <Table>
                         <TableHeader className="bg-muted/50 border-y border-border">
                             <TableRow className="hover:bg-transparent border-none">
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Statement Date</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Bank Account</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Opening Balance</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Closing Balance</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Status</TableHead>
-                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Actions</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Statement Date</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Bank Account</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Opening Balance</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Closing Balance</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-500">Loading statements...</TableCell>
+                                    <TableCell colSpan={6} className="text-center py-8 text-sm text-muted-foreground">Loading statements...</TableCell>
                                 </TableRow>
                             ) : statements?.length === 0 ? (
                                 <TableRow>
@@ -136,10 +136,10 @@ export default function BankReconciliationPage() {
                                 </TableRow>
                             ) : (
                                 (Array.isArray(statements) ? statements : (statements as any)?.results || []).map((statement: any) => (
-                                    <TableRow key={statement.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                    <TableRow key={statement.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
                                         <TableCell className="px-4 py-2 text-sm text-foreground">
                                             <div className="flex items-center">
-                                                <FileText className="w-4 h-4 mr-2 text-gray-400" />
+                                                <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
                                                 {format(new Date(statement.statement_date), 'MMM d, yyyy')}
                                             </div>
                                         </TableCell>

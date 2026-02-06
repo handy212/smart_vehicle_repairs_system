@@ -555,13 +555,13 @@ export default function NewWorkOrderPage() {
               variant="ghost"
               size="sm"
               onClick={() => router.back()}
-              className="w-fit -ml-2 h-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              className="w-fit -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground dark:hover:text-gray-100"
             >
               <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
               Back
             </Button>
             <h1 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
-              <PremiumIcons.PlusCircle className="w-6 h-6 text-primary dark:text-primary" />
+              <PremiumIcons.PlusCircle className="w-6 h-6 text-primary" />
               <span className="font-semibold text-lg">New Work Order</span>
             </h1>
           </div>
@@ -715,9 +715,9 @@ export default function NewWorkOrderPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Customer & Vehicle */}
             <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
+              <CardHeader className="bg-card/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
                 <CardTitle className="flex items-center gap-2">
-                  <PremiumIcons.Users className="w-5 h-5 text-gray-500" />
+                  <PremiumIcons.Users className="w-5 h-5 text-muted-foreground" />
                   Customer & Vehicle
                 </CardTitle>
                 <CardDescription>Select customer and vehicle</CardDescription>
@@ -889,9 +889,9 @@ export default function NewWorkOrderPage() {
 
             {/* Work Order Details */}
             <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
+              <CardHeader className="bg-card/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-border/50">
                 <CardTitle className="flex items-center gap-2">
-                  <PremiumIcons.FileText className="w-5 h-5 text-gray-500" />
+                  <PremiumIcons.FileText className="w-5 h-5 text-muted-foreground" />
                   Work Order Details
                 </CardTitle>
                 <CardDescription>Priority and description</CardDescription>
@@ -909,7 +909,7 @@ export default function NewWorkOrderPage() {
                           type="radio"
                           value="general"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                          className="w-4 h-4 text-primary border-border focus:ring-primary"
                         />
                         <span className="text-sm font-medium text-foreground">General Repair</span>
                       </label>
@@ -918,7 +918,7 @@ export default function NewWorkOrderPage() {
                           type="radio"
                           value="routine"
                           {...register("maintenance_type")}
-                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                          className="w-4 h-4 text-primary border-border focus:ring-primary"
                         />
                         <span className="text-sm font-medium text-foreground">Routine Service</span>
                       </label>
@@ -1119,7 +1119,7 @@ export default function NewWorkOrderPage() {
             <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-card/60 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
               <CardContent className="p-0">
                 {/* Header / Toggle Area */}
-                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border border-dashed border-gray-300 border-border'}`}
+                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted dark:hover:bg-gray-800/50 border border-dashed border-border border-border'}`}
                   onClick={() => {
                     const newState = !isWarrantyRework;
                     setIsWarrantyRework(newState);
@@ -1130,7 +1130,7 @@ export default function NewWorkOrderPage() {
                     }
                   }}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-muted-foreground dark:bg-gray-800 text-muted-foreground'}`}>
                       <AlertCircle className="w-5 h-5" />
                     </div>
                     <div>
@@ -1145,7 +1145,7 @@ export default function NewWorkOrderPage() {
 
                   <div className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isWarrantyRework} readOnly />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer bg-muted peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-border peer-checked:bg-primary"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer bg-muted peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-border peer-checked:bg-primary"></div>
                   </div>
                 </div>
 
@@ -1168,7 +1168,7 @@ export default function NewWorkOrderPage() {
                         </div>
 
                         {isLoadingRecentWorkOrders ? (
-                          <div className="flex items-center gap-2 text-sm text-gray-500 p-4 justify-center bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 justify-center bg-muted rounded-lg">
                             <PremiumIcons.Spinner className="w-4 h-4 animate-spin" />
                             Loading history...
                           </div>
@@ -1204,7 +1204,7 @@ export default function NewWorkOrderPage() {
                           </div>
                         ) : (
                           <div className="text-center py-6 bg-muted/20 rounded-lg border border-dashed border-border">
-                            <p className="text-sm text-gray-500 mt-1">No recent history found.</p>
+                            <p className="text-sm text-muted-foreground mt-1">No recent history found.</p>
                             <Button type="button" variant="link" size="sm" onClick={() => setShowWorkOrderSearch(true)} className="text-primary">
                               Search by ID instead
                             </Button>
@@ -1216,7 +1216,7 @@ export default function NewWorkOrderPage() {
                     {/* Manual Search (Conditional) */}
                     {(showWorkOrderSearch || (!recentWorkOrders.length && !isLoadingRecentWorkOrders)) && (
                       <div className="space-y-2 bg-muted p-3 rounded-lg border border-border">
-                        <label className="text-xs font-semibold uppercase text-gray-500 tracking-wide">
+                        <label className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
                           Search by ID
                         </label>
                         <div className="relative">
@@ -1231,7 +1231,7 @@ export default function NewWorkOrderPage() {
                             className="bg-card"
                           />
                           <Button size="sm" variant="ghost" className="absolute right-1 top-1 h-7 w-7 p-0" onClick={() => setShowWorkOrderSearch(false)}>
-                            <XCircle className="w-4 h-4 text-gray-400" />
+                            <XCircle className="w-4 h-4 text-muted-foreground" />
                           </Button>
                         </div>
                       </div>
@@ -1298,7 +1298,7 @@ export default function NewWorkOrderPage() {
                         Work Order: {group.work_order_number}
                       </p>
                       {group.work_order_completed_at && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           Completed: {new Date(group.work_order_completed_at).toLocaleDateString()}
                         </p>
                       )}
@@ -1356,7 +1356,7 @@ export default function NewWorkOrderPage() {
                   type="checkbox"
                   checked={acknowledgedUnapproved}
                   onChange={(e) => setAcknowledgedUnapproved(e.target.checked)}
-                  className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
+                  className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
                 />
                 <span className="text-card-foreground">
                   I acknowledge these unapproved recommendations and wish to proceed

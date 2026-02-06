@@ -99,7 +99,7 @@ export default function MyAppointmentsPage() {
                       <div className="font-semibold text-foreground">
                         {format(new Date(apt.appointment_date), "MMM d, yyyy")}
                       </div>
-                      <div className="flex items-center text-xs text-gray-500 gap-1 mt-0.5">
+                      <div className="flex items-center text-xs text-muted-foreground gap-1 mt-0.5">
                         <Clock className="w-3 h-3" />
                         {apt.appointment_time}
                       </div>
@@ -110,7 +110,7 @@ export default function MyAppointmentsPage() {
                   header: "Vehicle",
                   cell: (apt) => (
                     <div className="flex items-center gap-2 text-sm text-card-foreground">
-                      <Car className="w-4 h-4 text-gray-400" />
+                      <Car className="w-4 h-4 text-muted-foreground" />
                       {apt.vehicle_info || "N/A"}
                     </div>
                   )
@@ -121,7 +121,7 @@ export default function MyAppointmentsPage() {
                     <div className="max-w-xs">
                       <div className="text-sm font-medium text-foreground">{apt.service_type || "Service"}</div>
                       {apt.customer_concerns && (
-                        <div className="text-xs text-gray-500 truncate">{apt.customer_concerns}</div>
+                        <div className="text-xs text-muted-foreground truncate">{apt.customer_concerns}</div>
                       )}
                     </div>
                   )
@@ -160,7 +160,7 @@ export default function MyAppointmentsPage() {
                       <span className="flex items-center gap-1.5 font-medium text-card-foreground">
                         <Clock className="w-3 h-3" /> {apt.appointment_time}
                       </span>
-                      <span className="text-xs text-gray-500">{apt.vehicle_info}</span>
+                      <span className="text-xs text-muted-foreground">{apt.vehicle_info}</span>
                     </span>
                   }
                   status={

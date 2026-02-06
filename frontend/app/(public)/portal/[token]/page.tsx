@@ -106,7 +106,7 @@ export default function PortalPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh]">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-gray-500">Loading work order details...</p>
+                <p className="text-muted-foreground">Loading work order details...</p>
             </div>
         );
     }
@@ -117,8 +117,8 @@ export default function PortalPage() {
                 <div className="bg-red-100 p-4 rounded-full mb-4">
                     <XCircle className="h-10 w-10 text-red-600" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-                <p className="text-gray-500">{error || "Work order not found."}</p>
+                <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+                <p className="text-muted-foreground">{error || "Work order not found."}</p>
                 <Button className="mt-6" variant="outline" asChild>
                     <a href="/portal">Back to Portal Home</a>
                     {/* If we had a home, forcing refresh usually clears issues contextually */}
@@ -135,22 +135,22 @@ export default function PortalPage() {
         <div className="space-y-8 animate-in fade-in duration-500">
 
             {/* Header / Status Banner */}
-            <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center bg-card p-6 rounded-xl border border-border shadow-sm">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <h1 className="text-2xl font-bold text-gray-900">Work Order #{work_order_number}</h1>
+                        <h1 className="text-2xl font-bold text-foreground">Work Order #{work_order_number}</h1>
                         <Badge variant={isApproved ? "default" : isPending ? "secondary" : "outline"} className="text-sm px-3 py-1 capitalize">
                             {status.replace('_', ' ')}
                         </Badge>
                     </div>
-                    <div className="flex items-center text-gray-500 gap-2">
+                    <div className="flex items-center text-muted-foreground gap-2">
                         <Car className="h-4 w-4" />
                         <span>{vehicle_info}</span>
                     </div>
                 </div>
                 <div className="flex flex-col items-end">
-                    <div className="text-sm text-gray-500 mb-1">Estimated Total</div>
-                    <div className="text-3xl font-bold text-gray-900">
+                    <div className="text-sm text-muted-foreground mb-1">Estimated Total</div>
+                    <div className="text-3xl font-bold text-foreground">
                         {formatCurrency(parseFloat(estimated_total))}
                     </div>
                 </div>
@@ -175,10 +175,10 @@ export default function PortalPage() {
                         <CardContent className="space-y-4">
                             {recommendations && recommendations.length > 0 ? (
                                 recommendations.map((rec: any) => (
-                                    <div key={rec.id} className="flex flex-col sm:flex-row justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                    <div key={rec.id} className="flex flex-col sm:flex-row justify-between p-4 bg-muted rounded-lg border border-border">
                                         <div className="mb-2 sm:mb-0">
-                                            <h3 className="font-semibold text-gray-900">{rec.name}</h3>
-                                            <p className="text-sm text-gray-500 mt-1">{rec.description || "No description provided."}</p>
+                                            <h3 className="font-semibold text-foreground">{rec.name}</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">{rec.description || "No description provided."}</p>
                                         </div>
                                         <div className="text-right">
                                             <span className="font-medium block">{formatCurrency(parseFloat(rec.estimated_cost || 0))}</span>
@@ -187,7 +187,7 @@ export default function PortalPage() {
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-gray-500 italic text-center py-4">No pending recommendations.</p>
+                                <p className="text-muted-foreground italic text-center py-4">No pending recommendations.</p>
                             )}
                         </CardContent>
                     </Card>
@@ -203,8 +203,8 @@ export default function PortalPage() {
                             </CardHeader>
                             <CardContent className="space-y-2">
                                 {approved_jobs.map((job: any) => (
-                                    <div key={job.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-                                        <span className="text-gray-700">{job.name}</span>
+                                    <div key={job.id} className="flex justify-between items-center py-2 border-b border-border last:border-0">
+                                        <span className="text-foreground">{job.name}</span>
                                         <Badge variant="secondary" className="capitalize">{job.status}</Badge>
                                     </div>
                                 ))}
@@ -235,7 +235,7 @@ export default function PortalPage() {
                             ) : (
                                 <>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-700">Approval Notes (Optional)</label>
+                                        <label className="text-sm font-medium text-foreground">Approval Notes (Optional)</label>
                                         <Textarea
                                             placeholder="Any special instructions or questions..."
                                             value={approveNotes}
@@ -256,7 +256,7 @@ export default function PortalPage() {
                                     {!showDeclineInput ? (
                                         <Button
                                             variant="ghost"
-                                            className="w-full text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                            className="w-full text-muted-foreground hover:text-red-600 hover:bg-red-50"
                                             onClick={() => setShowDeclineInput(true)}
                                             disabled={processing}
                                         >
@@ -269,7 +269,7 @@ export default function PortalPage() {
                                                 placeholder="Please tell us why..."
                                                 value={declineReason}
                                                 onChange={(e) => setDeclineReason(e.target.value)}
-                                                className="bg-white border-red-200 focus-visible:ring-red-500"
+                                                className="bg-card border-red-200 focus-visible:ring-red-500"
                                             />
                                             <div className="flex gap-2">
                                                 <Button
@@ -297,7 +297,7 @@ export default function PortalPage() {
 
                             <Separator className="my-4" />
 
-                            <div className="text-xs text-gray-400 text-center">
+                            <div className="text-xs text-muted-foreground text-center">
                                 <p>Digital approval is secure and binding.</p>
                                 <p>Questions? Call us at (555) 123-4567</p>
                             </div>

@@ -10,8 +10,8 @@ interface VehicleDocumentsViewProps {
 export function VehicleDocumentsView({ vehicleId }: VehicleDocumentsViewProps) {
     return (
         <Card className="shadow-sm border">
-            <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
-                <CardTitle className="text-sm font-semibold text-gray-700">Vehicle Documents</CardTitle>
+            <CardHeader className="py-3 px-4 border-b bg-muted/30">
+                <CardTitle className="text-sm font-semibold text-foreground">Vehicle Documents</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
                 <DocumentList vehicleId={vehicleId} />

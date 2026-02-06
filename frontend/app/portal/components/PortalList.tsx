@@ -72,7 +72,7 @@ export function PortalList<T extends { id: string | number }>({
                                     key={idx}
                                     scope="col"
                                     className={cn(
-                                        "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider",
+                                        "px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider",
                                         col.className
                                     )}
                                 >
@@ -87,7 +87,7 @@ export function PortalList<T extends { id: string | number }>({
                                 key={item.id}
                                 className={cn(
                                     "transition-colors",
-                                    onRowClick ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" : "hover:bg-gray-50/50"
+                                    onRowClick ? "cursor-pointer hover:bg-muted dark:hover:bg-gray-800/50" : "hover:bg-muted/50"
                                 )}
                                 onClick={() => onRowClick?.(item)}
                             >

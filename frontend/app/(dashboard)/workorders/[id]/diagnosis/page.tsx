@@ -301,7 +301,7 @@ export default function DiagnosisPage() {
           <CardContent className="pt-6">
             <div className="space-y-2">
               <p className="text-red-600 font-semibold">Error loading diagnosis</p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {(diagnosisError as any)?.response?.data?.detail ||
                   (diagnosisError as any)?.message ||
                   "Please try again or contact support."}
@@ -329,7 +329,7 @@ export default function DiagnosisPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-gray-600">No diagnosis found. This should be created automatically.</p>
+            <p className="text-muted-foreground">No diagnosis found. This should be created automatically.</p>
             <Button
               variant="secondary"
               onClick={() => queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] })}
@@ -472,14 +472,14 @@ export default function DiagnosisPage() {
                 className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-primary border-orange-200' :
                   diagnosis.status === 'paused' ? 'bg-orange-50 text-primary border-orange-200' :
                     diagnosis.status === 'completed' ? 'bg-success/10 text-green-700 border-green-200' :
-                      'bg-gray-100 text-gray-700 border-gray-200'
+                      'bg-gray-100 text-foreground border-border'
                   }`}
               >
                 <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
                 {statusConfig.label}
               </Badge>
 
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 {diagnosis.technician_name && (
                   <div className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5" />
@@ -496,7 +496,7 @@ export default function DiagnosisPage() {
             </div>
 
             {/* Compact Workflow Stages */}
-            <div className="flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-gray-400">
+            <div className="flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">
               <span className={diagnosis.status !== 'not_started' ? "text-primary" : ""}>Start</span>
               <span className="mx-1">→</span>
               <span className={['in_progress', 'paused', 'completed'].includes(diagnosis.status) ? "text-primary" : ""}>In Progress</span>
@@ -554,7 +554,7 @@ export default function DiagnosisPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diagnostic Codes</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Diagnostic Codes</span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-foreground">{codesCount}</span>
               <Code className="w-4 h-4 text-primary mb-1" />
@@ -563,7 +563,7 @@ export default function DiagnosisPage() {
         </Card>
         <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tests Run</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tests Run</span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-foreground">{testsCount}</span>
               <TestTube className="w-4 h-4 text-purple-500 mb-1" />
@@ -572,7 +572,7 @@ export default function DiagnosisPage() {
         </Card>
         <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Photos</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Photos</span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-foreground">{photosCount}</span>
               <Camera className="w-4 h-4 text-orange-500 mb-1" />
@@ -581,7 +581,7 @@ export default function DiagnosisPage() {
         </Card>
         <Card className="border-none shadow-sm bg-card border border-border">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recommendations</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recommendations</span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-foreground">{recommendationsCount}</span>
               <Wrench className="w-4 h-4 text-indigo-500 mb-1" />
@@ -763,25 +763,25 @@ export default function DiagnosisPage() {
               {diagnosis.time_logs.map((log: any, index: number) => (
                 <div
                   key={log.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md border"
+                  className="flex items-center justify-between p-3 bg-muted rounded-md border"
                 >
                   <div className="flex items-center space-x-3">
                     <Badge variant="secondary" className="text-xs">
                       {log.stage_display || log.stage}
                     </Badge>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                       {format(new Date(log.started_at), "MMM dd, yyyy h:mm a")}
                     </span>
                     {log.ended_at && (
                       <>
-                        <span className="text-gray-400">→</span>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-muted-foreground">→</span>
+                        <span className="text-sm text-muted-foreground">
                           {format(new Date(log.ended_at), "MMM dd, yyyy h:mm a")}
                         </span>
                       </>
                     )}
                     {log.technician_name && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         by {log.technician_name}
                       </span>
                     )}
@@ -793,7 +793,7 @@ export default function DiagnosisPage() {
                       </Badge>
                     )}
                     {log.notes && (
-                      <span className="text-xs text-gray-500 italic">
+                      <span className="text-xs text-muted-foreground italic">
                         {log.notes}
                       </span>
                     )}
@@ -1032,7 +1032,7 @@ function RecommendationsTab({
       <Card className="border-none shadow-sm bg-muted/50">
         <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
           <div className="space-y-1">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Repair Recommendations</CardTitle>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Repair Recommendations</CardTitle>
             <CardDescription className="text-xs">
               {recommendations.length} total • {approvedRecommendations.length} approved • {convertedRecommendations.length} converted to tasks
             </CardDescription>
@@ -1121,7 +1121,7 @@ function RecommendationsTab({
                         onCheckedChange={handleSelectAll}
                         className="h-4 w-4"
                       />
-                      <span className="text-xs text-gray-500">Select All</span>
+                      <span className="text-xs text-muted-foreground">Select All</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1143,7 +1143,7 @@ function RecommendationsTab({
                                 <Badge variant={rec.priority === 'critical' ? 'danger' : rec.priority === 'necessary' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 h-5 font-medium capitalize">
                                   {rec.priority_display || rec.priority}
                                 </Badge>
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-gray-500 capitalize">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-muted-foreground capitalize">
                                   {rec.recommendation_type_display || rec.recommendation_type}
                                 </Badge>
                               </div>
@@ -1181,28 +1181,28 @@ function RecommendationsTab({
                                     {/* Old parts_needed data */}
                                     {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
                                       <div className="flex items-center gap-1.5">
-                                        <Package className="w-3 h-3 text-gray-400" />
+                                        <Package className="w-3 h-3 text-muted-foreground" />
                                         <span>{rec.parts_needed.length} part(s) • {formatCurrency(Number(rec.estimated_parts_cost || 0))}</span>
                                       </div>
                                     )}
                                     {/* Linked parts from Estimate tab */}
                                     {linkedParts.length > 0 && (
                                       <div className="flex items-center gap-1.5">
-                                        <Package className="w-3 h-3 text-gray-400" />
+                                        <Package className="w-3 h-3 text-muted-foreground" />
                                         <span>{linkedParts.length} part(s) • {formatCurrency(linkedPartsTotal)}</span>
                                       </div>
                                     )}
                                     {/* Old labor data */}
                                     {rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0 && (
                                       <div className="flex items-center gap-1.5">
-                                        <Clock className="w-3 h-3 text-gray-400" />
+                                        <Clock className="w-3 h-3 text-muted-foreground" />
                                         <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h • {formatCurrency(Number(rec.estimated_labor_cost || 0))}</span>
                                       </div>
                                     )}
                                     {/* Linked labor from Estimate tab */}
                                     {linkedLabor.length > 0 && (
                                       <div className="flex items-center gap-1.5">
-                                        <Clock className="w-3 h-3 text-gray-400" />
+                                        <Clock className="w-3 h-3 text-muted-foreground" />
                                         <span>{linkedLaborHours.toFixed(1)}h • {formatCurrency(linkedLaborTotal)}</span>
                                       </div>
                                     )}
@@ -1210,7 +1210,7 @@ function RecommendationsTab({
                                 );
                               } else {
                                 return (
-                                  <div className="text-xs text-gray-400 italic px-2">No estimate details added</div>
+                                  <div className="text-xs text-muted-foreground italic px-2">No estimate details added</div>
                                 );
                               }
                             })()}
@@ -1268,7 +1268,7 @@ function RecommendationsTab({
                               <Badge variant={rec.priority === 'critical' ? 'danger' : rec.priority === 'necessary' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 h-5 font-medium capitalize">
                                 {rec.priority_display || rec.priority}
                               </Badge>
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-gray-500 bg-white">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-muted-foreground bg-card">
                                 {rec.recommendation_type_display || rec.recommendation_type}
                               </Badge>
                               <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-success hover:bg-green-700 border-transparent text-white">
@@ -1276,18 +1276,18 @@ function RecommendationsTab({
                               </Badge>
                             </div>
                             {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                              <span className="text-sm font-bold text-gray-900 font-mono">
+                              <span className="text-sm font-bold text-foreground font-mono">
                                 {formatCurrency(Number(rec.estimated_total_cost))}
                               </span>
                             )}
                           </div>
 
-                          <p className="text-sm text-gray-700 line-clamp-2">{rec.description}</p>
+                          <p className="text-sm text-foreground line-clamp-2">{rec.description}</p>
 
                           {/* Parts and Labor Details */}
                           {(rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) ||
                             (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0) ? (
-                            <div className="text-xs bg-white/50 rounded p-2 text-gray-600 space-y-1 border border-green-100/50">
+                            <div className="text-xs bg-card/50 rounded p-2 text-muted-foreground space-y-1 border border-green-100/50">
                               {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
                                 <div className="flex items-center gap-1.5">
                                   <Package className="w-3 h-3 text-success/70" />
@@ -1302,7 +1302,7 @@ function RecommendationsTab({
                               )}
                             </div>
                           ) : (
-                            <div className="text-xs text-gray-400 italic px-2">No estimate details</div>
+                            <div className="text-xs text-muted-foreground italic px-2">No estimate details</div>
                           )}
 
                           <div className="flex justify-end pt-2 border-t border-green-100/50">
@@ -1334,7 +1334,7 @@ function RecommendationsTab({
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {convertedRecommendations.map((rec: any) => (
-                      <div key={rec.id} className="p-4 bg-gray-50 border border-gray-200 dark:bg-gray-800 border-border rounded-lg space-y-3 opacity-75">
+                      <div key={rec.id} className="p-4 bg-muted border border-border dark:bg-gray-800 border-border rounded-lg space-y-3 opacity-75">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
@@ -1345,12 +1345,12 @@ function RecommendationsTab({
                             </Badge>
                           </div>
                           {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                            <span className="text-sm font-bold text-gray-500 font-mono">
+                            <span className="text-sm font-bold text-muted-foreground font-mono">
                               {formatCurrency(Number(rec.estimated_total_cost))}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 line-clamp-2">{rec.description}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{rec.description}</p>
 
                         {rec.converted_to_task_id && (
                           <div className="pt-2 border-t border-border">
@@ -1368,9 +1368,9 @@ function RecommendationsTab({
             </div>
           ) : (
             <div className="text-center py-16 bg-muted/50 rounded-lg border border-dashed border-border">
-              <Wrench className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+              <Wrench className="w-12 h-12 mx-auto mb-3 text-gray-300 text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground mb-1">No recommendations yet</h3>
-              <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">Add repair recommendations to suggest parts and labor services for this diagnosis.</p>
+              <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">Add repair recommendations to suggest parts and labor services for this diagnosis.</p>
               <Button onClick={() => setShowAddDialog(true)} variant="outline" size="sm" className="h-8">
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add First Recommendation
@@ -1449,7 +1449,7 @@ function PhotosTab({
       <Card className="border-none shadow-sm bg-muted/50">
         <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
           <div className="space-y-1">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Visual Evidence</CardTitle>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Visual Evidence</CardTitle>
             <CardDescription className="text-xs">
               {photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded for this diagnosis
             </CardDescription>
@@ -1472,9 +1472,9 @@ function PhotosTab({
             </div>
           ) : photos.length === 0 ? (
             <div className="text-center py-16 bg-muted/50 rounded-lg border border-dashed border-border">
-              <Camera className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+              <Camera className="w-12 h-12 mx-auto mb-3 text-gray-300 text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground mb-1">No photos yet</h3>
-              <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">Upload photos to document vehicle condition, evidence, or parts.</p>
+              <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">Upload photos to document vehicle condition, evidence, or parts.</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -1503,7 +1503,7 @@ function PhotosTab({
                         onClick={() => window.open(photo.photo_url, '_blank')}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                         <Camera className="w-8 h-8 opacity-20" />
                       </div>
                     )}
@@ -1531,7 +1531,7 @@ function PhotosTab({
                     {/* Badge */}
                     {photo.photo_type && (
                       <div className="absolute top-2 left-2">
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-white/90 dark:bg-black/90 backdrop-blur-sm shadow-sm capitalize">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-card/90 dark:bg-black/90 backdrop-blur-sm shadow-sm capitalize">
                           {photo.photo_type.replace('_', ' ')}
                         </Badge>
                       </div>
@@ -1541,9 +1541,9 @@ function PhotosTab({
 
                   <div className="p-3">
                     <p className="text-xs font-medium text-foreground truncate" title={photo.caption || "Untitled"}>
-                      {photo.caption || <span className="text-gray-400 italic">No caption</span>}
+                      {photo.caption || <span className="text-muted-foreground italic">No caption</span>}
                     </p>
-                    <p className="text-[10px] text-gray-500 mt-1">
+                    <p className="text-[10px] text-muted-foreground mt-1">
                       {new Date(photo.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -1675,7 +1675,7 @@ function PhotoUploadDialog({
       <DialogContent className="max-w-2xl bg-card gap-0 p-0 border border-border shadow-xl sm:rounded-xl">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold text-foreground">Upload Diagnosis Photo</DialogTitle>
-          <DialogDescription className="text-sm text-gray-500">
+          <DialogDescription className="text-sm text-muted-foreground">
             Add photos to document findings, evidence, or repair verification.
           </DialogDescription>
         </DialogHeader>
@@ -1693,7 +1693,7 @@ function PhotoUploadDialog({
                 required
               />
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-orange-200 bg-primary/5" : "border-gray-200 hover:border-orange-400 hover:bg-gray-50 border-border dark:hover:border-primary dark:hover:bg-gray-800"}`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-orange-200 bg-primary/5" : "border-border hover:border-orange-400 hover:bg-muted border-border dark:hover:border-primary dark:hover:bg-gray-800"}`}
                 onClick={() => document.getElementById("photo")?.click()}
               >
                 {preview ? (
@@ -1726,7 +1726,7 @@ function PhotoUploadDialog({
                 ) : (
                   <div className="py-4">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Camera className="w-8 h-8 text-primary dark:text-primary" />
+                      <Camera className="w-8 h-8 text-primary" />
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-foreground">
@@ -1924,7 +1924,7 @@ function SummaryTab({
         <CardContent className="pt-6">
           <div className="grid grid-cols-3 gap-6">
             <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
-              <div className="p-2 mb-3 rounded-full bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary">
+              <div className="p-2 mb-3 rounded-full bg-primary/10 dark:bg-orange-900/20 text-primary">
                 <Clock className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Time Spent</p>
@@ -1961,7 +1961,7 @@ function SummaryTab({
         </CardHeader>
         <CardContent className="flex-1 pt-4 space-y-4 flex flex-col">
           <Textarea
-            className="flex-1 min-h-[200px] resize-none bg-muted border-border focus:bg-white dark:focus:bg-gray-950 transition-colors"
+            className="flex-1 min-h-[200px] resize-none bg-muted border-border focus:bg-card dark:focus:bg-gray-950 transition-colors"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Enter detailed diagnostic notes here..."

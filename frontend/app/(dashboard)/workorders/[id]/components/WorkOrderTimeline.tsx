@@ -14,7 +14,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
         <Card>
             <CardHeader>
                 <CardTitle>Activity Timeline</CardTitle>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                     Chronological view of work order events and activities
                 </p>
             </CardHeader>
@@ -224,8 +224,8 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {!workOrder.created_at && notes.length === 0 && (
                             <div className="text-center py-8">
-                                <Clock className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                                <p className="text-sm text-gray-500">No timeline events yet.</p>
+                                <Clock className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-3" />
+                                <p className="text-sm text-muted-foreground">No timeline events yet.</p>
                             </div>
                         )}
                     </div>

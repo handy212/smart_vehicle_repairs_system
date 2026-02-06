@@ -183,13 +183,13 @@ export default function RefundDetailPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <DollarSign className="h-5 w-5 text-gray-500" />
+                            <DollarSign className="h-5 w-5 text-muted-foreground" />
                             Refund Information
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="flex justify-between items-center p-4 bg-muted rounded-lg border">
-                            <span className="text-sm font-medium text-gray-500">Amount to Refund</span>
+                            <span className="text-sm font-medium text-muted-foreground">Amount to Refund</span>
                             <span className="text-2xl font-bold text-foreground">
                                 {formatCurrency(parseFloat(refund.amount))}
                             </span>
@@ -197,14 +197,14 @@ export default function RefundDetailPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-1">Method</h3>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-1">Method</h3>
                                 <p className="font-medium capitalize flex items-center gap-2">
-                                    <Wallet className="h-4 w-4 text-gray-400" />
+                                    <Wallet className="h-4 w-4 text-muted-foreground" />
                                     {refund.refund_method.replace('_', ' ')}
                                 </p>
                             </div>
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-1">Reference</h3>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-1">Reference</h3>
                                 <p className="font-medium">{refund.reference_number || '-'}</p>
                             </div>
                         </div>
@@ -212,7 +212,7 @@ export default function RefundDetailPage() {
                         <Separator />
 
                         <div>
-                            <h3 className="text-sm font-medium text-gray-500 mb-2">Reason</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-2">Reason</h3>
                             <p className="text-sm bg-muted p-3 rounded-md min-h-[60px]">
                                 {refund.reason}
                             </p>
@@ -224,7 +224,7 @@ export default function RefundDetailPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-gray-500" />
+                            <FileText className="h-5 w-5 text-muted-foreground" />
                             Related Information
                         </CardTitle>
                     </CardHeader>
@@ -232,8 +232,8 @@ export default function RefundDetailPage() {
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-500">Customer</span>
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-muted-foreground">Customer</span>
                                 </div>
                                 <Link href={`/customers/${refund.customer}`} className="text-primary hover:underline">
                                     {refund.customer_name}
@@ -244,8 +244,8 @@ export default function RefundDetailPage() {
 
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-500">Invoice</span>
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-muted-foreground">Invoice</span>
                                 </div>
                                 <Link href={`/billing/invoices/${refund.invoice}`} className="text-primary hover:underline">
                                     View Invoice #{refund.invoice}
@@ -256,8 +256,8 @@ export default function RefundDetailPage() {
 
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-500">Original Payment</span>
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-muted-foreground">Original Payment</span>
                                 </div>
                                 <Link href={`/billing/payments/${refund.original_payment}`} className="text-primary hover:underline">
                                     View Payment #{refund.original_payment}

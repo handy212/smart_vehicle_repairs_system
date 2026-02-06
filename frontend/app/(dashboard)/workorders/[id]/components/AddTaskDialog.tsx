@@ -104,7 +104,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
             )}
 
             <div>
-              <label htmlFor="task_type" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="task_type" className="block text-sm font-medium text-foreground mb-2">
                 Task Type *
               </label>
               <Select
@@ -127,7 +127,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">
                 Description *
               </label>
               <Input
@@ -141,7 +141,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
             </div>
 
             <div>
-              <label htmlFor="detailed_notes" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="detailed_notes" className="block text-sm font-medium text-foreground mb-2">
                 Detailed Notes
               </label>
               <Textarea
@@ -154,7 +154,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="estimated_hours" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="estimated_hours" className="block text-sm font-medium text-foreground mb-2">
                   Estimated Hours
                 </label>
                 <Input
@@ -166,7 +166,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
                 />
               </div>
               <div>
-                <label htmlFor="sequence_order" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="sequence_order" className="block text-sm font-medium text-foreground mb-2">
                   Sequence Order
                 </label>
                 <Input

@@ -60,11 +60,11 @@ function GatePassSection({ workOrderId }: { workOrderId: number }) {
             <div>
               <h3 className="font-semibold text-sm">Gate Pass</h3>
               {gatePass ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Gate Pass {gatePass.gate_pass_number} - {gatePass.status?.replace("_", " ")}
                 </p>
               ) : (
-                <p className="text-xs text-gray-500">No gate pass created yet</p>
+                <p className="text-xs text-muted-foreground">No gate pass created yet</p>
               )}
             </div>
           </div>
@@ -172,7 +172,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                   </div>
                   <span
                     className={`text-xs mt-1 text-center whitespace-nowrap max-w-[70px] truncate ${stepStatus === 'current'
-                      ? 'font-semibold text-primary dark:text-primary'
+                      ? 'font-semibold text-primary'
                       : stepStatus === 'completed'
                         ? 'text-muted-foreground'
                         : 'text-muted-foreground'
@@ -346,7 +346,7 @@ export default function WorkOrderDetailPage() {
               variant="ghost"
               size="sm"
               onClick={() => router.back()}
-              className="mb-1 -ml-2 h-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              className="mb-1 -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground dark:hover:text-gray-100"
             >
               <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
               Back
@@ -368,7 +368,7 @@ export default function WorkOrderDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
-                className="flex items-center h-9 dark:bg-gray-800 dark:text-gray-100 border-border backdrop-blur-sm"
+                className="flex items-center h-9 dark:bg-gray-800 text-foreground border-border backdrop-blur-sm"
               >
                 <PremiumIcons.Receipt className="w-3.5 h-3.5 mr-2" />
                 Print
@@ -392,7 +392,7 @@ export default function WorkOrderDetailPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowPrintMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-white/90 backdrop-blur-xl dark:bg-gray-800/90 rounded-xl shadow-xl border border-gray-200/50 border-border/50 z-20 overflow-hidden ring-1 ring-black/5">
+                  <div className="absolute right-0 mt-2 w-48 bg-card/90 backdrop-blur-xl dark:bg-gray-800/90 rounded-xl shadow-xl border border-border/50 border-border/50 z-20 overflow-hidden ring-1 ring-black/5">
                     <div
                       className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={() => {
@@ -478,15 +478,15 @@ export default function WorkOrderDetailPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="overview" className="data-[state=active]:bg-white/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-card/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
             <PremiumIcons.FileText className="w-4 h-4 mr-2" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="tasks" className="data-[state=active]:bg-white/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
+          <TabsTrigger value="tasks" className="data-[state=active]:bg-card/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
             <PremiumIcons.Wrench className="w-4 h-4 mr-2" />
             Tasks ({tasks.length})
           </TabsTrigger>
-          <TabsTrigger value="parts" className="data-[state=active]:bg-white/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
+          <TabsTrigger value="parts" className="data-[state=active]:bg-card/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
             <PremiumIcons.Package className="w-4 h-4 mr-2" />
             Parts ({parts.length})
           </TabsTrigger>

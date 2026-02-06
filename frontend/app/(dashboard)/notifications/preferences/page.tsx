@@ -99,14 +99,14 @@ export default function NotificationPreferencesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
               <div className="flex items-center space-x-3">
-                <Mail className="w-5 h-5 text-gray-400" />
+                <Mail className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="email_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  <Label htmlFor="email_enabled" className="text-sm font-medium text-foreground cursor-pointer">
                     Email
                   </Label>
-                  <p className="text-xs text-gray-500">Receive notifications via email</p>
+                  <p className="text-xs text-muted-foreground">Receive notifications via email</p>
                 </div>
               </div>
               <Checkbox
@@ -115,14 +115,14 @@ export default function NotificationPreferencesPage() {
                 onCheckedChange={(checked) => handleChange("email_enabled", checked === true)}
               />
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
               <div className="flex items-center space-x-3">
-                <MessageSquare className="w-5 h-5 text-gray-400" />
+                <MessageSquare className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="sms_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  <Label htmlFor="sms_enabled" className="text-sm font-medium text-foreground cursor-pointer">
                     SMS
                   </Label>
-                  <p className="text-xs text-gray-500">Receive notifications via text message</p>
+                  <p className="text-xs text-muted-foreground">Receive notifications via text message</p>
                 </div>
               </div>
               <Checkbox
@@ -132,8 +132,8 @@ export default function NotificationPreferencesPage() {
               />
             </div>
             {mergedData.sms_enabled && (
-              <div className="ml-8 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                <Label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="ml-8 p-3 rounded-lg bg-muted border border-border">
+                <Label htmlFor="phone_number" className="block text-sm font-medium text-foreground mb-2">
                   Phone Number
                 </Label>
                 <Input
@@ -145,14 +145,14 @@ export default function NotificationPreferencesPage() {
                 />
               </div>
             )}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
               <div className="flex items-center space-x-3">
-                <Smartphone className="w-5 h-5 text-gray-400" />
+                <Smartphone className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="push_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  <Label htmlFor="push_enabled" className="text-sm font-medium text-foreground cursor-pointer">
                     Push Notifications
                   </Label>
-                  <p className="text-xs text-gray-500">Receive push notifications on your device</p>
+                  <p className="text-xs text-muted-foreground">Receive push notifications on your device</p>
                 </div>
               </div>
               <Checkbox
@@ -161,14 +161,14 @@ export default function NotificationPreferencesPage() {
                 onCheckedChange={(checked) => handleChange("push_enabled", checked === true)}
               />
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
               <div className="flex items-center space-x-3">
-                <Bell className="w-5 h-5 text-gray-400" />
+                <Bell className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="in_app_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  <Label htmlFor="in_app_enabled" className="text-sm font-medium text-foreground cursor-pointer">
                     In-App
                   </Label>
-                  <p className="text-xs text-gray-500">Show notifications in the application</p>
+                  <p className="text-xs text-muted-foreground">Show notifications in the application</p>
                 </div>
               </div>
               <Checkbox
@@ -177,14 +177,14 @@ export default function NotificationPreferencesPage() {
                 onCheckedChange={(checked) => handleChange("in_app_enabled", checked === true)}
               />
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
               <div className="flex items-center space-x-3">
-                <Volume2 className="w-5 h-5 text-gray-400" />
+                <Volume2 className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <Label htmlFor="sound_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  <Label htmlFor="sound_enabled" className="text-sm font-medium text-foreground cursor-pointer">
                     Notification Sounds
                   </Label>
-                  <p className="text-xs text-gray-500">Play sound when new notifications arrive</p>
+                  <p className="text-xs text-muted-foreground">Play sound when new notifications arrive</p>
                 </div>
               </div>
               <Checkbox
@@ -218,13 +218,13 @@ export default function NotificationPreferencesPage() {
               ].map(({ key, label, icon: Icon }) => (
                 <div
                   key={key}
-                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className="w-4 h-4 text-gray-400" />
+                    <Icon className="w-4 h-4 text-muted-foreground" />
                     <Label
                       htmlFor={key}
-                      className="text-sm font-medium text-gray-900 cursor-pointer"
+                      className="text-sm font-medium text-foreground cursor-pointer"
                     >
                       {label}
                     </Label>
@@ -252,8 +252,8 @@ export default function NotificationPreferencesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <Label htmlFor="quiet_hours_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
+              <Label htmlFor="quiet_hours_enabled" className="text-sm font-medium text-foreground cursor-pointer">
                 Enable Quiet Hours
               </Label>
               <Checkbox
@@ -265,7 +265,7 @@ export default function NotificationPreferencesPage() {
             {mergedData.quiet_hours_enabled && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Start Time
                   </label>
                   <Input
@@ -275,7 +275,7 @@ export default function NotificationPreferencesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     End Time
                   </label>
                   <Input

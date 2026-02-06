@@ -270,7 +270,7 @@ export default function RoadsideDetailPage() {
                                             href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-xs text-primary dark:text-primary flex items-center gap-1 mt-1 hover:underline"
+                                            className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline"
                                         >
                                             Open in Maps <ExternalLink className="h-3 w-3" />
                                         </a>
@@ -309,7 +309,7 @@ export default function RoadsideDetailPage() {
                                 <div className="pt-3 border-t">
                                     <p className="text-xs text-muted-foreground mb-1">Vehicle</p>
                                     <p className="text-sm text-foreground">{request.vehicle_display}</p>
-                                    <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-primary dark:text-primary hover:underline">
+                                    <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-primary hover:underline">
                                         View Details
                                     </Link>
                                 </div>
@@ -410,7 +410,7 @@ export default function RoadsideDetailPage() {
                                                 <span className="text-muted-foreground">Invoice:</span>
                                                 <Link
                                                     href={`/billing/invoices/${request.invoice}`}
-                                                    className="font-semibold text-primary dark:text-primary hover:underline flex items-center gap-1"
+                                                    className="font-semibold text-primary hover:underline flex items-center gap-1"
                                                 >
                                                     {request.invoice_number} <ExternalLink className="h-3 w-3" />
                                                 </Link>
@@ -503,7 +503,7 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-success/100 text-white'
                                             : request.status === 'requested'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-border text-gray-400'
+                                                : 'bg-border text-muted-foreground'
                                             }`}>
                                             {['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '1'}
                                         </div>
@@ -517,7 +517,7 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-success/100 text-white'
                                             : request.status === 'dispatched'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-border text-gray-400'
+                                                : 'bg-border text-muted-foreground'
                                             }`}>
                                             {['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '2'}
                                         </div>
@@ -531,7 +531,7 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-success/100 text-white'
                                             : request.status === 'en_route'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-border text-gray-400'
+                                                : 'bg-border text-muted-foreground'
                                             }`}>
                                             {['on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '3'}
                                         </div>
@@ -545,7 +545,7 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-success/100 text-white'
                                             : ['on_site', 'arrived'].includes(request.status)
                                                 ? 'bg-primary text-white'
-                                                : 'bg-border text-gray-400'
+                                                : 'bg-border text-muted-foreground'
                                             }`}>
                                             {['in_progress', 'completed'].includes(request.status) ? '✓' : '4'}
                                         </div>
@@ -559,7 +559,7 @@ export default function RoadsideDetailPage() {
                                             ? 'bg-success/100 text-white'
                                             : request.status === 'in_progress'
                                                 ? 'bg-primary text-white'
-                                                : 'bg-border text-gray-400'
+                                                : 'bg-border text-muted-foreground'
                                             }`}>
                                             {request.status === 'completed' ? '✓' : '5'}
                                         </div>
@@ -571,7 +571,7 @@ export default function RoadsideDetailPage() {
                                     <div className="flex flex-col items-center">
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
                                             ? 'bg-success text-white'
-                                            : 'bg-border text-gray-400'
+                                            : 'bg-border text-muted-foreground'
                                             }`}>
                                             {request.status === 'completed' ? '✓' : '6'}
                                         </div>

@@ -32,7 +32,7 @@ export default function BudgetReportPage() {
     const getVarianceIcon = (status: string) => {
         if (status === 'over') return <TrendingUp className="w-4 h-4 text-red-600" />;
         if (status === 'under') return <TrendingDown className="w-4 h-4 text-success" />;
-        return <AlertCircle className="w-4 h-4 text-gray-400" />;
+        return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
     };
 
     return (
@@ -124,7 +124,7 @@ export default function BudgetReportPage() {
                                             {formatCurrency(line.variance)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <span className={`font-semibold ${Math.abs(line.variance_percent) > 10 ? 'text-red-600' : 'text-gray-600'}`}>
+                                            <span className={`font-semibold ${Math.abs(line.variance_percent) > 10 ? 'text-red-600' : 'text-muted-foreground'}`}>
                                                 {line.variance_percent.toFixed(1)}%
                                             </span>
                                         </TableCell>

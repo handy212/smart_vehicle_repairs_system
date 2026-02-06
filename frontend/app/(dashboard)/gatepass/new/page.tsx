@@ -215,7 +215,7 @@ export default function NewGatePassPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold">Create Gate Pass</h1>
-          <p className="text-sm text-gray-500">Create a gate pass for vehicle pickup</p>
+          <p className="text-sm text-muted-foreground">Create a gate pass for vehicle pickup</p>
         </div>
       </div>
 
@@ -287,7 +287,7 @@ export default function NewGatePassPage() {
                   id="picked_up_by_customer"
                   checked={pickedUpByCustomer}
                   onChange={(e) => setValue("picked_up_by_customer", e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 <Label htmlFor="picked_up_by_customer" className="cursor-pointer">
                   Customer is picking up the vehicle

@@ -134,11 +134,11 @@ export function EstimateReminders({ estimate, currentUser }: EstimateRemindersPr
             </CardHeader>
             <CardContent>
                 {isLoading ? (
-                    <div className="text-center py-8 text-gray-500">Loading reminders...</div>
+                    <div className="text-center py-8 text-muted-foreground">Loading reminders...</div>
                 ) : remindersData && remindersData.length > 0 ? (
                     <div className="rounded-md border">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 text-gray-700 font-medium border-b">
+                            <thead className="bg-muted text-foreground font-medium border-b">
                                 <tr>
                                     <th className="px-4 py-3">Description</th>
                                     <th className="px-4 py-3">Date</th>
@@ -148,19 +148,19 @@ export function EstimateReminders({ estimate, currentUser }: EstimateRemindersPr
                             </thead>
                             <tbody className="divide-y">
                                 {remindersData.map((reminder: any) => (
-                                    <tr key={reminder.id} className="hover:bg-gray-50/50">
-                                        <td className="px-4 py-3 font-medium text-gray-900">{reminder.message}</td>
-                                        <td className="px-4 py-3 text-gray-500">
+                                    <tr key={reminder.id} className="hover:bg-muted/50">
+                                        <td className="px-4 py-3 font-medium text-foreground">{reminder.message}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">
                                             {reminder.scheduled_for ? (
                                                 <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                                    <Calendar className="w-4 h-4 text-muted-foreground" />
                                                     {format(new Date(reminder.scheduled_for), "MMM d, yyyy h:mm a")}
                                                 </div>
                                             ) : (
-                                                <span className="text-gray-400 italic">Not scheduled</span>
+                                                <span className="text-muted-foreground italic">Not scheduled</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-700">
+                                        <td className="px-4 py-3 text-foreground">
                                             {reminder.recipient_name || "Me"}
                                         </td>
                                         <td className="px-4 py-3">
@@ -180,9 +180,9 @@ export function EstimateReminders({ estimate, currentUser }: EstimateRemindersPr
                         </table>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                         <Bell className="w-12 h-12 text-gray-300 mb-3" />
-                        <p className="text-lg font-medium text-gray-900">No Reminders</p>
+                        <p className="text-lg font-medium text-foreground">No Reminders</p>
                         <p className="text-sm max-w-sm mt-1 mb-4">
                             You haven't set any reminders for this estimate yet.
                         </p>

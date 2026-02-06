@@ -265,7 +265,7 @@ export default function NotificationsPage() {
                         className={cn(
                           "w-5 h-5",
                           !isRead
-                            ? "text-primary dark:text-primary"
+                            ? "text-primary"
                             : "text-muted-foreground"
                         )}
                       />
@@ -333,7 +333,7 @@ export default function NotificationsPage() {
       ) : (
         <Card>
           <CardContent className="py-12 text-center">
-            <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-2">No notifications found</p>
             <p className="text-sm text-muted-foreground">
               {filter === "unread"

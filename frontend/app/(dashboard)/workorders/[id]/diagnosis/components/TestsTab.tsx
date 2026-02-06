@@ -110,7 +110,7 @@ export function TestsTab({
             <Card className="border-none shadow-sm bg-muted/50">
                 <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
                     <div className="space-y-1">
-                        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Diagnostic Tests</CardTitle>
+                        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Diagnostic Tests</CardTitle>
                         <CardDescription className="text-xs">Tests performed on the vehicle</CardDescription>
                     </div>
                     <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
@@ -128,8 +128,8 @@ export function TestsTab({
                             Failed to load tests. Please try again.
                         </p>
                     ) : tests.length === 0 ? (
-                        <div className="text-center py-12 text-gray-500">
-                            <TestTube className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                        <div className="text-center py-12 text-muted-foreground">
+                            <TestTube className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
                             <p className="text-sm">No tests recorded yet.</p>
                             <Button onClick={() => setShowAddDialog(true)} variant="outline" size="sm" className="mt-4" disabled={isDisabled}>
                                 <Plus className="w-4 h-4 mr-2" />
@@ -146,11 +146,11 @@ export function TestsTab({
                                     <div className="flex items-start justify-between mb-3">
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-gray-500">
+                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-muted-foreground">
                                                     {test.category_display || test.category}
                                                 </Badge>
                                                 {test.performed_at && (
-                                                    <span className="text-[10px] text-gray-400">
+                                                    <span className="text-[10px] text-muted-foreground">
                                                         {format(new Date(test.performed_at), "MMM d, HH:mm")}
                                                     </span>
                                                 )}
@@ -175,14 +175,14 @@ export function TestsTab({
 
                                     <div className="space-y-2 mb-3">
                                         {test.test_procedure && (
-                                            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                                <span className="font-medium text-gray-700 block mb-0.5">Procedure:</span>
+                                            <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                                                <span className="font-medium text-foreground block mb-0.5">Procedure:</span>
                                                 <p className="line-clamp-2">{test.test_procedure}</p>
                                             </div>
                                         )}
                                         {test.actual_result && (
-                                            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                                <span className="font-medium text-gray-700 block mb-0.5">Result:</span>
+                                            <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                                                <span className="font-medium text-foreground block mb-0.5">Result:</span>
                                                 <p className="line-clamp-2">{test.actual_result}</p>
                                             </div>
                                         )}
@@ -192,7 +192,7 @@ export function TestsTab({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-7 px-2 text-gray-500 hover:text-primary"
+                                            className="h-7 px-2 text-muted-foreground hover:text-primary"
                                             onClick={() => setEditingTest(test)}
                                             disabled={isDisabled}
                                         >
@@ -202,7 +202,7 @@ export function TestsTab({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-7 px-2 text-gray-500 hover:text-red-600"
+                                            className="h-7 px-2 text-muted-foreground hover:text-red-600"
                                             onClick={() => {
                                                 if (confirm("Delete this test?")) {
                                                     deleteMutation.mutate(test.id);
@@ -407,7 +407,7 @@ function TestDialog({
                                 </div>
                                 {templateResults.length > 0 && (
                                     <div className="mt-2 border border-border rounded-lg bg-card shadow-sm overflow-hidden z-10 relative">
-                                        <div className="p-2 text-xs font-semibold text-gray-500 bg-muted/50 border-b border-gray-100 border-border">
+                                        <div className="p-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b border-border border-border">
                                             Recommended Templates
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">
@@ -421,7 +421,7 @@ function TestDialog({
                                                     <div className="font-semibold text-sm text-foreground group-hover:text-primary dark:group-hover:text-orange-300">
                                                         {template.name}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 mt-1 line-clamp-1">
+                                                    <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
                                                         {template.description || template.test_procedure}
                                                     </div>
                                                 </button>

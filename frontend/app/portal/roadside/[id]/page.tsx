@@ -171,7 +171,7 @@ export default function RoadsideRequestDetailPage() {
         </Link>
         <Card>
           <CardContent className="p-6 text-center">
-            <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">
               Request Not Found
             </h3>
@@ -272,7 +272,7 @@ export default function RoadsideRequestDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-2">
-                <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
+                <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Breakdown Location</p>
                   <p className="text-foreground">{req.breakdown_location}</p>
@@ -280,7 +280,7 @@ export default function RoadsideRequestDetailPage() {
               </div>
               {req.destination && (
                 <div className="flex items-start gap-2">
-                  <Navigation className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <Navigation className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Destination</p>
                     <p className="text-foreground">{req.destination}</p>
@@ -309,7 +309,7 @@ export default function RoadsideRequestDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+                <Clock className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-foreground">Requested</p>
                   <p className="text-xs text-muted-foreground">
@@ -371,7 +371,7 @@ export default function RoadsideRequestDetailPage() {
                 {req.customer_feedback ? (
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Your Feedback:</p>
-                    <div className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl italic text-sm">
+                    <div className="p-4 bg-card/50 dark:bg-gray-800/50 rounded-xl italic text-sm">
                       "{req.customer_feedback}"
                     </div>
                   </div>
@@ -396,7 +396,7 @@ export default function RoadsideRequestDetailPage() {
                         placeholder="What did you like? What can we improve?"
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
-                        className="bg-white/50 dark:bg-gray-800/50"
+                        className="bg-card/50 dark:bg-gray-800/50"
                       />
                     </div>
                     <Button

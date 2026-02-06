@@ -37,7 +37,7 @@ export default function TechnicianEfficiencyPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Technician Efficiency</h1>
-                    <p className="text-gray-500 text-sm">Monitor technician performance and labor efficiency.</p>
+                    <p className="text-muted-foreground text-sm">Monitor technician performance and labor efficiency.</p>
                 </div>
                 <DateRangePicker
                     startDate={format(dateRange.from, "yyyy-MM-dd")}
@@ -122,7 +122,7 @@ export default function TechnicianEfficiencyPage() {
                                 })}
                                 {data?.technicians.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-24 text-center text-gray-500">
+                                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                             No data found for the selected period.
                                         </TableCell>
                                     </TableRow>

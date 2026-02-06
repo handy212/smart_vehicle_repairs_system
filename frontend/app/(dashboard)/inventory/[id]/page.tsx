@@ -136,7 +136,7 @@ export default function PartDetailPage() {
                     </div>
                   ) : (
                     <div className="w-full md:w-48 aspect-square rounded-lg bg-border flex items-center justify-center border border-border">
-                      <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                      <Package className="w-12 h-12 text-gray-300 text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -294,7 +294,7 @@ export default function PartDetailPage() {
                   <div className="rounded-lg border border-border overflow-hidden bg-card shadow-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs text-left">
-                        <thead className="bg-muted/50 text-gray-500 font-semibold uppercase tracking-wider border-b border-border">
+                        <thead className="bg-muted/50 text-muted-foreground font-semibold uppercase tracking-wider border-b border-border">
                           <tr>
                             <th className="px-4 py-2.5 font-bold">Event</th>
                             <th className="px-4 py-2.5">Reference</th>
@@ -307,7 +307,7 @@ export default function PartDetailPage() {
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                           {transactions?.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground bg-gray-50/20">
+                              <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground bg-muted/20">
                                 <div className="flex flex-col items-center justify-center opacity-40">
                                   <RotateCcw className="w-8 h-8 mb-2" />
                                   <p>No transaction history found.</p>
@@ -327,18 +327,18 @@ export default function PartDetailPage() {
                                   case 'use':
                                   case 'damage':
                                   case 'adjustment_out': return 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
-                                  default: return 'bg-gray-50 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-400 border-border';
+                                  default: return 'bg-muted text-foreground border-border dark:bg-gray-800 text-muted-foreground border-border';
                                 }
                               };
 
                               return (
-                                <tr key={txn.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                <tr key={txn.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/30 transition-colors">
                                   <td className="px-4 py-3">
                                     <div className="flex flex-col gap-1">
                                       <Badge variant="outline" className={`w-fit text-[10px] h-4 px-1.5 font-medium border uppercase ${getBadgeColor(txn.transaction_type)}`}>
                                         {txn.transaction_type.replace('_', ' ')}
                                       </Badge>
-                                      <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                         <Clock className="w-3 h-3" />
                                         {format(new Date(txn.created_at), "MMM dd, HH:mm")}
                                       </span>
@@ -348,12 +348,12 @@ export default function PartDetailPage() {
                                     {txn.reference_number ? (
                                       <div className="flex items-center gap-1.5 text-muted-foreground">
                                         <Hash className="w-3 h-3 opacity-60" />
-                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-muted px-1.5 py-0.5 rounded border border-gray-100 border-border">
+                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-muted px-1.5 py-0.5 rounded border border-border border-border">
                                           {txn.reference_number}
                                         </span>
                                       </div>
                                     ) : (
-                                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                                      <span className="text-gray-300 text-muted-foreground">—</span>
                                     )}
                                   </td>
                                   <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-success' : 'text-red-600 dark:text-red-400'}`}>
@@ -366,7 +366,7 @@ export default function PartDetailPage() {
                                     <span className="font-medium text-foreground">{txn.balance_after}</span>
                                   </td>
                                   <td className="px-4 py-3">
-                                    <div className="flex items-center gap-1.5 text-gray-500">
+                                    <div className="flex items-center gap-1.5 text-muted-foreground">
                                       <div className="w-5 h-5 rounded-full bg-border flex items-center justify-center">
                                         <User className="w-3 h-3 opacity-60" />
                                       </div>
@@ -374,7 +374,7 @@ export default function PartDetailPage() {
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 min-w-[150px]">
-                                    <div className="flex items-start gap-1.5 italic text-gray-500 leading-tight">
+                                    <div className="flex items-start gap-1.5 italic text-muted-foreground leading-tight">
                                       <FileText className="w-3 h-3 mt-0.5 shrink-0 opacity-40" />
                                       <span className="text-[10px] line-clamp-2" title={txn.reason || txn.notes}>
                                         {txn.reason || txn.notes || 'No description provided'}
@@ -455,7 +455,7 @@ export default function PartDetailPage() {
             )}
             <button
               onClick={() => setShowImageModal(false)}
-              className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white rounded-full p-2"
+              className="absolute top-4 right-4 bg-card/20 hover:bg-card/40 text-white rounded-full p-2"
             >
               <span className="sr-only">Close</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>

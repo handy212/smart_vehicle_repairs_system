@@ -122,7 +122,7 @@ export default function MobileDashboardPage() {
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -167,7 +167,7 @@ export default function MobileDashboardPage() {
                 <div className="text-sm font-semibold text-foreground">
                   Currently Clocked In
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   {activeLog.work_order_number || `WO #${activeLog.work_order}`}
                 </div>
               </div>
@@ -224,7 +224,7 @@ export default function MobileDashboardPage() {
           <CardContent className="space-y-2">
             {activeWorkOrders.map((wo) => (
               <Link key={wo.id} href={`/mobile/workorders/${wo.id}`}>
-                <div className="p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <div className="p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800 transition-colors">
                   <div className="flex items-start justify-between mb-1">
                     <div className="font-medium text-sm text-foreground">
                       {wo.work_order_number || `WO #${wo.id}`}
@@ -244,7 +244,7 @@ export default function MobileDashboardPage() {
                     {wo.vehicle_display || wo.vehicle_info || 'Vehicle'}
                   </div>
                   {wo.customer_name && (
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       {wo.customer_name}
                     </div>
                   )}
@@ -278,7 +278,7 @@ export default function MobileDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary dark:text-primary">
+            <div className="text-2xl font-bold text-primary">
               {stats.in_progress}
             </div>
           </CardContent>
@@ -362,7 +362,7 @@ export default function MobileDashboardPage() {
                 <Link
                   key={wo.id}
                   href={`/mobile/workorders/${wo.id}`}
-                  className="block p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="block p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">

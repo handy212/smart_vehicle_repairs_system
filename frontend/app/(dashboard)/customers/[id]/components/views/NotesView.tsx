@@ -99,7 +99,7 @@ export function NotesView({ customerId }: NotesViewProps) {
         <div className="space-y-6">
             <Card>
                 <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-500">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
                         {editingNote ? "Edit Note" : "Add New Note"}
                     </CardTitle>
                 </CardHeader>
@@ -119,9 +119,9 @@ export function NotesView({ customerId }: NotesViewProps) {
                                         id="edit-important"
                                         checked={editingNote.is_important}
                                         onChange={(e) => setEditingNote({ ...editingNote, is_important: e.target.checked })}
-                                        className="rounded border-gray-300"
+                                        className="rounded border-border"
                                     />
-                                    <label htmlFor="edit-important" className="text-sm text-gray-600">Important</label>
+                                    <label htmlFor="edit-important" className="text-sm text-muted-foreground">Important</label>
                                 </div>
                             )}
                             <div className="flex gap-2 ml-auto">
@@ -142,9 +142,9 @@ export function NotesView({ customerId }: NotesViewProps) {
 
             <div className="space-y-4">
                 {isLoading ? (
-                    <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+                    <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
                 ) : notes.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-muted-foreground">
                         <StickyNote className="w-12 h-12 mx-auto mb-3 opacity-20" />
                         <p>No notes found.</p>
                     </div>
@@ -155,12 +155,12 @@ export function NotesView({ customerId }: NotesViewProps) {
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold text-sm">{note.created_by_name || "User"}</span>
-                                        <span className="text-xs text-gray-500">{format(new Date(note.created_at), "MMM dd, yyyy h:mm a")}</span>
+                                        <span className="text-xs text-muted-foreground">{format(new Date(note.created_at), "MMM dd, yyyy h:mm a")}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {note.is_important && <Badge variant="danger">Important</Badge>}
                                         <div className="flex gap-1 ml-2">
-                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-gray-500" onClick={() => startEdit(note)}>Edit</Button>
+                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground" onClick={() => startEdit(note)}>Edit</Button>
                                             <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500 hover:text-red-600" onClick={() => { if (confirm("Delete note?")) deleteMutation.mutate(note.id); }}>Delete</Button>
                                         </div>
                                     </div>

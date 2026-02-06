@@ -31,7 +31,7 @@ export default function SupplierDetailPage() {
   if (!supplier) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Supplier not found.</p>
+        <p className="text-muted-foreground">Supplier not found.</p>
         <Link href="/inventory/suppliers">
           <Button className="mt-4"variant="secondary">
             Back to Suppliers
@@ -52,8 +52,8 @@ export default function SupplierDetailPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{supplier.name}</h1>
-            <p className="text-sm text-gray-500 mt-1">Supplier Details</p>
+            <h1 className="text-3xl font-bold text-foreground">{supplier.name}</h1>
+            <p className="text-sm text-muted-foreground mt-1">Supplier Details</p>
           </div>
         </div>
         <Link href={`/inventory/suppliers/${id}/edit`}>
@@ -72,18 +72,18 @@ export default function SupplierDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-500">Supplier Code</label>
+              <label className="text-sm font-medium text-muted-foreground">Supplier Code</label>
               <p className="text-lg font-mono">{supplier.supplier_code}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Type</label>
+              <label className="text-sm font-medium text-muted-foreground">Type</label>
               <div className="mt-1">
                 <Badge variant="secondary">{supplier.supplier_type || "N/A"}</Badge>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Status</label>
+                <label className="text-sm font-medium text-muted-foreground">Status</label>
                 <div className="mt-1">
                   <Badge variant={supplier.is_active ? "success" : "secondary"}>
                     {supplier.is_active ? "Active" : "Inactive"}
@@ -92,7 +92,7 @@ export default function SupplierDetailPage() {
               </div>
               {supplier.is_preferred && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Preferred</label>
+                  <label className="text-sm font-medium text-muted-foreground">Preferred</label>
                   <div className="mt-1">
                     <Badge variant="success">Yes</Badge>
                   </div>
@@ -101,7 +101,7 @@ export default function SupplierDetailPage() {
             </div>
             {supplier.parts_count !== undefined && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Parts Count</label>
+                <label className="text-sm font-medium text-muted-foreground">Parts Count</label>
                 <p className="text-lg">{supplier.parts_count}</p>
               </div>
             )}
@@ -116,13 +116,13 @@ export default function SupplierDetailPage() {
           <CardContent className="space-y-4">
             {supplier.contact_person && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Contact Person</label>
+                <label className="text-sm font-medium text-muted-foreground">Contact Person</label>
                 <p className="text-lg">{supplier.contact_person}</p>
               </div>
             )}
             {supplier.email && (
               <div>
-                <label className="text-sm font-medium text-gray-500 flex items-center">
+                <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <Mail className="w-4 h-4 mr-2" />
                   Email
                 </label>
@@ -131,7 +131,7 @@ export default function SupplierDetailPage() {
             )}
             {supplier.phone && (
               <div>
-                <label className="text-sm font-medium text-gray-500 flex items-center">
+                <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <Phone className="w-4 h-4 mr-2" />
                   Phone
                 </label>
@@ -140,13 +140,13 @@ export default function SupplierDetailPage() {
             )}
             {supplier.fax && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Fax</label>
+                <label className="text-sm font-medium text-muted-foreground">Fax</label>
                 <p className="text-lg">{supplier.fax}</p>
               </div>
             )}
             {supplier.website && (
               <div>
-                <label className="text-sm font-medium text-gray-500 flex items-center">
+                <label className="text-sm font-medium text-muted-foreground flex items-center">
                   <Globe className="w-4 h-4 mr-2" />
                   Website
                 </label>
@@ -194,26 +194,26 @@ export default function SupplierDetailPage() {
           <CardContent className="space-y-4">
             {supplier.tax_id && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Tax ID / EIN</label>
+                <label className="text-sm font-medium text-muted-foreground">Tax ID / EIN</label>
                 <p className="text-lg">{supplier.tax_id}</p>
               </div>
             )}
             {supplier.payment_terms && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Payment Terms</label>
+                <label className="text-sm font-medium text-muted-foreground">Payment Terms</label>
                 <p className="text-lg">{supplier.payment_terms}</p>
               </div>
             )}
             {supplier.credit_limit && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Credit Limit</label>
+                <label className="text-sm font-medium text-muted-foreground">Credit Limit</label>
                 <p className="text-lg">{formatCurrency(parseFloat(supplier.credit_limit))}</p>
               </div>
             )}
             {supplier.notes && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Notes</label>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{supplier.notes}</p>
+                <label className="text-sm font-medium text-muted-foreground">Notes</label>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{supplier.notes}</p>
               </div>
             )}
           </CardContent>

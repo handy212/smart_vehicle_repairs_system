@@ -79,7 +79,7 @@ export function StatementView({ customerId }: StatementViewProps) {
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (isLoading) {
-        return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
+        return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
     }
 
     const cols = [
@@ -92,7 +92,7 @@ export function StatementView({ customerId }: StatementViewProps) {
 
     const stats = [
         { label: "Beginning Balance", value: formatCurrency(summary.beginning_balance) },
-        { label: "Invoiced Amount", value: formatCurrency(summary.invoiced), color: "text-primary dark:text-primary" },
+        { label: "Invoiced Amount", value: formatCurrency(summary.invoiced), color: "text-primary" },
         { label: "Payments Made", value: formatCurrency(summary.payments), color: "text-success" },
         { label: "Balance Due", value: formatCurrency(summary.balance_due), color: "text-red-600 dark:text-red-400" }
     ];
@@ -137,7 +137,7 @@ export function StatementView({ customerId }: StatementViewProps) {
                              I will update the whole file to be safe and include DataTable. 
                           */}
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-muted/50 text-gray-500 font-medium border-b border-border">
+                            <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
                                 <tr>
                                     <th className="px-4 py-3">Date</th>
                                     <th className="px-4 py-3">Type</th>
@@ -148,10 +148,10 @@ export function StatementView({ customerId }: StatementViewProps) {
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {transactions.length === 0 ? (
-                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No transactions found</td></tr>
+                                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No transactions found</td></tr>
                                 ) : (
                                     transactions.map((t: any) => (
-                                        <tr key={`${t.type}-${t.id}`} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                                        <tr key={`${t.type}-${t.id}`} className="hover:bg-muted/50 dark:hover:bg-gray-800/50">
                                             <td className="px-4 py-3">
                                                 {t.date ? (
                                                     // specific check for invalid date string

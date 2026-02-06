@@ -304,7 +304,7 @@ export default function EstimateDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-800/50 border-border text-foreground">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground dark:bg-gray-800/50 border-border text-foreground">
                   Estimate #{estimate.estimate_number}
                 </span>
                 {estimate.work_order && estimate.work_order_number && (
@@ -316,7 +316,7 @@ export default function EstimateDetailPage() {
                   </Link>
                 )}
               </div>
-              <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground mt-1 text-muted-foreground">
                 {estimate.customer_name || "Customer"}
               </p>
             </div>
@@ -483,45 +483,45 @@ export default function EstimateDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Customer / Bill To */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Customer</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Customer</h3>
                     {estimate.customer ? (
-                      <Link href={`/customers/${typeof estimate.customer === 'object' && estimate.customer !== null ? estimate.customer.id : estimate.customer}`} className="text-base font-semibold text-gray-900 hover:text-primary block">
+                      <Link href={`/customers/${typeof estimate.customer === 'object' && estimate.customer !== null ? estimate.customer.id : estimate.customer}`} className="text-base font-semibold text-foreground hover:text-primary block">
                         {estimate.customer_name || "View Customer"}
                       </Link>
                     ) : (
-                      <p className="text-base font-semibold text-gray-900">{estimate.customer_name || "-"}</p>
+                      <p className="text-base font-semibold text-foreground">{estimate.customer_name || "-"}</p>
                     )}
-                    {estimate.customer_email && <p className="text-sm text-gray-600">{estimate.customer_email}</p>}
-                    {estimate.customer_phone && <p className="text-sm text-gray-600">{estimate.customer_phone}</p>}
-                    {estimate.customer_address && <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{estimate.customer_address}</p>}
+                    {estimate.customer_email && <p className="text-sm text-muted-foreground">{estimate.customer_email}</p>}
+                    {estimate.customer_phone && <p className="text-sm text-muted-foreground">{estimate.customer_phone}</p>}
+                    {estimate.customer_address && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{estimate.customer_address}</p>}
                   </div>
 
                   {/* Estimate Info */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Details</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Details</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-gray-500 w-24">Date:</span>
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm text-muted-foreground w-24">Date:</span>
+                        <span className="text-sm font-medium text-foreground">
                           {estimate.estimate_date ? format(new Date(estimate.estimate_date), "MMM dd, yyyy") : "-"}
                         </span>
                       </div>
                       <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-gray-500 w-24">Valid Until:</span>
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm text-muted-foreground w-24">Valid Until:</span>
+                        <span className="text-sm font-medium text-foreground">
                           {estimate.valid_until ? format(new Date(estimate.valid_until), "MMM dd, yyyy") : "-"}
                         </span>
                       </div>
                       {estimate.sales_agent_name && (
                         <div className="flex justify-between md:justify-start md:gap-8">
-                          <span className="text-sm text-gray-500 w-24">Sales Agent:</span>
-                          <span className="text-sm font-medium text-gray-900">{estimate.sales_agent_name}</span>
+                          <span className="text-sm text-muted-foreground w-24">Sales Agent:</span>
+                          <span className="text-sm font-medium text-foreground">{estimate.sales_agent_name}</span>
                         </div>
                       )}
                       {estimate.days_until_expiration !== undefined && estimate.status === 'sent' && (
                         <div className="flex justify-between md:justify-start md:gap-8">
-                          <span className="text-sm text-gray-500 w-24">Expires:</span>
-                          <span className={cn("text-sm font-medium", estimate.days_until_expiration < 0 ? "text-red-600" : "text-gray-900")}>
+                          <span className="text-sm text-muted-foreground w-24">Expires:</span>
+                          <span className={cn("text-sm font-medium", estimate.days_until_expiration < 0 ? "text-red-600" : "text-foreground")}>
                             {estimate.days_until_expiration < 0 ? "Expired" : `${estimate.days_until_expiration} days`}
                           </span>
                         </div>
@@ -531,20 +531,20 @@ export default function EstimateDetailPage() {
 
                   {/* Vehicle / Status */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Related</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Related</h3>
                     <div className="space-y-2">
                       {estimate.vehicle && (
                         <div className="flex flex-col">
-                          <span className="text-sm text-gray-500">Vehicle</span>
+                          <span className="text-sm text-muted-foreground">Vehicle</span>
                           <Link href={`/vehicles/${typeof estimate.vehicle === 'object' && estimate.vehicle !== null ? estimate.vehicle.id : estimate.vehicle}`} className="text-sm font-medium text-primary hover:underline">
                             {estimate.vehicle_display || "View Vehicle"}
                           </Link>
-                          {estimate.vehicle_vin && <span className="text-xs text-gray-500">VIN: {estimate.vehicle_vin}</span>}
+                          {estimate.vehicle_vin && <span className="text-xs text-muted-foreground">VIN: {estimate.vehicle_vin}</span>}
                         </div>
                       )}
 
                       <div className="flex flex-col mt-2">
-                        <span className="text-sm text-gray-500 mb-1">Status</span>
+                        <span className="text-sm text-muted-foreground mb-1">Status</span>
                         <div className="flex items-center gap-2">
                           <Badge variant={getStatusVariant(localStatus || estimate.status) as any}>
                             {(localStatus || estimate.status)?.replace("_", " ").toUpperCase()}
@@ -554,7 +554,7 @@ export default function EstimateDetailPage() {
                             value={localStatus || estimate.status}
                             onChange={handleStatusChange}
                             disabled={statusChangeMutation.isPending}
-                            className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                            className="px-2 py-1 text-xs border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value="draft">Draft</option>
                             <option value="sent">Sent</option>
@@ -573,15 +573,15 @@ export default function EstimateDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t">
                     {(estimate.title || estimate.description) && (
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Description</h4>
-                        {estimate.title && <p className="text-sm font-medium text-gray-900 mb-1">{estimate.title}</p>}
-                        {estimate.description && <p className="text-sm text-gray-600 whitespace-pre-wrap">{estimate.description}</p>}
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Description</h4>
+                        {estimate.title && <p className="text-sm font-medium text-foreground mb-1">{estimate.title}</p>}
+                        {estimate.description && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{estimate.description}</p>}
                       </div>
                     )}
                     {estimate.notes && (
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</h4>
-                        <p className="text-sm text-gray-600 italic whitespace-pre-wrap">{estimate.notes}</p>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</h4>
+                        <p className="text-sm text-muted-foreground italic whitespace-pre-wrap">{estimate.notes}</p>
                       </div>
                     )}
                   </div>
@@ -611,8 +611,8 @@ export default function EstimateDetailPage() {
                           <TableRow key={item.id || index}>
                             <TableCell className="align-top py-3">
                               <div className="flex flex-col">
-                                <span className="font-medium text-gray-900">{item.description}</span>
-                                <span className="text-xs text-gray-500 capitalize mt-0.5">{item.item_type?.replace("_", " ")}</span>
+                                <span className="font-medium text-foreground">{item.description}</span>
+                                <span className="text-xs text-muted-foreground capitalize mt-0.5">{item.item_type?.replace("_", " ")}</span>
                               </div>
                             </TableCell>
                             <TableCell className="text-right align-top py-3">
@@ -630,7 +630,7 @@ export default function EstimateDetailPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                             No line items found.
                           </TableCell>
                         </TableRow>
@@ -645,21 +645,21 @@ export default function EstimateDetailPage() {
             <div className="flex justify-end">
               <div className="w-full md:w-1/3 min-w-[300px] space-y-2 px-4 md:px-0">
                 {estimate.labor_subtotal && (
-                  <div className="flex justify-between text-sm text-gray-500">
+                  <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Labor Subtotal</span>
                     <span>{formatCurrency(parseFloat(estimate.labor_subtotal))}</span>
                   </div>
                 )}
                 {estimate.parts_subtotal && (
-                  <div className="flex justify-between text-sm text-gray-500">
+                  <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Parts Subtotal</span>
                     <span>{formatCurrency(parseFloat(estimate.parts_subtotal))}</span>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between border-t border-dashed pt-2 mt-2">
-                  <span className="font-medium text-gray-600">Subtotal</span>
-                  <span className="text-gray-900 font-medium">
+                  <span className="font-medium text-muted-foreground">Subtotal</span>
+                  <span className="text-foreground font-medium">
                     {formatCurrency(parseFloat(estimate.subtotal || "0"))}
                   </span>
                 </div>
@@ -681,25 +681,25 @@ export default function EstimateDetailPage() {
                 {hasDetailedTax ? (
                   <div className="space-y-1 pt-1 opacity-90">
                     {taxBreakdown.nhilAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>NHIL</span>
                         <span>{formatCurrency(taxBreakdown.nhilAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.getfundAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>GETFund</span>
                         <span>{formatCurrency(taxBreakdown.getfundAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.hrlAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>COVID-19 HRL</span>
                         <span>{formatCurrency(taxBreakdown.hrlAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.vatAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>VAT</span>
                         <span>{formatCurrency(taxBreakdown.vatAmount)}</span>
                       </div>
@@ -707,16 +707,16 @@ export default function EstimateDetailPage() {
                   </div>
                 ) : (
                   parseAmount(estimate.tax_amount) > 0 && (
-                    <div className="flex justify-between text-sm text-gray-500">
+                    <div className="flex justify-between text-sm text-muted-foreground">
                       <span>Tax</span>
                       <span>{formatCurrency(parseAmount(estimate.tax_amount))}</span>
                     </div>
                   )
                 )}
 
-                <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-3 mt-2">
+                <div className="flex justify-between text-lg font-bold border-t border-border pt-3 mt-2">
                   <span>Total</span>
-                  <span className="text-gray-900">{formatCurrency(parseFloat(estimate.total || "0"))}</span>
+                  <span className="text-foreground">{formatCurrency(parseFloat(estimate.total || "0"))}</span>
                 </div>
 
               </div>
@@ -743,7 +743,7 @@ export default function EstimateDetailPage() {
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-primary dark:text-primary" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                 </div>
                 <DialogTitle className="text-xl">Approve Estimate {estimate?.estimate_number}</DialogTitle>
               </div>

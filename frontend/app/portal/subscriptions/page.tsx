@@ -172,7 +172,7 @@ export default function MySubscriptionsPage() {
           {!mySubscriptions || mySubscriptions.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <PackageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <PackageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Active Subscriptions</h3>
                 <p className="text-muted-foreground mb-4">
                   You don't have any active subscriptions yet.
@@ -371,7 +371,7 @@ export default function MySubscriptionsPage() {
           ) : !availablePackages || availablePackages.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <PackageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <PackageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Packages Available</h3>
                 <p className="text-muted-foreground">
                   There are no subscription packages available at this time.

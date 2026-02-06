@@ -147,12 +147,12 @@ export default function StockAdjustmentDialog({
             <div className="bg-muted p-4 rounded">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Current Stock</p>
-                  <p className="text-2xl font-bold text-gray-900">{part.quantity_in_stock || 0}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Current Stock</p>
+                  <p className="text-2xl font-bold text-foreground">{part.quantity_in_stock || 0}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Available</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-muted-foreground">Available</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {part.available_quantity || part.quantity_in_stock || 0}
                   </p>
                 </div>
@@ -160,7 +160,7 @@ export default function StockAdjustmentDialog({
             </div>
 
             <div>
-              <label htmlFor="adjustment_type" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="adjustment_type" className="block text-sm font-medium text-foreground mb-2">
                 Adjustment Type *
               </label>
               <Select
@@ -178,7 +178,7 @@ export default function StockAdjustmentDialog({
             </div>
 
             <div>
-              <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="quantity" className="block text-sm font-medium text-foreground mb-2">
                 Quantity *
               </label>
               <Input
@@ -192,7 +192,7 @@ export default function StockAdjustmentDialog({
                 <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>
               )}
               {quantity && (
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-muted-foreground">
                   New stock level will be: <strong>{newStockLevel}</strong>
                   {newStockLevel < 0 && (
                     <span className="text-red-600 ml-2">(Warning: Negative stock!)</span>
@@ -202,7 +202,7 @@ export default function StockAdjustmentDialog({
             </div>
 
             <div>
-              <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="reason" className="block text-sm font-medium text-foreground mb-2">
                 Reason *
               </label>
               <Select value={watch("reason")} onValueChange={(val) => {
@@ -227,7 +227,7 @@ export default function StockAdjustmentDialog({
             </div>
 
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-2">
                 Notes
               </label>
               <Textarea id="notes" {...register("notes")} rows={3} className="w-full" placeholder="Additional notes..." />

@@ -102,7 +102,7 @@ export default function TillDashboardPage() {
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <AlertCircle className="h-5 w-5 text-gray-400" />
+                                <AlertCircle className="h-5 w-5 text-muted-foreground" />
                                 <div>
                                     <p className="font-semibold text-foreground">No Open Till</p>
                                     <p className="text-xs text-muted-foreground">Open a till to start processing cash transactions</p>
@@ -130,7 +130,7 @@ export default function TillDashboardPage() {
                             {todayTills.results.map((till: Till) => (
                                 <div
                                     key={till.id}
-                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted dark:hover:bg-gray-800/50"
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="flex flex-col">
@@ -199,7 +199,7 @@ export default function TillDashboardPage() {
                         <CardContent className="pt-6">
                             <div className="flex items-center gap-3">
                                 <div className="p-3 bg-border rounded-lg">
-                                    <Clock className="h-6 w-6 text-gray-600" />
+                                    <Clock className="h-6 w-6 text-muted-foreground" />
                                 </div>
                                 <div>
                                     <p className="font-semibold">Till History</p>

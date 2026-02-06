@@ -79,15 +79,15 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                         <div className="flex items-center gap-3">
                             <div className={cn(
                                 "p-2 rounded-lg",
-                                subscription.status === 'active' ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
+                                subscription.status === 'active' ? "bg-green-100 text-green-700" : "bg-slate-100 text-muted-foreground"
                             )}>
                                 {getStatusIcon(subscription.status)}
                             </div>
                             <div>
-                                <DialogTitle className="text-lg font-bold text-slate-900 leading-tight">
+                                <DialogTitle className="text-lg font-bold text-foreground leading-tight">
                                     {subscription.package_name}
                                 </DialogTitle>
-                                <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                                     <span className="font-mono font-medium">{subscription.subscription_number}</span>
                                     <span>•</span>
                                     <span>Member since {format(new Date(subscription.start_date), "MMM yyyy")}</span>
@@ -100,7 +100,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                     </div>
                 </DialogHeader>
 
-                <div className="p-5 space-y-6 bg-white max-h-[70vh] overflow-y-auto">
+                <div className="p-5 space-y-6 bg-card max-h-[70vh] overflow-y-auto">
                     {/* Primary Info Row */}
                     <div className="grid grid-cols-2 gap-8 px-2">
                         <div className="space-y-4">
@@ -109,19 +109,19 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 Customer & Vehicle
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200 text-xs">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground font-bold border border-border text-xs">
                                     {subscription.customer_name?.substring(0, 2).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="font-bold text-slate-900 text-sm truncate">{subscription.customer_full_name}</div>
-                                    <div className="text-[11px] text-slate-500 font-mono">ID: {subscription.customer}</div>
+                                    <div className="font-bold text-foreground text-sm truncate">{subscription.customer_full_name}</div>
+                                    <div className="text-[11px] text-muted-foreground font-mono">ID: {subscription.customer}</div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 py-1.5 px-2 bg-slate-50/80 rounded-lg border border-slate-100">
+                            <div className="flex items-center gap-3 py-1.5 px-2 bg-slate-50/80 rounded-lg border border-border">
                                 <Car className="w-4 h-4 text-muted-foreground" />
                                 <div className="min-w-0">
                                     <div className="text-[9px] font-bold text-muted-foreground uppercase leading-none">Vehicle ID</div>
-                                    <div className="text-[12px] font-mono font-medium text-slate-700 mt-0.5 truncate">{subscription.vehicle || 'N/A'}</div>
+                                    <div className="text-[12px] font-mono font-medium text-foreground mt-0.5 truncate">{subscription.vehicle || 'N/A'}</div>
                                 </div>
                             </div>
                         </div>
@@ -133,22 +133,22 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                             </div>
                             <div className="space-y-2.5">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[12px] text-slate-500">Period</span>
-                                    <span className="text-[12px] font-semibold text-slate-800">
+                                    <span className="text-[12px] text-muted-foreground">Period</span>
+                                    <span className="text-[12px] font-semibold text-foreground">
                                         {format(new Date(subscription.start_date), "MMM dd")} - {format(new Date(subscription.end_date), "MMM dd, yyyy")}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center px-2 py-1 bg-slate-50 rounded-md">
-                                    <span className="text-[12px] font-medium text-slate-600">Remaining</span>
+                                    <span className="text-[12px] font-medium text-muted-foreground">Remaining</span>
                                     <span className={cn(
                                         "text-sm font-black",
-                                        subscription.days_remaining && subscription.days_remaining < 30 ? "text-red-500" : "text-slate-900"
+                                        subscription.days_remaining && subscription.days_remaining < 30 ? "text-red-500" : "text-foreground"
                                     )}>
                                         {subscription.days_remaining} Days
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-[12px]">
-                                    <span className="text-slate-500">Auto-Renew</span>
+                                    <span className="text-muted-foreground">Auto-Renew</span>
                                     <span className={cn("font-medium", subscription.auto_renew ? "text-success" : "text-muted-foreground")}>
                                         {subscription.auto_renew ? "On" : "Off"}
                                     </span>
@@ -166,8 +166,8 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                             Allowances & Usage
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-medium text-slate-500">Service Fee:</span>
-                            <span className="text-sm font-black text-slate-900">{formatCurrency(parseFloat(subscription.purchase_price))}</span>
+                            <span className="text-[11px] font-medium text-muted-foreground">Service Fee:</span>
+                            <span className="text-sm font-black text-foreground">{formatCurrency(parseFloat(subscription.purchase_price))}</span>
                         </div>
                     </div>
 
@@ -175,12 +175,12 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                     {subscription.remaining_allowances && Object.keys(subscription.remaining_allowances).length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 px-2">
                             {Object.entries(subscription.remaining_allowances).map(([key, value]) => (
-                                <div key={key} className="p-2.5 bg-slate-50/50 rounded-lg border border-slate-100 hover:border-primary/30 transition-colors group">
+                                <div key={key} className="p-2.5 bg-slate-50/50 rounded-lg border border-border hover:border-primary/30 transition-colors group">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <div className="p-1 rounded bg-white text-muted-foreground group-hover:text-primary transition-colors border border-slate-100">
+                                        <div className="p-1 rounded bg-card text-muted-foreground group-hover:text-primary transition-colors border border-border">
                                             {iconMap[key] || iconMap.default}
                                         </div>
-                                        <div className="text-[16px] font-black text-slate-800 line-clamp-1">{value}</div>
+                                        <div className="text-[16px] font-black text-foreground line-clamp-1">{value}</div>
                                     </div>
                                     <div className="text-[10px] uppercase font-bold text-muted-foreground truncate leading-tight" title={labelMap[key] || key}>
                                         {labelMap[key] || key.replace(/_/g, " ")}
@@ -202,32 +202,32 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                             )}
                         </div>
 
-                        <div className="border rounded-lg overflow-hidden bg-white">
+                        <div className="border rounded-lg overflow-hidden bg-card">
                             {isLoadingUsage ? (
                                 <div className="p-8 text-center text-muted-foreground text-xs">Loading history...</div>
                             ) : usageHistory && usageHistory.length > 0 ? (
                                 <Table>
                                     <TableHeader className="bg-slate-50/50">
                                         <TableRow className="h-9">
-                                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase h-9">Date</TableHead>
-                                            <TableHead className="text-[11px] font-bold text-slate-500 uppercase h-9">Service</TableHead>
-                                            <TableHead className="text-right text-[11px] font-bold text-slate-500 uppercase h-9">Used</TableHead>
+                                            <TableHead className="text-[11px] font-bold text-muted-foreground uppercase h-9">Date</TableHead>
+                                            <TableHead className="text-[11px] font-bold text-muted-foreground uppercase h-9">Service</TableHead>
+                                            <TableHead className="text-right text-[11px] font-bold text-muted-foreground uppercase h-9">Used</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {usageHistory.slice(0, 5).map((usage: any) => (
                                             <TableRow key={usage.id} className="hover:bg-slate-50/30 h-10 border-slate-50">
                                                 <TableCell className="p-2 align-middle">
-                                                    <div className="text-[11px] font-medium text-slate-700">{format(new Date(usage.service_date), "MMM dd, yyyy")}</div>
+                                                    <div className="text-[11px] font-medium text-foreground">{format(new Date(usage.service_date), "MMM dd, yyyy")}</div>
                                                     <div className="text-[9px] text-muted-foreground">{format(new Date(usage.service_date), "h:mm a")}</div>
                                                 </TableCell>
                                                 <TableCell className="p-2 align-middle">
-                                                    <div className="capitalize text-[11px] font-semibold text-slate-800 truncate max-w-[120px]">
+                                                    <div className="capitalize text-[11px] font-semibold text-foreground truncate max-w-[120px]">
                                                         {usage.usage_type?.replace(/_/g, " ")}
                                                     </div>
-                                                    <div className="text-[9px] text-slate-500">#{usage.reference_id || 'N/A'}</div>
+                                                    <div className="text-[9px] text-muted-foreground">#{usage.reference_id || 'N/A'}</div>
                                                 </TableCell>
-                                                <TableCell className="p-2 align-middle text-right font-bold text-[11px] text-slate-900">
+                                                <TableCell className="p-2 align-middle text-right font-bold text-[11px] text-foreground">
                                                     -{usage.quantity_used}
                                                 </TableCell>
                                             </TableRow>
@@ -249,7 +249,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                         <Button
                             variant="link"
                             size="sm"
-                            className="h-8 gap-2 text-slate-500 px-1 hover:text-slate-900"
+                            className="h-8 gap-2 text-muted-foreground px-1 hover:text-foreground"
                             onClick={() => subscriptionsApi.downloadCard(subscription.id, subscription.subscription_number)}
                         >
                             <Download className="w-3.5 h-3.5" />

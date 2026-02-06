@@ -349,7 +349,7 @@ export default function MobileWorkOrderDetailPage() {
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -358,8 +358,8 @@ export default function MobileWorkOrderDetailPage() {
   if (!workOrder) {
     return (
       <div className="p-4 text-center">
-        <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">Work order not found</p>
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Work order not found</p>
         <Link href="/mobile/workorders">
           <Button className="mt-4">Back to Work Orders</Button>
         </Link>
@@ -377,7 +377,7 @@ export default function MobileWorkOrderDetailPage() {
 
   const getPartStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      draft: "bg-gray-100 text-gray-700",
+      draft: "bg-gray-100 text-foreground",
       pending: "bg-yellow-100 text-yellow-700",
       ordered: "bg-orange-100 text-primary",
       ready: "bg-green-100 text-green-700",
@@ -385,7 +385,7 @@ export default function MobileWorkOrderDetailPage() {
       installed: "bg-green-100 text-green-700",
       returned: "bg-red-100 text-red-700",
     };
-    return colors[status] || "bg-gray-100 text-gray-700";
+    return colors[status] || "bg-gray-100 text-foreground";
   };
 
   return (
@@ -433,13 +433,13 @@ export default function MobileWorkOrderDetailPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start gap-2">
-            <User className="h-4 w-4 text-gray-500 mt-0.5" />
+            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div className="flex-1">
               <div className="text-sm font-medium text-foreground">
                 {workOrder.customer_name || "Customer"}
               </div>
               {workOrder.primary_technician_name && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   Tech: {workOrder.primary_technician_name}
                 </div>
               )}
@@ -447,7 +447,7 @@ export default function MobileWorkOrderDetailPage() {
           </div>
 
           <div className="flex items-start gap-2">
-            <Car className="h-4 w-4 text-gray-500 mt-0.5" />
+            <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div className="text-sm text-card-foreground">
               {workOrder.vehicle_display || workOrder.vehicle_info || "Vehicle"}
             </div>
@@ -455,7 +455,7 @@ export default function MobileWorkOrderDetailPage() {
 
           {workOrder.customer_concerns && (
             <div className="flex items-start gap-2">
-              <FileText className="h-4 w-4 text-gray-500 mt-0.5" />
+              <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div className="text-sm text-card-foreground">
                 {workOrder.customer_concerns}
               </div>
@@ -465,7 +465,7 @@ export default function MobileWorkOrderDetailPage() {
           {(workOrder.estimated_total || workOrder.total_cost) && (
             <div className="pt-2 border-t border-border">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Estimated Total</span>
+                <span className="text-muted-foreground">Estimated Total</span>
                 <span className="font-semibold text-foreground">
                   ${workOrder.estimated_total || workOrder.total_cost}
                 </span>
@@ -610,7 +610,7 @@ export default function MobileWorkOrderDetailPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {parts.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No parts requested</p>
+            <p className="text-sm text-muted-foreground text-center py-4">No parts requested</p>
           ) : (
             parts.map((part) => (
               <div
@@ -623,7 +623,7 @@ export default function MobileWorkOrderDetailPage() {
                       {part.part_name}
                     </div>
                     {part.part_number && (
-                      <div className="text-xs text-gray-500 mt-0.5">
+                      <div className="text-xs text-muted-foreground mt-0.5">
                         #{part.part_number}
                       </div>
                     )}
@@ -633,7 +633,7 @@ export default function MobileWorkOrderDetailPage() {
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between mt-2 text-xs">
-                  <span className="text-gray-500">Qty: {part.quantity}</span>
+                  <span className="text-muted-foreground">Qty: {part.quantity}</span>
                   {part.total_cost && (
                     <span className="font-medium text-foreground">
                       ${part.total_cost}
@@ -651,12 +651,12 @@ export default function MobileWorkOrderDetailPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center justify-between">
             <span>Tasks ({tasks.length})</span>
-            <Clock className="h-4 w-4 text-gray-500" />
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {tasks.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-4">
               No tasks assigned yet
             </p>
           ) : (
@@ -667,7 +667,7 @@ export default function MobileWorkOrderDetailPage() {
                   "p-3 rounded-lg border transition-colors cursor-pointer",
                   task.status === "completed"
                     ? "bg-success/10 border-green-200 dark:bg-green-950 dark:border-green-800"
-                    : "bg-white border-gray-200 bg-background border-border hover:bg-gray-50 dark:hover:bg-gray-800"
+                    : "bg-card border-border bg-background border-border hover:bg-muted dark:hover:bg-gray-800"
                 )}
                 onClick={() => handleToggleTask(task)}
               >
@@ -676,7 +676,7 @@ export default function MobileWorkOrderDetailPage() {
                     {task.status === "completed" ? (
                       <CheckCircle2 className="h-5 w-5 text-success" />
                     ) : (
-                      <Circle className="h-5 w-5 text-gray-400" />
+                      <Circle className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -684,19 +684,19 @@ export default function MobileWorkOrderDetailPage() {
                       className={cn(
                         "text-sm font-medium",
                         task.status === "completed"
-                          ? "line-through text-gray-500"
+                          ? "line-through text-muted-foreground"
                           : "text-foreground"
                       )}
                     >
                       {task.description}
                     </div>
                     {task.detailed_notes && (
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-muted-foreground mt-1">
                         {task.detailed_notes}
                       </div>
                     )}
                     {task.estimated_hours && (
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-muted-foreground mt-1">
                         Est. {task.estimated_hours}h
                       </div>
                     )}

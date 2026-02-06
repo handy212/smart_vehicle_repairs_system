@@ -168,7 +168,7 @@ export default function EditSupplierPage() {
   if (!supplier) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Supplier not found.</p>
+        <p className="text-muted-foreground">Supplier not found.</p>
         <Link href="/inventory/suppliers">
           <Button className="mt-4" variant="secondary">
             Back to Suppliers
@@ -188,8 +188,8 @@ export default function EditSupplierPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Supplier</h1>
-          <p className="text-sm text-gray-500 mt-1">Update supplier details</p>
+          <h1 className="text-3xl font-bold text-foreground">Edit Supplier</h1>
+          <p className="text-sm text-muted-foreground mt-1">Update supplier details</p>
         </div>
       </div>
 
@@ -208,7 +208,7 @@ export default function EditSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Supplier Name *
                 </label>
                 <Input {...register("name")} placeholder="Supplier name" />
@@ -216,7 +216,7 @@ export default function EditSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Supplier Code *
                 </label>
                 <Input {...register("supplier_code")} placeholder="SUP-001" />
@@ -226,12 +226,12 @@ export default function EditSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Supplier Type *
                 </label>
                 <select
                   {...register("supplier_type")}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
                 >
                   <option value="manufacturer">Manufacturer</option>
                   <option value="distributor">Distributor</option>
@@ -249,17 +249,17 @@ export default function EditSupplierPage() {
                   <input
                     type="checkbox"
                     {...register("is_active")}
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                    className="rounded border-border text-primary focus:ring-primary"
                   />
-                  <label className="ml-2 text-sm text-gray-700">Active</label>
+                  <label className="ml-2 text-sm text-foreground">Active</label>
                 </div>
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     {...register("is_preferred")}
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                    className="rounded border-border text-primary focus:ring-primary"
                   />
-                  <label className="ml-2 text-sm text-gray-700">Preferred</label>
+                  <label className="ml-2 text-sm text-foreground">Preferred</label>
                 </div>
               </div>
             </CardContent>
@@ -271,14 +271,14 @@ export default function EditSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Contact Person
                 </label>
                 <Input {...register("contact_person")} placeholder="John Doe" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Email
                 </label>
                 <Input type="email" {...register("email")} placeholder="supplier@example.com" />
@@ -286,21 +286,21 @@ export default function EditSupplierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Phone
                 </label>
                 <Input {...register("phone")} placeholder="+1 (555) 123-4567" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Fax
                 </label>
                 <Input {...register("fax")} placeholder="+1 (555) 123-4568" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Website
                 </label>
                 <Input type="url" {...register("website")} placeholder="https://www.example.com" />
@@ -317,14 +317,14 @@ export default function EditSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Address Line 1
                 </label>
                 <Input {...register("address_line1")} placeholder="123 Main St" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Address Line 2
                 </label>
                 <Input {...register("address_line2")} placeholder="Suite 100" />
@@ -332,24 +332,24 @@ export default function EditSupplierPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">City</label>
                   <Input {...register("city")} placeholder="City" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">State</label>
                   <Input {...register("state")} placeholder="State" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Postal Code
                   </label>
                   <Input {...register("postal_code")} placeholder="12345" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Country
                   </label>
                   <Input {...register("country")} placeholder="USA" />
@@ -364,28 +364,28 @@ export default function EditSupplierPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tax ID / EIN
                 </label>
                 <Input {...register("tax_id")} placeholder="12-3456789" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Payment Terms
                 </label>
                 <Input {...register("payment_terms")} placeholder="Net 30, COD, etc." />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Credit Limit
                 </label>
                 <Input type="number" step="0.01" {...register("credit_limit")} placeholder="0.00" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Notes
                 </label>
                 <Textarea {...register("notes")} placeholder="Additional notes..." rows={4} />

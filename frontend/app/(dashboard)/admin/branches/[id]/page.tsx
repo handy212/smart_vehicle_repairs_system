@@ -85,7 +85,7 @@ export default function BranchDetailPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">Branch not found</p>
             </div>
           </CardContent>
@@ -249,7 +249,7 @@ export default function BranchDetailPage() {
                         <br />
                         <a
                           href={`mailto:${branch.email}`}
-                          className="text-primary dark:text-primary hover:underline flex items-center gap-1"
+                          className="text-primary hover:underline flex items-center gap-1"
                         >
                           <Mail className="w-3 h-3" />
                           {branch.email}
@@ -294,7 +294,7 @@ export default function BranchDetailPage() {
                   {staff.map((member: any) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800/50"
                     >
                       <div>
                         <p className="font-medium text-foreground">
@@ -336,7 +336,7 @@ export default function BranchDetailPage() {
                   {managers.map((manager: any) => (
                     <div
                       key={manager.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted dark:hover:bg-gray-800/50"
                     >
                       <div>
                         <p className="font-medium text-foreground">

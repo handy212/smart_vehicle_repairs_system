@@ -103,9 +103,9 @@ export function PartsRequiredTab({
             case "received":
                 return { color: "text-success bg-success/10", icon: CheckCircle };
             case "installed":
-                return { color: "text-gray-600 bg-gray-50", icon: CheckCircle };
+                return { color: "text-muted-foreground bg-muted", icon: CheckCircle };
             default:
-                return { color: "text-gray-600 bg-gray-50", icon: AlertCircle };
+                return { color: "text-muted-foreground bg-muted", icon: AlertCircle };
         }
     };
 
@@ -149,7 +149,7 @@ export function PartsRequiredTab({
             <Card className="border-none shadow-sm bg-muted/50">
                 <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-muted/50">
                     <div className="space-y-1">
-                        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Parts Required</CardTitle>
+                        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Parts Required</CardTitle>
                         <CardDescription className="text-xs">
                             List all parts required for this repair.
                         </CardDescription>
@@ -183,9 +183,9 @@ export function PartsRequiredTab({
                         </div>
                     ) : parts.length === 0 ? (
                         <div className="text-center py-16">
-                            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300 text-muted-foreground" />
                             <h3 className="text-sm font-medium text-foreground mb-1">No parts requested</h3>
-                            <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">
+                            <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">
                                 Add parts needed for this repair.
                             </p>
                             <Button
@@ -224,7 +224,7 @@ export function PartsRequiredTab({
                                                 <div className="flex flex-col">
                                                     <span>{part.part_name}</span>
                                                     {part.description && (
-                                                        <span className="text-xs text-gray-500 truncate max-w-[250px]">{part.description}</span>
+                                                        <span className="text-xs text-muted-foreground truncate max-w-[250px]">{part.description}</span>
                                                     )}
                                                 </div>
                                             </TableCell>
@@ -232,7 +232,7 @@ export function PartsRequiredTab({
                                                 {part.part_number ? (
                                                     <Badge variant="outline" className="font-mono text-[10px]">{part.part_number}</Badge>
                                                 ) : (
-                                                    <span className="text-gray-400 text-xs">-</span>
+                                                    <span className="text-muted-foreground text-xs">-</span>
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-center">{part.quantity}</TableCell>
@@ -248,7 +248,7 @@ export function PartsRequiredTab({
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-8 w-8 p-0 text-gray-400 hover:text-primary"
+                                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
                                                             onClick={() => {
                                                                 setEditPart(part);
                                                                 setShowAddDialog(true);
@@ -260,7 +260,7 @@ export function PartsRequiredTab({
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
+                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
                                                         onClick={() => {
                                                             if (confirm("Remove this part request?")) {
                                                                 deleteMutation.mutate(part.id);
@@ -457,7 +457,7 @@ function PartFormDialog({
             <DialogContent className="max-w-2xl bg-card border border-border shadow-xl sm:rounded-xl">
                 <DialogHeader className="pb-2 border-b">
                     <DialogTitle className="text-lg">{initialData ? "Edit Part Request" : "Request Part"}</DialogTitle>
-                    <DialogDescription className="text-xs text-gray-500">
+                    <DialogDescription className="text-xs text-muted-foreground">
                         {initialData ? "Update details for this part request." : "Select from inventory or enter details manually."}
                     </DialogDescription>
                 </DialogHeader>
@@ -465,7 +465,7 @@ function PartFormDialog({
                 <div className="py-4 space-y-4">
                     {/* Items Queue List (Only for new requests) */}
                     {!initialData && queuedParts.length > 0 && (
-                        <div className="rounded-md border border-border bg-gray-50/50 dark:bg-gray-800/20 overflow-hidden">
+                        <div className="rounded-md border border-border bg-muted/50 dark:bg-gray-800/20 overflow-hidden">
                             <div className="px-3 py-2 border-b border-border bg-gray-100/50 dark:bg-gray-800/50 flex justify-between items-center">
                                 <span className="text-xs font-semibold text-card-foreground">Parts to Submit ({queuedParts.length})</span>
                                 <Button
@@ -479,7 +479,7 @@ function PartFormDialog({
                             </div>
                             <div className="max-h-[150px] overflow-y-auto">
                                 <table className="w-full text-xs text-left">
-                                    <thead className="text-gray-500 bg-muted sticky top-0">
+                                    <thead className="text-muted-foreground bg-muted sticky top-0">
                                         <tr>
                                             <th className="px-3 py-2 font-medium">Name</th>
                                             <th className="px-3 py-2 font-medium">Qty</th>
@@ -488,17 +488,17 @@ function PartFormDialog({
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                                         {queuedParts.map((item, idx) => (
-                                            <tr key={idx} className="group hover:bg-white dark:hover:bg-gray-800/50">
+                                            <tr key={idx} className="group hover:bg-card dark:hover:bg-gray-800/50">
                                                 <td className="px-3 py-2">
                                                     <div className="font-medium text-foreground">{item.part_name}</div>
-                                                    <div className="text-[10px] text-gray-500 truncate max-w-[200px]">{item.description}</div>
+                                                    <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{item.description}</div>
                                                 </td>
-                                                <td className="px-3 py-2 text-gray-600">{item.quantity}</td>
+                                                <td className="px-3 py-2 text-muted-foreground">{item.quantity}</td>
                                                 <td className="px-3 py-2 text-right">
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveFromQueue(idx)}
-                                                        className="text-gray-400 hover:text-red-500 transition-colors"
+                                                        className="text-muted-foreground hover:text-red-500 transition-colors"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -518,7 +518,7 @@ function PartFormDialog({
                             <div className="space-y-3">
                                 {!initialData && (
                                     <div className="space-y-1.5">
-                                        <Label className="text-xs font-semibold text-gray-700">Search Inventory</Label>
+                                        <Label className="text-xs font-semibold text-foreground">Search Inventory</Label>
                                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                                             <PopoverTrigger asChild>
                                                 <Button
@@ -574,7 +574,7 @@ function PartFormDialog({
                                 )}
 
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="part_name" className="text-xs font-semibold text-gray-700">Part Name <span className="text-red-500">*</span></Label>
+                                    <Label htmlFor="part_name" className="text-xs font-semibold text-foreground">Part Name <span className="text-red-500">*</span></Label>
                                     <Input
                                         id="part_name"
                                         className="h-9 text-sm"
@@ -590,7 +590,7 @@ function PartFormDialog({
                             <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="quantity" className="text-xs font-semibold text-gray-700">Qty <span className="text-red-500">*</span></Label>
+                                        <Label htmlFor="quantity" className="text-xs font-semibold text-foreground">Qty <span className="text-red-500">*</span></Label>
                                         <Input
                                             id="quantity"
                                             type="number"
@@ -602,7 +602,7 @@ function PartFormDialog({
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="part_number" className="text-xs font-semibold text-gray-700">Part No.</Label>
+                                        <Label htmlFor="part_number" className="text-xs font-semibold text-foreground">Part No.</Label>
                                         <Input
                                             id="part_number"
                                             className="h-9 text-sm"
@@ -617,7 +617,7 @@ function PartFormDialog({
 
                         {/* Full Width: Description */}
                         <div className="space-y-1.5">
-                            <Label htmlFor="description" className="text-xs font-semibold text-gray-700">Description / Notes</Label>
+                            <Label htmlFor="description" className="text-xs font-semibold text-foreground">Description / Notes</Label>
                             <Input
                                 id="description"
                                 className="h-9 text-sm"
@@ -636,7 +636,7 @@ function PartFormDialog({
                                         size="sm"
                                         onClick={handleAddToQueue}
                                         disabled={!formData.part_name}
-                                        className="border-dashed border-gray-300 border-border"
+                                        className="border-dashed border-border border-border"
                                     >
                                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                                         Add to List

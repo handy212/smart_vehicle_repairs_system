@@ -53,10 +53,10 @@ export default function TechnicianLayout({
 
     if (!mounted || !isAuthenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+            <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-gray-950">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading...</p>
+                    <p className="mt-4 text-muted-foreground">Loading...</p>
                 </div>
             </div>
         );
@@ -83,7 +83,7 @@ export default function TechnicianLayout({
                 <div className="flex items-center gap-3">
                     <div className="hidden sm:flex flex-col items-end mr-2">
                         <span className="text-sm font-medium text-foreground">{user?.first_name} {user?.last_name}</span>
-                        <span className="text-xs text-gray-500 capitalize">{user?.role}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
                     </div>
                     <ThemeToggle />
                     <Button variant="ghost" size="icon" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10">

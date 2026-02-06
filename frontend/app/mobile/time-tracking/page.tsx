@@ -213,7 +213,7 @@ export default function TimeTrackingPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-xs text-gray-500 uppercase font-semibold mb-1">
+                <div className="text-xs text-muted-foreground uppercase font-semibold mb-1">
                   Work Order
                 </div>
                 <div className="font-medium text-foreground">
@@ -221,7 +221,7 @@ export default function TimeTrackingPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase font-semibold mb-1">
+                <div className="text-xs text-muted-foreground uppercase font-semibold mb-1">
                   Started At
                 </div>
                 <div className="font-medium text-foreground">
@@ -231,7 +231,7 @@ export default function TimeTrackingPage() {
             </div>
 
             <div className="bg-card p-4 rounded-lg flex flex-col items-center justify-center border border-orange-100 dark:border-orange-900/50">
-              <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Elapsed Time</div>
+              <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Elapsed Time</div>
               <div className="font-mono text-3xl font-bold text-primary">
                 {formatDuration(
                   activeLog.duration_hours ||
@@ -256,7 +256,7 @@ export default function TimeTrackingPage() {
       {/* Assigned Work Orders (Only show if not clocked in) */}
       {!activeLog && assignedWorkOrders.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider ml-1">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider ml-1">
             Ready for Work
           </h3>
           <div className="space-y-3">
@@ -293,7 +293,7 @@ export default function TimeTrackingPage() {
 
       {/* Recent Time Logs */}
       <div className="space-y-2 pt-4">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider ml-1">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider ml-1">
           Recent Activity
         </h3>
         <Card className="bg-transparent border-none shadow-none">
@@ -319,7 +319,7 @@ export default function TimeTrackingPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono font-semibold text-gray-900 text-foreground">
+                        <div className="font-mono font-semibold text-foreground text-foreground">
                           {formatDuration(log.duration_hours)}
                         </div>
                         {!log.synced && (

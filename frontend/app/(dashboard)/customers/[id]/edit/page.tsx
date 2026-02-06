@@ -486,7 +486,7 @@ export default function EditCustomerPage() {
           <Card className="dark:bg-gray-800 border-border border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg">
-                <Building2 className="w-5 h-5 text-primary dark:text-primary" />
+                <Building2 className="w-5 h-5 text-primary" />
                 Customer Type & Business Information
               </CardTitle>
             </CardHeader>
@@ -612,7 +612,7 @@ export default function EditCustomerPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted bg-muted/50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-card-foreground">Portal Access Status</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -727,7 +727,7 @@ export default function EditCustomerPage() {
                               <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300"
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
                                 title={showPassword ? "Hide password" : "Show password"}
                               >
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -763,7 +763,7 @@ export default function EditCustomerPage() {
                           <input
                             type="checkbox"
                             id="send_password_email_customer_edit"
-                            className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                            className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                           />
                           <Label htmlFor="send_password_email_customer_edit" className="text-sm font-medium text-card-foreground">
                             Send new password to customer via email

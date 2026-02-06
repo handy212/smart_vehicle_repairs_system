@@ -53,7 +53,7 @@ export default function InventoryPartSearch({ onSelect, className }: InventoryPa
     return (
         <div ref={containerRef} className={cn("relative", className)}>
             <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                     type="text"
                     placeholder="Search inventory parts..."
@@ -67,15 +67,15 @@ export default function InventoryPartSearch({ onSelect, className }: InventoryPa
                 />
                 {isLoading && (
                     <div className="absolute right-2.5 top-2.5">
-                        <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
                 )}
             </div>
 
             {isOpen && debouncedSearch.length > 1 && data && (
-                <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg max-h-60 overflow-auto">
                     {data.results.length === 0 ? (
-                        <div className="p-3 text-sm text-gray-500 text-center">No parts found</div>
+                        <div className="p-3 text-sm text-muted-foreground text-center">No parts found</div>
                     ) : (
                         <div className="py-1">
                             {data.results.map((part) => (
@@ -85,13 +85,13 @@ export default function InventoryPartSearch({ onSelect, className }: InventoryPa
                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 flex flex-col items-start gap-1"
                                     onClick={() => handleSelect(part)}
                                 >
-                                    <div className="flex justify-between w-full font-medium text-gray-900">
+                                    <div className="flex justify-between w-full font-medium text-foreground">
                                         <span>{part.part_number} - {part.name}</span>
-                                        <span className="text-gray-600">
+                                        <span className="text-muted-foreground">
                                             {part.available_quantity ? `${part.available_quantity} in stock` : 'Out of stock'}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between w-full text-xs text-gray-500">
+                                    <div className="flex justify-between w-full text-xs text-muted-foreground">
                                         <span>{part.description ? part.description.substring(0, 50) + (part.description.length > 50 ? '...' : '') : 'No description'}</span>
                                         <span>${part.selling_price || '0.00'}</span>
                                     </div>

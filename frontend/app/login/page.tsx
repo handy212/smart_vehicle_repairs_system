@@ -197,7 +197,7 @@ export default function LoginPage() {
 
           <div className="relative z-10 flex items-center gap-3">
             {heroLogo ? (
-              <div className="p-3 bg-white rounded-xl shadow-lg">
+              <div className="p-3 bg-card rounded-xl shadow-lg">
                 <img
                   src={getImageUrl(heroLogo, "")}
                   alt={branding.site_name}
@@ -205,7 +205,7 @@ export default function LoginPage() {
                 />
               </div>
             ) : (
-              <div className="p-3 bg-white rounded-xl shadow-lg">
+              <div className="p-3 bg-card rounded-xl shadow-lg">
                 <Car className="w-8 h-8" style={{ color: branding.primary_color }} />
               </div>
             )}
@@ -223,16 +223,16 @@ export default function LoginPage() {
         </div>
 
         {/* Right side: Login Form */}
-        <div className="flex items-center justify-center p-8 bg-gray-50/50">
+        <div className="flex items-center justify-center p-8 bg-muted/50">
           <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-center lg:text-left">
-              <h2 className="text-3xl font-bold text-gray-900">{branding.site_name}</h2>
-              <p className="mt-2 text-gray-600">
+              <h2 className="text-3xl font-bold text-foreground">{branding.site_name}</h2>
+              <p className="mt-2 text-muted-foreground">
                 Welcome back! Please enter your details.
               </p>
             </div>
 
-            <Card className="border-0 shadow-xl bg-white rounded-2xl overflow-hidden">
+            <Card className="border-0 shadow-xl bg-card rounded-2xl overflow-hidden">
               <CardContent className="p-8">
                 {regData ? (
                   <CompleteRegistrationForm
@@ -252,12 +252,12 @@ export default function LoginPage() {
                     )}
 
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700 ml-1">Email Address</label>
+                      <label className="text-sm font-semibold text-foreground ml-1">Email Address</label>
                       <Input
                         type="email"
                         {...register("email")}
                         placeholder="name@company.com"
-                        className="h-12 rounded-xl border-gray-200 bg-white focus:bg-white focus:ring-2 focus:ring-offset-0 transition-all"
+                        className="h-12 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
                         style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
                         disabled={isLoading}
                       />
@@ -266,7 +266,7 @@ export default function LoginPage() {
 
                     <div className="space-y-2">
                       <div className="flex justify-between items-center px-1">
-                        <label className="text-sm font-semibold text-gray-700">Password</label>
+                        <label className="text-sm font-semibold text-foreground">Password</label>
                         <button
                           type="button"
                           onClick={() => router.push("/login/forgot-password")}
@@ -281,14 +281,14 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"}
                           {...register("password")}
                           placeholder="••••••••"
-                          className="h-12 rounded-xl border-gray-200 bg-white focus:bg-white focus:ring-2 focus:ring-offset-0 pr-12 transition-all"
+                          className="h-12 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 pr-12 transition-all"
                           style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
                           disabled={isLoading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                         >
                           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
@@ -317,9 +317,9 @@ export default function LoginPage() {
                       {isLoading ? "Signing in..." : "Sign in"}
                     </Button>
 
-                    <div className="relative my-8 text-center text-sm font-medium text-gray-400 line-through">
-                      <span className="bg-white px-4 relative z-10 no-underline">OR</span>
-                      <hr className="absolute top-1/2 left-0 w-full border-gray-100" />
+                    <div className="relative my-8 text-center text-sm font-medium text-muted-foreground line-through">
+                      <span className="bg-card px-4 relative z-10 no-underline">OR</span>
+                      <hr className="absolute top-1/2 left-0 w-full border-border" />
                     </div>
 
                     <GoogleLoginButton
@@ -335,7 +335,7 @@ export default function LoginPage() {
               </CardContent>
             </Card>
 
-            <p className="text-center text-gray-600">
+            <p className="text-center text-muted-foreground">
               Don't have an account?{" "}
               <button
                 type="button"
@@ -351,8 +351,8 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-4 px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-gray-600">
+      <footer className="bg-card border-t border-border py-4 px-8">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-muted-foreground">
           <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.</p>
           <p>Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a></p>
         </div>

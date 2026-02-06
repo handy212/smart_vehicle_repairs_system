@@ -23,7 +23,7 @@ echo "---"
 
 # Function to replace in TSX/TS files
 replace_in_tsx() {
-    find frontend/app -type f \( -name "*.tsx" -o -name "*.ts" \) -exec sed -i "$1" {} +
+    find frontend -type f \( -name "*.tsx" -o -name "*.ts" \) -exec sed -i "$1" {} +
 }
 
 # 1. Background Colors - Cards and Containers

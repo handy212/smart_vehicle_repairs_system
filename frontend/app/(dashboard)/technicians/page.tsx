@@ -61,9 +61,9 @@ function TechniciansContent() {
     const getStatusColor = (status: Technician['current_status']) => {
         switch (status) {
             case 'available': return "bg-success/100/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
-            case 'busy': return "bg-primary/15 text-primary dark:text-primary border-orange-200 dark:border-orange-800";
+            case 'busy': return "bg-primary/15 text-primary border-orange-200 dark:border-orange-800";
             case 'break': return "bg-primary/15 text-primary dark:text-orange-400 border-orange-200 dark:border-orange-800";
-            case 'offline': return "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-border";
+            case 'offline': return "bg-gray-500/15 text-foreground text-muted-foreground border-border";
             default: return "";
         }
     };
@@ -93,25 +93,25 @@ function TechniciansContent() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
                             <span className="text-lg font-bold text-foreground">{data.results.length}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Available</span>
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Available</span>
                             <span className="text-lg font-bold text-success">{data.results.filter(t => t.current_status === 'available').length}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Busy</span>
-                            <span className="text-lg font-bold text-primary dark:text-primary">{data.results.filter(t => ['busy', 'break'].includes(t.current_status)).length}</span>
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Busy</span>
+                            <span className="text-lg font-bold text-primary">{data.results.filter(t => ['busy', 'break'].includes(t.current_status)).length}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Offline</span>
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Offline</span>
                             <span className="text-lg font-bold text-muted-foreground">{data.results.filter(t => t.current_status === 'offline').length}</span>
                         </CardContent>
                     </Card>
@@ -257,7 +257,7 @@ function TechniciansContent() {
                             ) : (
                                 <div className="col-span-full flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-lg bg-muted/50">
                                     <div className="rounded-full bg-orange-100 dark:bg-orange-900/20 p-4 mb-4">
-                                        <Search className="h-8 w-8 text-primary dark:text-primary" />
+                                        <Search className="h-8 w-8 text-primary" />
                                     </div>
                                     <h3 className="text-lg font-semibold">No technicians found</h3>
                                     <p className="text-muted-foreground max-w-sm mt-2 mb-6">
@@ -276,13 +276,13 @@ function TechniciansContent() {
                         </div>
                     ) : (
                         <Card className="border-t shadow-sm">
-                            <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+                            <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
                                 <CardTitle className="text-sm font-semibold">All Technicians ({data?.results?.length || 0})</CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-gray-50/50 hover:bg-muted/50 dark:hover:bg-gray-800/50">
+                                        <TableRow className="bg-muted/50 hover:bg-muted/50 dark:hover:bg-gray-800/50">
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Technician</TableHead>
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contact</TableHead>
                                             <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Skills</TableHead>
@@ -296,7 +296,7 @@ function TechniciansContent() {
                                             data.results.map((tech) => (
                                                 <TableRow
                                                     key={tech.id}
-                                                    className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors border-b border-border cursor-pointer"
+                                                    className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 transition-colors border-b border-border cursor-pointer"
                                                     onDoubleClick={() => router.push(`/technicians/${tech.id}`)}
                                                 >
                                                     <TableCell className="px-3 py-1.5">

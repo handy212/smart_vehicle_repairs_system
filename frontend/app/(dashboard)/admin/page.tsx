@@ -50,29 +50,29 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Users</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Users</span>
             <span className="text-lg font-bold text-foreground">{totalUsers}</span>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
             <span className="text-lg font-bold text-success">{activeUsers}</span>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inactive</span>
             <span className="text-lg font-bold text-red-600 dark:text-red-400">{inactiveUsers}</span>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Staff</span>
-            <span className="text-lg font-bold text-primary dark:text-primary">{staffCount}</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Staff</span>
+            <span className="text-lg font-bold text-primary">{staffCount}</span>
           </CardContent>
         </Card>
       </div>
@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
               {Object.entries(roleCounts).slice(0, 6).map(([role, count]) => (
                 <div key={role} className="flex justify-between items-center p-3 bg-muted rounded-lg border border-border">
                   <div className="flex items-center gap-2">
-                    <Shield className="w-3.5 h-3.5 text-gray-400" />
+                    <Shield className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium capitalize text-card-foreground">{role.replace("_", " ")}</span>
                   </div>
                   <Badge variant="secondary" className="font-bold">{count}</Badge>
@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
             {dashboardStats?.recent_logs && dashboardStats.recent_logs.length > 0 ? (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {dashboardStats.recent_logs.slice(0, 5).map((log) => (
-                  <div key={log.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                  <div key={log.id} className="p-4 hover:bg-muted dark:hover:bg-gray-900 transition-colors">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center space-x-2">
                         <span className={cn("w-2 h-2 rounded-full",
@@ -177,7 +177,7 @@ export default function AdminDashboardPage() {
                         )}></span>
                         <span className="text-xs font-bold text-foreground">{log.user_name || "System"}</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-mono">
+                      <span className="text-[10px] text-muted-foreground font-mono">
                         {format(new Date(log.timestamp), "HH:mm")}
                       </span>
                     </div>
@@ -193,7 +193,7 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm p-8 text-center italic">No recent activity</p>
+              <p className="text-muted-foreground text-sm p-8 text-center italic">No recent activity</p>
             )}
           </CardContent>
         </Card>
@@ -206,13 +206,13 @@ export default function AdminDashboardPage() {
             {dashboardStats?.recent_backups && dashboardStats.recent_backups.length > 0 ? (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {dashboardStats.recent_backups.map((backup) => (
-                  <div key={backup.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                  <div key={backup.id} className="p-4 flex items-center justify-between hover:bg-muted dark:hover:bg-gray-900 transition-colors">
                     <div>
                       <div className="flex items-center space-x-2">
-                        <Database className="w-3.5 h-3.5 text-gray-400" />
+                        <Database className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="text-sm font-semibold capitalize text-foreground">{backup.backup_type} Backup</span>
                       </div>
-                      <span className="text-[10px] text-gray-500 pl-5 block mt-0.5">
+                      <span className="text-[10px] text-muted-foreground pl-5 block mt-0.5">
                         {format(new Date(backup.started_at), "MMM dd, yyyy • HH:mm")}
                       </span>
                     </div>
@@ -226,7 +226,7 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm p-8 text-center italic">No recent backups found</p>
+              <p className="text-muted-foreground text-sm p-8 text-center italic">No recent backups found</p>
             )}
           </CardContent>
         </Card>

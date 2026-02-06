@@ -60,14 +60,14 @@ const CustomerRow = memo(function CustomerRow({
   onDelete,
 }: CustomerRowProps) {
   return (
-    <TableRow key={customer.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/customers/${customer.id}`)}>
+    <TableRow key={customer.id} className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/customers/${customer.id}`)}>
       {visibleColumns.has("checkbox") && (
         <TableCell className="px-4 py-2 whitespace-nowrap">
           <input
             type="checkbox"
             checked={bulkSelection.isSelected(customer.id)}
             onChange={() => bulkSelection.toggleSelection(customer.id)}
-            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+            className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
           />
         </TableCell>
       )}
@@ -158,7 +158,7 @@ const CustomerRow = memo(function CustomerRow({
             className={cn(
               "text-[10px] px-2 py-0.5 font-medium border shadow-none",
               customer.status === "active" && "border-green-200 text-green-700 bg-success/10 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
-              customer.status === "inactive" && "border-gray-200 text-gray-700 bg-gray-50/50 border-border text-foreground dark:bg-gray-800",
+              customer.status === "inactive" && "border-border text-foreground bg-muted/50 border-border text-foreground dark:bg-gray-800",
               customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
             )}
           >
@@ -527,31 +527,31 @@ export default function CustomersPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
               <span className="text-lg font-bold text-foreground">{stats?.total_customers || 0}</span>
             </CardContent>
           </Card>
           <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
               <span className="text-lg font-bold text-success">{stats?.active_customers || 0}</span>
             </CardContent>
           </Card>
           <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inactive</span>
               <span className="text-lg font-bold text-muted-foreground">{stats?.inactive_customers || 0}</span>
             </CardContent>
           </Card>
           <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Contact</span>
-              <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_contacts || 0}</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Contact</span>
+              <span className="text-lg font-bold text-primary">{stats?.active_contacts || 0}</span>
             </CardContent>
           </Card>
           <Card className="shadow-sm border bg-card">
             <CardContent className="p-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive Contact</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inactive Contact</span>
               <span className="text-lg font-bold text-muted-foreground">{stats?.inactive_contacts || 0}</span>
             </CardContent>
           </Card>
@@ -563,7 +563,7 @@ export default function CustomersPage() {
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-64">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               type="text"
               placeholder="Search..."
@@ -624,7 +624,7 @@ export default function CustomersPage() {
                 className="h-9 w-24 text-sm bg-muted border-none"
                 min="1"
               />
-              <span className="text-xs text-gray-500">days</span>
+              <span className="text-xs text-muted-foreground">days</span>
             </div>
           )}
 
@@ -665,7 +665,7 @@ export default function CustomersPage() {
                 setShowCustomDaysInput(false);
                 setPage(1);
               }}
-              className="h-9 w-9 p-0 text-gray-500 hover:text-red-600"
+              className="h-9 w-9 p-0 text-muted-foreground hover:text-red-600"
               title="Clear all filters"
             >
               <X className="w-4 h-4" />
@@ -759,7 +759,7 @@ export default function CustomersPage() {
           ) : data?.results && data.results.length > 0 ? (
             <div className="rounded-md">
               <Table>
-                <TableHeader className="bg-gray-50/50 hover:bg-muted/50">
+                <TableHeader className="bg-muted/50 hover:bg-muted/50">
                   <TableRow>
                     {visibleColumns.has("checkbox") && (
                       <TableHead className="w-[50px] px-4 h-10">
@@ -770,7 +770,7 @@ export default function CustomersPage() {
                             if (input) input.indeterminate = bulkSelection.isIndeterminate;
                           }}
                           onChange={bulkSelection.toggleSelectAll}
-                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                         />
                       </TableHead>
                     )}

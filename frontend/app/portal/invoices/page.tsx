@@ -81,7 +81,7 @@ export default function MyInvoicesPage() {
         </Card>
         <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-primary/10 dark:bg-orange-900/10">
           <CardContent className="p-4 flex flex-col justify-center h-full">
-            <p className="text-xs font-medium text-primary dark:text-primary uppercase tracking-wider">Total Invoices</p>
+            <p className="text-xs font-medium text-primary uppercase tracking-wider">Total Invoices</p>
             <div className="text-2xl font-bold text-foreground mt-1">
               {invoices.length}
             </div>
@@ -140,10 +140,10 @@ export default function MyInvoicesPage() {
                   header: "Work Order",
                   className: "hidden md:table-cell",
                   cell: (inv) => inv.work_order ? (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       #{typeof inv.work_order === "object" ? inv.work_order.work_order_number : inv.work_order}
                     </span>
-                  ) : <span className="text-gray-400">-</span>
+                  ) : <span className="text-muted-foreground">-</span>
                 },
                 {
                   header: "Action",

@@ -256,7 +256,7 @@ export default function EmailTemplatesPage() {
         <CardContent className="p-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
               <Input
                 type="text"
                 placeholder="Search templates..."
@@ -335,10 +335,10 @@ export default function EmailTemplatesPage() {
                     {template.name || "Unnamed Template"}
                   </CardTitle>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-gray-200 bg-gray-50 text-gray-600">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-border bg-muted text-muted-foreground">
                       {template.template_type.replace(/_/g, " ")}
                     </Badge>
-                    {template.channel === 'email' && <Mail className="w-3 h-3 text-gray-400" />}
+                    {template.channel === 'email' && <Mail className="w-3 h-3 text-muted-foreground" />}
                   </div>
                 </div>
                 <Switch
@@ -352,20 +352,20 @@ export default function EmailTemplatesPage() {
             <CardContent className="p-3 pt-2">
               <div className="space-y-2">
                 <div>
-                  <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Subject</div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Subject</div>
                   <p className="text-xs text-card-foreground truncate font-medium">
-                    {template.subject || <span className="text-gray-400 italic">No subject</span>}
+                    {template.subject || <span className="text-muted-foreground italic">No subject</span>}
                   </p>
                 </div>
                 <div>
-                  <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Preview</div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Preview</div>
                   <p className="text-[10px] text-muted-foreground line-clamp-2 min-h-[2.5em]">
-                    {template.body || <span className="text-gray-400 italic">No content</span>}
+                    {template.body || <span className="text-muted-foreground italic">No content</span>}
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 mt-1 border-t border-border">
-                  <span className="text-[10px] text-gray-400">
+                  <span className="text-[10px] text-muted-foreground">
                     {format(new Date(template.updated_at), "MMM d, yyyy")}
                   </span>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -406,10 +406,10 @@ export default function EmailTemplatesPage() {
       {filteredTemplates.length === 0 && (
         <div className="text-center py-12 px-4">
           <div className="w-12 h-12 bg-border rounded-full flex items-center justify-center mx-auto mb-3">
-            <Mail className="w-6 h-6 text-gray-400" />
+            <Mail className="w-6 h-6 text-muted-foreground" />
           </div>
           <h3 className="text-sm font-semibold text-foreground">No templates found</h3>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {search || typeFilter ? "Try adjusting your filters" : "Create a new template to get started"}
           </p>
         </div>
@@ -431,7 +431,7 @@ export default function EmailTemplatesPage() {
                   <DialogTitle className="text-lg font-bold text-foreground">
                     {creatingTemplate ? "Create Template" : "Edit Template"}
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-gray-500">
+                  <DialogDescription className="text-xs text-muted-foreground">
                     {creatingTemplate ? "New email notification template" : editingTemplate?.name}
                   </DialogDescription>
                 </div>
@@ -534,16 +534,16 @@ export default function EmailTemplatesPage() {
                       />
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-500 text-right">
+                  <p className="text-[10px] text-muted-foreground text-right">
                     {activeTab === "plain" ? "Required fallback version" : "Optional rich version"}
                   </p>
                 </div>
               </div>
 
               {/* Sidebar */}
-              <div className="w-full lg:w-[280px] border-l border-border bg-gray-50/50 flex flex-col">
+              <div className="w-full lg:w-[280px] border-l border-border bg-muted/50 flex flex-col">
                 <div className="p-4 border-b border-border">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <Sparkles className="w-3 h-3" /> Variables
                   </h4>
                 </div>
@@ -556,7 +556,7 @@ export default function EmailTemplatesPage() {
                           navigator.clipboard.writeText(variable);
                           toast({ title: "Copied!", description: variable, duration: 1000 });
                         }}
-                        className="w-full text-left px-3 py-2 text-[10px] font-mono text-gray-600 hover:bg-primary/10 hover:text-primary rounded transition-colors flex items-center justify-between group border border-transparent hover:border-orange-100"
+                        className="w-full text-left px-3 py-2 text-[10px] font-mono text-muted-foreground hover:bg-primary/10 hover:text-primary rounded transition-colors flex items-center justify-between group border border-transparent hover:border-orange-100"
                       >
                         {variable}
                         <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100" />
@@ -572,7 +572,7 @@ export default function EmailTemplatesPage() {
               </div>
             </div>
 
-            <DialogFooter className="px-6 py-3 border-t border-border flex-shrink-0 bg-gray-50/50">
+            <DialogFooter className="px-6 py-3 border-t border-border flex-shrink-0 bg-muted/50">
               <div className="flex items-center justify-between w-full">
                 <Button
                   variant="ghost"
@@ -613,9 +613,9 @@ export default function EmailTemplatesPage() {
               </div>
             </DialogHeader>
             <div className="flex-1 overflow-hidden flex flex-col">
-              <div className="px-6 py-3 border-b border-gray-100 bg-gray-50/50">
-                <p className="text-sm font-medium text-gray-900">
-                  <span className="text-gray-500 font-normal mr-2">Subject:</span>
+              <div className="px-6 py-3 border-b border-border bg-muted/50">
+                <p className="text-sm font-medium text-foreground">
+                  <span className="text-muted-foreground font-normal mr-2">Subject:</span>
                   {previewTemplate.subject}
                 </p>
               </div>
@@ -626,13 +626,13 @@ export default function EmailTemplatesPage() {
                   onValueChange={setPreviewTab}
                   className="w-full"
                 >
-                  <TabsList className="w-full justify-start h-9 p-1 bg-gray-100 border-b border-gray-200 rounded-none mb-4">
+                  <TabsList className="w-full justify-start h-9 p-1 bg-gray-100 border-b border-border rounded-none mb-4">
                     <TabsTrigger value="plain" className="text-xs h-7">Plain Text</TabsTrigger>
                     <TabsTrigger value="html" className="text-xs h-7" disabled={!previewTemplate.html_body}>HTML</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="plain" className="mt-0">
-                    <div className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">
+                    <div className="font-mono text-sm whitespace-pre-wrap text-foreground leading-relaxed">
                       {previewTemplate.body}
                     </div>
                   </TabsContent>
@@ -642,7 +642,7 @@ export default function EmailTemplatesPage() {
                 </Tabs>
               </div>
             </div>
-            <DialogFooter className="px-6 py-3 border-t border-gray-100">
+            <DialogFooter className="px-6 py-3 border-t border-border">
               <Button variant="secondary" size="sm" onClick={() => setPreviewTemplate(null)} className="h-8 text-xs">Close</Button>
             </DialogFooter>
           </DialogContent>

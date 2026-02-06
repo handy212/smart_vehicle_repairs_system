@@ -256,14 +256,14 @@ export default function InvoiceDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-800/50 border-border text-foreground">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground dark:bg-gray-800/50 border-border text-foreground">
                   Invoice #{invoice.invoice_number}
                 </span>
                 <Badge className={cn("capitalize px-3 py-1", getStatusVariant(localStatus || invoice.status))}>
                   {localStatus || invoice.status}
                 </Badge>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-muted-foreground mt-2">
                 {invoice.customer_name || "Customer"}
               </p>
             </div>
@@ -384,35 +384,35 @@ export default function InvoiceDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Bill To */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Bill To</h3>
-                    <Link href={`/customers/${invoice.customer}`} className="text-base font-semibold text-gray-900 hover:text-primary block">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Bill To</h3>
+                    <Link href={`/customers/${invoice.customer}`} className="text-base font-semibold text-foreground hover:text-primary block">
                       {invoice.customer_name}
                     </Link>
-                    {invoice.customer_email && <p className="text-sm text-gray-600">{invoice.customer_email}</p>}
-                    {invoice.customer_phone && <p className="text-sm text-gray-600">{invoice.customer_phone}</p>}
-                    {invoice.customer_address && <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{invoice.customer_address}</p>}
+                    {invoice.customer_email && <p className="text-sm text-muted-foreground">{invoice.customer_email}</p>}
+                    {invoice.customer_phone && <p className="text-sm text-muted-foreground">{invoice.customer_phone}</p>}
+                    {invoice.customer_address && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{invoice.customer_address}</p>}
                   </div>
 
                   {/* Invoice Details */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Details</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Details</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-gray-500 w-24">Reference:</span>
-                        <span className="text-sm font-medium text-gray-900">{invoice.reference_number || "N/A"}</span>
+                        <span className="text-sm text-muted-foreground w-24">Reference:</span>
+                        <span className="text-sm font-medium text-foreground">{invoice.reference_number || "N/A"}</span>
                       </div>
                       <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-gray-500 w-24">Issued:</span>
-                        <span className="text-sm font-medium text-gray-900">{format(new Date(invoice.invoice_date), "MMM dd, yyyy")}</span>
+                        <span className="text-sm text-muted-foreground w-24">Issued:</span>
+                        <span className="text-sm font-medium text-foreground">{format(new Date(invoice.invoice_date), "MMM dd, yyyy")}</span>
                       </div>
                       <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-gray-500 w-24">Due:</span>
+                        <span className="text-sm text-muted-foreground w-24">Due:</span>
                         <span className="text-sm font-medium text-red-600">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</span>
                       </div>
                       {invoice.sales_agent_name && (
                         <div className="flex justify-between md:justify-start md:gap-8">
-                          <span className="text-sm text-gray-500 w-24">Sales Agent:</span>
-                          <span className="text-sm font-medium text-gray-900">{invoice.sales_agent_name}</span>
+                          <span className="text-sm text-muted-foreground w-24">Sales Agent:</span>
+                          <span className="text-sm font-medium text-foreground">{invoice.sales_agent_name}</span>
                         </div>
                       )}
                     </div>
@@ -420,11 +420,11 @@ export default function InvoiceDetailPage() {
 
                   {/* Work Order / Status */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Related</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Related</h3>
                     <div className="space-y-2">
                       {invoice.work_order_number && (
                         <div className="flex flex-col">
-                          <span className="text-sm text-gray-500">Work Order</span>
+                          <span className="text-sm text-muted-foreground">Work Order</span>
                           <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`} className="text-sm font-medium text-primary hover:underline">
                             #{invoice.work_order_number}
                           </Link>
@@ -433,7 +433,7 @@ export default function InvoiceDetailPage() {
 
                       {invoice.status && (
                         <div className="flex flex-col mt-2">
-                          <span className="text-sm text-gray-500 mb-1">Status</span>
+                          <span className="text-sm text-muted-foreground mb-1">Status</span>
                           <Badge className={cn("w-fit capitalize", getStatusVariant(localStatus || invoice.status))}>
                             {localStatus || invoice.status}
                           </Badge>
@@ -447,14 +447,14 @@ export default function InvoiceDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t">
                     {invoice.notes && (
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</h4>
-                        <p className="text-sm text-gray-600 italic whitespace-pre-wrap">{invoice.notes}</p>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</h4>
+                        <p className="text-sm text-muted-foreground italic whitespace-pre-wrap">{invoice.notes}</p>
                       </div>
                     )}
                     {invoice.terms && (
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Conditions</h4>
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap text-xs">{invoice.terms}</p>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Terms & Conditions</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap text-xs">{invoice.terms}</p>
                       </div>
                     )}
                   </div>
@@ -484,14 +484,14 @@ export default function InvoiceDetailPage() {
                         invoice.line_items.map((item: any) => (
                           <TableRow key={item.id}>
                             <TableCell className="align-top py-3">
-                              <div className="font-medium text-gray-900">{item.description}</div>
+                              <div className="font-medium text-foreground">{item.description}</div>
                               {(item.part_number || item.item_type === 'part') && (
                                 <div className="flex items-center gap-2 mt-1">
                                   {item.part_number && <Badge variant="outline" className="text-[10px] h-4 px-1">{item.part_number}</Badge>}
-                                  <span className="text-xs text-gray-500 capitalize">{item.item_type}</span>
+                                  <span className="text-xs text-muted-foreground capitalize">{item.item_type}</span>
                                 </div>
                               )}
-                              {item.notes && <p className="text-xs text-gray-500 mt-1">{item.notes}</p>}
+                              {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
                             </TableCell>
                             <TableCell className="text-right align-top py-3">{item.quantity}</TableCell>
                             <TableCell className="text-right align-top py-3">
@@ -507,7 +507,7 @@ export default function InvoiceDetailPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             No line items found.
                           </TableCell>
                         </TableRow>
@@ -522,8 +522,8 @@ export default function InvoiceDetailPage() {
             <div className="flex justify-end">
               <div className="w-full md:w-1/3 min-w-[300px] space-y-2 px-4 md:px-0">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-gray-600">Subtotal</span>
-                  <span className="text-gray-900 font-medium">
+                  <span className="font-medium text-muted-foreground">Subtotal</span>
+                  <span className="text-foreground font-medium">
                     {formatCurrency(parseFloat(invoice.subtotal || "0"))}
                   </span>
                 </div>
@@ -545,25 +545,25 @@ export default function InvoiceDetailPage() {
                 {hasDetailedTax ? (
                   <div className="space-y-1 pt-1 opacity-90">
                     {taxBreakdown.nhilAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>NHIL</span>
                         <span>{formatCurrency(taxBreakdown.nhilAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.getfundAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>GETFund</span>
                         <span>{formatCurrency(taxBreakdown.getfundAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.hrlAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>COVID-19 HRL</span>
                         <span>{formatCurrency(taxBreakdown.hrlAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.vatAmount > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
+                      <div className="flex justify-between text-sm text-muted-foreground">
                         <span>VAT</span>
                         <span>{formatCurrency(taxBreakdown.vatAmount)}</span>
                       </div>
@@ -571,27 +571,27 @@ export default function InvoiceDetailPage() {
                   </div>
                 ) : (
                   parseAmount(invoice.tax_amount) > 0 && (
-                    <div className="flex justify-between text-sm text-gray-500">
+                    <div className="flex justify-between text-sm text-muted-foreground">
                       <span>Tax</span>
                       <span>{formatCurrency(parseAmount(invoice.tax_amount))}</span>
                     </div>
                   )
                 )}
 
-                <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-3 mt-2">
+                <div className="flex justify-between text-lg font-bold border-t border-border pt-3 mt-2">
                   <span>Total</span>
-                  <span className="text-gray-900">{formatCurrency(parseFloat(invoice.total || "0"))}</span>
+                  <span className="text-foreground">{formatCurrency(parseFloat(invoice.total || "0"))}</span>
                 </div>
 
                 {/* Paid & Balance */}
-                <div className="space-y-1 pt-2 border-t border-dashed border-gray-200">
+                <div className="space-y-1 pt-2 border-t border-dashed border-border">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Amount Paid</span>
+                    <span className="text-muted-foreground">Amount Paid</span>
                     <span className="text-success font-medium">{formatCurrency(parseFloat(invoice.amount_paid || "0"))}</span>
                   </div>
                   <div className="flex justify-between text-base font-semibold">
-                    <span className="text-gray-700">Balance Due</span>
-                    <span className={cn(parseFloat(invoice.balance_due || "0") > 0 ? "text-red-600" : "text-gray-900")}>
+                    <span className="text-foreground">Balance Due</span>
+                    <span className={cn(parseFloat(invoice.balance_due || "0") > 0 ? "text-red-600" : "text-foreground")}>
                       {formatCurrency(parseFloat(invoice.balance_due || "0"))}
                     </span>
                   </div>
@@ -603,10 +603,10 @@ export default function InvoiceDetailPage() {
           </TabsContent>
 
           <TabsContent value="payments" className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
+            <div className="flex justify-between items-center bg-card p-4 rounded-lg border shadow-sm">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Payment History</h3>
-                <p className="text-sm text-gray-500">Manage payments and allocations</p>
+                <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
+                <p className="text-sm text-muted-foreground">Manage payments and allocations</p>
               </div>
               {(localStatus || invoice.status) !== 'paid' && parseFloat(String(invoice.balance_due || 0)) > 0 && invoice.status !== 'void' && (
                 <Button onClick={() => setShowPaymentDialog(true)}>
@@ -621,7 +621,7 @@ export default function InvoiceDetailPage() {
                 {payments && payments.length > 0 ? (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {payments.map((payment: any) => (
-                      <div key={payment.id} className="p-6 hover:bg-gray-50/50 transition-colors">
+                      <div key={payment.id} className="p-6 hover:bg-muted/50 transition-colors">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-4">
                             <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-success">
@@ -638,8 +638,8 @@ export default function InvoiceDetailPage() {
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
-                                <span className="font-medium text-gray-900">{format(new Date(payment.payment_date), "MMM dd, yyyy")}</span>
+                              <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                                <span className="font-medium text-foreground">{format(new Date(payment.payment_date), "MMM dd, yyyy")}</span>
                                 <span>•</span>
                                 <span className="capitalize">{payment.payment_method?.replace(/_/g, " ")}</span>
                               </div>
@@ -652,11 +652,11 @@ export default function InvoiceDetailPage() {
                             </Badge>
 
                             {payment.status === 'completed' && (
-                              <div className="flex items-center border rounded-md overflow-hidden bg-white shadow-sm">
+                              <div className="flex items-center border rounded-md overflow-hidden bg-card shadow-sm">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-9 px-3 text-gray-600 hover:text-primary hover:bg-primary/10 border-r rounded-none"
+                                  className="h-9 px-3 text-muted-foreground hover:text-primary hover:bg-primary/10 border-r rounded-none"
                                   onClick={() => downloadPDF({
                                     documentType: 'receipt',
                                     documentId: payment.id,
@@ -697,11 +697,11 @@ export default function InvoiceDetailPage() {
                   </div>
                 ) : (
                   <div className="text-center py-16 px-4">
-                    <div className="bg-gray-100 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">
+                    <div className="bg-gray-100 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground">
                       <CreditCard className="w-10 h-10" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No payments recorded</h3>
-                    <p className="text-gray-500 mb-8 max-w-sm mx-auto">This invoice has not received any payments yet. Record a payment to settle the balance.</p>
+                    <h3 className="text-xl font-semibold text-foreground mb-2">No payments recorded</h3>
+                    <p className="text-muted-foreground mb-8 max-w-sm mx-auto">This invoice has not received any payments yet. Record a payment to settle the balance.</p>
                     <Button size="lg" onClick={() => setShowPaymentDialog(true)}>
                       <DollarSign className="w-5 h-5 mr-2" /> Record First Payment
                     </Button>
@@ -712,16 +712,16 @@ export default function InvoiceDetailPage() {
           </TabsContent>
 
           <TabsContent value="workorder" className="space-y-6">
-            <Card className="bg-gray-50/50 border-dashed min-h-[400px]">
+            <Card className="bg-muted/50 border-dashed min-h-[400px]">
               <CardContent className="flex flex-col items-center justify-center h-full py-16 text-center">
-                <div className="bg-white p-6 rounded-full shadow-sm mb-6">
+                <div className="bg-card p-6 rounded-full shadow-sm mb-6">
                   <Wrench className="w-12 h-12 text-orange-500" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Work Order Details</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Work Order Details</h3>
                 {invoice.work_order ? (
                   <div className="space-y-4">
-                    <p className="text-gray-500 max-w-md mx-auto">
-                      This invoice is linked to Work Order <span className="font-medium text-gray-900">#{invoice.work_order_number}</span>.
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      This invoice is linked to Work Order <span className="font-medium text-foreground">#{invoice.work_order_number}</span>.
                     </p>
                     <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`}>
                       <Button variant="outline" className="mt-2">
@@ -731,7 +731,7 @@ export default function InvoiceDetailPage() {
                     </Link>
                   </div>
                 ) : (
-                  <p className="text-gray-500 max-w-md mx-auto">
+                  <p className="text-muted-foreground max-w-md mx-auto">
                     This invoice is not directly linked to a specific work order.
                   </p>
                 )}

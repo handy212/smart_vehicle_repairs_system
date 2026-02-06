@@ -172,7 +172,7 @@ export default function UsersManagementPage() {
       <Card className="mx-4 border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex flex-col sm:flex-row gap-3 items-center">
-            <div className="flex items-center gap-2 text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider min-w-[60px]">
               <Filter className="w-3.5 h-3.5" />
               <span>Filters</span>
             </div>
@@ -240,7 +240,7 @@ export default function UsersManagementPage() {
 
       {/* Users Table */}
       <Card className="mx-4 border-t shadow-sm dark:bg-gray-800 border-border">
-        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+        <CardHeader className="py-3 px-4 border-b bg-muted/30 dark:bg-gray-800/30">
           <CardTitle className="text-sm font-semibold text-card-foreground">
             Users Directory <span className="text-muted-foreground font-normal ml-1">({usersData?.count || 0})</span>
           </CardTitle>
@@ -249,7 +249,7 @@ export default function UsersManagementPage() {
           {users.length > 0 ? (
             <div className="rounded-md">
               <Table>
-                <TableHeader className="bg-gray-50/50 hover:bg-muted/50">
+                <TableHeader className="bg-muted/50 hover:bg-muted/50">
                   <TableRow>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">User</TableHead>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Role</TableHead>
@@ -261,10 +261,10 @@ export default function UsersManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/admin/users/${user.id}`)}>
+                    <TableRow key={user.id} className="group hover:bg-muted/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/admin/users/${user.id}`)}>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs flex-shrink-0 border border-slate-200 bg-muted dark:text-muted-foreground border-border">
+                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground font-bold text-xs flex-shrink-0 border border-border bg-muted text-muted-foreground border-border">
                             {user.first_name?.[0] || user.email[0].toUpperCase()}
                           </div>
                           <div className="ml-3">
@@ -289,7 +289,7 @@ export default function UsersManagementPage() {
                           ) : user.branch_name ? (
                             <span>{user.branch_name}</span>
                           ) : (
-                            <span className="text-gray-300 dark:text-gray-600">-</span>
+                            <span className="text-gray-300 text-muted-foreground">-</span>
                           )}
                         </div>
                       </TableCell>
@@ -365,14 +365,14 @@ export default function UsersManagementPage() {
           ) : (
             <div className="text-center py-12">
               <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">No users found matching your filters.</p>
+              <p className="text-muted-foreground text-sm">No users found matching your filters.</p>
             </div>
           )}
 
           {/* Pagination */}
           {usersData && (usersData.next || usersData.previous || usersData.count > 0) && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-              <div className="text-xs text-gray-500">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/30">
+              <div className="text-xs text-muted-foreground">
                 {((page - 1) * 20) + 1}-{Math.min(page * 20, usersData.count)} of {usersData.count}
               </div>
               <div className="flex items-center space-x-2">

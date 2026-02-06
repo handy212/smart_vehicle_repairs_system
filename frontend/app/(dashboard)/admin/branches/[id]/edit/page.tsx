@@ -336,7 +336,7 @@ export default function BranchEditPage() {
                   <input
                     type="checkbox"
                     {...register("is_active")}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
                   <span className="text-sm text-card-foreground">Active</span>
                 </label>
@@ -344,7 +344,7 @@ export default function BranchEditPage() {
                   <input
                     type="checkbox"
                     {...register("is_headquarters")}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
                   <span className="text-sm text-card-foreground">Headquarters</span>
                 </label>

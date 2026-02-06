@@ -61,7 +61,7 @@ export default function InspectionPrintPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-8 print:p-4">
+    <div className="min-h-screen bg-card p-8 print:p-4">
       <style jsx global>{`
         @media print {
           @page {
@@ -79,17 +79,17 @@ export default function InspectionPrintPage() {
       `}</style>
 
       {/* Header */}
-      <div className="mb-8 border-b-2 border-gray-300 pb-6">
+      <div className="mb-8 border-b-2 border-border pb-6">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">VEHICLE INSPECTION REPORT</h1>
-            <p className="text-gray-600">Inspection #{inspectionData.inspection_number || inspectionData.id}</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">VEHICLE INSPECTION REPORT</h1>
+            <p className="text-muted-foreground">Inspection #{inspectionData.inspection_number || inspectionData.id}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Date: {format(new Date(inspectionData.inspection_date || inspectionData.created_at), "MMMM d, yyyy")}
             </p>
-            <p className="text-sm font-semibold text-gray-900 mt-2">
+            <p className="text-sm font-semibold text-foreground mt-2">
               Status: <span className="uppercase">{getOverallStatus()}</span>
             </p>
           </div>
@@ -99,9 +99,9 @@ export default function InspectionPrintPage() {
       {/* Vehicle & Customer Info */}
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
-          <h2 className="font-semibold text-gray-900 mb-2">Vehicle Info:</h2>
+          <h2 className="font-semibold text-foreground mb-2">Vehicle Info:</h2>
           {inspectionData.vehicle && (
-            <div className="text-gray-700">
+            <div className="text-foreground">
               <p className="font-medium">
                 {typeof inspectionData.vehicle === "object"
                   ? `${inspectionData.vehicle.year || ""} ${inspectionData.vehicle.make || ""} ${inspectionData.vehicle.model || ""}`.trim()
@@ -117,9 +117,9 @@ export default function InspectionPrintPage() {
           )}
         </div>
         <div>
-          <h2 className="font-semibold text-gray-900 mb-2">Customer:</h2>
+          <h2 className="font-semibold text-foreground mb-2">Customer:</h2>
           {inspectionData.customer && (
-            <div className="text-gray-700">
+            <div className="text-foreground">
               <p className="font-medium">
                 {typeof inspectionData.customer === "object"
                   ? `${(inspectionData.customer as any).first_name || ""} ${(inspectionData.customer as any).last_name || ""}`.trim()
@@ -129,8 +129,8 @@ export default function InspectionPrintPage() {
           )}
           {inspectionData.inspector && (
             <>
-              <h2 className="font-semibold text-gray-900 mb-2 mt-4">Inspector:</h2>
-              <p className="text-gray-700">
+              <h2 className="font-semibold text-foreground mb-2 mt-4">Inspector:</h2>
+              <p className="text-foreground">
                 {typeof inspectionData.inspector === "object"
                   ? `${(inspectionData.inspector as any).first_name || ""} ${(inspectionData.inspector as any).last_name || ""}`.trim()
                   : inspectionData.inspector}
@@ -142,8 +142,8 @@ export default function InspectionPrintPage() {
 
       {/* Summary */}
       {(criticalIssues.length > 0 || failedItems.length > 0 || advisoryItems.length > 0) && (
-        <div className="mb-8 p-4 bg-gray-50 border border-gray-300 rounded">
-          <h3 className="font-semibold text-gray-900 mb-3">Summary</h3>
+        <div className="mb-8 p-4 bg-muted border border-border rounded">
+          <h3 className="font-semibold text-foreground mb-3">Summary</h3>
           <div className="grid grid-cols-3 gap-4 text-sm">
             {failedItems.length > 0 && (
               <div>
@@ -172,21 +172,21 @@ export default function InspectionPrintPage() {
       {/* Inspection Results */}
       {results.length > 0 && (
         <div className="mb-8">
-          <h3 className="font-semibold text-gray-900 mb-4">Inspection Results</h3>
+          <h3 className="font-semibold text-foreground mb-4">Inspection Results</h3>
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-gray-100 border-b-2 border-gray-300">
-                <th className="text-left p-3 font-semibold text-gray-900">Component</th>
-                <th className="text-left p-3 font-semibold text-gray-900">Condition</th>
-                <th className="text-left p-3 font-semibold text-gray-900">Result</th>
-                <th className="text-left p-3 font-semibold text-gray-900">Notes</th>
+              <tr className="bg-gray-100 border-b-2 border-border">
+                <th className="text-left p-3 font-semibold text-foreground">Component</th>
+                <th className="text-left p-3 font-semibold text-foreground">Condition</th>
+                <th className="text-left p-3 font-semibold text-foreground">Result</th>
+                <th className="text-left p-3 font-semibold text-foreground">Notes</th>
               </tr>
             </thead>
             <tbody>
               {results.map((item: any, index: number) => (
-                <tr key={index} className="border-b border-gray-200">
-                  <td className="p-3 text-gray-700 font-medium">{item.component_name || item.component || "N/A"}</td>
-                  <td className="p-3 text-gray-700 capitalize">{item.condition || "N/A"}</td>
+                <tr key={index} className="border-b border-border">
+                  <td className="p-3 text-foreground font-medium">{item.component_name || item.component || "N/A"}</td>
+                  <td className="p-3 text-foreground capitalize">{item.condition || "N/A"}</td>
                   <td className="p-3">
                     <div className="flex items-center space-x-2">
                       {getResultIcon(item.result)}
@@ -201,7 +201,7 @@ export default function InspectionPrintPage() {
                       </span>
                     </div>
                   </td>
-                  <td className="p-3 text-gray-700 text-sm">{item.notes || item.comments || "-"}</td>
+                  <td className="p-3 text-foreground text-sm">{item.notes || item.comments || "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -226,21 +226,21 @@ export default function InspectionPrintPage() {
       {/* Recommendations */}
       {inspectionData.recommendations && (
         <div className="mb-8">
-          <h3 className="font-semibold text-gray-900 mb-3">Recommendations</h3>
-          <p className="text-gray-700 whitespace-pre-wrap">{inspectionData.recommendations}</p>
+          <h3 className="font-semibold text-foreground mb-3">Recommendations</h3>
+          <p className="text-foreground whitespace-pre-wrap">{inspectionData.recommendations}</p>
         </div>
       )}
 
       {/* Notes */}
       {inspectionData.notes && (
         <div className="mb-8">
-          <h3 className="font-semibold text-gray-900 mb-3">Additional Notes</h3>
-          <p className="text-gray-700 whitespace-pre-wrap">{inspectionData.notes}</p>
+          <h3 className="font-semibold text-foreground mb-3">Additional Notes</h3>
+          <p className="text-foreground whitespace-pre-wrap">{inspectionData.notes}</p>
         </div>
       )}
 
       {/* Footer */}
-      <div className="mt-12 pt-6 border-t border-gray-300 text-center text-sm text-gray-600">
+      <div className="mt-12 pt-6 border-t border-border text-center text-sm text-muted-foreground">
         <p>This inspection report is for informational purposes only.</p>
         <p className="mt-2">
           Inspection performed on {format(new Date(inspectionData.inspection_date || inspectionData.created_at), "MMMM d, yyyy 'at' h:mm a")}

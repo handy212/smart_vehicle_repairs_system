@@ -78,7 +78,7 @@ export default function JobProfitabilityPage() {
                         <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</p>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Revenue</p>
                                     <p className="text-lg font-bold text-foreground mt-1">
                                         {formatCurrency(report.summary?.total_revenue || 0)}
                                     </p>
@@ -91,7 +91,7 @@ export default function JobProfitabilityPage() {
                         <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Costs</p>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Costs</p>
                                     <p className="text-lg font-bold text-foreground mt-1">
                                         {formatCurrency(report.summary?.total_costs || 0)}
                                     </p>
@@ -104,7 +104,7 @@ export default function JobProfitabilityPage() {
                         <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Net Profit</p>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Net Profit</p>
                                     <p className="text-lg font-bold text-success mt-1">
                                         {formatCurrency(report.summary?.net_profit || 0)}
                                     </p>
@@ -131,19 +131,19 @@ export default function JobProfitabilityPage() {
                             <Table>
                                 <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">WO #</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Customer</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Date</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Revenue</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Labor Cost</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Parts Cost</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Profit</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Margin</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">WO #</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Customer</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Date</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Revenue</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Labor Cost</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Parts Cost</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Profit</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Margin</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {report.jobs.map((job: any) => (
-                                        <TableRow key={job.work_order_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                        <TableRow key={job.work_order_id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
                                             <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                 {job.work_order_number}
                                             </TableCell>

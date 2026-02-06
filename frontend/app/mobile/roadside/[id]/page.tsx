@@ -90,7 +90,7 @@ export default function RoadsideDetailPage() {
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <div className="text-sm text-gray-500 font-mono">{request.request_number}</div>
+                    <div className="text-sm text-muted-foreground font-mono">{request.request_number}</div>
                     <h1 className="font-bold text-lg">{request.service_type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</h1>
                 </div>
                 <div className="ml-auto">
@@ -105,7 +105,7 @@ export default function RoadsideDetailPage() {
                 <Card>
                     <CardContent className="p-0">
                         <div className="h-32 bg-border flex items-center justify-center relative overflow-hidden">
-                            <MapIcon className="h-12 w-12 text-gray-400 opacity-50" />
+                            <MapIcon className="h-12 w-12 text-muted-foreground opacity-50" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-4">
                                 <span className="text-white font-medium text-sm truncate w-full">
                                     {request.breakdown_location}
@@ -124,7 +124,7 @@ export default function RoadsideDetailPage() {
                 {/* Customer & Vehicle */}
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm uppercase tracking-wider text-gray-500">Info</CardTitle>
+                        <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground">Info</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex items-start gap-3">
@@ -133,7 +133,7 @@ export default function RoadsideDetailPage() {
                             </div>
                             <div className="flex-1">
                                 <div className="font-medium">{request.customer_phone}</div>
-                                <div className="text-sm text-gray-500">{request.customer.first_name} {request.customer.last_name}</div>
+                                <div className="text-sm text-muted-foreground">{request.customer.first_name} {request.customer.last_name}</div>
                             </div>
                             <Button size="sm" variant="outline" onClick={() => window.open(`tel:${request.customer_phone}`)}>
                                 Call
@@ -146,7 +146,7 @@ export default function RoadsideDetailPage() {
                             </div>
                             <div>
                                 <div className="font-medium">{request.vehicle.year} {request.vehicle.make} {request.vehicle.model}</div>
-                                <div className="text-sm text-gray-500">{request.vehicle.license_plate}</div>
+                                <div className="text-sm text-muted-foreground">{request.vehicle.license_plate}</div>
                             </div>
                         </div>
                     </CardContent>
@@ -158,7 +158,7 @@ export default function RoadsideDetailPage() {
                         <CardContent className="p-4 space-y-3">
                             {request.description && (
                                 <div>
-                                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Problem Description</h4>
+                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">Problem Description</h4>
                                     <p className="text-sm">{request.description}</p>
                                 </div>
                             )}

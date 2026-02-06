@@ -102,8 +102,8 @@ export default function NewCategoryPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Category</h1>
-          <p className="text-sm text-gray-500 mt-1">Create a new part category</p>
+          <h1 className="text-3xl font-bold text-foreground">New Category</h1>
+          <p className="text-sm text-muted-foreground mt-1">Create a new part category</p>
         </div>
       </div>
 
@@ -122,21 +122,21 @@ export default function NewCategoryPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Name *</label>
                 <Input {...register("name")} placeholder="Category name" />
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Description</label>
                 <Textarea {...register("description")} placeholder="Category description" rows={3} />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Parent Category</label>
                 <select
                   {...register("parent", { valueAsNumber: true })}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
                 >
                   <option value="">None (Root Category)</option>
                   {rootCategories.map((cat) => (
@@ -151,9 +151,9 @@ export default function NewCategoryPage() {
                 <input
                   type="checkbox"
                   {...register("is_active")}
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                  className="rounded border-border text-primary focus:ring-primary"
                 />
-                <label className="ml-2 text-sm text-gray-700">Active</label>
+                <label className="ml-2 text-sm text-foreground">Active</label>
               </div>
             </CardContent>
           </Card>

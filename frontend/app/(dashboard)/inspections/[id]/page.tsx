@@ -32,7 +32,7 @@ const itemResultColors: Record<string, string> = {
   pass: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200",
   fail: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200",
   advisory: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200",
-  na: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200",
+  na: "bg-gray-100 text-foreground dark:bg-gray-800 text-muted-foreground hover:bg-gray-200",
 };
 
 export default function InspectionDetailPage() {
@@ -219,7 +219,7 @@ export default function InspectionDetailPage() {
           <CardContent className="p-4 flex flex-col justify-center">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Technician</p>
             <div className="flex items-center gap-2 text-sm font-medium">
-              <User className="w-4 h-4 text-gray-400" />
+              <User className="w-4 h-4 text-muted-foreground" />
               {inspection.performed_by_name || "Unassigned"}
             </div>
           </CardContent>
@@ -244,7 +244,7 @@ export default function InspectionDetailPage() {
                   <CardContent className="py-12 flex flex-col items-center justify-center text-center">
                     <FileText className="w-12 h-12 text-gray-300 mb-2" />
                     <h3 className="font-medium text-foreground">No results yet</h3>
-                    <p className="text-sm text-gray-500">Perform the inspection to see results here.</p>
+                    <p className="text-sm text-muted-foreground">Perform the inspection to see results here.</p>
                     {inspection.status === 'in_progress' && (
                       <Button className="mt-4" onClick={() => router.push(`/inspections/${inspectionId}/perform`)}>
                         {inspection.results && inspection.results.length > 0 ? "Resume Inspection" : "Start Inspection"}
@@ -264,7 +264,7 @@ export default function InspectionDetailPage() {
                     <CardContent className="p-0">
                       <div className="divide-y divide-gray-100 dark:divide-gray-800">
                         {results.map((result) => (
-                          <div key={result.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                          <div key={result.id} className="p-4 hover:bg-muted dark:hover:bg-gray-800/30 transition-colors">
                             <div className="flex items-start gap-4">
                               <div className={cn(
                                 "w-2 h-2 rounded-full mt-2 flex-shrink-0",
@@ -432,7 +432,7 @@ export default function InspectionDetailPage() {
               {inspection.work_order ? (
                 <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
                   <div className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full">
-                    <Wrench className="w-4 h-4 text-primary dark:text-primary" />
+                    <Wrench className="w-4 h-4 text-primary" />
                   </div>
                   <div>
                     <Link href={`/workorders/${typeof inspection.work_order === 'object' ? inspection.work_order.id : inspection.work_order}`} className="font-medium text-sm hover:underline">

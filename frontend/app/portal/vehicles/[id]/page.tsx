@@ -75,7 +75,7 @@ export default function VehicleDetailPage() {
   if (!vehicle) {
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground mb-4">Vehicle not found</p>
         <Button onClick={() => router.push("/portal/vehicles")}>Back to Vehicles</Button>
       </div>
@@ -302,7 +302,7 @@ export default function VehicleDetailPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No work orders found</p>
               </CardContent>
             </Card>
@@ -340,7 +340,7 @@ export default function VehicleDetailPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No appointments found</p>
               </CardContent>
             </Card>
@@ -387,7 +387,7 @@ export default function VehicleDetailPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No inspections found</p>
               </CardContent>
             </Card>

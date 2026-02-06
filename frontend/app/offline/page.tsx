@@ -16,11 +16,11 @@ export default function OfflinePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted dark:bg-gray-950 p-4">
       <div className="text-center max-w-md w-full">
         <div className="mb-6 flex justify-center">
           <div className="bg-border rounded-full p-6">
-            <WifiOff className="h-16 w-16 text-gray-400" />
+            <WifiOff className="h-16 w-16 text-muted-foreground" />
           </div>
         </div>
         <h1 className="text-2xl font-bold text-foreground mb-2">

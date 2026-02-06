@@ -327,7 +327,7 @@ export default function ReconciliationDetailPage() {
                 {/* Cards Summary */}
                 <Card className="border shadow-none bg-muted/50">
                     <CardHeader className="p-4 pb-1">
-                        <CardTitle className="text-xs font-medium text-gray-500 uppercase">Statement Opening</CardTitle>
+                        <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Statement Opening</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-1">
                         <div className="text-xl font-mono">{formatCurrency(statement?.opening_balance)}</div>
@@ -335,15 +335,15 @@ export default function ReconciliationDetailPage() {
                 </Card>
                 <Card className="border shadow-none bg-muted/50">
                     <CardHeader className="p-4 pb-1">
-                        <CardTitle className="text-xs font-medium text-gray-500 uppercase">Statement Closing</CardTitle>
+                        <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Statement Closing</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-1">
                         <div className="text-xl font-mono">{formatCurrency(statement?.closing_balance)}</div>
                     </CardContent>
                 </Card>
-                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-white")}>
+                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-card")}>
                     <CardHeader className="p-4 pb-1">
-                        <CardTitle className="text-xs font-medium text-gray-500 uppercase">Reconciled Balance</CardTitle>
+                        <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Reconciled Balance</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-1">
                         <div className="text-xl font-mono font-semibold">{formatCurrency(reconciledBalance)}</div>
@@ -352,7 +352,7 @@ export default function ReconciliationDetailPage() {
                 </Card>
                 <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-red-50 dark:bg-red-900/10 border-red-200")}>
                     <CardHeader className="p-4 pb-1">
-                        <CardTitle className="text-xs font-medium text-gray-500 uppercase">Difference</CardTitle>
+                        <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Difference</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-1">
                         <div className={cn("text-xl font-mono font-bold", Math.abs(difference) < 0.01 ? "text-success" : "text-red-600")}>
@@ -365,7 +365,7 @@ export default function ReconciliationDetailPage() {
 
             <div className="flex-1 grid grid-cols-2 gap-4 min-h-0 overflow-hidden">
                 <Card className="border flex flex-col h-full overflow-hidden">
-                    <CardHeader className="py-2 px-4 border-b bg-gray-50 text-sm font-medium flex justify-between items-center flex-shrink-0">
+                    <CardHeader className="py-2 px-4 border-b bg-muted text-sm font-medium flex justify-between items-center flex-shrink-0">
                         <div className="flex items-center gap-2">
                             <span>Statement Lines</span>
                             <Badge variant="secondary" className="text-[10px]">{visibleBankLines.length}</Badge>
@@ -375,14 +375,14 @@ export default function ReconciliationDetailPage() {
                             setSelectedBankLine(null);
                         }} className="w-auto">
                             <TabsList className="grid w-full grid-cols-2 h-7 bg-gray-200/50">
-                                <TabsTrigger value="unmatched" className="text-xs px-2 h-6 data-[state=active]:bg-white">Unmatched</TabsTrigger>
-                                <TabsTrigger value="matched" className="text-xs px-2 h-6 data-[state=active]:bg-white">Matched</TabsTrigger>
+                                <TabsTrigger value="unmatched" className="text-xs px-2 h-6 data-[state=active]:bg-card">Unmatched</TabsTrigger>
+                                <TabsTrigger value="matched" className="text-xs px-2 h-6 data-[state=active]:bg-card">Matched</TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </CardHeader>
                     <div className="overflow-auto flex-1 p-0">
                         {visibleBankLines.length === 0 && (
-                            <div className="p-8 text-center text-gray-500 text-sm">
+                            <div className="p-8 text-center text-muted-foreground text-sm">
                                 {viewMatched === 'unmatched' ? 'No unmatched lines found. Good job!' : 'No matched lines yet.'}
                             </div>
                         )}
@@ -392,20 +392,20 @@ export default function ReconciliationDetailPage() {
                                     key={line.id}
                                     className={cn(
                                         "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center group relative",
-                                        selectedBankLine?.id === line.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                                        selectedBankLine?.id === line.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted dark:hover:bg-gray-800"
                                     )}
                                     onClick={() => setSelectedBankLine(selectedBankLine?.id === line.id ? null : line)}
                                 >
                                     <div className="flex-1">
                                         <div className="text-foreground font-medium">{format(new Date(line.transaction_date), 'MMM d')}</div>
-                                        <div className="text-xs text-gray-500 truncate max-w-[200px]" title={line.description}>{line.description}</div>
+                                        <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={line.description}>{line.description}</div>
                                         {line.matched && <div className="text-[10px] text-success flex items-center mt-0.5"><Check className="w-3 h-3 mr-1" /> Matched</div>}
                                     </div>
                                     <div className="font-mono text-right">
                                         {parseFloat(line.debit_amount) > 0 ? (
                                             <span className="text-success">+{formatCurrency(line.debit_amount)}</span>
                                         ) : (
-                                            <span className="text-gray-900">-{formatCurrency(line.credit_amount)}</span>
+                                            <span className="text-foreground">-{formatCurrency(line.credit_amount)}</span>
                                         )}
                                     </div>
                                 </div>
@@ -415,7 +415,7 @@ export default function ReconciliationDetailPage() {
                 </Card>
 
                 <Card className="border flex flex-col h-full overflow-hidden">
-                    <CardHeader className="py-3 px-4 border-b bg-gray-50 text-sm font-medium flex justify-between items-center flex-shrink-0">
+                    <CardHeader className="py-3 px-4 border-b bg-muted text-sm font-medium flex justify-between items-center flex-shrink-0">
                         <span>Unmatched System Transactions</span>
                     </CardHeader>
                     <div className="overflow-auto flex-1 p-0">
@@ -424,7 +424,7 @@ export default function ReconciliationDetailPage() {
                         ) : (
                             <div className="divide-y">
                                 {transactions?.length === 0 ? (
-                                    <div className="p-8 text-center text-gray-500 text-sm">
+                                    <div className="p-8 text-center text-muted-foreground text-sm">
                                         No matching transactions found.
                                     </div>
                                 ) : (
@@ -433,7 +433,7 @@ export default function ReconciliationDetailPage() {
                                             key={tx.id}
                                             className={cn(
                                                 "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center",
-                                                selectedSysTx?.id === tx.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                                                selectedSysTx?.id === tx.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-muted dark:hover:bg-gray-800"
                                             )}
                                             onClick={() => setSelectedSysTx(selectedSysTx?.id === tx.id ? null : tx)}
                                         >
@@ -441,13 +441,13 @@ export default function ReconciliationDetailPage() {
                                                 <div className="text-foreground font-medium">
                                                     {tx.date ? format(new Date(tx.date), 'MMM d') : '-'}
                                                 </div>
-                                                <div className="text-xs text-gray-500 truncate max-w-[200px]">{tx.description || 'Journal Entry'}</div>
+                                                <div className="text-xs text-muted-foreground truncate max-w-[200px]">{tx.description || 'Journal Entry'}</div>
                                             </div>
                                             <div className="font-mono text-right">
                                                 {tx.transaction_type === 'debit' ? (
                                                     <span className="text-success">+{formatCurrency(tx.amount)}</span>
                                                 ) : (
-                                                    <span className="text-gray-900">-{formatCurrency(tx.amount)}</span>
+                                                    <span className="text-foreground">-{formatCurrency(tx.amount)}</span>
                                                 )}
                                             </div>
                                         </div>
@@ -504,7 +504,7 @@ export default function ReconciliationDetailPage() {
                 )}
 
                 {!selectedBankLine && !selectedSysTx && (
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                         Select a line to match, unmatch, or create transaction.
                     </div>
                 )}

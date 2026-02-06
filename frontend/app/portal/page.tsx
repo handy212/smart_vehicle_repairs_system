@@ -50,7 +50,7 @@ export default function PortalHomePage() {
   if (!dashboard) {
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground">Unable to load dashboard data</p>
       </div>
     );
@@ -74,7 +74,7 @@ export default function PortalHomePage() {
 
       {/* Stats Grid */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 px-1">Overview</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-1">Overview</h2>
         <PortalStatsGrid stats={stats} />
       </section>
 
@@ -83,14 +83,14 @@ export default function PortalHomePage() {
         <div className="lg:col-span-2 space-y-8">
           {/* Quick Actions */}
           <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 px-1">Quick Actions</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-1">Quick Actions</h2>
             <PortalQuickActions />
           </section>
 
           {/* Recent Appointments */}
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Upcoming Service</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Upcoming Service</h2>
               <Link href="/portal/appointments" className="text-xs font-medium text-primary hover:text-primary flex items-center">
                 View All <ArrowRight className="w-3 h-3 ml-1" />
               </Link>
@@ -100,14 +100,14 @@ export default function PortalHomePage() {
                 {recent_appointments.length > 0 ? (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {recent_appointments.map((apt: any) => (
-                      <div key={apt.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex items-center justify-between group">
+                      <div key={apt.id} className="p-4 hover:bg-muted dark:hover:bg-gray-800/50 transition-colors flex items-center justify-between group">
                         <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center text-primary dark:text-primary font-bold text-xs">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center text-primary font-bold text-xs">
                             {format(new Date(apt.appointment_date), "d")}
                           </div>
                           <div>
                             <p className="font-medium text-sm text-foreground">{apt.vehicle_info || "Vehicle"}</p>
-                            <p className="text-xs text-gray-500 flex items-center gap-1">
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {apt.appointment_time} • {apt.service_type || "Service"}
                             </p>
@@ -120,7 +120,7 @@ export default function PortalHomePage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-8 text-center text-gray-500 text-sm">No upcoming appointments.</div>
+                  <div className="p-8 text-center text-muted-foreground text-sm">No upcoming appointments.</div>
                 )}
               </CardContent>
             </Card>
@@ -132,7 +132,7 @@ export default function PortalHomePage() {
           {/* Recent Invoices */}
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Recent Billing</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent Billing</h2>
               <Link href="/portal/invoices" className="text-xs font-medium text-primary hover:text-primary flex items-center">
                 View All <ArrowRight className="w-3 h-3 ml-1" />
               </Link>
@@ -145,16 +145,16 @@ export default function PortalHomePage() {
                       <Link
                         key={inv.id}
                         href={`/portal/invoices/${inv.id}`}
-                        className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                        className="block p-4 hover:bg-muted dark:hover:bg-gray-800/50 transition-colors group"
                       >
                         <div className="flex justify-between items-start mb-1">
-                          <p className="font-mono text-xs font-medium text-gray-500">#{inv.invoice_number}</p>
+                          <p className="font-mono text-xs font-medium text-muted-foreground">#{inv.invoice_number}</p>
                           <span className="font-bold text-sm text-foreground">
                             {formatCurrency(inv.total || 0)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <p className="text-xs text-gray-500">{format(new Date(inv.invoice_date), "MMM d, yyyy")}</p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(inv.invoice_date), "MMM d, yyyy")}</p>
                           <Badge variant={inv.status === "paid" ? "success" : inv.status === "pending" ? "warning" : "secondary"} className="h-5 px-1.5 text-[10px] uppercase">
                             {inv.status}
                           </Badge>
@@ -163,7 +163,7 @@ export default function PortalHomePage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-8 text-center text-gray-500 text-sm">No recent invoices.</div>
+                  <div className="p-8 text-center text-muted-foreground text-sm">No recent invoices.</div>
                 )}
               </CardContent>
             </Card>

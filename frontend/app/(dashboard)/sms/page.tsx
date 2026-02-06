@@ -329,7 +329,7 @@ export default function SMSConsolePage() {
                         <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Sent Today</p>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Sent Today</p>
                                     <p className="text-2xl font-bold text-foreground mt-1">{stats?.sent_today || 0}</p>
                                 </div>
                                 <TrendingUp className="h-8 w-8 text-green-500 opacity-20" />
@@ -340,8 +340,8 @@ export default function SMSConsolePage() {
                         <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Scheduled</p>
-                                    <p className="text-2xl font-bold text-primary dark:text-primary mt-1">{stats?.scheduled || 0}</p>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Scheduled</p>
+                                    <p className="text-2xl font-bold text-primary mt-1">{stats?.scheduled || 0}</p>
                                 </div>
                                 <Clock className="h-8 w-8 text-primary opacity-20" />
                             </div>
@@ -351,7 +351,7 @@ export default function SMSConsolePage() {
                         <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Failed Today</p>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Failed Today</p>
                                     <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats?.failed_today || 0}</p>
                                 </div>
                                 <AlertCircle className="h-8 w-8 text-red-500 opacity-20" />
@@ -362,12 +362,12 @@ export default function SMSConsolePage() {
                         <CardContent className="p-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Balance</p>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Balance</p>
                                     <p className="text-2xl font-bold text-foreground mt-1">
                                         {balance?.success ? `${balance.currency} ${balance.balance.toFixed(2)}` : 'N/A'}
                                     </p>
                                 </div>
-                                <DollarSign className="h-8 w-8 text-gray-500 opacity-20" />
+                                <DollarSign className="h-8 w-8 text-muted-foreground opacity-20" />
                             </div>
                         </CardContent>
                     </Card>
@@ -399,20 +399,20 @@ export default function SMSConsolePage() {
                                             }`}>
                                             {smsInfo.chars} chars
                                         </span>
-                                        <span className="text-gray-500">•</span>
+                                        <span className="text-muted-foreground">•</span>
                                         <span className="text-muted-foreground">
                                             {smsInfo.count} SMS {smsInfo.count > 1 ? 'segments' : 'segment'}
                                         </span>
                                         {recipients.length > 0 && (
                                             <>
-                                                <span className="text-gray-500">•</span>
+                                                <span className="text-muted-foreground">•</span>
                                                 <span className="text-muted-foreground">
                                                     Est. cost: GHS {smsInfo.cost.toFixed(2)}
                                                 </span>
                                             </>
                                         )}
                                     </div>
-                                    <span className="text-gray-400">{612 - smsInfo.chars} left</span>
+                                    <span className="text-muted-foreground">{612 - smsInfo.chars} left</span>
                                 </div>
                             </div>
 
@@ -491,7 +491,7 @@ export default function SMSConsolePage() {
                                     </DialogHeader>
                                     <div className="px-6 pb-4">
                                         <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                                             <Input
                                                 type="text"
                                                 placeholder="Search customers by name, email, or phone..."

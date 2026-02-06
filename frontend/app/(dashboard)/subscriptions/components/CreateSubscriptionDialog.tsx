@@ -116,33 +116,33 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
             <DialogContent className="max-w-5xl p-0 gap-0 overflow-hidden bg-slate-50/50">
 
                 {/* Header */}
-                <div className="bg-white border-b px-8 py-6 flex justify-between items-center shadow-sm relative z-10">
+                <div className="bg-card border-b px-8 py-6 flex justify-between items-center shadow-sm relative z-10">
                     <div>
-                        <DialogTitle className="text-2xl font-black text-slate-800 flex items-center gap-2">
+                        <DialogTitle className="text-2xl font-black text-foreground flex items-center gap-2">
                             <div className="p-2 bg-primary rounded-lg text-white shadow-orange-200 shadow-lg">
                                 <ShieldCheck className="w-5 h-5" />
                             </div>
                             New Subscription
                         </DialogTitle>
-                        <p className="text-slate-500 mt-1 pl-1">Configure a new vehicle protection plan</p>
+                        <p className="text-muted-foreground mt-1 pl-1">Configure a new vehicle protection plan</p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col md:flex-row h-full max-h-[80vh] overflow-hidden">
 
                     {/* Main Content Area */}
-                    <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white/50">
+                    <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-card/50">
 
                         {/* Step 1: Customer & Vehicle */}
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 uppercase tracking-widest">
-                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-xs">1</span>
+                            <div className="flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-widest">
+                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground text-xs">1</span>
                                 Customer Details
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-8">
                                 <div className="space-y-2">
-                                    <Label htmlFor="customer" className="text-slate-600 font-medium">Customer</Label>
+                                    <Label htmlFor="customer" className="text-muted-foreground font-medium">Customer</Label>
                                     <Select
                                         onValueChange={(val) => {
                                             setValue("customer", parseInt(val));
@@ -164,7 +164,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="vehicle" className="text-slate-600 font-medium">Vehicle</Label>
+                                    <Label htmlFor="vehicle" className="text-muted-foreground font-medium">Vehicle</Label>
                                     <Select
                                         onValueChange={(val) => setValue("vehicle", parseInt(val))}
                                         disabled={!selectedCustomerId || isLoadingVehicles}
@@ -177,7 +177,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                                 const vehicleType = v.vehicle_type || '';
                                                 const isAllowed = ['saloon', 'suv', 'pickup', 'minivan'].includes(vehicleType.toLowerCase());
                                                 return (
-                                                    <SelectItem key={v.id} value={v.id.toString()} disabled={!isAllowed} className={!isAllowed ? "text-gray-400" : ""}>
+                                                    <SelectItem key={v.id} value={v.id.toString()} disabled={!isAllowed} className={!isAllowed ? "text-muted-foreground" : ""}>
                                                         {v.license_plate} - {v.year} {v.make} {v.model} {!isAllowed ? "(Ineligible)" : ""}
                                                     </SelectItem>
                                                 );
@@ -191,8 +191,8 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
 
                         {/* Step 2: Plan Selection */}
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 uppercase tracking-widest">
-                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-xs">2</span>
+                            <div className="flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-widest">
+                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground text-xs">2</span>
                                 Select Plan
                             </div>
 
@@ -205,7 +205,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                             "relative cursor-pointer border-2 rounded-xl p-4 transition-all duration-200 hover:shadow-md",
                                             selectedPackageId === pkg.id
                                                 ? "border-primary bg-primary/5"
-                                                : "border-slate-100 bg-white hover:border-slate-300"
+                                                : "border-border bg-card hover:border-slate-300"
                                         )}
                                     >
                                         {selectedPackageId === pkg.id && (
@@ -215,7 +215,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                         )}
 
                                         <div className="space-y-1">
-                                            <h3 className="font-bold text-slate-900">{pkg.name}</h3>
+                                            <h3 className="font-bold text-foreground">{pkg.name}</h3>
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-xl font-black text-primary">{formatCurrency(parseFloat(pkg.price))}</span>
                                                 <span className="text-xs text-muted-foreground font-medium">/ {pkg.duration_months} months</span>
@@ -223,10 +223,10 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                         </div>
 
                                         <div className="mt-4 flex flex-wrap gap-2">
-                                            <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-0">
+                                            <Badge variant="secondary" className="bg-slate-100 text-muted-foreground hover:bg-slate-200 border-0">
                                                 {pkg.features?.towing_services_km || 0}km Towing
                                             </Badge>
-                                            <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 border-0">
+                                            <Badge variant="secondary" className="bg-slate-100 text-muted-foreground hover:bg-slate-200 border-0">
                                                 {pkg.features?.total_service_calls || 0} Calls
                                             </Badge>
                                         </div>
@@ -238,32 +238,32 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
 
                         {/* Step 3: Settings */}
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 uppercase tracking-widest">
-                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-xs">3</span>
+                            <div className="flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-widest">
+                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground text-xs">3</span>
                                 Configuration
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-8">
                                 <div className="space-y-2">
-                                    <Label htmlFor="start_date" className="text-slate-600 font-medium">Start Date</Label>
+                                    <Label htmlFor="start_date" className="text-muted-foreground font-medium">Start Date</Label>
                                     <Input
                                         id="start_date"
                                         type="date"
-                                        className="bg-white"
+                                        className="bg-card"
                                         {...register("start_date")}
                                     />
                                 </div>
 
-                                <div className="flex items-start justify-between p-3 border rounded-lg bg-white">
+                                <div className="flex items-start justify-between p-3 border rounded-lg bg-card">
                                     <div className="space-y-0.5">
-                                        <Label htmlFor="auto_renew" className="text-slate-900 font-medium cursor-pointer">Auto-Renew</Label>
-                                        <p className="text-xs text-slate-500">Automatically renew when expired</p>
+                                        <Label htmlFor="auto_renew" className="text-foreground font-medium cursor-pointer">Auto-Renew</Label>
+                                        <p className="text-xs text-muted-foreground">Automatically renew when expired</p>
                                     </div>
                                     <input
                                         type="checkbox"
                                         id="auto_renew"
                                         {...register("auto_renew")}
-                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
                                     />
                                 </div>
                             </div>
@@ -273,8 +273,8 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
 
                     {/* Sidebar Summary */}
                     <div className="w-full md:w-[320px] bg-slate-50 border-l flex flex-col">
-                        <div className="p-6 border-b bg-white">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
+                        <div className="p-6 border-b bg-card">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2">
                                 Order Summary
                             </h3>
                         </div>
@@ -295,8 +295,8 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                         </div>
 
                                         <div className="space-y-3 pt-2">
-                                            <h4 className="text-xs font-bold text-slate-500 uppercase">Includes</h4>
-                                            <ul className="space-y-2 text-sm text-slate-700">
+                                            <h4 className="text-xs font-bold text-muted-foreground uppercase">Includes</h4>
+                                            <ul className="space-y-2 text-sm text-foreground">
                                                 <li className="flex items-center gap-2">
                                                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                                                     <span>{selectedPackage.features?.towing_services_km || 0} km Towing Range</span>
@@ -314,15 +314,15 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                     </div>
 
                                     <div className="border-t border-dashed pt-4 space-y-2">
-                                        <div className="flex justify-between text-sm text-slate-500">
+                                        <div className="flex justify-between text-sm text-muted-foreground">
                                             <span>Subtotal</span>
                                             <span>{formatCurrency(parseFloat(selectedPackage.price))}</span>
                                         </div>
-                                        <div className="flex justify-between text-sm text-slate-500">
+                                        <div className="flex justify-between text-sm text-muted-foreground">
                                             <span>Tax (0%)</span>
                                             <span>$0.00</span>
                                         </div>
-                                        <div className="flex justify-between items-center pt-2 text-lg font-black text-slate-900">
+                                        <div className="flex justify-between items-center pt-2 text-lg font-black text-foreground">
                                             <span>Total</span>
                                             <span>{formatCurrency(parseFloat(selectedPackage.price))}</span>
                                         </div>
@@ -336,7 +336,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                             )}
                         </div>
 
-                        <div className="p-6 bg-white border-t">
+                        <div className="p-6 bg-card border-t">
                             <div className="flex gap-3">
                                 <Button
                                     type="button"

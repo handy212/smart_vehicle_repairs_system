@@ -526,7 +526,7 @@ export default function NewProformaPage() {
                     <CardContent className="space-y-4">
                         <div className="flex gap-2">
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search parts..."
                                     className="pl-9"
@@ -534,11 +534,11 @@ export default function NewProformaPage() {
                                     onChange={(e) => setPartSearchTerm(e.target.value)}
                                 />
                                 {partSearchTerm.length > 1 && partsData?.results && partsData.results.length > 0 && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-card border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
                                         {partsData.results.map((part: any) => (
                                             <div
                                                 key={part.id}
-                                                className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                                                className="px-4 py-2 hover:bg-muted cursor-pointer text-sm"
                                                 onClick={() => {
                                                     addLineItem("part", part);
                                                     setPartSearchTerm("");
@@ -667,7 +667,7 @@ export default function NewProformaPage() {
                                     <span>{formatCurrency(subtotal)}</span>
                                 </div>
                                 {taxSummary.totalTax > 0 && (
-                                    <div className="flex justify-between text-sm text-gray-500">
+                                    <div className="flex justify-between text-sm text-muted-foreground">
                                         <span>Tax:</span>
                                         <span>{formatCurrency(taxSummary.totalTax)}</span>
                                     </div>
@@ -681,7 +681,7 @@ export default function NewProformaPage() {
                     </CardContent>
                 </Card>
 
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-10 flex justify-end gap-3 shadow-lg lg:pl-64">
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t z-10 flex justify-end gap-3 shadow-lg lg:pl-64">
                     <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting ? "Creating..." : "Save Proforma"}

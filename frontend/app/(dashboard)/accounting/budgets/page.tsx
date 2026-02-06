@@ -228,17 +228,17 @@ export default function BudgetsPage() {
                             <Table>
                                 <TableHeader className="bg-muted/50 border-y border-border">
                                     <TableRow className="hover:bg-transparent border-none">
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Name</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Fiscal Year</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Period</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Branch</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Status</TableHead>
-                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Actions</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Fiscal Year</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Period</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Branch</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                                        <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {budgets.map((budget: any) => (
-                                        <TableRow key={budget.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border">
+                                        <TableRow key={budget.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {budget.name}
                                             </TableCell>
@@ -280,7 +280,7 @@ export default function BudgetsPage() {
                                                         </Button>
                                                     )}
                                                     <Link href={`/accounting/budgets/${budget.id}/report`}>
-                                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-500 hover:text-gray-700">
+                                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground hover:text-foreground">
                                                             <Eye className="w-3 h-3 mr-1" />
                                                             Report
                                                         </Button>

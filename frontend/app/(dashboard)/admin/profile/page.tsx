@@ -170,17 +170,17 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
           <h1 className="text-xl font-bold text-foreground tracking-tight">Profile Settings</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Manage your account information and preferences</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage your account information and preferences</p>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[1fr_2fr] px-4 pb-8">
         {/* Profile Information */}
         <Card className="border border-border shadow-sm">
-          <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
+          <CardHeader className="pb-3 border-b border-border bg-muted/50">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
-                <User className="w-4 h-4 text-primary dark:text-primary" />
+                <User className="w-4 h-4 text-primary" />
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold text-foreground">Personal Information</CardTitle>
@@ -192,7 +192,7 @@ export default function ProfilePage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="first_name" className="text-xs font-semibold text-gray-700">First Name</Label>
+                  <Label htmlFor="first_name" className="text-xs font-semibold text-foreground">First Name</Label>
                   <Input
                     id="first_name"
                     {...register("first_name")}
@@ -206,7 +206,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="last_name" className="text-xs font-semibold text-gray-700">Last Name</Label>
+                  <Label htmlFor="last_name" className="text-xs font-semibold text-foreground">Last Name</Label>
                   <Input
                     id="last_name"
                     {...register("last_name")}
@@ -221,7 +221,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5" />
                   Email Address
                 </Label>
@@ -239,7 +239,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <Label htmlFor="phone" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5" />
                   Phone Number
                 </Label>
@@ -257,7 +257,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="date_of_birth" className="text-xs font-semibold text-gray-700">Date of Birth</Label>
+                <Label htmlFor="date_of_birth" className="text-xs font-semibold text-foreground">Date of Birth</Label>
                 <Input
                   id="date_of_birth"
                   type="date"
@@ -268,7 +268,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="address" className="text-xs font-semibold text-gray-700">Street Address</Label>
+                <Label htmlFor="address" className="text-xs font-semibold text-foreground">Street Address</Label>
                 <Input
                   id="address"
                   {...register("address")}
@@ -280,7 +280,7 @@ export default function ProfilePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="city" className="text-xs font-semibold text-gray-700">City</Label>
+                  <Label htmlFor="city" className="text-xs font-semibold text-foreground">City</Label>
                   <Input
                     id="city"
                     {...register("city")}
@@ -291,7 +291,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="state" className="text-xs font-semibold text-gray-700">State</Label>
+                  <Label htmlFor="state" className="text-xs font-semibold text-foreground">State</Label>
                   <Input
                     id="state"
                     {...register("state")}
@@ -304,7 +304,7 @@ export default function ProfilePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="zip_code" className="text-xs font-semibold text-gray-700">Zip Code</Label>
+                  <Label htmlFor="zip_code" className="text-xs font-semibold text-foreground">Zip Code</Label>
                   <Input
                     id="zip_code"
                     {...register("zip_code")}
@@ -315,7 +315,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="country" className="text-xs font-semibold text-gray-700">Country</Label>
+                  <Label htmlFor="country" className="text-xs font-semibold text-foreground">Country</Label>
                   <Input
                     id="country"
                     {...register("country")}
@@ -351,10 +351,10 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {/* Profile Picture */}
           <Card className="border border-border shadow-sm">
-            <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
+            <CardHeader className="pb-3 border-b border-border bg-muted/50">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
-                  <User className="w-4 h-4 text-primary dark:text-primary" />
+                  <User className="w-4 h-4 text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-foreground">Profile Picture</CardTitle>
@@ -402,7 +402,7 @@ export default function ProfilePage() {
           {/* Employment Info - Only for staff */}
           {user?.role !== 'customer' && (
             <Card className="border border-border shadow-sm">
-              <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
+              <CardHeader className="pb-3 border-b border-border bg-muted/50">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-md">
                     <Briefcase className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -414,7 +414,7 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="pt-4 space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Employee ID</Label>
+                  <Label className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Employee ID</Label>
                   <div className="font-mono text-xs text-muted-foreground bg-border px-2 py-1 rounded">
                     {user?.employee_id || "Not Assigned"}
                   </div>
@@ -422,7 +422,7 @@ export default function ProfilePage() {
 
                 {user?.hire_date && (
                   <div className="space-y-1">
-                    <Label className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Hire Date</Label>
+                    <Label className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Hire Date</Label>
                     <div className="text-xs text-muted-foreground">
                       {format(new Date(user.hire_date), "MMM d, yyyy")}
                     </div>
@@ -430,7 +430,7 @@ export default function ProfilePage() {
                 )}
 
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Branch</Label>
+                  <Label className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Branch</Label>
                   <div className="text-xs text-muted-foreground">
                     {user?.branch_name || "Not Assigned"}
                   </div>
@@ -441,7 +441,7 @@ export default function ProfilePage() {
 
           {/* Security */}
           <Card className="border border-border shadow-sm">
-            <CardHeader className="pb-3 border-b border-border bg-gray-50/50">
+            <CardHeader className="pb-3 border-b border-border bg-muted/50">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
                   <KeyRound className="w-4 h-4 text-primary" />
@@ -452,7 +452,7 @@ export default function ProfilePage() {
               </div>
             </CardHeader>
             <CardContent className="pt-4">
-              <Button variant="outline" size="sm" className="w-full h-8 text-xs bg-white text-gray-700 border-gray-200 hover:bg-gray-50">
+              <Button variant="outline" size="sm" className="w-full h-8 text-xs bg-card text-foreground border-border hover:bg-muted">
                 Change Password
               </Button>
             </CardContent>

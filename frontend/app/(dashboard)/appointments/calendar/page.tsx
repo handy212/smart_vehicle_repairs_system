@@ -164,7 +164,7 @@ export default function AppointmentCalendarPage() {
         </div>
         <div className="flex items-center space-x-2">
           <Link href="/appointments">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border">
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 text-foreground border-border">
               <ArrowLeft className="w-3.5 h-3.5 mr-2" />
               List View
             </Button>
@@ -245,23 +245,23 @@ export default function AppointmentCalendarPage() {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-primary"></div>
-              <span className="text-sm text-gray-700">Normal</span>
+              <span className="text-sm text-foreground">Normal</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-success/100"></div>
-              <span className="text-sm text-gray-700">Confirmed</span>
+              <span className="text-sm text-foreground">Confirmed</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-amber-500"></div>
-              <span className="text-sm text-gray-700">Pending / High Priority</span>
+              <span className="text-sm text-foreground">Pending / High Priority</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-red-500"></div>
-              <span className="text-sm text-gray-700">Urgent / Cancelled</span>
+              <span className="text-sm text-foreground">Urgent / Cancelled</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded bg-gray-500"></div>
-              <span className="text-sm text-gray-700">Completed</span>
+              <span className="text-sm text-foreground">Completed</span>
             </div>
           </div>
         </CardContent>

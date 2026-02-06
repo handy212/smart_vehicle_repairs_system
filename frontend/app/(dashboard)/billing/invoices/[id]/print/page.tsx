@@ -43,7 +43,7 @@ export default function InvoicePrintPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen p-8">
         <div className="text-red-600 text-lg font-semibold">Invalid Invoice ID</div>
-        <p className="text-gray-600 mt-2">The invoice ID in the URL is invalid.</p>
+        <p className="text-muted-foreground mt-2">The invoice ID in the URL is invalid.</p>
       </div>
     );
   }
@@ -90,13 +90,13 @@ export default function InvoicePrintPage() {
         metaInfo={
           <div className="text-right">
             {invoice.invoice_date && (
-              <div className="mb-1"><span className="font-bold text-gray-700">Date:</span> {format(new Date(invoice.invoice_date), 'MMM dd, yyyy')}</div>
+              <div className="mb-1"><span className="font-bold text-foreground">Date:</span> {format(new Date(invoice.invoice_date), 'MMM dd, yyyy')}</div>
             )}
             {invoice.due_date && (
-              <div className="mb-1"><span className="font-bold text-gray-700">Due:</span> {format(new Date(invoice.due_date), 'MMM dd, yyyy')}</div>
+              <div className="mb-1"><span className="font-bold text-foreground">Due:</span> {format(new Date(invoice.due_date), 'MMM dd, yyyy')}</div>
             )}
             <div className="mb-1">
-              <span className="font-bold text-gray-700">Status:</span> <span className={`uppercase font-semibold ${invoice.status === 'overdue' ? 'text-red-600' :
+              <span className="font-bold text-foreground">Status:</span> <span className={`uppercase font-semibold ${invoice.status === 'overdue' ? 'text-red-600' :
                 invoice.status === 'paid' ? 'text-success' : ''
                 }`}>{invoice.status}</span>
             </div>

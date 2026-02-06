@@ -309,31 +309,31 @@ export default function WorkOrdersPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
             <span className="text-lg font-bold text-foreground">{stats?.total_workorders || 0}</span>
           </CardContent>
         </Card>
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">In Progress</span>
-            <span className="text-lg font-bold text-primary dark:text-primary">{stats?.in_progress || 0}</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">In Progress</span>
+            <span className="text-lg font-bold text-primary">{stats?.in_progress || 0}</span>
           </CardContent>
         </Card>
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending</span>
             <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats?.pending || 0}</span>
           </CardContent>
         </Card>
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Completed</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Completed</span>
             <span className="text-lg font-bold text-success">{stats?.completed || 0}</span>
           </CardContent>
         </Card>
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cancelled</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cancelled</span>
             <span className="text-lg font-bold text-muted-foreground">{stats?.cancelled || 0}</span>
           </CardContent>
         </Card>
@@ -344,7 +344,7 @@ export default function WorkOrdersPage() {
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-56">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search..."
@@ -387,7 +387,7 @@ export default function WorkOrdersPage() {
                 setStatusFilter("");
                 setPage(1);
               }}
-              className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
               title="Clear all filters"
             >
               <X className="w-3.5 h-3.5" />
@@ -490,7 +490,7 @@ export default function WorkOrdersPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-border">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
                     <TableHead className="w-[30px] px-3 h-8">
                       <input
                         type="checkbox"
@@ -499,7 +499,7 @@ export default function WorkOrdersPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-3 w-3 text-primary focus:ring-primary border-gray-300 rounded"
+                        className="h-3 w-3 text-primary focus:ring-primary border-border rounded"
                       />
                     </TableHead>
                     <SortableHeader
@@ -558,7 +558,7 @@ export default function WorkOrdersPage() {
                   {data.results.map((workorder) => (
                     <TableRow
                       key={workorder.id}
-                      className="group hover:bg-gray-50/80 transition-colors border-b border-border cursor-pointer"
+                      className="group hover:bg-muted/80 transition-colors border-b border-border cursor-pointer"
                       onDoubleClick={() => router.push(`/workorders/${workorder.id}`)}
                     >
                       <TableCell className="px-3 py-1.5">
@@ -567,10 +567,10 @@ export default function WorkOrdersPage() {
                           checked={bulkSelection.isSelected(workorder.id)}
                           onChange={() => bulkSelection.toggleSelection(workorder.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="h-3 w-3 text-primary focus:ring-primary border-gray-300 rounded"
+                          className="h-3 w-3 text-primary focus:ring-primary border-border rounded"
                         />
                       </TableCell>
-                      <TableCell className="px-3 py-1.5 font-mono text-[11px] font-bold text-primary dark:text-primary">
+                      <TableCell className="px-3 py-1.5 font-mono text-[11px] font-bold text-primary">
                         {workorder.work_order_number || "-"}
                       </TableCell>
                       <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{workorder.customer_name || "N/A"}</TableCell>
@@ -602,7 +602,7 @@ export default function WorkOrdersPage() {
                               className="h-6 w-6 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
                             >
                               <span className="sr-only">Open menu</span>
-                              <MoreVertical className="w-3.5 h-3.5 text-gray-500" />
+                              <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">

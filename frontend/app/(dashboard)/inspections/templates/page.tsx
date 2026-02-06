@@ -66,9 +66,9 @@ export default function InspectionTemplatesPage() {
         <CardContent className="p-0">
           {templates.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No templates</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-medium text-foreground">No templates</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Get started by creating a new inspection template.
               </p>
               <div className="mt-6">
@@ -84,26 +84,26 @@ export default function InspectionTemplatesPage() {
             <div className="overflow-hidden rounded-md border border-border bg-card">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-gray-50/50">
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Name</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Description</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Categories</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Created By</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Created</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Name</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Description</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Categories</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Created By</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Created</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {templates.map((template) => (
-                    <TableRow key={template.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                    <TableRow key={template.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50">
                       <TableCell className="font-medium text-sm text-foreground py-2.5">
                         {template.name}
                         {template.is_default && (
                           <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-orange-200 text-[10px] px-1.5 py-0">Default</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-gray-500 text-xs py-2.5 max-w-[200px] truncate">
+                      <TableCell className="text-muted-foreground text-xs py-2.5 max-w-[200px] truncate">
                         {template.description || "-"}
                       </TableCell>
                       <TableCell className="text-sm text-card-foreground py-2.5">{template.category_count || 0}</TableCell>
@@ -112,7 +112,7 @@ export default function InspectionTemplatesPage() {
                           variant="outline"
                           className={`text-[10px] px-2 py-0.5 font-medium border shadow-none ${template.is_active
                             ? "bg-success/10 text-green-700 border-green-200"
-                            : "bg-gray-50 text-gray-600 border-gray-200"
+                            : "bg-muted text-muted-foreground border-border"
                             }`}
                         >
                           {template.is_active ? "Active" : "Inactive"}
@@ -127,7 +127,7 @@ export default function InspectionTemplatesPage() {
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-7 w-7 p-0 hover:bg-gray-100">
                               <span className="sr-only">Open menu</span>
-                              <MoreVertical className="h-3.5 w-3.5 text-gray-500" />
+                              <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-[160px]">

@@ -183,7 +183,7 @@ export default function RolesPage() {
         <Card className="shadow-sm">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Roles</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total Roles</p>
               <p className="text-xl font-bold text-foreground">{stats.totalRoles}</p>
             </div>
             <Shield className="w-5 h-5 text-primary opacity-80" />
@@ -192,7 +192,7 @@ export default function RolesPage() {
         <Card className="shadow-sm">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Active</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Active</p>
               <p className="text-xl font-bold text-success">{stats.activeRoles}</p>
             </div>
             <Shield className="w-5 h-5 text-green-500 opacity-80" />
@@ -201,16 +201,16 @@ export default function RolesPage() {
         <Card className="shadow-sm">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">System</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">System</p>
               <p className="text-xl font-bold text-foreground">{stats.systemRoles}</p>
             </div>
-            <Shield className="w-5 h-5 text-gray-400 opacity-80" />
+            <Shield className="w-5 h-5 text-muted-foreground opacity-80" />
           </CardContent>
         </Card>
         <Card className="shadow-sm">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Users</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Users</p>
               <p className="text-xl font-bold text-foreground">{stats.totalUsers}</p>
             </div>
             <Users className="w-5 h-5 text-purple-500 opacity-80" />
@@ -219,7 +219,7 @@ export default function RolesPage() {
         <Card className="hidden md:block shadow-sm">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Perms</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Perms</p>
               <p className="text-xl font-bold text-foreground">{stats.totalPermissions}</p>
             </div>
             <Shield className="w-5 h-5 text-orange-500 opacity-80" />
@@ -232,7 +232,7 @@ export default function RolesPage() {
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
               <Input
                 type="text"
                 placeholder="Search roles..."
@@ -273,7 +273,7 @@ export default function RolesPage() {
 
       {/* Roles Table */}
       <Card className="mx-4 border-t shadow-sm">
-        <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+        <CardHeader className="py-3 px-4 border-b bg-muted/30">
           <CardTitle className="text-sm font-semibold text-card-foreground">
             Roles Directory <span className="text-muted-foreground font-normal ml-1">({filteredRoles.length})</span>
           </CardTitle>
@@ -286,7 +286,7 @@ export default function RolesPage() {
           ) : filteredRoles.length === 0 ? (
             <div className="text-center py-12">
               <Shield className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">No roles found.</p>
+              <p className="text-muted-foreground text-sm">No roles found.</p>
               {search && (
                 <Button variant="link" size="sm" onClick={() => setSearch("")} className="mt-1 h-auto p-0">
                   Clear Search
@@ -296,49 +296,49 @@ export default function RolesPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="bg-muted border-b border-border">
                   <tr>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Code</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Users</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Perms</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
-                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-2 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Code</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Users</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Perms</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Priority</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
+                <tbody className="bg-card divide-y divide-gray-100">
                   {filteredRoles.map((role) => (
-                    <tr key={role.id} className="hover:bg-gray-50/80 transition-colors group">
+                    <tr key={role.id} className="hover:bg-muted/80 transition-colors group">
                       <TableCell className="px-4 py-2.5">
                         <div>
                           <div className="text-sm font-medium text-foreground">{role.name}</div>
                           {role.description && (
-                            <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]">
+                            <div className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[200px]">
                               {role.description}
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
-                        <code className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono border border-slate-200">
+                        <code className="text-[10px] bg-slate-100 text-muted-foreground px-1.5 py-0.5 rounded font-mono border border-border">
                           {role.code}
                         </code>
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
-                        <div className="flex items-center space-x-1.5 text-xs text-gray-600">
-                          <Users className="w-3 h-3 text-gray-400" />
+                        <div className="flex items-center space-x-1.5 text-xs text-muted-foreground">
+                          <Users className="w-3 h-3 text-muted-foreground" />
                           <span>{role.user_count || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
-                        <div className="flex items-center space-x-1.5 text-xs text-gray-600">
-                          <Shield className="w-3 h-3 text-gray-400" />
+                        <div className="flex items-center space-x-1.5 text-xs text-muted-foreground">
+                          <Shield className="w-3 h-3 text-muted-foreground" />
                           <span>{role.permission_ids?.length || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
-                        <span className="text-xs font-mono text-gray-600">{role.priority}</span>
+                        <span className="text-xs font-mono text-muted-foreground">{role.priority}</span>
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
@@ -354,7 +354,7 @@ export default function RolesPage() {
                             </div>
                           )}
                           {role.is_system && (
-                            <Badge variant="secondary" className="text-[9px] px-1 h-4 font-normal bg-gray-100 text-gray-500 border-gray-200">
+                            <Badge variant="secondary" className="text-[9px] px-1 h-4 font-normal bg-gray-100 text-muted-foreground border-border">
                               System
                             </Badge>
                           )}
@@ -367,7 +367,7 @@ export default function RolesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => { setSelectedRole(role); setIsPermissionsDialogOpen(true); }}
-                              className="h-7 w-7 p-0 text-gray-500 hover:text-primary"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                               title="Manage Permissions"
                             >
                               <Shield className="w-3.5 h-3.5" />
@@ -378,7 +378,7 @@ export default function RolesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setEditingRole(role)}
-                              className="h-7 w-7 p-0 text-gray-500 hover:text-success"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-success"
                               title="Edit Role"
                             >
                               <Edit className="w-3.5 h-3.5" />
@@ -390,7 +390,7 @@ export default function RolesPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDelete(role)}
-                                className="h-7 w-7 p-0 text-gray-500 hover:text-red-600"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
                                 title="Delete Role"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -411,25 +411,25 @@ export default function RolesPage() {
       {/* Recent Audit Logs - Compact */}
       {canViewAudit && recentAuditLogs.length > 0 && (
         <Card className="mx-4 border-t shadow-sm">
-          <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between bg-gray-50/30">
-            <CardTitle className="text-sm font-semibold text-gray-700">Recent Role Changes</CardTitle>
+          <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between bg-muted/30">
+            <CardTitle className="text-sm font-semibold text-foreground">Recent Role Changes</CardTitle>
             <PermissionGuard permission="view_audit_logs">
               <Link href="/admin/audit-log" className="text-xs text-primary hover:underline">View All</Link>
             </PermissionGuard>
           </CardHeader>
           <div className="divide-y divide-gray-100">
             {recentAuditLogs.map((log) => (
-              <div key={log.id} className="px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between">
+              <div key={log.id} className="px-4 py-2 hover:bg-muted transition-colors flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-success/100' :
                     log.action === 'update' ? 'bg-primary' :
                       log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
                     }`}></span>
-                  <span className="text-xs font-medium text-gray-900">{log.object_repr}</span>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-wide px-1.5 bg-gray-100 rounded-sm">{log.action}</span>
+                  <span className="text-xs font-medium text-foreground">{log.object_repr}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1.5 bg-gray-100 rounded-sm">{log.action}</span>
                 </div>
-                <div className="text-[10px] text-gray-400">
-                  <span className="font-medium text-gray-600 mr-2">{log.user_name || "System"}</span>
+                <div className="text-[10px] text-muted-foreground">
+                  <span className="font-medium text-muted-foreground mr-2">{log.user_name || "System"}</span>
                   {new Date(log.timestamp).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                 </div>
               </div>
@@ -573,7 +573,7 @@ function RoleDialog({
               className="mt-1 font-mono h-8 text-sm"
             />
             {!role && (
-              <p className="text-[10px] text-gray-500 mt-1">Code cannot be changed after creation</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Code cannot be changed after creation</p>
             )}
           </div>
           <div>
@@ -584,7 +584,7 @@ function RoleDialog({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Describe the role's responsibilities..."
-              className="mt-1 text-sm bg-gray-50 border-gray-200"
+              className="mt-1 text-sm bg-muted border-border"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -599,7 +599,7 @@ function RoleDialog({
                 min="0"
                 max="100"
               />
-              <p className="text-[10px] text-gray-500 mt-0.5">0-100 scale</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">0-100 scale</p>
             </div>
             <div className="flex items-end h-10 pb-1">
               <div className="flex items-center space-x-2">
@@ -762,18 +762,18 @@ function PermissionsDialog({
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="flex items-center justify-between">
-            <span>Manage Permissions <span className="text-gray-400 font-normal mx-2">|</span> {role.name}</span>
+            <span>Manage Permissions <span className="text-muted-foreground font-normal mx-2">|</span> {role.name}</span>
             <span className="text-xs font-normal bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-orange-100">
               {selectedCount} Selected
             </span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col bg-gray-50/50">
+        <div className="flex-1 overflow-hidden flex flex-col bg-muted/50">
           {/* Search and Filter Bar */}
-          <div className="flex items-center gap-3 px-6 py-3 border-b bg-white">
+          <div className="flex items-center gap-3 px-6 py-3 border-b bg-card">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
               <Input
                 type="text"
                 placeholder="Search permissions..."
@@ -835,7 +835,7 @@ function PermissionsDialog({
 
                 return (
                   <Card key={category} className="overflow-hidden border shadow-sm group">
-                    <div className="flex items-center justify-between p-3 bg-white hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100" onClick={() => toggleExpanded(category)}>
+                    <div className="flex items-center justify-between p-3 bg-card hover:bg-muted transition-colors cursor-pointer border-b border-border" onClick={() => toggleExpanded(category)}>
                       <div className="flex items-center gap-3">
                         <Button
                           type="button"
@@ -851,27 +851,27 @@ function PermissionsDialog({
                               <span className="block w-2 h-2 bg-primary rounded-sm"></span>
                             </div>
                           ) : (
-                            <Square className="w-4 h-4 text-gray-400" />
+                            <Square className="w-4 h-4 text-muted-foreground" />
                           )}
                         </Button>
                         <div>
-                          <h4 className="text-sm font-semibold text-gray-800">{category}</h4>
-                          <p className="text-[10px] text-gray-500 mt-0">
+                          <h4 className="text-sm font-semibold text-foreground">{category}</h4>
+                          <p className="text-[10px] text-muted-foreground mt-0">
                             {selectedInCategory} / {perms.length} selected
                           </p>
                         </div>
                       </div>
                       <ChevronDown
-                        className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+                        className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? '' : '-rotate-90'}`}
                       />
                     </div>
                     {isExpanded && (
-                      <div className="p-3 bg-gray-50/30">
+                      <div className="p-3 bg-muted/30">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                           {perms.map((perm) => (
                             <label
                               key={perm.id}
-                              className={`flex items-start space-x-2.5 p-2 rounded border cursor-pointer transition-all ${selectedPermissions.includes(perm.id) ? 'bg-primary/10 border-orange-200 shadow-sm' : 'bg-white border-gray-200 hover:border-orange-200'}`}
+                              className={`flex items-start space-x-2.5 p-2 rounded border cursor-pointer transition-all ${selectedPermissions.includes(perm.id) ? 'bg-primary/10 border-orange-200 shadow-sm' : 'bg-card border-border hover:border-orange-200'}`}
                             >
                               <Checkbox
                                 checked={selectedPermissions.includes(perm.id)}
@@ -879,10 +879,10 @@ function PermissionsDialog({
                                 className="mt-0.5"
                               />
                               <div className="flex-1 min-w-0">
-                                <div className="text-[13px] font-medium text-gray-800 leading-tight">
+                                <div className="text-[13px] font-medium text-foreground leading-tight">
                                   {perm.name}
                                 </div>
-                                <div className="text-[10px] text-gray-500 mt-0.5 truncate" title={perm.description}>
+                                <div className="text-[10px] text-muted-foreground mt-0.5 truncate" title={perm.description}>
                                   {perm.description || perm.code}
                                 </div>
                               </div>
@@ -898,7 +898,7 @@ function PermissionsDialog({
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-3 border-t bg-white">
+        <DialogFooter className="px-6 py-3 border-t bg-card">
           <div className="flex items-center justify-between w-full">
             <div className="text-xs text-muted-foreground">
               <span className="font-semibold">{selectedCount}</span> permissions to be saved

@@ -88,7 +88,7 @@ export default function EstimateDetailPage() {
   if (!estimate) {
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground mb-4">Estimate not found</p>
         <Button onClick={() => router.push("/portal/estimates")}>Back to Estimates</Button>
       </div>
@@ -268,7 +268,7 @@ export default function EstimateDetailPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {estimate.line_items.map((item: any, index: number) => (
-                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <tr key={index} className="hover:bg-muted dark:hover:bg-gray-800">
                           <td className="px-4 py-3 text-sm text-foreground">
                             {item.description}
                           </td>

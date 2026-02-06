@@ -102,7 +102,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
 
     const columns = [
         { header: "Name", accessorKey: "first_name", cell: (item: any) => <span className="font-medium text-foreground">{item.first_name} {item.last_name}</span> },
-        { header: "Email", accessorKey: "email", cell: (item: any) => <span className="text-gray-500">{item.email}</span> },
+        { header: "Email", accessorKey: "email", cell: (item: any) => <span className="text-muted-foreground">{item.email}</span> },
         { header: "Position", accessorKey: "job_title" },
         { header: "Phone", accessorKey: "phone" },
         {
@@ -113,7 +113,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
         {
             header: "Last Login",
             accessorKey: "last_login",
-            cell: () => <span className="text-gray-400">-</span>
+            cell: () => <span className="text-muted-foreground">-</span>
         },
         {
             header: "Roles",
@@ -191,11 +191,11 @@ export function ContactsView({ customerId }: ContactsViewProps) {
 
                         <div className="flex gap-4">
                             <div className="flex items-center space-x-2">
-                                <input type="checkbox" id="is_primary" {...register("is_primary")} className="rounded border-gray-300" />
+                                <input type="checkbox" id="is_primary" {...register("is_primary")} className="rounded border-border" />
                                 <Label htmlFor="is_primary">Primary Contact</Label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <input type="checkbox" id="is_billing" {...register("is_billing")} className="rounded border-gray-300" />
+                                <input type="checkbox" id="is_billing" {...register("is_billing")} className="rounded border-border" />
                                 <Label htmlFor="is_billing">Billing Contact</Label>
                             </div>
                         </div>

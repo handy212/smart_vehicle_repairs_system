@@ -48,11 +48,11 @@ function KanbanColumn({ status, workOrders }: KanbanColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[300px] max-w-[300px] bg-gray-50 rounded-lg p-4 border-2 ${isOver ? "border-primary" : "border-gray-200"
+      className={`min-w-[300px] max-w-[300px] bg-muted rounded-lg p-4 border-2 ${isOver ? "border-primary" : "border-border"
         } transition-colors`}
     >
-      <div className="flex justify-between items-center mb-4 p-2 bg-white rounded border border-gray-200">
-        <h6 className="text-sm font-semibold text-gray-900">{status.label}</h6>
+      <div className="flex justify-between items-center mb-4 p-2 bg-card rounded border border-border">
+        <h6 className="text-sm font-semibold text-foreground">{status.label}</h6>
         <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">
           {workOrders.length}
         </div>
@@ -64,9 +64,9 @@ function KanbanColumn({ status, workOrders }: KanbanColumnProps) {
       >
         <div className="min-h-[500px] space-y-3">
           {workOrders.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-muted-foreground py-8">
               <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                <PremiumIcons.ClipboardList className="w-8 h-8 text-gray-400" />
+                <PremiumIcons.ClipboardList className="w-8 h-8 text-muted-foreground" />
               </div>
               <p className="text-xs">No work orders</p>
             </div>
@@ -132,7 +132,7 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="bg-white rounded-lg p-4 border border-gray-200 cursor-move transition-all hover:shadow-lg hover:-translate-y-0.5"
+      className="bg-card rounded-lg p-4 border border-border cursor-move transition-all hover:shadow-lg hover:-translate-y-0.5"
     >
       {/* Work Order Header */}
       <div className="flex justify-between items-start mb-2">
@@ -158,11 +158,11 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
             .toUpperCase()
             .slice(0, 2)}
         </div>
-        <div className="text-sm font-medium text-gray-900 truncate">{customerName}</div>
+        <div className="text-sm font-medium text-foreground truncate">{customerName}</div>
       </div>
 
       {/* Vehicle Info */}
-      <div className="text-sm text-gray-600 my-1">
+      <div className="text-sm text-muted-foreground my-1">
         <div className="flex items-center gap-1">
           <span className="text-xs">🚗</span>
           <span className="truncate">{vehicleInfo}</span>
@@ -171,15 +171,15 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
 
       {/* Technician Info */}
       {workOrder.primary_technician_name && (
-        <div className="text-xs text-gray-500 my-1 flex items-center gap-1">
+        <div className="text-xs text-muted-foreground my-1 flex items-center gap-1">
           <PremiumIcons.User className="w-3 h-3" />
           <span className="truncate">{workOrder.primary_technician_name}</span>
         </div>
       )}
 
       {/* Card Footer */}
-      <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-200">
-        <span className="text-xs text-gray-500">
+      <div className="flex justify-between items-center mt-3 pt-2 border-t border-border">
+        <span className="text-xs text-muted-foreground">
           {workOrder.created_at
             ? format(new Date(workOrder.created_at), "MMM d")
             : "-"}
@@ -196,7 +196,7 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
           <Link
             href={`/workorders/${workOrder.id}/edit`}
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center justify-center w-7 h-7 border border-gray-300 text-gray-600 rounded text-xs hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center justify-center w-7 h-7 border border-border text-muted-foreground rounded text-xs hover:bg-muted transition-colors"
             title="Edit"
           >
             <PremiumIcons.Edit className="w-3 h-3" />
@@ -333,7 +333,7 @@ export default function WorkOrderKanbanPage() {
           </Link>
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <PremiumIcons.LayoutGrid className="w-5 h-5 text-gray-500" />
+              <PremiumIcons.LayoutGrid className="w-5 h-5 text-muted-foreground" />
               Kanban Board
             </h1>
           </div>
@@ -350,7 +350,7 @@ export default function WorkOrderKanbanPage() {
       <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-6">
-            <div className="flex items-center space-x-2 border-r border-gray-200 pr-6 mr-2">
+            <div className="flex items-center space-x-2 border-r border-border pr-6 mr-2">
               <Switch
                 id="my-tasks"
                 checked={myTasksOnly}
@@ -361,7 +361,7 @@ export default function WorkOrderKanbanPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                <label className="block text-xs font-semibold text-foreground mb-2">
                   Technician
                 </label>
                 <Select
@@ -384,7 +384,7 @@ export default function WorkOrderKanbanPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                <label className="block text-xs font-semibold text-foreground mb-2">
                   Priority
                 </label>
                 <Select
@@ -441,7 +441,7 @@ export default function WorkOrderKanbanPage() {
         </div>
         <DragOverlay>
           {activeId ? (
-            <div className="bg-white rounded-lg p-4 border-2 border-primary shadow-xl opacity-90">
+            <div className="bg-card rounded-lg p-4 border-2 border-primary shadow-xl opacity-90">
               <p className="text-sm font-semibold">Moving work order...</p>
             </div>
           ) : null}

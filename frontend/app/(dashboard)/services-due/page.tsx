@@ -162,7 +162,7 @@ export default function ServicesDuePage() {
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
           <div className="relative flex-1 md:flex-none md:w-56">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search customer, vehicle, service..."
@@ -249,13 +249,13 @@ export default function ServicesDuePage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-border">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
                     <TableHead className="w-12">
                       <input
                         type="checkbox"
                         checked={selectedSchedules.length === filteredServices.length && filteredServices.length > 0}
                         onChange={toggleAllSelection}
-                        className="rounded border-gray-300"
+                        className="rounded border-border"
                       />
                     </TableHead>
                     <TableHead className="text-xs font-semibold">Customer</TableHead>
@@ -272,26 +272,26 @@ export default function ServicesDuePage() {
                 </TableHeader>
                 <TableBody>
                   {filteredServices.map((schedule) => (
-                    <TableRow key={schedule.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                    <TableRow key={schedule.id} className="hover:bg-muted/50 dark:hover:bg-gray-800/50">
                       <TableCell>
                         <input
                           type="checkbox"
                           checked={selectedSchedules.includes(schedule.id)}
                           onChange={() => toggleScheduleSelection(schedule.id)}
-                          className="rounded border-gray-300"
+                          className="rounded border-border"
                         />
                       </TableCell>
                       <TableCell className="text-xs">
                         <div>
                           <div className="font-medium">{schedule.customer_name || "N/A"}</div>
                           {schedule.customer_phone && (
-                            <div className="text-gray-500 text-xs flex items-center gap-1">
+                            <div className="text-muted-foreground text-xs flex items-center gap-1">
                               <Phone className="w-3 h-3" />
                               {schedule.customer_phone}
                             </div>
                           )}
                           {schedule.customer_email && (
-                            <div className="text-gray-500 text-xs flex items-center gap-1">
+                            <div className="text-muted-foreground text-xs flex items-center gap-1">
                               <Mail className="w-3 h-3" />
                               {schedule.customer_email}
                             </div>
@@ -354,8 +354,8 @@ export default function ServicesDuePage() {
               </Table>
             </div>
           ) : (
-            <div className="p-8 text-center text-gray-500">
-              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <div className="p-8 text-center text-muted-foreground">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p>No services due found for the selected period.</p>
             </div>
           )}

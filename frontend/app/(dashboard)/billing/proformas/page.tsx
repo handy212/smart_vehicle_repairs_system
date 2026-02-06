@@ -124,11 +124,11 @@ export default function ProformasPage() {
             </div>
 
             {/* Filter Bar */}
-            <Card className="border-none shadow-sm bg-gray-50/50">
+            <Card className="border-none shadow-sm bg-muted/50">
                 <CardContent className="p-3">
                     <div className="flex items-center gap-3">
                         <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                             <Input
                                 type="text"
                                 placeholder="Search proformas..."
@@ -155,7 +155,7 @@ export default function ProformasPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setSearch("")}
-                                className="h-8 text-gray-500"
+                                className="h-8 text-muted-foreground"
                             >
                                 <X className="w-3.5 h-3.5 mr-1" />
                                 Clear
@@ -174,29 +174,29 @@ export default function ProformasPage() {
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-gray-50/50">
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-gray-500">Number</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-gray-500">Customer</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-gray-500">Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-gray-500 text-right">Total</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-gray-500">Status</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-gray-500 text-right">Actions</TableHead>
+                                    <TableRow className="bg-muted/50">
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Number</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Customer</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Date</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground text-right">Total</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground">Status</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {invoices.map((invoice) => (
                                         <TableRow
                                             key={invoice.id}
-                                            className="group hover:bg-gray-50/80 transition-colors cursor-pointer"
+                                            className="group hover:bg-muted/80 transition-colors cursor-pointer"
                                             onDoubleClick={() => router.push(`/billing/proformas/${invoice.id}`)}
                                         >
                                             <TableCell className="px-4 py-2 font-mono text-xs font-medium">
                                                 {invoice.invoice_number || "-"}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
-                                                <span className="text-sm font-medium text-gray-900">{invoice.customer_name || "N/A"}</span>
+                                                <span className="text-sm font-medium text-foreground">{invoice.customer_name || "N/A"}</span>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {invoice.invoice_date ? format(new Date(invoice.invoice_date), "MMM dd, yyyy") : "-"}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right font-medium text-sm">
@@ -216,7 +216,7 @@ export default function ProformasPage() {
                                                     </Link>
                                                     <PermissionGuard permission="edit_invoices">
                                                         <Link href={`/billing/invoices/${invoice.id}/edit`}>
-                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-success">
+                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-success">
                                                                 <Edit className="w-3.5 h-3.5" />
                                                             </Button>
                                                         </Link>
@@ -246,7 +246,7 @@ export default function ProformasPage() {
                     ) : (
                         <div className="text-center py-12">
                             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500 text-sm">No proforma invoices found.</p>
+                            <p className="text-muted-foreground text-sm">No proforma invoices found.</p>
                             <Link href="/billing/proformas/new">
                                 <Button className="mt-4" variant="outline" size="sm">
                                     <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -261,7 +261,7 @@ export default function ProformasPage() {
             {/* Pagination */}
             {data && data.count > 20 && (
                 <div className="flex items-center justify-between px-2">
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                         Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.count)} of {data.count} proformas
                     </div>
                     <div className="flex items-center gap-2">

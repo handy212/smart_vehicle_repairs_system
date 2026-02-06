@@ -246,7 +246,7 @@ export function PartRequestDetailDialog({
                                         </Badge>
                                     </Link>
                                 </DialogTitle>
-                                <DialogDescription className="mt-1.5 text-sm text-gray-500">
+                                <DialogDescription className="mt-1.5 text-sm text-muted-foreground">
                                     <span className="font-medium text-card-foreground">{customerName}</span>
                                     <span className="mx-2 text-gray-300">|</span>
                                     {parts.length} item{parts.length !== 1 ? 's' : ''} requested
@@ -265,11 +265,11 @@ export function PartRequestDetailDialog({
                         <div className="rounded-md border shadow-sm">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 pl-4">Part Details</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Part Number</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-center">Qty</TableHead>
-                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right pr-4">Availability / Action</TableHead>
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pl-4">Part Details</TableHead>
+                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Part Number</TableHead>
+                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-center">Qty</TableHead>
+                                        <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right pr-4">Availability / Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -287,12 +287,12 @@ export function PartRequestDetailDialog({
 
                                         return (
                                             <React.Fragment key={part.id}>
-                                                <TableRow className="group hover:bg-gray-50/50">
+                                                <TableRow className="group hover:bg-muted/50">
                                                     <TableCell className="py-2.5 pl-4">
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="font-medium text-sm text-foreground">{part.part_name}</span>
                                                             {part.description && (
-                                                                <span className="text-xs text-gray-500 truncate max-w-[300px]">{part.description}</span>
+                                                                <span className="text-xs text-muted-foreground truncate max-w-[300px]">{part.description}</span>
                                                             )}
                                                             {/* Inventory Status Badge */}
                                                             {!isReady && !showPO && part.part_number && (
@@ -310,7 +310,7 @@ export function PartRequestDetailDialog({
                                                             )}
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="py-2.5 font-mono text-xs text-gray-600">
+                                                    <TableCell className="py-2.5 font-mono text-xs text-muted-foreground">
                                                         {part.part_number || <span className="text-gray-300 italic">-</span>}
                                                     </TableCell>
                                                     <TableCell className="py-2.5 text-center">
@@ -355,7 +355,7 @@ export function PartRequestDetailDialog({
                                                         <div className="inline-flex ml-2">
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-700">
+                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
                                                                         <MoreHorizontal className="w-4 h-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
@@ -405,7 +405,7 @@ export function PartRequestDetailDialog({
                     </div>
 
                     <DialogFooter className="flex items-center justify-between sm:justify-between border-t pt-4 mt-2">
-                        <Button variant="outline" size="sm" asChild className="text-gray-600">
+                        <Button variant="outline" size="sm" asChild className="text-muted-foreground">
                             <Link href={`/workorders/${workOrderId}/diagnosis`} target="_blank">
                                 View Diagnosis <ExternalLink className="w-3 h-3 ml-2" />
                             </Link>

@@ -174,7 +174,7 @@ export default function TemplateDetailPage() {
   if (!template) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Template not found</p>
+        <p className="text-muted-foreground">Template not found</p>
         <Link href="/inspections/templates">
           <Button variant="secondary" className="mt-4">
             Back to Templates
@@ -197,7 +197,7 @@ export default function TemplateDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-gray-900">{template.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{template.name}</h1>
               {template.is_default && (
                 <Badge className="bg-orange-100 text-orange-800">Default</Badge>
               )}
@@ -205,13 +205,13 @@ export default function TemplateDetailPage() {
                 className={
                   template.is_active
                     ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
+                    : "bg-gray-100 text-foreground"
                 }
               >
                 {template.is_active ? "Active" : "Inactive"}
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {template.description || "No description"}
             </p>
           </div>
@@ -234,7 +234,7 @@ export default function TemplateDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-500">Categories</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Categories</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{categories.length}</p>
@@ -243,7 +243,7 @@ export default function TemplateDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-500">Total Items</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Items</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{template.total_items || 0}</p>
@@ -252,13 +252,13 @@ export default function TemplateDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-500">Created</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Created</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm">
               {format(new Date(template.created_at), "MMM dd, yyyy")}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               by {template.created_by_name || "Unknown"}
             </p>
           </CardContent>
@@ -282,8 +282,8 @@ export default function TemplateDetailPage() {
         </CardHeader>
         <CardContent>
           {categories.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Folder className="mx-auto h-12 w-12 text-gray-400 mb-2" />
+            <div className="text-center py-8 text-muted-foreground">
+              <Folder className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
               <p>No categories yet. Add your first category to get started.</p>
             </div>
           ) : (
@@ -298,7 +298,7 @@ export default function TemplateDetailPage() {
                       </div>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <div
-                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-gray-100 hover:text-gray-900 h-8 px-3 cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-gray-100 hover:text-foreground h-8 px-3 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedCategoryId(category.id);
@@ -317,7 +317,7 @@ export default function TemplateDetailPage() {
                           Add Item
                         </div>
                         <div
-                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-gray-100 hover:text-gray-900 h-8 w-8 p-0 cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-gray-100 hover:text-foreground h-8 w-8 p-0 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingCategory(category);
@@ -348,7 +348,7 @@ export default function TemplateDetailPage() {
                         category.items.map((item: any) => (
                           <div
                             key={item.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200"
+                            className="flex items-center justify-between p-3 bg-muted rounded border border-border"
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -363,7 +363,7 @@ export default function TemplateDetailPage() {
                                 )}
                               </div>
                               {item.description && (
-                                <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                                <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                               )}
                             </div>
                             <div className="flex items-center gap-1">
@@ -400,7 +400,7 @@ export default function TemplateDetailPage() {
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-gray-500 py-2">No items in this category</p>
+                        <p className="text-sm text-muted-foreground py-2">No items in this category</p>
                       )}
                     </div>
                   </AccordionContent>
@@ -518,7 +518,7 @@ export default function TemplateDetailPage() {
                 id="item-type"
                 value={itemType}
                 onChange={(e) => setItemType(e.target.value as any)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm mt-1"
+                className="w-full rounded-md border border-border px-3 py-2 text-sm mt-1"
               >
                 <option value="pass_fail">Pass/Fail</option>
                 <option value="measurement">Measurement</option>
@@ -572,7 +572,7 @@ export default function TemplateDetailPage() {
                 id="is-critical"
                 checked={itemIsCritical}
                 onChange={(e) => setItemIsCritical(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-border"
               />
               <Label htmlFor="is-critical" className="cursor-pointer">
                 Critical Safety Item

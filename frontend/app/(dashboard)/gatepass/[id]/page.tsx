@@ -150,7 +150,7 @@ export default function GatePassDetailPage() {
                 {gatePass.status?.replace("_", " ") || gatePass.status}
               </Badge>
             </div>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5" />
               Created {gatePass.created_at ? format(new Date(gatePass.created_at), "MMM dd, yyyy HH:mm") : "N/A"}
             </p>
@@ -194,19 +194,19 @@ export default function GatePassDetailPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Work Order</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Work Order</p>
                 <Link href={`/workorders/${workOrderId}`} className="text-lg font-semibold text-primary hover:underline flex items-center gap-2">
                   {workOrderNumber}
                   <ArrowLeft className="w-3 h-3 rotate-135" />
                 </Link>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Customer</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Customer</p>
                 <p className="text-base font-medium">{gatePass.customer_name || "N/A"}</p>
               </div>
               <div className="sm:col-span-2">
                 <Separator className="my-2" />
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 mt-3">Vehicle</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 mt-3">Vehicle</p>
                 <div className="flex items-start gap-3 mt-1">
                   <div className="p-2 bg-border rounded-lg">
                     <Car className="w-5 h-5 text-muted-foreground" />
@@ -232,7 +232,7 @@ export default function GatePassDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Picked Up By</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Picked Up By</p>
                   <p className="text-lg font-medium text-foreground">
                     {gatePass.pickup_person_display || "N/A"}
                   </p>
@@ -247,25 +247,25 @@ export default function GatePassDetailPage() {
                   <>
                     {gatePass.pickup_person_relationship && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Relationship</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Relationship</p>
                         <p className="text-base font-medium">{gatePass.pickup_person_relationship}</p>
                       </div>
                     )}
                     {gatePass.pickup_person_id_type && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">ID Type</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">ID Type</p>
                         <p className="text-base font-medium capitalize">{gatePass.pickup_person_id_type.replace("_", " ")}</p>
                       </div>
                     )}
                     {gatePass.pickup_person_id_number && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">ID Number</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">ID Number</p>
                         <p className="text-base font-medium font-mono">{gatePass.pickup_person_id_number}</p>
                       </div>
                     )}
                     {gatePass.pickup_person_phone && (
                       <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Phone</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Phone</p>
                         <p className="text-base font-medium">{gatePass.pickup_person_phone}</p>
                       </div>
                     )}
@@ -275,7 +275,7 @@ export default function GatePassDetailPage() {
 
               {gatePass.pickup_notes && (
                 <div className="mt-4 bg-muted/50 p-4 rounded-lg border border-border">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 flex items-center gap-1">
                     <FileText className="w-3 h-3" /> Notes
                   </p>
                   <p className="text-sm text-card-foreground italic">"{gatePass.pickup_notes}"</p>
@@ -304,10 +304,10 @@ export default function GatePassDetailPage() {
                   <div className="w-3 h-3 rounded-full bg-primary mt-1.5 ring-4 ring-background z-10"></div>
                   <div>
                     <p className="text-sm font-medium text-foreground">Created</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {gatePass.created_at ? format(new Date(gatePass.created_at), "MMM dd, yyyy HH:mm") : "N/A"}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">By {gatePass.issued_by_name || "System"}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">By {gatePass.issued_by_name || "System"}</p>
                   </div>
                 </div>
 
@@ -316,11 +316,11 @@ export default function GatePassDetailPage() {
                     <div className="w-3 h-3 rounded-full bg-primary/80 mt-1.5 ring-4 ring-background z-10"></div>
                     <div>
                       <p className="text-sm font-medium text-foreground">Issued</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {format(new Date(gatePass.issued_at), "MMM dd, yyyy HH:mm")}
                       </p>
                       {gatePass.authorized_by_name && (
-                        <p className="text-xs text-gray-400 mt-0.5">Auth: {gatePass.authorized_by_name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Auth: {gatePass.authorized_by_name}</p>
                       )}
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export default function GatePassDetailPage() {
                     <div className="w-3 h-3 rounded-full bg-success mt-1.5 ring-4 ring-background z-10"></div>
                     <div>
                       <p className="text-sm font-medium text-foreground">Completed</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {format(new Date(gatePass.completed_at), "MMM dd, yyyy HH:mm")}
                       </p>
                     </div>
@@ -460,39 +460,39 @@ export default function GatePassDetailPage() {
       </Dialog>
 
       {/* Print View - Only visible when printing */}
-      <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8">
+      <div className="hidden print:block fixed inset-0 bg-card z-[9999] p-8">
         <div className="max-w-3xl mx-auto border-2 border-gray-800 rounded-xl p-8 space-y-8">
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6">
             <div>
-              <h1 className="text-4xl font-black text-gray-900 tracking-tight">GATE PASS</h1>
-              <p className="text-gray-500 font-medium mt-1">Vehicle Release Authorization</p>
+              <h1 className="text-4xl font-black text-foreground tracking-tight">GATE PASS</h1>
+              <p className="text-muted-foreground font-medium mt-1">Vehicle Release Authorization</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-500 uppercase font-bold tracking-wider">Pass Number</p>
-              <p className="text-2xl font-mono font-bold text-gray-900">{gatePass.gate_pass_number}</p>
+              <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider">Pass Number</p>
+              <p className="text-2xl font-mono font-bold text-foreground">{gatePass.gate_pass_number}</p>
             </div>
           </div>
 
           {/* Main Info Grid */}
           <div className="grid grid-cols-2 gap-x-12 gap-y-8">
             <div>
-              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Customer</p>
-              <p className="text-xl font-bold text-gray-900">{gatePass.customer_name || "N/A"}</p>
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Customer</p>
+              <p className="text-xl font-bold text-foreground">{gatePass.customer_name || "N/A"}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Date Issued</p>
-              <p className="text-xl font-bold text-gray-900">
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Date Issued</p>
+              <p className="text-xl font-bold text-foreground">
                 {gatePass.issued_at ? format(new Date(gatePass.issued_at), "MMM dd, yyyy HH:mm") : format(new Date(), "MMM dd, yyyy HH:mm")}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Vehicle</p>
-              <p className="text-xl font-bold text-gray-900">{gatePass.vehicle_info || "N/A"}</p>
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Vehicle</p>
+              <p className="text-xl font-bold text-foreground">{gatePass.vehicle_info || "N/A"}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Work Order Reference</p>
-              <p className="text-xl font-bold text-gray-900">{workOrderNumber}</p>
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Work Order Reference</p>
+              <p className="text-xl font-bold text-foreground">{workOrderNumber}</p>
             </div>
           </div>
 
@@ -500,19 +500,19 @@ export default function GatePassDetailPage() {
 
           {/* Pickup Details */}
           <div>
-            <p className="text-sm font-bold text-gray-900 uppercase tracking-widest border-b border-gray-200 pb-2 mb-4">Pickup Details</p>
+            <p className="text-sm font-bold text-foreground uppercase tracking-widest border-b border-border pb-2 mb-4">Pickup Details</p>
             <div className="grid grid-cols-2 gap-8">
               <div>
-                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Picked Up By</p>
-                <p className="text-lg font-medium text-gray-900">
+                <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Picked Up By</p>
+                <p className="text-lg font-medium text-foreground">
                   {gatePass.pickup_person_display || "N/A"}
                   {gatePass.picked_up_by_customer && " (Customer)"}
                 </p>
               </div>
               {!gatePass.picked_up_by_customer && gatePass.pickup_person_id_number && (
                 <div>
-                  <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">ID Number</p>
-                  <p className="text-lg font-medium text-gray-900">{gatePass.pickup_person_id_number}</p>
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">ID Number</p>
+                  <p className="text-lg font-medium text-foreground">{gatePass.pickup_person_id_number}</p>
                 </div>
               )}
             </div>
@@ -524,29 +524,29 @@ export default function GatePassDetailPage() {
               <div className="space-y-12">
                 <div className="border-b border-gray-400 h-1"></div>
                 <div>
-                  <p className="font-bold text-gray-900 uppercase text-xs">Issued By</p>
-                  <p className="text-sm text-gray-600">{gatePass.issued_by_name || "Authorized Staff"}</p>
+                  <p className="font-bold text-foreground uppercase text-xs">Issued By</p>
+                  <p className="text-sm text-muted-foreground">{gatePass.issued_by_name || "Authorized Staff"}</p>
                 </div>
               </div>
               <div className="space-y-12">
                 <div className="border-b border-gray-400 h-1"></div>
                 <div>
-                  <p className="font-bold text-gray-900 uppercase text-xs">Security Check</p>
-                  <p className="text-sm text-gray-600">Signature & Date</p>
+                  <p className="font-bold text-foreground uppercase text-xs">Security Check</p>
+                  <p className="text-sm text-muted-foreground">Signature & Date</p>
                 </div>
               </div>
               <div className="space-y-12">
                 <div className="border-b border-gray-400 h-1"></div>
                 <div>
-                  <p className="font-bold text-gray-900 uppercase text-xs">Receiver Signature</p>
-                  <p className="text-sm text-gray-600">I confirm receipt of vehicle</p>
+                  <p className="font-bold text-foreground uppercase text-xs">Receiver Signature</p>
+                  <p className="text-sm text-muted-foreground">I confirm receipt of vehicle</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="pt-8 text-center">
-            <p className="text-xs text-gray-400 font-mono">Generated on {format(new Date(), "PPpp")}</p>
+            <p className="text-xs text-muted-foreground font-mono">Generated on {format(new Date(), "PPpp")}</p>
           </div>
         </div>
       </div>

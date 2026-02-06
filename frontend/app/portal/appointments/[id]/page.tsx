@@ -127,7 +127,7 @@ export default function AppointmentDetailPage() {
   if (!appointment) {
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground">Appointment not found</p>
         <Link href="/portal/appointments">
           <Button variant="secondary" className="mt-4">
@@ -387,7 +387,7 @@ export default function AppointmentDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-start space-x-2">
-                  <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
                   <p className="text-sm text-card-foreground">
                     {apt.branch_name}
                   </p>

@@ -144,9 +144,9 @@ export default function AddPartDialog({
           </div>
 
           <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-gray-200"></div>
-            <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">OR ENTER MANUALLY</span>
-            <div className="flex-grow border-t border-gray-200"></div>
+            <div className="flex-grow border-t border-border"></div>
+            <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs">OR ENTER MANUALLY</span>
+            <div className="flex-grow border-t border-border"></div>
           </div>
         </div>
 
@@ -162,7 +162,7 @@ export default function AddPartDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="part_number" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="part_number" className="block text-sm font-medium text-foreground mb-2">
                   Part Number *
                 </label>
                 <Input
@@ -175,7 +175,7 @@ export default function AddPartDialog({
                 )}
               </div>
               <div>
-                <label htmlFor="part_name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="part_name" className="block text-sm font-medium text-foreground mb-2">
                   Part Name *
                 </label>
                 <Input
@@ -190,7 +190,7 @@ export default function AddPartDialog({
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">
                 Description
               </label>
               <Textarea
@@ -203,7 +203,7 @@ export default function AddPartDialog({
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="quantity" className="block text-sm font-medium text-foreground mb-2">
                   Quantity *
                 </label>
                 <Input
@@ -217,7 +217,7 @@ export default function AddPartDialog({
                 )}
               </div>
               <div>
-                <label htmlFor="unit_cost" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="unit_cost" className="block text-sm font-medium text-foreground mb-2">
                   Unit Cost (Buy Price) *
                 </label>
                 <Input
@@ -232,7 +232,7 @@ export default function AddPartDialog({
                 )}
               </div>
               <div>
-                <label htmlFor="markup_percentage" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="markup_percentage" className="block text-sm font-medium text-foreground mb-2">
                   Markup %
                 </label>
                 <Input
@@ -245,10 +245,10 @@ export default function AddPartDialog({
               </div>
             </div>
 
-            <div className="bg-gray-50 p-3 rounded">
+            <div className="bg-muted p-3 rounded">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Total Price (To Customer):</span>
-                <span className="text-lg font-bold text-gray-900">{formatCurrency(totalCost)}</span>
+                <span className="text-sm font-medium text-foreground">Total Price (To Customer):</span>
+                <span className="text-lg font-bold text-foreground">{formatCurrency(totalCost)}</span>
               </div>
             </div>
           </div>

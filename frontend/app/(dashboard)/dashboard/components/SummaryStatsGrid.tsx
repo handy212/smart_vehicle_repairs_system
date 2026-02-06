@@ -56,7 +56,7 @@ export function SummaryStatsGrid({ stats }: SummaryStatsGridProps) {
             label: "Vehicles on Site",
             value: stats.total_vehicles,
             icon: Car,
-            iconColor: "text-gray-400",
+            iconColor: "text-muted-foreground",
             link: "/vehicles",
         },
     ];

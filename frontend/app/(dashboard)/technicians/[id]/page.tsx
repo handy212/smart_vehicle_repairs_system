@@ -73,7 +73,7 @@ function TechnicianProfileContent() {
             case 'available': return "text-success bg-green-100 dark:bg-green-900/30 dark:text-green-400";
             case 'busy': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-primary";
             case 'break': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400";
-            case 'offline': return "text-gray-600 bg-border dark:text-gray-400";
+            case 'offline': return "text-muted-foreground bg-border text-muted-foreground";
             default: return "";
         }
     };
@@ -128,7 +128,7 @@ function TechnicianProfileContent() {
                             <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                                 <Avatar className="h-24 w-24 border-4 border-white dark:border-gray-950 shadow-lg">
                                     <AvatarImage src={technician.user_details?.profile_picture} />
-                                    <AvatarFallback className="text-2xl font-bold bg-white text-primary">
+                                    <AvatarFallback className="text-2xl font-bold bg-card text-primary">
                                         {technician.user_details?.first_name?.[0]}{technician.user_details?.last_name?.[0]}
                                     </AvatarFallback>
                                 </Avatar>
@@ -232,7 +232,7 @@ function TechnicianProfileContent() {
                                 <CardContent>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="bg-primary/10 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800">
-                                            <div className="text-2xl font-bold text-primary dark:text-primary">0</div>
+                                            <div className="text-2xl font-bold text-primary">0</div>
                                             <div className="text-sm text-primary dark:text-orange-300">Active Jobs</div>
                                         </div>
                                         <div className="bg-success/10 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">

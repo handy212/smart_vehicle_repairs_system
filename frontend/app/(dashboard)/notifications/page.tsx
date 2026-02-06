@@ -230,7 +230,7 @@ export default function NotificationsPage() {
         <div className="p-3 space-y-3">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search notifications..."
@@ -344,7 +344,7 @@ export default function NotificationsPage() {
                         className="h-7 w-7 p-0 hover:bg-orange-100 dark:hover:bg-orange-900/20"
                         title="Mark as read"
                       >
-                        <CheckCircle className="w-4 h-4 text-primary dark:text-primary" />
+                        <CheckCircle className="w-4 h-4 text-primary" />
                       </Button>
                     )}
                   </div>
@@ -371,7 +371,7 @@ export default function NotificationsPage() {
         <Card className="border-dashed border-2 bg-muted/50">
           <div className="py-16 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 rounded-full bg-border flex items-center justify-center mb-4">
-              <Bell className="w-8 h-8 text-gray-400" />
+              <Bell className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-card-foreground mb-1">
               {debouncedSearch ? "No notifications found" : filter === "unread" ? "No unread notifications" : "No notifications yet"}

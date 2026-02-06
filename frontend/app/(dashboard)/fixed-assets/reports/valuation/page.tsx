@@ -122,7 +122,7 @@ export default function AssetValuationReportPage() {
             {/* Print Header */}
             <div className="hidden print:block mb-8">
                 <h1 className="text-2xl font-bold mb-2">Fixed Asset Valuation Report</h1>
-                <p className="text-sm text-gray-500">Generated on {format(new Date(), "PPP")}</p>
+                <p className="text-sm text-muted-foreground">Generated on {format(new Date(), "PPP")}</p>
             </div>
 
             {/* Summary Cards */}

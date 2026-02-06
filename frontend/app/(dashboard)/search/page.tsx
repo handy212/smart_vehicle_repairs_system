@@ -98,8 +98,8 @@ export default function SearchPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Search</h1>
-        <p className="text-sm text-gray-500 mt-1">Search across all records</p>
+        <h1 className="text-3xl font-bold text-foreground">Search</h1>
+        <p className="text-sm text-muted-foreground mt-1">Search across all records</p>
       </div>
 
       {/* Search Form */}
@@ -108,7 +108,7 @@ export default function SearchPage() {
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="flex gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <Input
                   type="text"
                   placeholder="Search customers, vehicles, work orders, appointments, invoices, parts..."
@@ -123,7 +123,7 @@ export default function SearchPage() {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-gray-600">Quick filters:</span>
+              <span className="text-muted-foreground">Quick filters:</span>
               <Button
                 type="button"
                variant="secondary"
@@ -186,8 +186,8 @@ export default function SearchPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Enter at least 2 characters to search</p>
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Enter at least 2 characters to search</p>
             </div>
           </CardContent>
         </Card>
@@ -204,7 +204,7 @@ export default function SearchPage() {
           <CardContent className="pt-6">
             <div className="text-center py-12">
               <p className="text-red-600 font-medium mb-2">Search Error</p>
-              <p className="text-gray-500 text-sm">
+              <p className="text-muted-foreground text-sm">
                 {error instanceof Error ? error.message : "An error occurred while searching"}
               </p>
             </div>
@@ -212,7 +212,7 @@ export default function SearchPage() {
         </Card>
       ) : searchData && searchData.results.length > 0 ? (
         <div className="space-y-6">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             Found {searchData.total} result{searchData.total !== 1 ? "s" : ""} for &quot;{debouncedQuery}&quot;
           </div>
 
@@ -230,13 +230,13 @@ export default function SearchPage() {
                     <Link
                       key={`${result.type}-${result.id}`}
                       href={result.url}
-                      className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-orange-300 transition-colors"
+                      className="block p-4 border border-border rounded-lg hover:bg-muted hover:border-orange-300 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{result.title}</h3>
+                          <h3 className="font-semibold text-foreground">{result.title}</h3>
                           {result.subtitle && (
-                            <p className="text-sm text-gray-600 mt-1">{result.subtitle}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{result.subtitle}</p>
                           )}
                         </div>
                         <div className="ml-4 flex items-center space-x-2">
@@ -261,9 +261,9 @@ export default function SearchPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-900 font-medium mb-2">No results found</p>
-              <p className="text-gray-500 text-sm">
+              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-foreground font-medium mb-2">No results found</p>
+              <p className="text-muted-foreground text-sm">
                 Try different keywords or check your spelling
               </p>
             </div>

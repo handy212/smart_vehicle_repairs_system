@@ -125,7 +125,7 @@ export default function BalanceSheetPage() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <Link href="/accounting" className="text-gray-500 hover:text-gray-700">
+                        <Link href="/accounting" className="text-muted-foreground hover:text-foreground">
                             <ArrowLeft className="w-4 h-4" />
                         </Link>
                         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
@@ -150,7 +150,7 @@ export default function BalanceSheetPage() {
                         className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${showFilters ? "flex" : "hidden sm:flex"}`}
                     >
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">As of:</span>
+                            <span className="text-sm text-muted-foreground">As of:</span>
                             <Input
                                 type="date"
                                 value={date}
@@ -191,7 +191,7 @@ export default function BalanceSheetPage() {
                                     {report.assets.map((acc) => (
                                         <TableRow key={acc.code}>
                                             <TableCell>
-                                                <span className="font-medium text-gray-700">{acc.code}</span> - {acc.name}
+                                                <span className="font-medium text-foreground">{acc.code}</span> - {acc.name}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 {formatCurrency(acc.balance)}
@@ -200,7 +200,7 @@ export default function BalanceSheetPage() {
                                     ))}
                                     {report.assets.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={2} className="text-center text-gray-500">No assets found</TableCell>
+                                            <TableCell colSpan={2} className="text-center text-muted-foreground">No assets found</TableCell>
                                         </TableRow>
                                     )}
                                     <TableRow className="font-bold bg-muted/50">
@@ -230,7 +230,7 @@ export default function BalanceSheetPage() {
                                         {report.liabilities.map((acc) => (
                                             <TableRow key={acc.code}>
                                                 <TableCell>
-                                                    <span className="font-medium text-gray-700">{acc.code}</span> - {acc.name}
+                                                    <span className="font-medium text-foreground">{acc.code}</span> - {acc.name}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     {formatCurrency(acc.balance)}
@@ -239,7 +239,7 @@ export default function BalanceSheetPage() {
                                         ))}
                                         {report.liabilities.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={2} className="text-center text-gray-500">No liabilities found</TableCell>
+                                                <TableCell colSpan={2} className="text-center text-muted-foreground">No liabilities found</TableCell>
                                             </TableRow>
                                         )}
                                         <TableRow className="font-bold bg-muted/50">
@@ -268,7 +268,7 @@ export default function BalanceSheetPage() {
                                         {report.equity.map((acc) => (
                                             <TableRow key={acc.code}>
                                                 <TableCell>
-                                                    <span className="font-medium text-gray-700">{acc.code}</span> - {acc.name}
+                                                    <span className="font-medium text-foreground">{acc.code}</span> - {acc.name}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     {formatCurrency(acc.balance)}
@@ -277,7 +277,7 @@ export default function BalanceSheetPage() {
                                         ))}
                                         {report.equity.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={2} className="text-center text-gray-500">No equity records found</TableCell>
+                                                <TableCell colSpan={2} className="text-center text-muted-foreground">No equity records found</TableCell>
                                             </TableRow>
                                         )}
                                         <TableRow className="font-bold bg-muted/50">
@@ -293,7 +293,7 @@ export default function BalanceSheetPage() {
                         <Card className={report.is_balanced ? "border-green-200 bg-success/10" : "border-red-200 bg-red-50/50"}>
                             <CardContent className="pt-6">
                                 <div className="flex justify-between items-center">
-                                    <span className="font-bold text-gray-700">Total Liabilities + Equity</span>
+                                    <span className="font-bold text-foreground">Total Liabilities + Equity</span>
                                     <span className={`font-bold ${report.is_balanced ? "text-green-700" : "text-red-700"}`}>
                                         {formatCurrency(report.totals.liabilities_plus_equity)}
                                     </span>
@@ -306,7 +306,7 @@ export default function BalanceSheetPage() {
                     </div>
                 </div>
             ) : (
-                <div className="text-center py-10 text-gray-500">No data available</div>
+                <div className="text-center py-10 text-muted-foreground">No data available</div>
             )}
         </div>
     );

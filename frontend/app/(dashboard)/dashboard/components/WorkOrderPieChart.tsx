@@ -179,7 +179,7 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
             return (
               <div
                 key={index}
-                className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-2 p-2 rounded hover:bg-muted dark:hover:bg-gray-800 transition-colors"
               >
                 <div
                   className="w-3 h-3 rounded-full flex-shrink-0"
@@ -223,7 +223,7 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
                       {group.label}
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {group.count} <span className="text-xs font-normal text-gray-500">({percentage}%)</span>
+                      {group.count} <span className="text-xs font-normal text-muted-foreground">({percentage}%)</span>
                     </p>
                   </div>
                 </div>

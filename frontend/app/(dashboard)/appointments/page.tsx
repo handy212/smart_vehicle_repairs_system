@@ -329,7 +329,7 @@ export default function AppointmentsPage() {
           {/* Premium Header */}
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
-              <PremiumIcons.Calendar className="w-8 h-8 text-primary dark:text-primary" />
+              <PremiumIcons.Calendar className="w-8 h-8 text-primary" />
               Appointments
             </h1>
           </div>
@@ -343,7 +343,7 @@ export default function AppointmentsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border backdrop-blur-sm bg-white/50"
+                className="h-9 dark:bg-gray-800 text-foreground border-border backdrop-blur-sm bg-card/50"
               >
                 Actions
                 <PremiumIcons.ChevronDown className="w-3.5 h-3.5 ml-2" />
@@ -363,7 +363,7 @@ export default function AppointmentsPage() {
           </DropdownMenu>
 
           <Link href="/appointments/calendar">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border backdrop-blur-sm bg-white/50">
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 text-foreground border-border backdrop-blur-sm bg-card/50">
               <PremiumIcons.CalendarDays className="w-3.5 h-3.5 mr-2" />
               Calendar View
             </Button>
@@ -384,7 +384,7 @@ export default function AppointmentsPage() {
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
           <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <PremiumIcons.Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <PremiumIcons.Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search appointments..."
@@ -502,7 +502,7 @@ export default function AppointmentsPage() {
 
       {/* Appointments Table */}
       <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-        <CardHeader className="py-4 px-6 border-b border-border/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm">
+        <CardHeader className="py-4 px-6 border-b border-border/50 bg-card/40 dark:bg-gray-800/40 backdrop-blur-sm">
           <CardTitle className="text-base font-semibold text-foreground tracking-tight">
             All Appointments ({data?.count || 0})
           </CardTitle>
@@ -516,7 +516,7 @@ export default function AppointmentsPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="w-[40px] pl-4">
                       <input
                         type="checkbox"
@@ -525,14 +525,14 @@ export default function AppointmentsPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
+                        className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                       />
                     </TableHead>
                     <SortableHeader
                       field="appointment_number"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
+                      className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Appt #
                     </SortableHeader>
@@ -540,16 +540,16 @@ export default function AppointmentsPage() {
                       field="customer__user__last_name"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
+                      className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Customer
                     </SortableHeader>
-                    <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">Vehicle</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
                     <SortableHeader
                       field="appointment_date"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
+                      className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Date & Time
                     </SortableHeader>
@@ -557,7 +557,7 @@ export default function AppointmentsPage() {
                       field="service_type"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
+                      className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Service Type
                     </SortableHeader>
@@ -565,7 +565,7 @@ export default function AppointmentsPage() {
                       field="priority"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
+                      className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Priority
                     </SortableHeader>
@@ -573,18 +573,18 @@ export default function AppointmentsPage() {
                       field="status"
                       sortConfig={sortConfig}
                       onSort={handleSort}
-                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
+                      className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
                     >
                       Status
                     </SortableHeader>
-                    <TableHead className="text-right text-[10px] uppercase tracking-wider font-semibold text-gray-500 pr-4">Actions</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pr-4">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((appointment) => (
                     <TableRow
                       key={appointment.id}
-                      className="hover:bg-gray-50/80 transition-colors cursor-pointer group"
+                      className="hover:bg-muted/80 transition-colors cursor-pointer group"
                       onDoubleClick={() => router.push(`/appointments/${appointment.id}`)}
                     >
                       <TableCell className="pl-4 py-2.5">
@@ -593,7 +593,7 @@ export default function AppointmentsPage() {
                           checked={bulkSelection.isSelected(appointment.id)}
                           onChange={() => bulkSelection.toggleSelection(appointment.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
+                          className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                         />
                       </TableCell>
                       <TableCell className="font-mono text-xs font-medium py-2.5">
@@ -688,8 +688,8 @@ export default function AppointmentsPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <PremiumIcons.Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No appointments found.</p>
+              <PremiumIcons.Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No appointments found.</p>
               <Link href="/appointments/new">
                 <Button className="mt-4" variant="secondary">
                   <PremiumIcons.Plus className="w-4 h-4 mr-2" />
@@ -702,7 +702,7 @@ export default function AppointmentsPage() {
           {/* Pagination */}
           {data && data.count > 0 && (
             <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-foreground">
                 Showing page {page} of {Math.ceil(data.count / 10)}
               </div>
               <div className="flex space-x-2">
@@ -735,7 +735,7 @@ export default function AppointmentsPage() {
             <DialogTitle>Update Status for {bulkSelection.selectedCount} Appointment(s)</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               New Status
             </label>
             <Select

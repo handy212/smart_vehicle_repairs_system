@@ -379,7 +379,7 @@ export default function InvoicesPage() {
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Unpaid</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unpaid</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-primary">{stats?.counts.unpaid || 0}</span>
                             <FileText className="w-4 h-4 text-orange-500/50" />
@@ -395,7 +395,7 @@ export default function InvoicesPage() {
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paid</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-success">{stats?.counts.paid || 0}</span>
                             <CheckCircle className="w-4 h-4 text-green-500/50" />
@@ -411,7 +411,7 @@ export default function InvoicesPage() {
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Partially Paid</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Partially Paid</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-primary">{stats?.counts.partially_paid || 0}</span>
                             <CreditCard className="w-4 h-4 text-primary/50" />
@@ -427,7 +427,7 @@ export default function InvoicesPage() {
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overdue</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Overdue</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-red-600">{stats?.counts.overdue || 0}</span>
                             <AlertCircle className="w-4 h-4 text-red-500/50" />
@@ -443,23 +443,23 @@ export default function InvoicesPage() {
                     }}
                 >
                     <CardContent className="p-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Draft</span>
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Draft</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-gray-600">{stats?.counts.draft || 0}</span>
-                            <FileText className="w-4 h-4 text-gray-400" />
+                            <span className="text-lg font-bold text-muted-foreground">{stats?.counts.draft || 0}</span>
+                            <FileText className="w-4 h-4 text-muted-foreground" />
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Compact Filter Bar */}
-            <Card className="border-none shadow-sm bg-gray-50/50">
+            <Card className="border-none shadow-sm bg-muted/50">
                 <CardContent className="p-3">
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3 flex-wrap">
                             {/* Search */}
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                                 <Input
                                     type="text"
                                     placeholder="Search invoices..."
@@ -497,7 +497,7 @@ export default function InvoicesPage() {
                                         setAdvancedFilters({});
                                         setPage(1);
                                     }}
-                                    className="h-8 text-gray-500 hover:text-red-600"
+                                    className="h-8 text-muted-foreground hover:text-red-600"
                                 >
                                     <X className="w-3.5 h-3.5 mr-1" />
                                     Clear
@@ -508,17 +508,17 @@ export default function InvoicesPage() {
                             {stats && (
                                 <div className="hidden md:flex items-center space-x-2 ml-auto text-sm">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-gray-500 font-medium">Paid Inv:</span>
+                                        <span className="text-muted-foreground font-medium">Paid Inv:</span>
                                         <span className="font-bold text-foreground">{formatCurrency(stats.financials.total_paid)}</span>
                                     </div>
                                     <div className="h-4 w-px bg-border"></div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-gray-500 font-medium">Past Due Inv:</span>
+                                        <span className="text-muted-foreground font-medium">Past Due Inv:</span>
                                         <span className="font-bold text-red-600">{formatCurrency(stats.financials.past_due_total)}</span>
                                     </div>
                                     <div className="h-4 w-px bg-border"></div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-gray-500 font-medium">Outstanding Inv:</span>
+                                        <span className="text-muted-foreground font-medium">Outstanding Inv:</span>
                                         <span className="font-bold text-foreground">{formatCurrency(stats.financials.outstanding_total)}</span>
                                     </div>
                                 </div>
@@ -595,7 +595,7 @@ export default function InvoicesPage() {
 
             {/* Invoices Table */}
             <Card className="border-t shadow-sm">
-                <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30">
                     <CardTitle className="text-sm font-semibold text-card-foreground">
                         All Invoices <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
                     </CardTitle>
@@ -607,7 +607,7 @@ export default function InvoicesPage() {
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
                                         <TableHead className="w-[40px] px-4">
                                             <input
                                                 type="checkbox"
@@ -616,25 +616,25 @@ export default function InvoicesPage() {
                                                     if (input) input.indeterminate = bulkSelection.isIndeterminate;
                                                 }}
                                                 onChange={bulkSelection.toggleSelectAll}
-                                                className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
+                                                className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                                             />
                                         </TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Invoice #</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Customer</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Due Date</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Total</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Paid</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Due</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Invoice #</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Due Date</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Total</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Paid</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Due</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {data.results.map((invoice) => (
                                         <TableRow
                                             key={invoice.id}
-                                            className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 cursor-pointer"
+                                            className="group hover:bg-muted/80 transition-colors border-b border-border last:border-0 cursor-pointer"
                                             onDoubleClick={() => router.push(`/billing/invoices/${invoice.id}`)}
                                         >
                                             <TableCell className="px-4 py-2">
@@ -642,22 +642,22 @@ export default function InvoicesPage() {
                                                     type="checkbox"
                                                     checked={bulkSelection.isSelected(invoice.id)}
                                                     onChange={() => bulkSelection.toggleSelection(invoice.id)}
-                                                    className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
+                                                    className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                                                 />
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700">
+                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-foreground">
                                                 {invoice.invoice_number || "-"}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
-                                                <span className="text-sm font-medium text-gray-900">{invoice.customer_name || "N/A"}</span>
+                                                <span className="text-sm font-medium text-foreground">{invoice.customer_name || "N/A"}</span>
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {invoice.invoice_date ? format(new Date(invoice.invoice_date), "MMM dd, yyyy") : "-"}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-xs text-gray-600">
+                                            <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                                 {invoice.due_date ? format(new Date(invoice.due_date), "MMM dd, yyyy") : "-"}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-right font-medium text-sm text-gray-700">
+                                            <TableCell className="px-4 py-2 text-right font-medium text-sm text-foreground">
                                                 {formatCurrency(parseFloat(invoice.total || "0"))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right text-sm text-success">
@@ -677,14 +677,14 @@ export default function InvoicesPage() {
                                             <TableCell className="px-4 py-2 text-right">
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Link href={`/billing/invoices/${invoice.id}`}>
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
                                                             <Eye className="w-3.5 h-3.5" />
                                                         </Button>
                                                     </Link>
                                                     {invoice.status === 'draft' && (
                                                         <PermissionGuard permission="edit_invoices">
                                                             <Link href={`/billing/invoices/${invoice.id}/edit`}>
-                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-success">
+                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-success">
                                                                     <Edit className="w-3.5 h-3.5" />
                                                                 </Button>
                                                             </Link>
@@ -701,7 +701,7 @@ export default function InvoicesPage() {
                                                                 documentNumber: invoice.invoice_number
                                                             });
                                                         }}
-                                                        className="h-7 w-7 p-0 text-gray-500 hover:text-purple-600"
+                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-purple-600"
                                                     >
                                                         <Printer className="w-3.5 h-3.5" />
                                                     </Button>
@@ -715,7 +715,7 @@ export default function InvoicesPage() {
                     ) : (
                         <div className="text-center py-12">
                             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500 text-sm">No invoices found.</p>
+                            <p className="text-muted-foreground text-sm">No invoices found.</p>
                             <PermissionGuard permission="create_invoices">
                                 <Link href="/billing/invoices/new">
                                     <Button className="mt-4" variant="outline" size="sm">
@@ -732,7 +732,7 @@ export default function InvoicesPage() {
             {/* Pagination */}
             {data && data.count > 20 && (
                 <div className="flex items-center justify-between px-2">
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                         Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.count)} of {data.count} invoices
                     </div>
                     <div className="flex items-center gap-2">
@@ -773,7 +773,7 @@ export default function InvoicesPage() {
                             <div className="col-span-3">
                                 <select
                                     id="status"
-                                    className="flex h-10 w-full rounded-md border border-gray-300 border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="flex h-10 w-full rounded-md border border-border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={bulkStatus}
                                     onChange={(e) => setBulkStatus(e.target.value)}
                                 >

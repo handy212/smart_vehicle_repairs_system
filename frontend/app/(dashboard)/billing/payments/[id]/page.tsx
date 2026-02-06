@@ -216,33 +216,33 @@ export default function PaymentDetailPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <DollarSign className="h-5 w-5 text-gray-500" />
+                                <DollarSign className="h-5 w-5 text-muted-foreground" />
                                 Payment Details
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-2 gap-6">
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-1">Amount</h3>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-1">Amount</h3>
                                 <p className="text-2xl font-bold">${parseFloat(payment.amount).toLocaleString()}</p>
                             </div>
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-1">Method</h3>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-1">Method</h3>
                                 <div className="flex items-center gap-2">
-                                    <CreditCard className="h-4 w-4 text-gray-400" />
+                                    <CreditCard className="h-4 w-4 text-muted-foreground" />
                                     <span className="font-medium capitalize">{payment.payment_method.replace('_', ' ')}</span>
                                 </div>
                             </div>
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-1">Reference</h3>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-1">Reference</h3>
                                 <p className="font-medium">{payment.reference_number || '-'}</p>
                             </div>
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-1">Transaction ID</h3>
+                                <h3 className="text-sm font-medium text-muted-foreground mb-1">Transaction ID</h3>
                                 <p className="font-medium">{payment.transaction_id || '-'}</p>
                             </div>
                             {payment.notes && (
                                 <div className="col-span-2">
-                                    <h3 className="text-sm font-medium text-gray-500 mb-1">Notes</h3>
+                                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Notes</h3>
                                     <p className="text-card-foreground bg-muted p-3 rounded-md">
                                         {payment.notes}
                                     </p>
@@ -255,7 +255,7 @@ export default function PaymentDetailPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-gray-500" />
+                                <FileText className="h-5 w-5 text-muted-foreground" />
                                 Allocations
                             </CardTitle>
                             <CardDescription>
@@ -306,7 +306,7 @@ export default function PaymentDetailPage() {
                         <CardContent>
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                                    <User className="h-5 w-5 text-primary dark:text-primary" />
+                                    <User className="h-5 w-5 text-primary" />
                                 </div>
                                 <div>
                                     <Link href={payment.customer ? `/customers/${payment.customer}` : '#'} className="font-medium hover:text-primary block">
@@ -324,12 +324,12 @@ export default function PaymentDetailPage() {
                                 <CardTitle className="text-base">Primary Invoice</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <Link href={`/billing/invoices/${payment.invoice}`} className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                <Link href={`/billing/invoices/${payment.invoice}`} className="flex items-center justify-between p-3 border rounded-md hover:bg-muted dark:hover:bg-gray-800 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <FileText className="h-5 w-5 text-gray-500" />
+                                        <FileText className="h-5 w-5 text-muted-foreground" />
                                         <span className="font-medium">{payment.invoice_number}</span>
                                     </div>
-                                    <ArrowLeft className="h-4 w-4 rotate-180 text-gray-400" />
+                                    <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
                                 </Link>
                             </CardContent>
                         </Card>

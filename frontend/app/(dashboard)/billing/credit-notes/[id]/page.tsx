@@ -126,7 +126,7 @@ export default function CreditNoteDetailPage() {
                                 {creditNote.status.toUpperCase()}
                             </Badge>
                         </h1>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                             Created on {format(new Date(creditNote.created_at || new Date()), "MMM d, yyyy")}
                         </p>
                     </div>
@@ -198,14 +198,14 @@ export default function CreditNoteDetailPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <Label className="text-gray-500">Name</Label>
+                                <Label className="text-muted-foreground">Name</Label>
                                 <p className="font-medium">
                                     {typeof creditNote.customer === 'object' ? creditNote.customer.full_name : creditNote.customer_name}
                                 </p>
                             </div>
                             {creditNote.invoice_number && (
                                 <div>
-                                    <Label className="text-gray-500">Original Invoice</Label>
+                                    <Label className="text-muted-foreground">Original Invoice</Label>
                                     <p>
                                         <Link
                                             href={`/billing/invoices/${typeof creditNote.invoice === 'object' ? creditNote.invoice?.id : creditNote.invoice}`}
@@ -226,20 +226,20 @@ export default function CreditNoteDetailPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-500">Unused Amount</span>
+                                <span className="text-muted-foreground">Unused Amount</span>
                                 <Badge variant="outline" className="text-lg">
                                     {formatCurrency(parseFloat(creditNote.unused_amount))}
                                 </Badge>
                             </div>
 
                             <div className="pt-4 border-t">
-                                <p className="text-sm text-gray-500 mb-1">Reason</p>
+                                <p className="text-sm text-muted-foreground mb-1">Reason</p>
                                 <p>{creditNote.reason || "-"}</p>
                             </div>
 
                             {creditNote.notes && (
                                 <div className="pt-4 border-t">
-                                    <p className="text-sm text-gray-500 mb-1">Notes</p>
+                                    <p className="text-sm text-muted-foreground mb-1">Notes</p>
                                     <p className="text-sm">{creditNote.notes}</p>
                                 </div>
                             )}

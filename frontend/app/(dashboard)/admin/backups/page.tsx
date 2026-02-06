@@ -135,7 +135,7 @@ export default function BackupsPage() {
       case "media":
         return <FileArchive className="w-3.5 h-3.5 text-primary" />;
       default:
-        return <FileArchive className="w-3.5 h-3.5 text-gray-500" />;
+        return <FileArchive className="w-3.5 h-3.5 text-muted-foreground" />;
     }
   };
 
@@ -157,11 +157,11 @@ export default function BackupsPage() {
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
           <h1 className="text-xl font-bold text-foreground tracking-tight">System Backups</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Manage database and file backups</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage database and file backups</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
-            <RefreshCw className="w-4 h-4 text-gray-500" />
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </Button>
           <PermissionGuard permission="manage_settings">
             <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-white h-8 text-xs">
@@ -177,7 +177,7 @@ export default function BackupsPage() {
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Label htmlFor="backup_type" className="text-xs font-medium text-gray-600">Type:</Label>
+              <Label htmlFor="backup_type" className="text-xs font-medium text-muted-foreground">Type:</Label>
               <Select
                 value={backupTypeFilter}
                 onValueChange={(val) => {
@@ -197,7 +197,7 @@ export default function BackupsPage() {
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <Label htmlFor="status" className="text-xs font-medium text-gray-600">Status:</Label>
+              <Label htmlFor="status" className="text-xs font-medium text-muted-foreground">Status:</Label>
               <Select
                 value={statusFilter}
                 onValueChange={(val) => {
@@ -230,21 +230,21 @@ export default function BackupsPage() {
           <Card className="border border-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="bg-gray-50/80">
+                <TableHeader className="bg-muted/80">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-[140px]">Type</TableHead>
-                    <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-[100px]">Status</TableHead>
-                    <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-[100px]">Size</TableHead>
-                    <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-[140px]">Created By</TableHead>
-                    <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Started</TableHead>
-                    <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Completed</TableHead>
-                    <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</TableHead>
+                    <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[140px]">Type</TableHead>
+                    <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[100px]">Status</TableHead>
+                    <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[100px]">Size</TableHead>
+                    <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[140px]">Created By</TableHead>
+                    <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Started</TableHead>
+                    <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Completed</TableHead>
+                    <TableHead className="h-9 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {backups.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center text-xs text-gray-500">
+                      <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground">
                         <div className="flex flex-col items-center justify-center">
                           <Database className="w-6 h-6 text-gray-300 mb-2" />
                           No backups found matching your criteria
@@ -253,7 +253,7 @@ export default function BackupsPage() {
                     </TableRow>
                   ) : (
                     backups.map((backup) => (
-                      <TableRow key={backup.id} className="hover:bg-gray-50/50 transition-colors group">
+                      <TableRow key={backup.id} className="hover:bg-muted/50 transition-colors group">
                         <TableCell className="px-4 py-2.5">
                           <div className="flex items-center space-x-2">
                             <div className="p-1.5 bg-border rounded-md">
@@ -275,10 +275,10 @@ export default function BackupsPage() {
                         <TableCell className="px-4 py-2.5 text-xs text-muted-foreground">
                           {backup.created_by_name || "System"}
                         </TableCell>
-                        <TableCell className="px-4 py-2.5 text-xs text-gray-500">
+                        <TableCell className="px-4 py-2.5 text-xs text-muted-foreground">
                           {format(new Date(backup.started_at), "MMM d, yyyy HH:mm")}
                         </TableCell>
-                        <TableCell className="px-4 py-2.5 text-xs text-gray-500">
+                        <TableCell className="px-4 py-2.5 text-xs text-muted-foreground">
                           {backup.completed_at
                             ? format(new Date(backup.completed_at), "MMM d, yyyy HH:mm")
                             : "-"}
@@ -377,11 +377,11 @@ function CreateBackupDialog({
         <DialogHeader className="px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
-              <Database className="w-5 h-5 text-primary dark:text-primary" />
+              <Database className="w-5 h-5 text-primary" />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold">Create System Backup</DialogTitle>
-              <DialogDescription className="text-xs text-gray-500">
+              <DialogDescription className="text-xs text-muted-foreground">
                 Select backup type and options
               </DialogDescription>
             </div>
@@ -389,7 +389,7 @@ function CreateBackupDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="px-6 py-6 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="backup_type" className="text-xs font-semibold text-gray-700">
+            <Label htmlFor="backup_type" className="text-xs font-semibold text-foreground">
               Backup Type
             </Label>
             <Select
@@ -405,7 +405,7 @@ function CreateBackupDialog({
                 <SelectItem value="media">Media Files Only</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-[10px] text-gray-500">
+            <p className="text-[10px] text-muted-foreground">
               {backupType === 'full' && "Recommended for complete system restoration."}
               {backupType === 'database' && "Includes all tables and records. Does not include uploaded files."}
               {backupType === 'media' && "Includes only uploaded images and documents."}
@@ -413,7 +413,7 @@ function CreateBackupDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="notes" className="text-xs font-semibold text-gray-700">
+            <Label htmlFor="notes" className="text-xs font-semibold text-foreground">
               Notes
             </Label>
             <Textarea
@@ -426,7 +426,7 @@ function CreateBackupDialog({
             />
           </div>
         </form>
-        <DialogFooter className="px-6 py-3 border-t border-border bg-gray-50/50">
+        <DialogFooter className="px-6 py-3 border-t border-border bg-muted/50">
           <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isCreating} className="h-8">
             Cancel
           </Button>

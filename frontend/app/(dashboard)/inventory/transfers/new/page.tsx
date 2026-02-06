@@ -166,13 +166,13 @@ export default function NewTransferPage() {
                             </div>
 
                             {items.length === 0 && (
-                                <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded border border-dashed">
+                                <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded border border-dashed">
                                     No items added. Click "Add Part" to begin.
                                 </p>
                             )}
 
                             {items.map((item, index) => (
-                                <div key={index} className="flex gap-4 items-end bg-gray-50 p-3 rounded-md border">
+                                <div key={index} className="flex gap-4 items-end bg-muted p-3 rounded-md border">
                                     <div className="flex-1 space-y-2">
                                         <Label className="text-xs">Part</Label>
                                         <PartSelector

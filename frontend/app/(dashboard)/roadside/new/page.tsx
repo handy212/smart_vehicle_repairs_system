@@ -355,7 +355,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 </div>
                                                 <div>
                                                     <h4 className="font-bold text-foreground">{selectedCustomer.full_name || selectedCustomer.company_name}</h4>
-                                                    <p className="text-xs text-gray-500">{selectedCustomer.customer_number} • {selectedCustomer.phone || "No phone"}</p>
+                                                    <p className="text-xs text-muted-foreground">{selectedCustomer.customer_number} • {selectedCustomer.phone || "No phone"}</p>
                                                 </div>
                                             </div>
                                             <Badge variant="secondary" className="bg-card">Verified</Badge>
@@ -436,7 +436,7 @@ export default function NewRoadsideRequestDashboardPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="latitude" className="text-xs font-medium text-gray-500">Latitude (Optional)</Label>
+                                        <Label htmlFor="latitude" className="text-xs font-medium text-muted-foreground">Latitude (Optional)</Label>
                                         <Input
                                             id="latitude"
                                             type="number"
@@ -447,7 +447,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="longitude" className="text-xs font-medium text-gray-500">Longitude (Optional)</Label>
+                                        <Label htmlFor="longitude" className="text-xs font-medium text-muted-foreground">Longitude (Optional)</Label>
                                         <Input
                                             id="longitude"
                                             type="number"
@@ -562,7 +562,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         <Info className="h-5 w-5 text-primary mt-0.5" />
                                         <div className="space-y-1">
                                             <p className="text-xs font-bold text-foreground uppercase tracking-wider">Policy Check</p>
-                                            <p className="text-[11px] text-gray-500 leading-relaxed">System will auto-check AA Membership during submission and apply covered benefits immediately.</p>
+                                            <p className="text-[11px] text-muted-foreground leading-relaxed">System will auto-check AA Membership during submission and apply covered benefits immediately.</p>
                                         </div>
                                     </div>
                                 </div>

@@ -172,7 +172,7 @@ export default function NewBillPage() {
                 </Link>
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Create New Bill</h1>
-                    <p className="text-sm text-gray-500">Enter vendor bill details and line items.</p>
+                    <p className="text-sm text-muted-foreground">Enter vendor bill details and line items.</p>
                 </div>
             </div>
 
@@ -311,7 +311,7 @@ export default function NewBillPage() {
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-gray-50 hover:bg-gray-50">
+                                        <TableRow className="bg-muted hover:bg-muted">
                                             <TableHead className="w-[40%] pl-6">Description</TableHead>
                                             <TableHead className="w-[15%]">Category</TableHead>
                                             <TableHead className="w-[15%] text-right">Quantity</TableHead>
@@ -407,7 +407,7 @@ export default function NewBillPage() {
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-8 w-8 text-gray-500 hover:text-red-600"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-red-600"
                                                                 onClick={() => remove(index)}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -421,13 +421,13 @@ export default function NewBillPage() {
                                 </Table>
                             </div>
                         </CardContent>
-                        <CardFooter className="flex flex-col items-end border-t p-6 bg-gray-50/50">
+                        <CardFooter className="flex flex-col items-end border-t p-6 bg-muted/50">
                             <div className="w-full max-w-xs space-y-2">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Subtotal:</span>
+                                    <span className="text-muted-foreground">Subtotal:</span>
                                     <span className="font-medium">{formatCurrency(subtotal)}</span>
                                 </div>
-                                <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t">
+                                <div className="flex justify-between text-base font-bold text-foreground pt-2 border-t">
                                     <span>Total:</span>
                                     <span>{formatCurrency(subtotal)}</span>
                                 </div>

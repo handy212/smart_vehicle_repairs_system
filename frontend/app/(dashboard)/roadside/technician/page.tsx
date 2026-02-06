@@ -105,7 +105,7 @@ export default function TechnicianRoadsideDashboard() {
                 <div className="relative z-10">
                     <h3 className="text-lg font-black mb-1">Safety First!</h3>
                     <p className="text-white/80 text-sm mb-4">Always wear your high-visibility vest and set up warning triangles immediately upon arrival.</p>
-                    <Button variant="outline" size="sm" className="h-9 bg-white/10 border-white/20 text-white hover:bg-white/20">
+                    <Button variant="outline" size="sm" className="h-9 bg-card/10 border-white/20 text-white hover:bg-card/20">
                         Safety Checklist
                     </Button>
                 </div>
@@ -160,7 +160,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                     <div className="flex items-start gap-2">
                         <MapPin className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                            <div className="text-[10px] font-black uppercase text-gray-500 leading-none mb-1">Breakdown Location</div>
+                            <div className="text-[10px] font-black uppercase text-muted-foreground leading-none mb-1">Breakdown Location</div>
                             <div className="text-sm font-bold leading-tight">{request.breakdown_location}</div>
                             {request.latitude && request.longitude && (
                                 <a

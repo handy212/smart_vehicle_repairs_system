@@ -129,7 +129,7 @@ export default function PartCategoriesPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/50 p-1 rounded-lg">
         <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           <div className="relative flex-1 md:flex-none md:w-64">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               type="text"
               placeholder="Search categories..."
@@ -185,23 +185,23 @@ export default function PartCategoriesPage() {
               <Table>
                 <TableHeader className="bg-muted/50 border-y border-border">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Name</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Full Path</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-center">Subcategories</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-center">Parts</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Status</TableHead>
-                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Actions</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Full Path</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">Subcategories</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-center">Parts</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Status</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {categories.map((category) => (
                     <TableRow
                       key={category.id}
-                      className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-border cursor-pointer transition-colors"
+                      className="group hover:bg-muted/50 dark:hover:bg-gray-800/50 border-b border-border cursor-pointer transition-colors"
                     >
                       <TableCell className="px-4 py-2">
                         <div className="flex items-center">
-                          <FolderTree className="w-3.5 h-3.5 mr-2 text-gray-400" />
+                          <FolderTree className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
                           <span className="text-sm font-medium text-foreground">{category.name}</span>
                         </div>
                       </TableCell>
@@ -226,7 +226,7 @@ export default function PartCategoriesPage() {
                       <TableCell className="px-4 py-2 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 text-gray-500">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 text-muted-foreground">
                               <MoreVertical className="w-3.5 h-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -256,9 +256,9 @@ export default function PartCategoriesPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <FolderTree className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <FolderTree className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground">No categories found</h3>
-              <p className="text-gray-500 max-w-sm mx-auto mt-1 mb-4">
+              <p className="text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
                 Get started by adding a new category to organize your parts.
               </p>
               <Link href="/inventory/categories/new">

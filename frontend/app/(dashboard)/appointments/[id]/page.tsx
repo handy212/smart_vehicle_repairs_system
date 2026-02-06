@@ -172,7 +172,7 @@ export default function AppointmentDetailPage() {
           <h1 className="text-xl font-bold text-foreground tracking-tight">Appointment Details</h1>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={() => router.back()} className="h-9 dark:bg-gray-800 dark:text-gray-100 border-border">
+          <Button variant="outline" size="sm" onClick={() => router.back()} className="h-9 dark:bg-gray-800 text-foreground border-border">
             <ArrowLeft className="w-3.5 h-3.5 mr-2" />
             Back
           </Button>
@@ -208,10 +208,10 @@ export default function AppointmentDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start space-x-3">
-                <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+                <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Date</p>
-                  <p className="text-gray-900">
+                  <p className="text-sm font-medium text-muted-foreground">Date</p>
+                  <p className="text-foreground">
                     {appointment.appointment_date
                       ? format(new Date(appointment.appointment_date), "EEEE, MMMM dd, yyyy")
                       : "-"}
@@ -219,22 +219,22 @@ export default function AppointmentDetailPage() {
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
+                <Clock className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Time</p>
-                  <p className="text-gray-900">{appointment.appointment_time || "-"}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Time</p>
+                  <p className="text-foreground">{appointment.appointment_time || "-"}</p>
                 </div>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Service Type</p>
-                <p className="text-gray-900 capitalize">
+                <p className="text-sm font-medium text-muted-foreground mb-1">Service Type</p>
+                <p className="text-foreground capitalize">
                   {appointment.service_type?.replace("_", " ") || appointment.service_type || "-"}
                 </p>
               </div>
               {appointment.estimated_duration && (
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Estimated Duration</p>
-                  <p className="text-gray-900">{appointment.estimated_duration} minutes</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Estimated Duration</p>
+                  <p className="text-foreground">{appointment.estimated_duration} minutes</p>
                 </div>
               )}
             </CardContent>
@@ -247,9 +247,9 @@ export default function AppointmentDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start space-x-3">
-                <User className="w-5 h-5 text-gray-400 mt-0.5" />
+                <User className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Customer</p>
+                  <p className="text-sm font-medium text-muted-foreground">Customer</p>
                   {appointment.customer ? (
                     <Link
                       href={`/customers/${typeof appointment.customer === 'object' && appointment.customer !== null ? appointment.customer.id : appointment.customer}`}
@@ -258,14 +258,14 @@ export default function AppointmentDetailPage() {
                       {appointment.customer_name || "View Customer"}
                     </Link>
                   ) : (
-                    <p className="text-gray-900">{appointment.customer_name || "-"}</p>
+                    <p className="text-foreground">{appointment.customer_name || "-"}</p>
                   )}
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Car className="w-5 h-5 text-gray-400 mt-0.5" />
+                <Car className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Vehicle</p>
+                  <p className="text-sm font-medium text-muted-foreground">Vehicle</p>
                   {appointment.vehicle ? (
                     <Link
                       href={`/vehicles/${typeof appointment.vehicle === 'object' && appointment.vehicle !== null ? appointment.vehicle.id : appointment.vehicle}`}
@@ -274,7 +274,7 @@ export default function AppointmentDetailPage() {
                       {appointment.vehicle_info || "View Vehicle"}
                     </Link>
                   ) : (
-                    <p className="text-gray-900">{appointment.vehicle_info || "-"}</p>
+                    <p className="text-foreground">{appointment.vehicle_info || "-"}</p>
                   )}
                 </div>
               </div>
@@ -288,7 +288,7 @@ export default function AppointmentDetailPage() {
                 <CardTitle>Notes</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-900 whitespace-pre-wrap">{appointment.notes}</p>
+                <p className="text-foreground whitespace-pre-wrap">{appointment.notes}</p>
               </CardContent>
             </Card>
           )}
@@ -362,12 +362,12 @@ export default function AppointmentDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-xs text-gray-500">Appointment Number</p>
+                <p className="text-xs text-muted-foreground">Appointment Number</p>
                 <p className="text-sm font-mono">{appointment.appointment_number}</p>
               </div>
               {appointment.created_at && (
                 <div>
-                  <p className="text-xs text-gray-500">Created</p>
+                  <p className="text-xs text-muted-foreground">Created</p>
                   <p className="text-sm">
                     {format(new Date(appointment.created_at), "MMM dd, yyyy 'at' h:mm a")}
                   </p>
@@ -389,7 +389,7 @@ export default function AppointmentDetailPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
+              <label className="text-sm font-medium text-foreground mb-2 block">
                 Cancellation Reason (Optional)
               </label>
               <Textarea

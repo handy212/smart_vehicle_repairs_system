@@ -119,8 +119,8 @@ export default function NewTemplatePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Inspection Template</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-foreground">New Inspection Template</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Create a new inspection template with categories and items
           </p>
         </div>
@@ -168,7 +168,7 @@ export default function NewTemplatePage() {
                   type="checkbox"
                   id="is_active"
                   {...register("is_active", { valueAsNumber: false })}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-border"
                 />
                 <Label htmlFor="is_active" className="cursor-pointer">
                   Active
@@ -180,7 +180,7 @@ export default function NewTemplatePage() {
                   type="checkbox"
                   id="is_default"
                   {...register("is_default", { valueAsNumber: false })}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-border"
                 />
                 <Label htmlFor="is_default" className="cursor-pointer">
                   Set as Default
@@ -189,7 +189,7 @@ export default function NewTemplatePage() {
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Template Settings</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-4">Template Settings</h3>
               
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
@@ -197,7 +197,7 @@ export default function NewTemplatePage() {
                     type="checkbox"
                     id="requires_odometer"
                     {...register("requires_odometer", { valueAsNumber: false })}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-border"
                   />
                   <Label htmlFor="requires_odometer" className="cursor-pointer">
                     Requires Odometer Reading
@@ -209,7 +209,7 @@ export default function NewTemplatePage() {
                     type="checkbox"
                     id="requires_technician_signature"
                     {...register("requires_technician_signature", { valueAsNumber: false })}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-border"
                   />
                   <Label htmlFor="requires_technician_signature" className="cursor-pointer">
                     Requires Technician Signature
@@ -221,7 +221,7 @@ export default function NewTemplatePage() {
                     type="checkbox"
                     id="requires_customer_signature"
                     {...register("requires_customer_signature", { valueAsNumber: false })}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-border"
                   />
                   <Label htmlFor="requires_customer_signature" className="cursor-pointer">
                     Requires Customer Signature
@@ -233,7 +233,7 @@ export default function NewTemplatePage() {
                     type="checkbox"
                     id="allows_photos"
                     {...register("allows_photos", { valueAsNumber: false })}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-border"
                   />
                   <Label htmlFor="allows_photos" className="cursor-pointer">
                     Allows Photos
@@ -245,7 +245,7 @@ export default function NewTemplatePage() {
                     type="checkbox"
                     id="allows_video"
                     {...register("allows_video", { valueAsNumber: false })}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-border"
                   />
                   <Label htmlFor="allows_video" className="cursor-pointer">
                     Allows Video

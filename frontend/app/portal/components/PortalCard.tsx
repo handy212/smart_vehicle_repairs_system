@@ -60,7 +60,7 @@ export function PortalCard({
     );
 
     const wrapperClasses = cn(
-        "relative block p-4 bg-card border border-border rounded-xl transition-all hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm",
+        "relative block p-4 bg-card border border-border rounded-xl transition-all hover:bg-muted dark:hover:bg-gray-800/50 hover:shadow-sm",
         className
     );
 

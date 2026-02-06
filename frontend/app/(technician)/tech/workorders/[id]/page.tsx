@@ -73,8 +73,8 @@ export default function TechnicianWorkOrderPage() {
             case "in_progress": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
             case "assigned": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
             case "paused": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
-            case "completed": return "bg-gray-100 text-gray-800 bg-background/30 text-foreground";
-            default: return "bg-gray-100 text-gray-800";
+            case "completed": return "bg-gray-100 text-foreground bg-background/30 text-foreground";
+            default: return "bg-gray-100 text-foreground";
         }
     };
 
@@ -144,19 +144,19 @@ export default function TechnicianWorkOrderPage() {
             {/* Main Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-4 h-12 bg-border p-1 rounded-xl">
-                    <TabsTrigger value="jobs" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="jobs" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
                         <ListTodo className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Tasks</span>
                     </TabsTrigger>
-                    <TabsTrigger value="info" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="info" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
                         <FileText className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Details</span>
                     </TabsTrigger>
-                    <TabsTrigger value="photos" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="photos" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
                         <Camera className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Photos</span>
                     </TabsTrigger>
-                    <TabsTrigger value="parts" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="parts" className="rounded-lg data-[state=active]:bg-card dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm">
                         <Wrench className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Parts</span>
                     </TabsTrigger>
@@ -166,7 +166,7 @@ export default function TechnicianWorkOrderPage() {
                 <TabsContent value="jobs" className="mt-4 space-y-4">
                     <div className="space-y-3">
                         {tasksLoading ? (
-                            <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+                            <div className="text-center py-8 text-muted-foreground">Loading tasks...</div>
                         ) : tasks && tasks.length > 0 ? (
                             tasks.map((task: any) => (
                                 <Card key={task.id} className="border border-border shadow-sm overflow-hidden">
@@ -187,7 +187,7 @@ export default function TechnicianWorkOrderPage() {
                             <div className="text-center py-12 bg-muted/50 rounded-lg border border-dashed border-border">
                                 <CheckCircle className="h-12 w-12 mx-auto text-gray-300 mb-3" />
                                 <h3 className="text-lg font-medium text-foreground">All Caught Up</h3>
-                                <p className="text-gray-500">No tasks assigned to this work order yet.</p>
+                                <p className="text-muted-foreground">No tasks assigned to this work order yet.</p>
                             </div>
                         )}
                     </div>
@@ -200,11 +200,11 @@ export default function TechnicianWorkOrderPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <h4 className="font-semibold text-sm text-gray-500 uppercase">Special Instructions</h4>
+                                <h4 className="font-semibold text-sm text-muted-foreground uppercase">Special Instructions</h4>
                                 <p className="mt-1">{workOrder.special_instructions || "None"}</p>
                             </div>
                             <div>
-                                <h4 className="font-semibold text-sm text-gray-500 uppercase">Vehicle Info</h4>
+                                <h4 className="font-semibold text-sm text-muted-foreground uppercase">Vehicle Info</h4>
                                 <p className="mt-1">{workOrder.vehicle_info}</p>
                             </div>
                         </CardContent>
@@ -214,13 +214,13 @@ export default function TechnicianWorkOrderPage() {
                 <TabsContent value="photos">
                     <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-lg border border-dashed">
                         <Camera className="h-12 w-12 text-gray-300 mb-3" />
-                        <p className="text-gray-500">Photo upload coming soon.</p>
+                        <p className="text-muted-foreground">Photo upload coming soon.</p>
                     </div>
                 </TabsContent>
                 <TabsContent value="parts">
                     <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-lg border border-dashed">
                         <Wrench className="h-12 w-12 text-gray-300 mb-3" />
-                        <p className="text-gray-500">Parts list coming soon.</p>
+                        <p className="text-muted-foreground">Parts list coming soon.</p>
                     </div>
                 </TabsContent>
             </Tabs>
@@ -232,7 +232,7 @@ export default function TechnicianWorkOrderPage() {
                         size="lg"
                         className={`h-14 px-8 rounded-full shadow-lg transition-all ${isWorking
                             ? "bg-primary hover:bg-primary/90 text-white"
-                            : "bg-gray-200 text-gray-400 cursor-not-allowed hidden"
+                            : "bg-gray-200 text-muted-foreground cursor-not-allowed hidden"
                             }`}
                         onClick={() => {
                             if (confirm("Are you sure you want to complete this job?")) {

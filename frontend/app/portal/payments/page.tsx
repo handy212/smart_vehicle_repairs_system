@@ -160,7 +160,7 @@ export default function PaymentHistoryPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center space-x-4">
-            <Filter className="w-5 h-5 text-gray-400" />
+            <Filter className="w-5 h-5 text-muted-foreground" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -227,7 +227,7 @@ export default function PaymentHistoryPage() {
                         {payment.invoice_number ? (
                           <Link
                             href={`/portal/invoices/${payment.invoice}`}
-                            className="text-primary dark:text-primary hover:underline"
+                            className="text-primary hover:underline"
                           >
                             {payment.invoice_number}
                           </Link>
@@ -266,7 +266,7 @@ export default function PaymentHistoryPage() {
       ) : (
         <Card>
           <CardContent className="py-12 text-center">
-            <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">No payments found</p>
             <p className="text-sm text-muted-foreground">
               Your payment history will appear here once you make a payment

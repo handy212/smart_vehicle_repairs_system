@@ -29,7 +29,7 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
             label: "My Vehicles",
             value: stats.total_vehicles,
             icon: Car,
-            color: "text-primary dark:text-primary",
+            color: "text-primary",
             bg: "bg-primary/10 dark:bg-orange-900/20",
             href: "/portal/vehicles"
         },
@@ -64,10 +64,10 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {items.map((item, index) => (
-                <Card key={index} className="border-none shadow-sm bg-white/50 bg-background/50 hover:bg-white dark:hover:bg-gray-900 transition-colors group">
+                <Card key={index} className="border-none shadow-sm bg-card/50 bg-background/50 hover:bg-card dark:hover:bg-gray-900 transition-colors group">
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{item.label}</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{item.label}</p>
                             <div className="flex items-center gap-2">
                                 <span className="text-2xl font-bold text-foreground">{item.value}</span>
                                 {item.alert && (

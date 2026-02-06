@@ -98,25 +98,25 @@ export default function DiagnosisListPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Total Reports
             </span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-foreground">
                 {stats.total}
               </span>
-              <FileText className="w-5 h-5 text-gray-400 mb-0.5" />
+              <FileText className="w-5 h-5 text-muted-foreground mb-0.5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               In Progress
             </span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-primary dark:text-primary">
+              <span className="text-xl font-bold text-primary">
                 {stats.inProgress}
               </span>
               <Timer className="w-5 h-5 text-orange-400 mb-0.5" />
@@ -126,7 +126,7 @@ export default function DiagnosisListPage() {
 
         <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Completed
             </span>
             <div className="flex items-end justify-between">
@@ -140,7 +140,7 @@ export default function DiagnosisListPage() {
 
         <Card className="border-none shadow-sm bg-muted/50">
           <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Total Fees
             </span>
             <div className="flex items-end justify-between">
@@ -158,7 +158,7 @@ export default function DiagnosisListPage() {
         <CardContent className="p-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search diagnosis..."
                 value={searchQuery}
@@ -171,7 +171,7 @@ export default function DiagnosisListPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-9 w-32 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
+                className="h-9 w-32 rounded-md border border-border bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
               >
                 <option value="all">All Status</option>
                 <option value="in_progress">In Progress</option>
@@ -182,7 +182,7 @@ export default function DiagnosisListPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="h-9 w-36 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
+                className="h-9 w-36 rounded-md border border-border bg-card px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -201,7 +201,7 @@ export default function DiagnosisListPage() {
           </div>
         ) : diagnoses.length === 0 ? (
           <div className="text-center py-16 bg-card rounded-lg border border-dashed border-border">
-            <Stethoscope className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+            <Stethoscope className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
             <h3 className="text-lg font-medium text-foreground">No diagnoses found</h3>
             <p className="text-sm text-muted-foreground mt-1">
               {searchQuery || statusFilter !== "all"
@@ -213,26 +213,26 @@ export default function DiagnosisListPage() {
           <div className="rounded-md border border-border bg-card overflow-hidden shadow-sm">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-gray-50/50">
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     ID / WO#
                   </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">
+                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Date Started
                   </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">
+                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Vehicle
                   </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 hidden md:table-cell">
+                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground hidden md:table-cell">
                     Complaint
                   </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">
+                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Technician
                   </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">
+                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Status
                   </TableHead>
-                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">
+                  <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">
                     Fee
                   </TableHead>
                   <TableHead className="h-10 w-[50px]"></TableHead>
@@ -256,7 +256,7 @@ export default function DiagnosisListPage() {
                   return (
                     <TableRow
                       key={diagnosis.id}
-                      className="group cursor-pointer hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-colors"
+                      className="group cursor-pointer hover:bg-muted/80 dark:hover:bg-gray-800/80 transition-colors"
                       onDoubleClick={handleRowClick}
                     >
                       <TableCell className="py-2.5 font-medium">
@@ -264,7 +264,7 @@ export default function DiagnosisListPage() {
                           <span className="text-sm text-foreground">
                             #{diagnosis.id}
                           </span>
-                          <span className="text-xs text-gray-500 font-mono">
+                          <span className="text-xs text-muted-foreground font-mono">
                             {diagnosis.work_order_number || (workOrder ? `WO-${workOrder.id}` : "-")}
                           </span>
                         </div>
@@ -280,12 +280,12 @@ export default function DiagnosisListPage() {
                             <span className="text-sm font-medium text-foreground">
                               {diagnosis.vehicle_info.make} {diagnosis.vehicle_info.model}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               {diagnosis.vehicle_info.year} • {diagnosis.vehicle_info.license_plate}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400">Unknown Vehicle</span>
+                          <span className="text-xs text-muted-foreground">Unknown Vehicle</span>
                         )}
                       </TableCell>
                       <TableCell className="py-2.5 hidden md:table-cell">
@@ -296,13 +296,13 @@ export default function DiagnosisListPage() {
                       <TableCell className="py-2.5">
                         {diagnosis.technician_name ? (
                           <div className="flex items-center gap-1.5">
-                            <User className="w-3 h-3 text-gray-400" />
+                            <User className="w-3 h-3 text-muted-foreground" />
                             <span className="text-xs text-card-foreground">
                               {diagnosis.technician_name}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400">-</span>
+                          <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell className="py-2.5">
@@ -313,7 +313,7 @@ export default function DiagnosisListPage() {
                             diagnosis.status === "completed"
                               ? "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
                               : diagnosis.status === "on_hold"
-                                ? "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 border-border"
+                                ? "bg-muted text-foreground border-border dark:bg-gray-800 text-muted-foreground border-border"
                                 : "bg-primary/10 text-primary border-orange-200 dark:bg-orange-900/20 dark:text-primary dark:border-orange-800"
                           )}
                         >
@@ -331,7 +331,7 @@ export default function DiagnosisListPage() {
                               className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <span className="sr-only">Open menu</span>
-                              <MoreVertical className="h-3.5 w-3.5 text-gray-500" />
+                              <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">

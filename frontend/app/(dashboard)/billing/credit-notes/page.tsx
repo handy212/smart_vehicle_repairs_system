@@ -98,7 +98,7 @@ export default function CreditNotesPage() {
                 <CardHeader className="pb-3">
                     <div className="flex flex-col sm:flex-row gap-4 justify-between">
                         <div className="relative w-full sm:w-96">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search credit notes..."
                                 className="pl-9"
@@ -107,7 +107,7 @@ export default function CreditNotesPage() {
                             />
                         </div>
                         <div className="flex gap-2 items-center">
-                            <Filter className="mr-2 h-4 w-4 text-gray-500" />
+                            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
                             <Select
                                 value={statusFilter}
                                 onValueChange={(val) => setStatusFilter(val)}
@@ -137,7 +137,7 @@ export default function CreditNotesPage() {
                             Error details: {(error as any).message || "Detailed error information unavailable"}
                         </div>
                     ) : !data?.results?.length ? (
-                        <div className="text-center py-12 text-gray-500">
+                        <div className="text-center py-12 text-muted-foreground">
                             No credit notes found.
                         </div>
                     ) : (
@@ -186,7 +186,7 @@ export default function CreditNotesPage() {
                                             <TableCell className="text-right font-medium">
                                                 {formatCurrency(parseFloat(cn.total))}
                                             </TableCell>
-                                            <TableCell className="text-right text-gray-500">
+                                            <TableCell className="text-right text-muted-foreground">
                                                 {formatCurrency(parseFloat(cn.unused_amount))}
                                             </TableCell>
                                             <TableCell className="text-right">

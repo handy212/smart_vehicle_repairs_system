@@ -424,7 +424,7 @@ export default function ReportsPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-primary">
+                      <p className="text-xl sm:text-2xl font-bold text-primary">
                         {formatCurrency((revenueData.summary.service_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (
@@ -748,8 +748,8 @@ export default function ReportsPage() {
 
                 <div className="mt-8 border-t border-border pt-8">
                   <div className="px-4 sm:px-0 mb-4">
-                    <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400">Productivity Heatmap</h4>
-                    <p className="text-xs text-gray-500">Cross-metric performance comparison normalized by peak performance.</p>
+                    <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Productivity Heatmap</h4>
+                    <p className="text-xs text-muted-foreground">Cross-metric performance comparison normalized by peak performance.</p>
                   </div>
                   <TechnicianProductivityHeatmap data={technicianPerf.technicians} />
                 </div>
@@ -810,7 +810,7 @@ export default function ReportsPage() {
             <Card className="border-border">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="text-base sm:text-lg">Inventory Turnover Rate</CardTitle>
-                <p className="text-xs text-gray-500">How many times your inventory is sold and replaced over a 90-day period.</p>
+                <p className="text-xs text-muted-foreground">How many times your inventory is sold and replaced over a 90-day period.</p>
               </CardHeader>
               <CardContent>
                 <InventoryTurnoverChart data={turnoverData.all_parts || []} />
@@ -1150,7 +1150,7 @@ export default function ReportsPage() {
                   <TableBody>
                     {discountedInvoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           No invoices with discounts found recently.
                         </TableCell>
                       </TableRow>

@@ -53,7 +53,7 @@ export function ComplaintTab({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="border-none shadow-sm bg-muted/50">
                 <CardHeader className="pb-3 border-b bg-muted/50">
-                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Customer Complaint</CardTitle>
+                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Customer Complaint</CardTitle>
                     <CardDescription className="text-xs">What the customer reported</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
@@ -73,7 +73,7 @@ export function ComplaintTab({
             </Card>
             <Card className="border-none shadow-sm bg-muted/50">
                 <CardHeader className="pb-3 border-b bg-muted/50">
-                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Initial Observations</CardTitle>
+                    <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Initial Observations</CardTitle>
                     <CardDescription className="text-xs">Technician's initial visual check</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">

@@ -245,11 +245,11 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
               </TableHeader>
               <TableBody>
                 {schedules.map((schedule) => (
-                  <TableRow key={schedule.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <TableRow key={schedule.id} className="hover:bg-muted dark:hover:bg-gray-800/50 transition-colors">
                     <TableCell>
                       <div className="font-medium text-foreground">{schedule.service_type_name || "N/A"}</div>
                       {schedule.notes && (
-                        <div className="text-xs text-gray-500 mt-1 max-w-[200px] truncate" title={schedule.notes}>
+                        <div className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate" title={schedule.notes}>
                           {schedule.notes}
                         </div>
                       )}
@@ -262,7 +262,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                             : "Never"}
                         </span>
                         {schedule.last_service_mileage && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             @ {schedule.last_service_mileage.toLocaleString()} mi
                           </span>
                         )}
@@ -276,7 +276,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                             : "Not set"}
                         </span>
                         {schedule.next_service_due_mileage && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             or {schedule.next_service_due_mileage.toLocaleString()} mi
                           </span>
                         )}
@@ -295,7 +295,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                           </span>
                         )}
                         {!schedule.interval_months && !schedule.interval_miles && (
-                          <span className="text-xs italic text-gray-400">Using Default</span>
+                          <span className="text-xs italic text-muted-foreground">Using Default</span>
                         )}
                       </div>
                     </TableCell>
@@ -349,10 +349,10 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
         <Card className="border-dashed border-2">
           <CardContent className="p-12 text-center">
             <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-8 h-8 text-gray-400" />
+              <Calendar className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-medium text-foreground mb-1">No services scheduled</h3>
-            <p className="text-gray-500 mb-6">Create a maintenance schedule to track services for this vehicle.</p>
+            <p className="text-muted-foreground mb-6">Create a maintenance schedule to track services for this vehicle.</p>
             <PermissionGuard permission="edit_vehicles">
               <Button onClick={openAddDialog}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -398,7 +398,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500 bg-muted/50 rounded-lg border border-dashed">
+          <div className="text-center py-8 text-muted-foreground bg-muted/50 rounded-lg border border-dashed">
             No service bundles available.
           </div>
         )}

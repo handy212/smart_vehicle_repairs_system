@@ -94,15 +94,15 @@ export default function NewPurchaseOrderPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">New Purchase Order</h1>
-                    <p className="text-sm text-gray-500 mt-1">Create a new purchase order</p>
+                    <h1 className="text-3xl font-bold text-foreground">New Purchase Order</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Create a new purchase order</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                     <Card className="border-t shadow-sm">
-                        <CardHeader className="py-4 border-b bg-gray-50/30">
+                        <CardHeader className="py-4 border-b bg-muted/30">
                             <CardTitle className="text-sm font-semibold">Order Information</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-6">
@@ -114,7 +114,7 @@ export default function NewPurchaseOrderPage() {
                                             name="supplier"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs font-semibold uppercase text-gray-500">Supplier *</FormLabel>
+                                                    <FormLabel className="text-xs font-semibold uppercase text-muted-foreground">Supplier *</FormLabel>
                                                     <FormControl>
                                                         <select
                                                             {...field}
@@ -138,7 +138,7 @@ export default function NewPurchaseOrderPage() {
                                             name="order_date"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs font-semibold uppercase text-gray-500">Order Date *</FormLabel>
+                                                    <FormLabel className="text-xs font-semibold uppercase text-muted-foreground">Order Date *</FormLabel>
                                                     <FormControl>
                                                         <Input type="date" {...field} className="h-10 transition-colors" />
                                                     </FormControl>
@@ -152,7 +152,7 @@ export default function NewPurchaseOrderPage() {
                                             name="expected_delivery_date"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs font-semibold uppercase text-gray-500">Expected Delivery Date</FormLabel>
+                                                    <FormLabel className="text-xs font-semibold uppercase text-muted-foreground">Expected Delivery Date</FormLabel>
                                                     <FormControl>
                                                         <Input type="date" {...field} className="h-10 transition-colors" />
                                                     </FormControl>
@@ -167,12 +167,12 @@ export default function NewPurchaseOrderPage() {
                                         name="notes"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold uppercase text-gray-500">Notes & Instructions</FormLabel>
+                                                <FormLabel className="text-xs font-semibold uppercase text-muted-foreground">Notes & Instructions</FormLabel>
                                                 <FormControl>
                                                     <Textarea
                                                         placeholder="Add any specific instructions for the supplier..."
                                                         {...field}
-                                                        className="min-h-[120px] resize-none transition-colors focus:bg-white"
+                                                        className="min-h-[120px] resize-none transition-colors focus:bg-card"
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
@@ -209,11 +209,11 @@ export default function NewPurchaseOrderPage() {
                                     <p className="text-xs text-muted-foreground">Initialize the order by selecting a supplier and basic dates.</p>
                                 </div>
                                 <div className="flex gap-3">
-                                    <div className="w-6 h-6 rounded-full bg-border text-gray-400 flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                                    <div className="w-6 h-6 rounded-full bg-border text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0">2</div>
                                     <p className="text-xs text-muted-foreground font-medium">Add parts and items to the order after it has been created.</p>
                                 </div>
                                 <div className="flex gap-3">
-                                    <div className="w-6 h-6 rounded-full bg-border text-gray-400 flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                                    <div className="w-6 h-6 rounded-full bg-border text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0">3</div>
                                     <p className="text-xs text-muted-foreground">Review the order summary and submit it to the provider.</p>
                                 </div>
                             </div>
@@ -221,12 +221,12 @@ export default function NewPurchaseOrderPage() {
                     </Card>
 
                     <Card className="border-t shadow-sm">
-                        <CardHeader className="py-4 border-b bg-gray-50/30">
+                        <CardHeader className="py-4 border-b bg-muted/30">
                             <CardTitle className="text-sm font-semibold">Important Note</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 px-4 pb-4">
-                            <p className="text-xs text-gray-500 leading-relaxed italic">
-                                Once an order is initialized, it will be saved as a <span className="font-semibold text-gray-900">Draft</span>.
+                            <p className="text-xs text-muted-foreground leading-relaxed italic">
+                                Once an order is initialized, it will be saved as a <span className="font-semibold text-foreground">Draft</span>.
                                 You can continue editing and adding items at any time before final submission.
                             </p>
                         </CardContent>

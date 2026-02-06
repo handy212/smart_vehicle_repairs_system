@@ -133,7 +133,7 @@ export function RecommendationDialog({
                     <DialogTitle className="text-xl font-bold text-foreground">
                         {recommendation ? "Edit Recommendation" : "Add Recommendation"}
                     </DialogTitle>
-                    <DialogDescription className="text-sm text-gray-500">
+                    <DialogDescription className="text-sm text-muted-foreground">
                         {recommendation ? "Update the details below." : "Add a new repair recommendation for this vehicle."}
                     </DialogDescription>
                 </DialogHeader>
@@ -223,7 +223,7 @@ export function RecommendationDialog({
 
                         <div className="bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 rounded-lg p-3 flex gap-3">
                             <div className="shrink-0 mt-0.5">
-                                <Package className="w-5 h-5 text-primary dark:text-primary" />
+                                <Package className="w-5 h-5 text-primary" />
                             </div>
                             <div>
                                 <h4 className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-0.5">Parts & Labor</h4>

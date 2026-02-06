@@ -63,7 +63,7 @@ export default function RoadsideListPage() {
             {/* Active Requests */}
             <div className="space-y-3">
                 {activeRequests.length === 0 && !loading && (
-                    <div className="text-center py-8 text-gray-500 bg-muted rounded-lg border border-dashed border-gray-300 border-border">
+                    <div className="text-center py-8 text-muted-foreground bg-muted rounded-lg border border-dashed border-border border-border">
                         <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p>No active jobs assigned</p>
                     </div>
@@ -80,7 +80,7 @@ export default function RoadsideListPage() {
                                 <Badge variant={getStatusVariant(req.status)} className="uppercase">
                                     {req.status.replace('_', ' ')}
                                 </Badge>
-                                <span className="text-xs text-gray-500 font-mono">
+                                <span className="text-xs text-muted-foreground font-mono">
                                     {req.request_number}
                                 </span>
                             </div>
@@ -91,11 +91,11 @@ export default function RoadsideListPage() {
 
                             <div className="space-y-1.5 text-sm text-muted-foreground mb-3">
                                 <div className="flex items-start gap-2">
-                                    <MapPin className="h-4 w-4 mt-0.5 text-gray-400 shrink-0" />
+                                    <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                                     <span className="line-clamp-2">{req.breakdown_location}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Truck className="h-4 w-4 text-gray-400 shrink-0" />
+                                    <Truck className="h-4 w-4 text-muted-foreground shrink-0" />
                                     <span>{req.vehicle.year} {req.vehicle.make} {req.vehicle.model}</span>
                                 </div>
                             </div>
@@ -116,7 +116,7 @@ export default function RoadsideListPage() {
             {/* Past Requests (Collapsed or simple list) */}
             {pastRequests.length > 0 && (
                 <div className="pt-6">
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
                         Recent History
                     </h3>
                     <div className="space-y-2">
@@ -128,7 +128,7 @@ export default function RoadsideListPage() {
                             >
                                 <div>
                                     <div className="font-medium text-sm">{req.service_type.replace('_', ' ')}</div>
-                                    <div className="text-xs text-gray-500">{new Date(req.created_at).toLocaleDateString()}</div>
+                                    <div className="text-xs text-muted-foreground">{new Date(req.created_at).toLocaleDateString()}</div>
                                 </div>
                                 <Badge variant={getStatusVariant(req.status)} className="scale-90">
                                     {req.status}

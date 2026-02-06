@@ -99,11 +99,11 @@ export default function RefundsPage() {
             </div>
 
             {/* Filters */}
-            <Card className="border-none shadow-sm bg-gray-50/50">
+            <Card className="border-none shadow-sm bg-muted/50">
                 <CardContent className="p-3">
                     <div className="flex flex-col md:flex-row gap-3">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                             <Input
                                 type="text"
                                 placeholder="Search by refund # or customer..."
@@ -116,7 +116,7 @@ export default function RefundsPage() {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-3 py-1 h-8 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="px-3 py-1 h-8 text-sm border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">All Statuses</option>
                             <option value="pending">Pending</option>
@@ -133,7 +133,7 @@ export default function RefundsPage() {
                                     setSearch("");
                                     setStatusFilter("");
                                 }}
-                                className="h-8 text-gray-500 hover:text-red-600"
+                                className="h-8 text-muted-foreground hover:text-red-600"
                             >
                                 <XCircle className="w-4 h-4 mr-1" />
                                 Clear
@@ -145,7 +145,7 @@ export default function RefundsPage() {
 
             {/* Refunds Table */}
             <Card className="border-t shadow-sm">
-                <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30">
                     <CardTitle className="text-sm font-semibold text-card-foreground">
                         All Refunds
                     </CardTitle>
@@ -155,30 +155,30 @@ export default function RefundsPage() {
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Refund #</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Customer</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Amount</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Method</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Requested</TableHead>
-                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Refund #</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Amount</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Method</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Requested</TableHead>
+                                        <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredRefunds.map((refund: Refund) => (
                                         <TableRow
                                             key={refund.id}
-                                            className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 cursor-pointer"
+                                            className="group hover:bg-muted/80 transition-colors border-b border-border last:border-0 cursor-pointer"
                                             onDoubleClick={() => router.push(`/billing/refunds/${refund.id}`)}
                                         >
-                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700">
+                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-foreground">
                                                 {refund.refund_number}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-sm text-gray-900">
+                                            <TableCell className="px-4 py-2 text-sm text-foreground">
                                                 {refund.customer_name}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 font-mono font-semibold text-sm text-gray-700">
+                                            <TableCell className="px-4 py-2 font-mono font-semibold text-sm text-foreground">
                                                 ${parseFloat(refund.amount).toLocaleString()}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
@@ -191,14 +191,14 @@ export default function RefundsPage() {
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
                                                 <div>
-                                                    <div className="text-xs text-gray-900">{format(new Date(refund.requested_at), 'MMM dd, yyyy')}</div>
+                                                    <div className="text-xs text-foreground">{format(new Date(refund.requested_at), 'MMM dd, yyyy')}</div>
                                                     <div className="text-[10px] text-muted-foreground">{refund.requested_by_name}</div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Link href={`/billing/refunds/${refund.id}`}>
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
                                                             <Eye className="h-3.5 w-3.5" />
                                                         </Button>
                                                     </Link>
@@ -209,7 +209,7 @@ export default function RefundsPage() {
                                                                 size="sm"
                                                                 onClick={() => approveMutation.mutate(refund.id)}
                                                                 disabled={approveMutation.isPending}
-                                                                className="h-7 w-7 p-0 text-gray-500 hover:text-success"
+                                                                className="h-7 w-7 p-0 text-muted-foreground hover:text-success"
                                                             >
                                                                 <CheckCircle className="h-3.5 w-3.5" />
                                                             </Button>
@@ -218,7 +218,7 @@ export default function RefundsPage() {
                                                                 size="sm"
                                                                 onClick={() => rejectMutation.mutate(refund.id)}
                                                                 disabled={rejectMutation.isPending}
-                                                                className="h-7 w-7 p-0 text-gray-500 hover:text-red-600"
+                                                                className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
                                                             >
                                                                 <XCircle className="h-3.5 w-3.5" />
                                                             </Button>
@@ -233,7 +233,7 @@ export default function RefundsPage() {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <p className="text-sm text-gray-500">No refunds found.</p>
+                            <p className="text-sm text-muted-foreground">No refunds found.</p>
                             <Link href="/billing/refunds/new">
                                 <Button className="mt-4 h-8" variant="outline" size="sm">
                                     <Plus className="mr-1.5 h-3.5 w-3.5" />

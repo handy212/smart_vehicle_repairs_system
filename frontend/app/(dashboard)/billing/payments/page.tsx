@@ -130,11 +130,11 @@ export default function PaymentsPage() {
                 </Button>
             </div>
 
-            <Card className="border-none shadow-sm bg-gray-50/50">
+            <Card className="border-none shadow-sm bg-muted/50">
                 <CardContent className="p-3">
                     <div className="flex flex-col md:flex-row gap-3">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                             <Input
                                 type="text"
                                 placeholder="Search payments, customers, invoices..."
@@ -147,7 +147,7 @@ export default function PaymentsPage() {
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-3 py-1 h-8 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary w-40"
+                                className="px-3 py-1 h-8 text-sm border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-primary w-40"
                             >
                                 <option value="">All Statuses</option>
                                 <option value="completed">Completed</option>
@@ -159,7 +159,7 @@ export default function PaymentsPage() {
                             <select
                                 value={methodFilter}
                                 onChange={(e) => setMethodFilter(e.target.value)}
-                                className="px-3 py-1 h-8 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary w-40"
+                                className="px-3 py-1 h-8 text-sm border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-primary w-40"
                             >
                                 <option value="">All Methods</option>
                                 <option value="cash">Cash</option>
@@ -174,7 +174,7 @@ export default function PaymentsPage() {
             </Card>
 
             <Card className="border-t shadow-sm">
-                <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-semibold text-card-foreground">
                             All Payments
@@ -185,33 +185,33 @@ export default function PaymentsPage() {
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Payment #</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Date</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Customer</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Invoice</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Method</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Amount</TableHead>
-                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Payment #</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Date</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Invoice</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Method</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Amount</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredPayments.length > 0 ? (
                                 filteredPayments.map((payment: Payment) => (
-                                    <TableRow key={payment.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 cursor-pointer">
+                                    <TableRow key={payment.id} className="group hover:bg-muted/80 transition-colors border-b border-border last:border-0 cursor-pointer">
                                         <TableCell className="px-4 py-2 font-mono text-xs font-medium text-primary">
                                             <Link href={`/billing/payments/${payment.id}`} className="hover:underline">
                                                 {payment.payment_number}
                                             </Link>
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-xs text-gray-600">
+                                        <TableCell className="px-4 py-2 text-xs text-muted-foreground">
                                             {format(new Date(payment.payment_date), 'MMM dd, yyyy')}
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm text-gray-900">
+                                        <TableCell className="px-4 py-2 text-sm text-foreground">
                                             {payment.customer_name}
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm text-gray-600">
+                                        <TableCell className="px-4 py-2 text-sm text-muted-foreground">
                                             {payment.invoice_number ? (
                                                 <Link href={`/billing/invoices/${payment.invoice}`} className="hover:text-primary hover:underline">
                                                     {payment.invoice_number}
@@ -219,7 +219,7 @@ export default function PaymentsPage() {
                                             ) : '-'}
                                         </TableCell>
                                         <TableCell className="px-4 py-2">
-                                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 capitalize bg-white">
+                                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 capitalize bg-card">
                                                 {payment.payment_method.replace('_', ' ')}
                                             </Badge>
                                         </TableCell>
@@ -233,7 +233,7 @@ export default function PaymentsPage() {
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-right">
                                             <Link href={`/billing/payments/${payment.id}`}>
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
                                                     <Eye className="h-3.5 w-3.5" />
                                                 </Button>
                                             </Link>

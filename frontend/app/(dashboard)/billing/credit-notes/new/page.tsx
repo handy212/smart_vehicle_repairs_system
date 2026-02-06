@@ -127,7 +127,7 @@ export default function NewCreditNotePage() {
                 </Link>
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Create Credit Note</h1>
-                    <p className="text-sm text-gray-500">Issue a credit to a customer</p>
+                    <p className="text-sm text-muted-foreground">Issue a credit to a customer</p>
                 </div>
             </div>
 
@@ -253,7 +253,7 @@ export default function NewCreditNotePage() {
                                 <div className="col-span-4 md:col-span-3 space-y-2">
                                     <Label className={index !== 0 ? "sr-only" : ""}>Price</Label>
                                     <div className="relative">
-                                        <span className="absolute left-2.5 top-2.5 text-gray-500">$</span>
+                                        <span className="absolute left-2.5 top-2.5 text-muted-foreground">$</span>
                                         <Input
                                             type="number"
                                             step="0.01"

@@ -409,10 +409,10 @@ export default function EstimatesPage() {
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Draft</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Draft</span>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-gray-600">{stats?.counts.draft || 0}</span>
-              <FileText className="w-4 h-4 text-gray-400" />
+              <span className="text-lg font-bold text-muted-foreground">{stats?.counts.draft || 0}</span>
+              <FileText className="w-4 h-4 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -425,7 +425,7 @@ export default function EstimatesPage() {
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sent (Pending)</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sent (Pending)</span>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-primary">{stats?.counts.sent || 0}</span>
               <Mail className="w-4 h-4 text-primary/50" />
@@ -441,7 +441,7 @@ export default function EstimatesPage() {
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Approved</span>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-success">{stats?.counts.approved || 0}</span>
               <CheckCircle className="w-4 h-4 text-green-500/50" />
@@ -457,7 +457,7 @@ export default function EstimatesPage() {
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Declined</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Declined</span>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-red-600">{stats?.counts.declined || 0}</span>
               <XCircle className="w-4 h-4 text-red-500/50" />
@@ -473,7 +473,7 @@ export default function EstimatesPage() {
           }}
         >
           <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Expired</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Expired</span>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-primary">{stats?.counts.expired || 0}</span>
               <Clock className="w-4 h-4 text-orange-500/50" />
@@ -483,13 +483,13 @@ export default function EstimatesPage() {
       </div>
 
       {/* Compact Filter Bar */}
-      <Card className="border-none shadow-sm bg-gray-50/50">
+      <Card className="border-none shadow-sm bg-muted/50">
         <CardContent className="p-3">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3 flex-wrap">
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                 <Input
                   type="text"
                   placeholder="Search estimates..."
@@ -533,7 +533,7 @@ export default function EstimatesPage() {
                     setEndDate("");
                     setPage(1);
                   }}
-                  className="h-8 text-gray-500 hover:text-red-600"
+                  className="h-8 text-muted-foreground hover:text-red-600"
                 >
                   <X className="w-3.5 h-3.5 mr-1" />
                   Clear
@@ -544,12 +544,12 @@ export default function EstimatesPage() {
               {stats && (
                 <div className="hidden md:flex items-center space-x-4 ml-auto text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 font-medium">Approved Value:</span>
+                    <span className="text-muted-foreground font-medium">Approved Value:</span>
                     <span className="font-bold text-foreground">{formatCurrency(stats.financials.total_approved)}</span>
                   </div>
                   <div className="h-4 w-px bg-border"></div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 font-medium">Pipeline Value:</span>
+                    <span className="text-muted-foreground font-medium">Pipeline Value:</span>
                     <span className="font-bold text-primary">{formatCurrency(stats.financials.total_pending)}</span>
                   </div>
                 </div>
@@ -627,7 +627,7 @@ export default function EstimatesPage() {
 
       {/* Estimates Table */}
       <Card className="border-t shadow-sm">
-        <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+        <CardHeader className="py-3 px-4 border-b bg-muted/30">
           <CardTitle className="text-sm font-semibold text-card-foreground">
             All Estimates <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
           </CardTitle>
@@ -639,7 +639,7 @@ export default function EstimatesPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-200">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
                     <TableHead className="w-[32px] px-2">
                       <input
                         type="checkbox"
@@ -648,23 +648,23 @@ export default function EstimatesPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
+                        className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                       />
                     </TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Estimate #</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Customer</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Vehicle</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Dates</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-gray-500">Total</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-gray-500">Actions</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Estimate #</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Customer</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Vehicle</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Dates</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-muted-foreground">Total</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((estimate) => (
                     <TableRow
                       key={estimate.id}
-                      className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 data-[state=selected]:bg-primary/5 cursor-pointer"
+                      className="group hover:bg-muted/80 transition-colors border-b border-border last:border-0 data-[state=selected]:bg-primary/5 cursor-pointer"
                       onDoubleClick={() => router.push(`/billing/estimates/${estimate.id}`)}
                     >
                       <TableCell className="px-2 py-1.5 w-[32px]">
@@ -672,24 +672,24 @@ export default function EstimatesPage() {
                           type="checkbox"
                           checked={bulkSelection.isSelected(estimate.id)}
                           onChange={() => bulkSelection.toggleSelection(estimate.id)}
-                          className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
+                          className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded"
                         />
                       </TableCell>
-                      <TableCell className="px-2 py-1.5 font-mono text-[11px] font-medium text-gray-700">
+                      <TableCell className="px-2 py-1.5 font-mono text-[11px] font-medium text-foreground">
                         {estimate.estimate_number || "-"}
                       </TableCell>
                       <TableCell className="px-2 py-1.5">
-                        <span className="text-sm font-medium text-gray-900 line-clamp-1">{estimate.customer_name || "N/A"}</span>
+                        <span className="text-sm font-medium text-foreground line-clamp-1">{estimate.customer_name || "N/A"}</span>
                       </TableCell>
-                      <TableCell className="px-2 py-1.5 text-xs text-gray-600">
+                      <TableCell className="px-2 py-1.5 text-xs text-muted-foreground">
                         <span className="line-clamp-1">{estimate.vehicle_display || "-"}</span>
                       </TableCell>
                       <TableCell className="px-2 py-1.5">
-                        <div className="flex flex-col text-[10px] text-gray-500">
+                        <div className="flex flex-col text-[10px] text-muted-foreground">
                           <span>{estimate.estimate_date ? format(new Date(estimate.estimate_date), "MMM dd") : "-"}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="px-2 py-1.5 text-right font-medium text-sm text-gray-700">
+                      <TableCell className="px-2 py-1.5 text-right font-medium text-sm text-foreground">
                         {formatCurrency(parseFloat(estimate.total || "0"))}
                       </TableCell>
                       <TableCell className="px-2 py-1.5">
@@ -708,14 +708,14 @@ export default function EstimatesPage() {
                       <TableCell className="px-2 py-1.5 text-right w-[80px]">
                         <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Link href={`/billing/estimates/${estimate.id}`}>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-primary hover:bg-primary/10">
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10">
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
                           </Link>
                           {estimate.status === 'draft' && (
                             <PermissionGuard permission="edit_estimates">
                               <Link href={`/billing/estimates/${estimate.id}/edit`}>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-success hover:bg-success/10">
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-success hover:bg-success/10">
                                   <Edit className="w-3.5 h-3.5" />
                                 </Button>
                               </Link>
@@ -734,7 +734,7 @@ export default function EstimatesPage() {
                               });
                               setOpenMenuId(openMenuId === estimate.id ? null : estimate.id);
                             }}
-                            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-900 hover:bg-gray-100"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-gray-100"
                           >
                             <MoreVertical className="w-3.5 h-3.5" />
                           </Button>
@@ -748,7 +748,7 @@ export default function EstimatesPage() {
           ) : (
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-sm">No estimates found.</p>
+              <p className="text-muted-foreground text-sm">No estimates found.</p>
               <PermissionGuard permission="create_estimates">
                 <Link href="/billing/estimates/new">
                   <Button className="mt-4" variant="outline" size="sm">
@@ -886,7 +886,7 @@ export default function EstimatesPage() {
           {/* Pagination */}
           {data && data.count > 0 && (
             <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-foreground">
                 Showing page {page} of {Math.ceil(data.count / 10)}
               </div>
               <div className="flex space-x-2">

@@ -485,7 +485,7 @@ export default function NewInvoicePage() {
               {/* Search Bar & Add */}
               <div className="flex gap-2 mb-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search to add item..."
                     className="pl-9"
@@ -493,18 +493,18 @@ export default function NewInvoicePage() {
                     onChange={(e) => setPartSearchTerm(e.target.value)}
                   />
                   {partSearchTerm.length > 1 && partsData?.results && partsData.results.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
                       {partsData.results.map((part: any) => (
                         <div
                           key={part.id}
-                          className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                          className="px-4 py-2 hover:bg-muted cursor-pointer text-sm"
                           onClick={() => {
                             addLineItem("part", part);
                             setPartSearchTerm("");
                           }}
                         >
                           <div className="font-medium">{part.part_number} - {part.name}</div>
-                          <div className="text-xs text-gray-500">Stock: {part.quantity_on_hand || part.quantity_in_stock} | {formatCurrency(part.selling_price || part.cost_price || "0")}</div>
+                          <div className="text-xs text-muted-foreground">Stock: {part.quantity_on_hand || part.quantity_in_stock} | {formatCurrency(part.selling_price || part.cost_price || "0")}</div>
                         </div>
                       ))}
                     </div>
@@ -527,7 +527,7 @@ export default function NewInvoicePage() {
 
               <div className="border rounded-md overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-gray-50">
+                  <TableHeader className="bg-muted">
                     <TableRow className="h-8">
                       <TableHead className="w-[120px] py-1 px-2 h-8">Type</TableHead>
                       <TableHead className="min-w-[200px] py-1 px-2 h-8">Description</TableHead>
@@ -625,7 +625,7 @@ export default function NewInvoicePage() {
                   </TableBody>
                 </Table>
                 {!lineItems.length && (
-                  <div className="p-8 text-center text-gray-500 text-sm bg-gray-50">
+                  <div className="p-8 text-center text-muted-foreground text-sm bg-muted">
                     No items added. Search or click "Add Item" to start.
                   </div>
                 )}
@@ -651,31 +651,31 @@ export default function NewInvoicePage() {
 
             {/* Tax Lines */}
             {taxSummary.vatAmount > 0 && (
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm text-muted-foreground">
                 <span>VAT (15.00%)</span>
                 <span>{formatCurrency(taxSummary.vatAmount)}</span>
               </div>
             )}
             {taxSummary.getfundAmount > 0 && (
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm text-muted-foreground">
                 <span>GETFund (2.50%)</span>
                 <span>{formatCurrency(taxSummary.getfundAmount)}</span>
               </div>
             )}
             {taxSummary.nhilAmount > 0 && (
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm text-muted-foreground">
                 <span>NHIL (2.50%)</span>
                 <span>{formatCurrency(taxSummary.nhilAmount)}</span>
               </div>
             )}
             {taxSummary.hrlAmount > 0 && (
-              <div className="flex justify-between text-sm text-gray-600">
+              <div className="flex justify-between text-sm text-muted-foreground">
                 <span>COVID-19 HRL (1.00%)</span>
                 <span>{formatCurrency(taxSummary.hrlAmount)}</span>
               </div>
             )}
 
-            <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2 mt-2">
+            <div className="flex justify-between text-lg font-bold border-t border-border pt-2 mt-2">
               <span>Total :</span>
               <span>{formatCurrency(total)}</span>
             </div>
@@ -685,7 +685,7 @@ export default function NewInvoicePage() {
       </form>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 z-10 flex justify-end items-center gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:pl-64">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border z-10 flex justify-end items-center gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:pl-64">
         <Link href="/billing">
           <Button variant="outline">Cancel</Button>
         </Link>

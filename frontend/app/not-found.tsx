@@ -6,22 +6,22 @@ import { Home, ArrowLeft, Search } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-muted flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         <div className="mb-8">
           <h1 className="text-9xl font-bold text-gray-300">404</h1>
-          <h2 className="text-3xl font-bold text-gray-900 mt-4">Page Not Found</h2>
-          <p className="text-gray-600 mt-2">
+          <h2 className="text-3xl font-bold text-foreground mt-4">Page Not Found</h2>
+          <p className="text-muted-foreground mt-2">
             Sorry, we couldn't find the page you're looking for.
           </p>
         </div>
 
         <div className="space-y-4">
-          <div className="bg-white rounded-lg shadow-sm p-6 text-left">
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-card rounded-lg shadow-sm p-6 text-left">
+            <p className="text-sm text-muted-foreground mb-4">
               The page you're trying to access doesn't exist or has been moved.
             </p>
-            <ul className="space-y-2 text-sm text-gray-600">
+            <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start">
                 <span className="text-primary mr-2">•</span>
                 Check the URL for typos

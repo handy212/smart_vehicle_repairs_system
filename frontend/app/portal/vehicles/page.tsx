@@ -60,7 +60,7 @@ export default function MyVehiclesPage() {
               header: "Vehicle",
               cell: (vehicle) => (
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center text-primary dark:text-primary">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center text-primary">
                     <Car className="w-5 h-5" />
                   </div>
                   <div>
@@ -68,7 +68,7 @@ export default function MyVehiclesPage() {
                       {vehicle.year} {vehicle.make} {vehicle.model}
                     </div>
                     {vehicle.color && (
-                      <div className="text-xs text-gray-500 capitalize">{vehicle.color}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{vehicle.color}</div>
                     )}
                   </div>
                 </div>
@@ -79,7 +79,7 @@ export default function MyVehiclesPage() {
               cell: (vehicle) => (
                 <div className="text-sm">
                   <div className="font-medium text-foreground">{vehicle.license_plate || "N/A"}</div>
-                  <div className="text-xs text-gray-500 font-mono">{vehicle.vin || "N/A"}</div>
+                  <div className="text-xs text-muted-foreground font-mono">{vehicle.vin || "N/A"}</div>
                 </div>
               )
             },

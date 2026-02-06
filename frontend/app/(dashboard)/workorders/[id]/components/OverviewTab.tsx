@@ -132,7 +132,7 @@ export default function WorkOrderOverviewTab({
       {/* Customer */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
-                  <User className="w-5 h-5 text-gray-400" />
+                  <User className="w-5 h-5 text-muted-foreground" />
                   <h3 className="text-sm font-semibold text-card-foreground">Customer</h3>
                 </div>
                 {workOrder.customer ? (
@@ -192,7 +192,7 @@ export default function WorkOrderOverviewTab({
       {/* Vehicle */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
-                  <Car className="w-5 h-5 text-gray-400" />
+                  <Car className="w-5 h-5 text-muted-foreground" />
                   <h3 className="text-sm font-semibold text-card-foreground">Vehicle</h3>
                 </div>
                 {workOrder.vehicle ? (
@@ -258,7 +258,7 @@ export default function WorkOrderOverviewTab({
               <CardTitle>Customer Concerns</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {workOrder.customer_concerns}
               </p>
             </CardContent>
@@ -272,7 +272,7 @@ export default function WorkOrderOverviewTab({
               <CardTitle>Diagnosis Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {(workOrder as any).diagnosis_notes}
               </p>
             </CardContent>
@@ -286,7 +286,7 @@ export default function WorkOrderOverviewTab({
               <CardTitle>Special Instructions</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground whitespace-pre-wrap">
                 {(workOrder as any).special_instructions}
               </p>
             </CardContent>
@@ -359,7 +359,7 @@ export default function WorkOrderOverviewTab({
                           <div>
                             <Link 
                               href={`/workorders/${rework.id}`}
-                              className="font-mono text-sm text-primary dark:text-primary hover:underline"
+                              className="font-mono text-sm text-primary hover:underline"
                             >
                               {rework.work_order_number}
                             </Link>
@@ -400,13 +400,13 @@ export default function WorkOrderOverviewTab({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Estimated Labor</span>
+              <span className="text-sm text-muted-foreground">Estimated Labor</span>
               <span className="text-sm font-medium text-foreground">
                 {formatCurrency(parseFloat((workOrder as any).estimated_labor_cost || "0"))}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Estimated Parts</span>
+              <span className="text-sm text-muted-foreground">Estimated Parts</span>
               <span className="text-sm font-medium text-foreground">
                 {formatCurrency(parseFloat((workOrder as any).estimated_parts_cost || "0"))}
               </span>
@@ -417,7 +417,7 @@ export default function WorkOrderOverviewTab({
                 <span className={`text-lg font-bold ${
                   parseFloat((workOrder as any).estimated_total || "0") > 0 
                     ? "text-foreground" 
-                    : "text-gray-400"
+                    : "text-muted-foreground"
                 }`}>
                   {formatCurrency(parseFloat((workOrder as any).estimated_total || workOrder.total_cost || "0"))}
                 </span>
@@ -448,7 +448,7 @@ export default function WorkOrderOverviewTab({
                 {parseFloat((workOrder as any).estimated_total || "0") > 0 && (
                   <div className="pt-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500">Variance</span>
+                      <span className="text-muted-foreground">Variance</span>
                       <span className={`font-medium ${
                         parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0")
                           ? "text-red-600 dark:text-red-400"
@@ -472,12 +472,12 @@ export default function WorkOrderOverviewTab({
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="text-xs text-gray-500">Work Order Number</p>
+              <p className="text-xs text-muted-foreground">Work Order Number</p>
               <p className="text-sm font-mono">{workOrder.work_order_number}</p>
             </div>
             {workOrder.created_at && (
               <div>
-                <p className="text-xs text-gray-500">Created</p>
+                <p className="text-xs text-muted-foreground">Created</p>
                 <p className="text-sm">
                   {format(new Date(workOrder.created_at), "MMM dd, yyyy 'at' h:mm a")}
                 </p>
@@ -485,7 +485,7 @@ export default function WorkOrderOverviewTab({
             )}
             {(workOrder as any).estimated_completion && (
               <div>
-                <p className="text-xs text-gray-500">Estimated Completion</p>
+                <p className="text-xs text-muted-foreground">Estimated Completion</p>
                 <p className="text-sm">
                   {format(new Date((workOrder as any).estimated_completion), "MMM dd, yyyy 'at' h:mm a")}
                 </p>
@@ -493,7 +493,7 @@ export default function WorkOrderOverviewTab({
             )}
             {(workOrder as any).primary_technician_name && (
               <div>
-                <p className="text-xs text-gray-500">Primary Technician</p>
+                <p className="text-xs text-muted-foreground">Primary Technician</p>
                 <p className="text-sm">{(workOrder as any).primary_technician_name}</p>
               </div>
             )}
@@ -501,7 +501,7 @@ export default function WorkOrderOverviewTab({
             {/* Service Coordinator */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Service Coordinator {!workOrder?.service_coordinator && <span className="text-red-500">*</span>}
                 </p>
                 {canEditServiceCoordinator && !isEditingServiceCoordinator && (
@@ -522,7 +522,7 @@ export default function WorkOrderOverviewTab({
                   <select
                     value={selectedServiceCoordinator}
                     onChange={(e) => setSelectedServiceCoordinator(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border dark:text-gray-100"
+                    className="w-full px-2 py-1.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted border-border text-foreground"
                   >
                     <option value="">Select Service Coordinator</option>
                     {serviceCoordinatorsList.map((coord: any) => (

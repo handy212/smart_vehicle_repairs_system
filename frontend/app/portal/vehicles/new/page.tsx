@@ -221,30 +221,30 @@ export default function AddVehiclePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Series:</span> {vinOtherInfo.series || "-"}</div>
-                    <div><span className="text-gray-500">Trim:</span> {vinOtherInfo.trim || "-"}</div>
-                    <div><span className="text-gray-500">GVWR:</span> {vinOtherInfo.gvwr || "-"}</div>
-                    <div><span className="text-gray-500">Drive Type:</span> {vinOtherInfo.drive_type || "-"}</div>
-                    <div><span className="text-gray-500">Cylinders:</span> {vinOtherInfo.cylinders ?? "-"}</div>
-                    <div><span className="text-gray-500">Engine Displacement (L):</span> {vinOtherInfo.engine_displacement_l || "-"}</div>
-                    <div><span className="text-gray-500">Engine Model:</span> {vinOtherInfo.engine_model || "-"}</div>
-                    <div><span className="text-gray-500">Engine HP:</span> {vinOtherInfo.engine_hp ?? "-"}</div>
-                    <div><span className="text-gray-500">Engine Manufacturer:</span> {vinOtherInfo.engine_manufacturer || "-"}</div>
-                    <div><span className="text-gray-500">Primary Fuel Type:</span> {vinOtherInfo.primary_fuel_type || "-"}</div>
-                    <div><span className="text-gray-500">Secondary Fuel Type:</span> {vinOtherInfo.secondary_fuel_type || "-"}</div>
-                    <div><span className="text-gray-500">Electrification Level:</span> {vinOtherInfo.electrification_level || "-"}</div>
-                    <div><span className="text-gray-500">Transmission Speed:</span> {vinOtherInfo.transmission_speed || "-"}</div>
-                    <div><span className="text-gray-500">Transmission Style:</span> {vinOtherInfo.transmission_style || "-"}</div>
+                    <div><span className="text-muted-foreground">Series:</span> {vinOtherInfo.series || "-"}</div>
+                    <div><span className="text-muted-foreground">Trim:</span> {vinOtherInfo.trim || "-"}</div>
+                    <div><span className="text-muted-foreground">GVWR:</span> {vinOtherInfo.gvwr || "-"}</div>
+                    <div><span className="text-muted-foreground">Drive Type:</span> {vinOtherInfo.drive_type || "-"}</div>
+                    <div><span className="text-muted-foreground">Cylinders:</span> {vinOtherInfo.cylinders ?? "-"}</div>
+                    <div><span className="text-muted-foreground">Engine Displacement (L):</span> {vinOtherInfo.engine_displacement_l || "-"}</div>
+                    <div><span className="text-muted-foreground">Engine Model:</span> {vinOtherInfo.engine_model || "-"}</div>
+                    <div><span className="text-muted-foreground">Engine HP:</span> {vinOtherInfo.engine_hp ?? "-"}</div>
+                    <div><span className="text-muted-foreground">Engine Manufacturer:</span> {vinOtherInfo.engine_manufacturer || "-"}</div>
+                    <div><span className="text-muted-foreground">Primary Fuel Type:</span> {vinOtherInfo.primary_fuel_type || "-"}</div>
+                    <div><span className="text-muted-foreground">Secondary Fuel Type:</span> {vinOtherInfo.secondary_fuel_type || "-"}</div>
+                    <div><span className="text-muted-foreground">Electrification Level:</span> {vinOtherInfo.electrification_level || "-"}</div>
+                    <div><span className="text-muted-foreground">Transmission Speed:</span> {vinOtherInfo.transmission_speed || "-"}</div>
+                    <div><span className="text-muted-foreground">Transmission Style:</span> {vinOtherInfo.transmission_style || "-"}</div>
                   </div>
 
                   <div className="mt-4">
                     <p className="text-sm font-medium text-card-foreground mb-2">Airbags</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      <div><span className="text-gray-500">Front:</span> {vinOtherInfo.airbags?.front || "-"}</div>
-                      <div><span className="text-gray-500">Knee:</span> {vinOtherInfo.airbags?.knee || "-"}</div>
-                      <div><span className="text-gray-500">Side:</span> {vinOtherInfo.airbags?.side || "-"}</div>
-                      <div><span className="text-gray-500">Curtain:</span> {vinOtherInfo.airbags?.curtain || "-"}</div>
-                      <div><span className="text-gray-500">Seat Cushion:</span> {vinOtherInfo.airbags?.seat_cushion || "-"}</div>
+                      <div><span className="text-muted-foreground">Front:</span> {vinOtherInfo.airbags?.front || "-"}</div>
+                      <div><span className="text-muted-foreground">Knee:</span> {vinOtherInfo.airbags?.knee || "-"}</div>
+                      <div><span className="text-muted-foreground">Side:</span> {vinOtherInfo.airbags?.side || "-"}</div>
+                      <div><span className="text-muted-foreground">Curtain:</span> {vinOtherInfo.airbags?.curtain || "-"}</div>
+                      <div><span className="text-muted-foreground">Seat Cushion:</span> {vinOtherInfo.airbags?.seat_cushion || "-"}</div>
                     </div>
                     {vinOtherInfo.airbags?.other_restraint_info && (
                       <p className="text-xs text-muted-foreground mt-2">

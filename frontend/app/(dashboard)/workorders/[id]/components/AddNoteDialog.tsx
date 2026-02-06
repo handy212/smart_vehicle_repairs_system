@@ -106,7 +106,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
             )}
 
             <div>
-              <label htmlFor="note_type" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="note_type" className="block text-sm font-medium text-foreground mb-2">
                 Note Type *
               </label>
               <Select
@@ -130,7 +130,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
             </div>
 
             <div>
-              <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="note" className="block text-sm font-medium text-foreground mb-2">
                 Note *
               </label>
               <Textarea
@@ -150,18 +150,18 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
                 <input
                   type="checkbox"
                   {...register("is_important")}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
-                <span className="text-sm text-gray-700">Mark as Important</span>
+                <span className="text-sm text-foreground">Mark as Important</span>
               </label>
               {noteType === "internal" && (
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
                     {...register("is_customer_visible")}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
-                  <span className="text-sm text-gray-700">Customer Visible</span>
+                  <span className="text-sm text-foreground">Customer Visible</span>
                 </label>
               )}
             </div>

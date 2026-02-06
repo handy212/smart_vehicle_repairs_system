@@ -154,7 +154,7 @@ export default function JobCardPrintPage() {
           /* Make sure borders and backgrounds show */
           .jobcard-content .border-2,
           .jobcard-content .border-gray-800,
-          .jobcard-content .border-gray-300,
+          .jobcard-content .border-border,
           .jobcard-content .border-b {
             border-color: #000000 !important;
           }
@@ -257,24 +257,24 @@ export default function JobCardPrintPage() {
         }
       `}</style>
 
-      <div className="jobcard-content bg-white">
+      <div className="jobcard-content bg-card">
 
         <div className="border-2 border-gray-800 p-8 space-y-6 print-jobcard-inner">
           {/* Header */}
           <div className="text-center border-b-2 border-gray-800 pb-4">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">JOB CARD</h1>
-            <p className="text-sm text-gray-600">Repair Service Request Acknowledgment</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">JOB CARD</h1>
+            <p className="text-sm text-muted-foreground">Repair Service Request Acknowledgment</p>
           </div>
 
           {/* Work Order Info */}
-          <div className="grid grid-cols-2 gap-4 border-b border-gray-300 pb-4">
+          <div className="grid grid-cols-2 gap-4 border-b border-border pb-4">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Job Card Number</p>
-              <p className="text-lg font-bold text-gray-900">{workOrder.work_order_number}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Job Card Number</p>
+              <p className="text-lg font-bold text-foreground">{workOrder.work_order_number}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Date</p>
-              <p className="text-lg font-semibold text-gray-900">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Date</p>
+              <p className="text-lg font-semibold text-foreground">
                 {workOrder.created_at 
                   ? format(new Date(workOrder.created_at), "MMMM dd, yyyy")
                   : "-"}
@@ -283,60 +283,60 @@ export default function JobCardPrintPage() {
           </div>
 
           {/* Customer Information */}
-          <div className="border-b border-gray-300 pb-4">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Customer Information</h2>
+          <div className="border-b border-border pb-4">
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-3">Customer Information</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500 mb-1">Name:</p>
-                <p className="font-semibold text-gray-900">
+                <p className="text-muted-foreground mb-1">Name:</p>
+                <p className="font-semibold text-foreground">
                   {customer?.full_name || workOrder.customer_name || "-"}
                 </p>
               </div>
               {customer?.phone && (
                 <div>
-                  <p className="text-gray-500 mb-1">Phone:</p>
-                  <p className="font-semibold text-gray-900">{customer.phone}</p>
+                  <p className="text-muted-foreground mb-1">Phone:</p>
+                  <p className="font-semibold text-foreground">{customer.phone}</p>
                 </div>
               )}
               {customer?.email && (
                 <div className="col-span-2">
-                  <p className="text-gray-500 mb-1">Email:</p>
-                  <p className="font-semibold text-gray-900 break-words">{customer.email}</p>
+                  <p className="text-muted-foreground mb-1">Email:</p>
+                  <p className="font-semibold text-foreground break-words">{customer.email}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Vehicle Info */}
-          <div className="border-b border-gray-300 pb-4">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Vehicle Info</h2>
+          <div className="border-b border-border pb-4">
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-3">Vehicle Info</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               {vehicle && (
                 <>
                   <div>
-                    <p className="text-gray-500 mb-1">Make/Model:</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-muted-foreground mb-1">Make/Model:</p>
+                    <p className="font-semibold text-foreground">
                       {vehicle.make} {vehicle.model} {vehicle.year}
                     </p>
                   </div>
                   {vehicle.license_plate && (
                     <div>
-                      <p className="text-gray-500 mb-1">License Plate:</p>
-                      <p className="font-semibold text-gray-900">{vehicle.license_plate}</p>
+                      <p className="text-muted-foreground mb-1">License Plate:</p>
+                      <p className="font-semibold text-foreground">{vehicle.license_plate}</p>
                     </div>
                   )}
                   {vehicle.vin && (
                     <div className="col-span-2">
-                      <p className="text-gray-500 mb-1">VIN:</p>
-                      <p className="font-semibold text-gray-900 font-mono text-xs">{vehicle.vin}</p>
+                      <p className="text-muted-foreground mb-1">VIN:</p>
+                      <p className="font-semibold text-foreground font-mono text-xs">{vehicle.vin}</p>
                     </div>
                   )}
                 </>
               )}
               {!vehicle && workOrder.vehicle_info && (
                 <div>
-                  <p className="text-gray-500 mb-1">Vehicle:</p>
-                  <p className="font-semibold text-gray-900">{workOrder.vehicle_info}</p>
+                  <p className="text-muted-foreground mb-1">Vehicle:</p>
+                  <p className="font-semibold text-foreground">{workOrder.vehicle_info}</p>
                 </div>
               )}
             </div>
@@ -344,10 +344,10 @@ export default function JobCardPrintPage() {
 
           {/* Customer Concerns */}
           {workOrder.customer_concerns && (
-            <div className="border-b border-gray-300 pb-4">
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Service Request Description</h2>
-              <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                <p className="text-sm text-gray-900 whitespace-pre-wrap">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wide mb-3">Service Request Description</h2>
+              <div className="bg-muted p-4 rounded border border-border">
+                <p className="text-sm text-foreground whitespace-pre-wrap">
                   {workOrder.customer_concerns}
                 </p>
               </div>
@@ -355,17 +355,17 @@ export default function JobCardPrintPage() {
           )}
 
           {/* Status */}
-          <div className="border-b border-gray-300 pb-4">
+          <div className="border-b border-border pb-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500 mb-1">Status:</p>
-                <p className="font-semibold text-gray-900 capitalize">
+                <p className="text-muted-foreground mb-1">Status:</p>
+                <p className="font-semibold text-foreground capitalize">
                   {workOrder.status?.replace("_", " ") || "-"}
                 </p>
               </div>
               <div>
-                <p className="text-gray-500 mb-1">Priority:</p>
-                <p className="font-semibold text-gray-900 capitalize">
+                <p className="text-muted-foreground mb-1">Priority:</p>
+                <p className="font-semibold text-foreground capitalize">
                   {workOrder.priority || "-"}
                 </p>
               </div>
@@ -374,14 +374,14 @@ export default function JobCardPrintPage() {
 
           {/* Footer Message */}
           <div className="pt-4 text-center border-t-2 border-gray-800">
-            <p className="text-xs text-gray-600 mb-2">
+            <p className="text-xs text-muted-foreground mb-2">
               This Job Card confirms that repair services have been requested for the above vehicle.
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Please keep this card for your records. We will contact you when your vehicle is ready for pickup.
             </p>
             {workOrder.created_at && (
-              <p className="text-xs text-gray-400 mt-4">
+              <p className="text-xs text-muted-foreground mt-4">
                 Generated on {format(new Date(workOrder.created_at), "MMMM dd, yyyy 'at' h:mm a")}
               </p>
             )}
