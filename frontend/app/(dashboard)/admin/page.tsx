@@ -86,9 +86,9 @@ export default function AdminDashboardPage() {
           <CardContent className="p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Link href="/admin/users">
-                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center mb-1">
-                    <Users className="h-4 w-4 text-primary dark:text-primary" />
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-muted border-border shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-1">
+                    <Users className="h-4 w-4 text-primary" />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Users</span>
@@ -97,9 +97,9 @@ export default function AdminDashboardPage() {
                 </Button>
               </Link>
               <Link href="/admin/settings">
-                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
-                  <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-1">
-                    <Settings className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-muted border-border shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-1">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Settings</span>
@@ -108,8 +108,8 @@ export default function AdminDashboardPage() {
                 </Button>
               </Link>
               <Link href="/admin/audit-log">
-                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
-                  <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mb-1">
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-muted border-border shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-1">
                     <FileText className="h-4 w-4 text-primary" />
                   </div>
                   <div className="text-center">
@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
                 </Button>
               </Link>
               <Link href="/subscriptions">
-                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-muted border-border shadow-sm transition-all hover:scale-[1.02]">
                   <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mb-1">
                     <CreditCard className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   </div>

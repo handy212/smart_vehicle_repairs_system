@@ -290,7 +290,7 @@ export default function BalanceSheetPage() {
                         </Card>
 
                         {/* Summary */}
-                        <Card className={report.is_balanced ? "border-green-200 bg-success/10/50" : "border-red-200 bg-red-50/50"}>
+                        <Card className={report.is_balanced ? "border-green-200 bg-success/10" : "border-red-200 bg-red-50/50"}>
                             <CardContent className="pt-6">
                                 <div className="flex justify-between items-center">
                                     <span className="font-bold text-gray-700">Total Liabilities + Equity</span>

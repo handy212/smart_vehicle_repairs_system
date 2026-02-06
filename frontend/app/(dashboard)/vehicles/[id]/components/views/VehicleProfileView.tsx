@@ -71,7 +71,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                     <Card className="overflow-hidden border-none shadow-md bg-card">
                         <div className="flex flex-col md:flex-row">
                             {/* Vehicle Image */}
-                            <div className="w-full md:w-1/3 relative bg-gray-100 dark:bg-gray-900 group cursor-pointer" onClick={() => vehicle.image && setShowImageModal(true)}>
+                            <div className="w-full md:w-1/3 relative bg-gray-100 bg-background group cursor-pointer" onClick={() => vehicle.image && setShowImageModal(true)}>
                                 {vehicle.image ? (
                                     <Image
                                         src={vehicle.image}

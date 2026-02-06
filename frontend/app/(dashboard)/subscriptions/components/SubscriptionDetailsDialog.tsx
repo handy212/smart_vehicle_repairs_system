@@ -104,7 +104,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                     {/* Primary Info Row */}
                     <div className="grid grid-cols-2 gap-8 px-2">
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 <User className="w-3.5 h-3.5" />
                                 Customer & Vehicle
                             </div>
@@ -118,16 +118,16 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 py-1.5 px-2 bg-slate-50/80 rounded-lg border border-slate-100">
-                                <Car className="w-4 h-4 text-slate-400" />
+                                <Car className="w-4 h-4 text-muted-foreground" />
                                 <div className="min-w-0">
-                                    <div className="text-[9px] font-bold text-slate-400 uppercase leading-none">Vehicle ID</div>
+                                    <div className="text-[9px] font-bold text-muted-foreground uppercase leading-none">Vehicle ID</div>
                                     <div className="text-[12px] font-mono font-medium text-slate-700 mt-0.5 truncate">{subscription.vehicle || 'N/A'}</div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-4">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 <Calendar className="w-3.5 h-3.5" />
                                 Subscription Period
                             </div>
@@ -149,7 +149,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 </div>
                                 <div className="flex justify-between items-center text-[12px]">
                                     <span className="text-slate-500">Auto-Renew</span>
-                                    <span className={cn("font-medium", subscription.auto_renew ? "text-success" : "text-slate-400")}>
+                                    <span className={cn("font-medium", subscription.auto_renew ? "text-success" : "text-muted-foreground")}>
                                         {subscription.auto_renew ? "On" : "Off"}
                                     </span>
                                 </div>
@@ -161,7 +161,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
 
                     {/* Financials & Allowances Header */}
                     <div className="flex items-center justify-between px-2">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                             <Activity className="w-3.5 h-3.5" />
                             Allowances & Usage
                         </div>
@@ -177,12 +177,12 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                             {Object.entries(subscription.remaining_allowances).map(([key, value]) => (
                                 <div key={key} className="p-2.5 bg-slate-50/50 rounded-lg border border-slate-100 hover:border-primary/30 transition-colors group">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <div className="p-1 rounded bg-white text-slate-400 group-hover:text-primary transition-colors border border-slate-100">
+                                        <div className="p-1 rounded bg-white text-muted-foreground group-hover:text-primary transition-colors border border-slate-100">
                                             {iconMap[key] || iconMap.default}
                                         </div>
                                         <div className="text-[16px] font-black text-slate-800 line-clamp-1">{value}</div>
                                     </div>
-                                    <div className="text-[10px] uppercase font-bold text-slate-400 truncate leading-tight" title={labelMap[key] || key}>
+                                    <div className="text-[10px] uppercase font-bold text-muted-foreground truncate leading-tight" title={labelMap[key] || key}>
                                         {labelMap[key] || key.replace(/_/g, " ")}
                                     </div>
                                 </div>
@@ -193,18 +193,18 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                     {/* Usage History Section */}
                     <div className="space-y-2.5 pt-2">
                         <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 <FileText className="w-3.5 h-3.5" />
                                 Recent Activity
                             </div>
                             {usageHistory && usageHistory.length > 0 && (
-                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{usageHistory.length} Total</span>
+                                <span className="text-[10px] font-bold text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-full">{usageHistory.length} Total</span>
                             )}
                         </div>
 
                         <div className="border rounded-lg overflow-hidden bg-white">
                             {isLoadingUsage ? (
-                                <div className="p-8 text-center text-slate-400 text-xs">Loading history...</div>
+                                <div className="p-8 text-center text-muted-foreground text-xs">Loading history...</div>
                             ) : usageHistory && usageHistory.length > 0 ? (
                                 <Table>
                                     <TableHeader className="bg-slate-50/50">
@@ -219,7 +219,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                             <TableRow key={usage.id} className="hover:bg-slate-50/30 h-10 border-slate-50">
                                                 <TableCell className="p-2 align-middle">
                                                     <div className="text-[11px] font-medium text-slate-700">{format(new Date(usage.service_date), "MMM dd, yyyy")}</div>
-                                                    <div className="text-[9px] text-slate-400">{format(new Date(usage.service_date), "h:mm a")}</div>
+                                                    <div className="text-[9px] text-muted-foreground">{format(new Date(usage.service_date), "h:mm a")}</div>
                                                 </TableCell>
                                                 <TableCell className="p-2 align-middle">
                                                     <div className="capitalize text-[11px] font-semibold text-slate-800 truncate max-w-[120px]">
@@ -235,7 +235,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                     </TableBody>
                                 </Table>
                             ) : (
-                                <div className="p-8 flex flex-col items-center justify-center text-center text-slate-300 space-y-2">
+                                <div className="p-8 flex flex-col items-center justify-center text-center text-muted-foreground space-y-2">
                                     <FileText className="w-6 h-6 stroke-1" />
                                     <p className="text-[11px]">No services used yet</p>
                                 </div>

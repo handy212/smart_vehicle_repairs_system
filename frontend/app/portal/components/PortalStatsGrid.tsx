@@ -64,7 +64,7 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {items.map((item, index) => (
-                <Card key={index} className="border-none shadow-sm bg-white/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-900 transition-colors group">
+                <Card key={index} className="border-none shadow-sm bg-white/50 bg-background/50 hover:bg-white dark:hover:bg-gray-900 transition-colors group">
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{item.label}</p>

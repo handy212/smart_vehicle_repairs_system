@@ -416,7 +416,7 @@ function TestDialog({
                                                     key={template.id}
                                                     type="button"
                                                     onClick={() => handleSelectTemplate(template)}
-                                                    className="w-full text-left p-3 hover:bg-primary/10 dark:hover:bg-orange-900/20 border-b border-gray-50 dark:border-gray-800 last:border-b-0 transition-colors group"
+                                                    className="w-full text-left p-3 hover:bg-primary/10 dark:hover:bg-orange-900/20 border-b border-gray-50 border-border last:border-b-0 transition-colors group"
                                                 >
                                                     <div className="font-semibold text-sm text-foreground group-hover:text-primary dark:group-hover:text-orange-300">
                                                         {template.name}

@@ -135,14 +135,14 @@ export default function UsersManagementPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 dark:bg-gray-900">
+      <div className="flex items-center justify-center h-64 bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-4 bg-background min-h-screen">
       <DynamicPageTitle title="User Management" />
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-4">
@@ -264,7 +264,7 @@ export default function UsersManagementPage() {
                     <TableRow key={user.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/admin/users/${user.id}`)}>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs flex-shrink-0 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs flex-shrink-0 border border-slate-200 bg-muted dark:text-muted-foreground border-border">
                             {user.first_name?.[0] || user.email[0].toUpperCase()}
                           </div>
                           <div className="ml-3">

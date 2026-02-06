@@ -166,7 +166,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-4 bg-background min-h-screen">
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
           <h1 className="text-xl font-bold text-foreground tracking-tight">Profile Settings</h1>

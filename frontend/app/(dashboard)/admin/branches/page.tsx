@@ -138,7 +138,7 @@ export default function BranchesPage() {
   }
 
   return (
-    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-4 bg-background min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4">
         <div>

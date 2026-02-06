@@ -312,7 +312,7 @@ export default function SearchPage() {
           <CardContent className="py-12 text-center">
             <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-muted-foreground mb-2">No results found</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Try searching with different keywords
             </p>
           </CardContent>
@@ -322,7 +322,7 @@ export default function SearchPage() {
           <CardContent className="py-12 text-center">
             <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-muted-foreground mb-2">Start searching</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Enter at least 2 characters to search across your vehicles, appointments, invoices,
               and more
             </p>

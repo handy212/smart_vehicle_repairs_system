@@ -27,7 +27,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                         {/* Work Order Created */}
                         {workOrder.created_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-primary border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-primary border-2 border-white border-border shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Work Order Created
@@ -55,7 +55,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                         {/* Status Changes */}
                         {workOrder.diagnosis_completed_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-purple-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-purple-500 border-2 border-white border-border shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Diagnosis Completed
@@ -72,7 +72,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.approval_requested_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-warning/100 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-warning/100 border-2 border-white border-border shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Approval Requested
@@ -89,7 +89,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.approved_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white border-border shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Work Order Approved
@@ -111,7 +111,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.started_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white border-border shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Work Started
@@ -134,7 +134,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                         {workOrder.quality_check_at && (
                             <div className="relative flex items-start">
                                 <div
-                                    className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${workOrder.quality_check_passed
+                                    className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${workOrder.quality_check_passed
                                             ? "bg-success/100"
                                             : "bg-red-500"
                                         }`}
@@ -156,7 +156,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
 
                         {workOrder.completed_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success border-2 border-white border-border shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-foreground">
                                         Work Order Completed
@@ -188,7 +188,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                     .map((note: any) => (
                                         <div key={note.id} className="relative flex items-start">
                                             <div
-                                                className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${note.note_type === "customer"
+                                                className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${note.note_type === "customer"
                                                         ? "bg-orange-400"
                                                         : note.is_important
                                                             ? "bg-red-500"

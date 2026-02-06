@@ -746,7 +746,7 @@ export default function ReportsPage() {
                   </Table>
                 </div>
 
-                <div className="mt-8 border-t dark:border-gray-800 pt-8">
+                <div className="mt-8 border-t border-border pt-8">
                   <div className="px-4 sm:px-0 mb-4">
                     <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400">Productivity Heatmap</h4>
                     <p className="text-xs text-gray-500">Cross-metric performance comparison normalized by peak performance.</p>

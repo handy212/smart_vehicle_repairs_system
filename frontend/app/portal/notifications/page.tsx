@@ -335,7 +335,7 @@ export default function NotificationsPage() {
           <CardContent className="py-12 text-center">
             <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-muted-foreground mb-2">No notifications found</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {filter === "unread"
                 ? "You're all caught up! No unread notifications."
                 : "You don't have any notifications yet."}

@@ -304,7 +304,7 @@ export default function EstimateDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-800/50 border-border dark:text-gray-300">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-800/50 border-border text-foreground">
                   Estimate #{estimate.estimate_number}
                 </span>
                 {estimate.work_order && estimate.work_order_number && (

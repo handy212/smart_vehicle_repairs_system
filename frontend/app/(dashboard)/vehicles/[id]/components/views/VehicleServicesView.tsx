@@ -230,7 +230,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : schedules.length > 0 ? (
-        <Card className="overflow-hidden border-orange-100 dark:border-gray-800">
+        <Card className="overflow-hidden border-orange-100 border-border">
           <CardContent className="p-0">
             <Table>
               <TableHeader className="bg-muted/50">

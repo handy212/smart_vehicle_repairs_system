@@ -95,7 +95,7 @@ export default function ImportHistoryPage() {
 
   return (
     <PermissionGuard permission="view_audit_logs">
-      <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+      <div className="space-y-4 bg-background min-h-screen">
         <div className="flex items-center justify-between px-4 pt-4">
           <div>
             <h1 className="text-xl font-bold text-foreground tracking-tight">Import History</h1>
@@ -272,7 +272,7 @@ export default function ImportHistoryPage() {
                   {data.count > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-gray-50/50">
                       <p className="text-xs text-gray-500">
-                        Showing <span className="font-medium text-gray-900 dark:text-gray-200">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-gray-900 dark:text-gray-200">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-gray-900 dark:text-gray-200">{data.count}</span> results
+                        Showing <span className="font-medium text-gray-900 text-foreground">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-gray-900 text-foreground">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-gray-900 text-foreground">{data.count}</span> results
                       </p>
                       <div className="flex items-center gap-2">
                         <Button

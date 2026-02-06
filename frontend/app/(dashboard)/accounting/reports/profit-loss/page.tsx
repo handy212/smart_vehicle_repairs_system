@@ -178,7 +178,7 @@ export default function ProfitLossPage() {
                 <>
                     {/* Income Section - Compact */}
                     <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                        <CardHeader className="pb-3 border-b border-border bg-success/10/50 dark:bg-green-900/10">
+                        <CardHeader className="pb-3 border-b border-border bg-success/10 dark:bg-green-900/10">
                             <CardTitle className="text-base text-green-700 dark:text-green-400">Income</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -200,7 +200,7 @@ export default function ProfitLossPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    <TableRow className="bg-success/10/50 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800">
+                                    <TableRow className="bg-success/10 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800">
                                         <TableCell className="px-4 py-2 text-sm font-bold text-green-700 dark:text-green-400">
                                             Total Income
                                         </TableCell>

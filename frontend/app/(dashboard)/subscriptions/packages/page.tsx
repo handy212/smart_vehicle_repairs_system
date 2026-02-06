@@ -282,13 +282,13 @@ export default function PackagesPage() {
       cell: (pkg: Package) => (
         <div className="flex flex-wrap gap-1 max-w-xs">
           {pkg.features.total_service_calls && (
-            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">Calls: {pkg.features.total_service_calls}</Badge>
+            <Badge variant="outline" className="text-[10px] bg-slate-50 bg-background">Calls: {pkg.features.total_service_calls}</Badge>
           )}
           {pkg.features.towing_services_km && (
-            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">Tow: {pkg.features.towing_services_km}km</Badge>
+            <Badge variant="outline" className="text-[10px] bg-slate-50 bg-background">Tow: {pkg.features.towing_services_km}km</Badge>
           )}
           {pkg.features.emergency_fuel && (
-            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">Fuel: {pkg.features.emergency_fuel}</Badge>
+            <Badge variant="outline" className="text-[10px] bg-slate-50 bg-background">Fuel: {pkg.features.emergency_fuel}</Badge>
           )}
           {/* Show +N more if many features? For now let's just show key ones or trunc */}
         </div>

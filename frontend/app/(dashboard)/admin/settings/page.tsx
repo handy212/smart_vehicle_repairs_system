@@ -437,7 +437,7 @@ export default function SystemSettingsPage() {
   }
 
   return (
-    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-4 bg-background min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-4">
@@ -494,7 +494,7 @@ export default function SystemSettingsPage() {
                 onClick={() => handleCategorySelect(cat.value)}
                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isSelected
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-muted border-border dark:text-gray-300 dark:hover:bg-gray-700"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-muted border-border text-foreground dark:hover:bg-gray-700"
                   }`}
               >
                 {cat.label}
@@ -570,7 +570,7 @@ export default function SystemSettingsPage() {
                     {recaptchaSettings.length > 0 ? (
                       <Card className="border shadow-none">
                         <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
-                          <CardTitle className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                          <CardTitle className="text-xs font-semibold text-foreground">
                             Google reCAPTCHA
                           </CardTitle>
                         </CardHeader>
@@ -590,7 +590,7 @@ export default function SystemSettingsPage() {
                     {firebaseSettings.length > 0 ? (
                       <Card className="border shadow-none">
                         <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
-                          <CardTitle className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                          <CardTitle className="text-xs font-semibold text-foreground">
                             Firebase Messaging
                           </CardTitle>
                         </CardHeader>
@@ -610,7 +610,7 @@ export default function SystemSettingsPage() {
                     {analyticsSettings.length > 0 ? (
                       <Card className="border shadow-none">
                         <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
-                          <CardTitle className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                          <CardTitle className="text-xs font-semibold text-foreground">
                             Analytics
                           </CardTitle>
                         </CardHeader>

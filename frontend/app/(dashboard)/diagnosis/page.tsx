@@ -171,7 +171,7 @@ export default function DiagnosisListPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-9 w-32 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 dark:border-gray-800 dark:bg-gray-900 dark:focus-visible:ring-gray-300"
+                className="h-9 w-32 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
               >
                 <option value="all">All Status</option>
                 <option value="in_progress">In Progress</option>
@@ -182,7 +182,7 @@ export default function DiagnosisListPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="h-9 w-36 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 dark:border-gray-800 dark:bg-gray-900 dark:focus-visible:ring-gray-300"
+                className="h-9 w-36 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 border-border bg-background dark:focus-visible:ring-gray-300"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>

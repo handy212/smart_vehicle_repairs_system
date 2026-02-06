@@ -1639,7 +1639,7 @@ function CompleteDiagnosisForm({
             </div>
           )}
           <div>
-            <Label htmlFor="diagnosis_notes" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="diagnosis_notes" className="block mb-2 text-foreground">
               Diagnosis Notes *
             </Label>
             <Textarea
@@ -1653,7 +1653,7 @@ function CompleteDiagnosisForm({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="estimated_labor_hours" className="block mb-2 dark:text-gray-300">
+              <Label htmlFor="estimated_labor_hours" className="block mb-2 text-foreground">
                 Estimated Labor Hours
               </Label>
               <Input
@@ -1666,7 +1666,7 @@ function CompleteDiagnosisForm({
               />
             </div>
             <div>
-              <Label htmlFor="estimated_labor_cost" className="block mb-2 dark:text-gray-300">
+              <Label htmlFor="estimated_labor_cost" className="block mb-2 text-foreground">
                 Estimated Labor Cost
               </Label>
               <Input
@@ -1680,7 +1680,7 @@ function CompleteDiagnosisForm({
             </div>
           </div>
           <div>
-            <Label htmlFor="estimated_parts_cost" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="estimated_parts_cost" className="block mb-2 text-foreground">
               Estimated Parts Cost
             </Label>
             <Input
@@ -1700,7 +1700,7 @@ function CompleteDiagnosisForm({
               onChange={(e) => setRequiresApproval(e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
             />
-            <Label htmlFor="requires_approval" className="cursor-pointer dark:text-gray-300">
+            <Label htmlFor="requires_approval" className="cursor-pointer text-foreground">
               Requires Customer Approval
             </Label>
           </div>
@@ -1739,7 +1739,7 @@ function AdditionalWorkForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="additional_work_notes" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="additional_work_notes" className="block mb-2 text-foreground">
               Describe Additional Work Found *
             </Label>
             <Textarea
@@ -1797,7 +1797,7 @@ function ApproveForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="approval_method" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="approval_method" className="block mb-2 text-foreground">
               Approval Method
             </Label>
             <select
@@ -1813,7 +1813,7 @@ function ApproveForm({
             </select>
           </div>
           <div>
-            <Label htmlFor="approval_notes" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="approval_notes" className="block mb-2 text-foreground">
               Notes
             </Label>
             <Textarea
@@ -1915,7 +1915,7 @@ function QualityCheckForm({
         <div className="space-y-6">
           {/* Quality Check Checklist */}
           <div className="space-y-3">
-            <Label className="text-base font-semibold dark:text-gray-300">
+            <Label className="text-base font-semibold text-foreground">
               Quality Check Checklist
             </Label>
             <div className="space-y-2 border rounded-lg p-4 border-border">
@@ -1927,7 +1927,7 @@ function QualityCheckForm({
                   onChange={() => handleChecklistChange('allTasksCompleted')}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
-                <Label htmlFor="allTasksCompleted" className="cursor-pointer dark:text-gray-300 text-sm">
+                <Label htmlFor="allTasksCompleted" className="cursor-pointer text-foreground text-sm">
                   All tasks completed
                   {(workOrder as any)?.tasks && (
                     <span className="text-muted-foreground ml-1">
@@ -1945,7 +1945,7 @@ function QualityCheckForm({
                   onChange={() => handleChecklistChange('allPartsInstalled')}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
-                <Label htmlFor="allPartsInstalled" className="cursor-pointer dark:text-gray-300 text-sm">
+                <Label htmlFor="allPartsInstalled" className="cursor-pointer text-foreground text-sm">
                   All parts installed or returned
                   {(workOrder as any)?.parts && (
                     <span className="text-muted-foreground ml-1">
@@ -1963,7 +1963,7 @@ function QualityCheckForm({
                   onChange={() => handleChecklistChange('vehicleClean')}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
-                <Label htmlFor="vehicleClean" className="cursor-pointer dark:text-gray-300 text-sm">
+                <Label htmlFor="vehicleClean" className="cursor-pointer text-foreground text-sm">
                   Vehicle cleaned and presentable
                 </Label>
               </div>
@@ -1976,7 +1976,7 @@ function QualityCheckForm({
                   onChange={() => handleChecklistChange('noDamage')}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
-                <Label htmlFor="noDamage" className="cursor-pointer dark:text-gray-300 text-sm">
+                <Label htmlFor="noDamage" className="cursor-pointer text-foreground text-sm">
                   No new damage or scratches
                 </Label>
               </div>
@@ -1989,7 +1989,7 @@ function QualityCheckForm({
                   onChange={() => handleChecklistChange('testDrivePassed')}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
-                <Label htmlFor="testDrivePassed" className="cursor-pointer dark:text-gray-300 text-sm">
+                <Label htmlFor="testDrivePassed" className="cursor-pointer text-foreground text-sm">
                   Test drive passed (if applicable)
                 </Label>
               </div>
@@ -2002,7 +2002,7 @@ function QualityCheckForm({
                   onChange={() => handleChecklistChange('customerSatisfied')}
                   className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
                 />
-                <Label htmlFor="customerSatisfied" className="cursor-pointer dark:text-gray-300 text-sm">
+                <Label htmlFor="customerSatisfied" className="cursor-pointer text-foreground text-sm">
                   Customer satisfaction confirmed
                 </Label>
               </div>
@@ -2020,7 +2020,7 @@ function QualityCheckForm({
 
           {/* Overall Result */}
           <div className="space-y-2">
-            <Label className="text-base font-semibold dark:text-gray-300">
+            <Label className="text-base font-semibold text-foreground">
               Overall Quality Check Result
             </Label>
             <div className="flex items-center space-x-2">
@@ -2031,7 +2031,7 @@ function QualityCheckForm({
                 onChange={(e) => setPassed(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
               />
-              <Label htmlFor="passed" className="cursor-pointer dark:text-gray-300">
+              <Label htmlFor="passed" className="cursor-pointer text-foreground">
                 Quality Check Passed
               </Label>
             </div>
@@ -2044,7 +2044,7 @@ function QualityCheckForm({
 
           {/* Notes */}
           <div>
-            <Label htmlFor="notes" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="notes" className="block mb-2 text-foreground">
               Quality Check Notes <span className="text-gray-500">(Optional)</span>
             </Label>
             <Textarea
@@ -2100,7 +2100,7 @@ function CompleteForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="odometer_out" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="odometer_out" className="block mb-2 text-foreground">
               Odometer Out (miles)
             </Label>
             <Input
@@ -2112,7 +2112,7 @@ function CompleteForm({
             />
           </div>
           <div>
-            <Label htmlFor="completion_notes" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="completion_notes" className="block mb-2 text-foreground">
               Completion Notes
             </Label>
             <Textarea
@@ -2187,7 +2187,7 @@ function MarkInvoicedForm({
           </div>
 
           <div>
-            <Label htmlFor="mark_invoiced_odometer_out" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="mark_invoiced_odometer_out" className="block mb-2 text-foreground">
               Odometer Out (miles) <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -2265,13 +2265,13 @@ function CloseWorkOrderForm({
               onChange={(e) => setPaymentReceived(e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-muted border-border"
             />
-            <Label htmlFor="payment_received" className="cursor-pointer dark:text-gray-300">
+            <Label htmlFor="payment_received" className="cursor-pointer text-foreground">
               Payment received
             </Label>
           </div>
 
           <div>
-            <Label htmlFor="closing_notes" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="closing_notes" className="block mb-2 text-foreground">
               Closing Notes <span className="text-gray-500">(Optional)</span>
             </Label>
             <Textarea
@@ -2323,7 +2323,7 @@ function PauseForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="reason" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="reason" className="block mb-2 text-foreground">
               Reason for Pause
             </Label>
             <Textarea
@@ -2409,7 +2409,7 @@ function StartDiagnosisForm({
           </div>
 
           <div>
-            <Label htmlFor="primary_technician" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="primary_technician" className="block mb-2 text-foreground">
               Assign to:
             </Label>
             <select
@@ -2428,7 +2428,7 @@ function StartDiagnosisForm({
           </div>
 
           <div>
-            <Label htmlFor="priority" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="priority" className="block mb-2 text-foreground">
               Priority (Optional)
             </Label>
             <select
@@ -2500,7 +2500,7 @@ function AssignServiceCoordinatorForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="service_coordinator" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="service_coordinator" className="block mb-2 text-foreground">
               Service Coordinator <span className="text-red-500">*</span>
             </Label>
             <select
@@ -2525,7 +2525,7 @@ function AssignServiceCoordinatorForm({
           </div>
 
           <div>
-            <Label htmlFor="initial_observations" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="initial_observations" className="block mb-2 text-foreground">
               Initial Observations (Optional)
             </Label>
             <Textarea
@@ -2602,7 +2602,7 @@ function CreateInspectionForm({
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="template" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="template" className="block mb-2 text-foreground">
               Inspection Template <span className="text-red-500">*</span>
             </Label>
             <select
@@ -2628,7 +2628,7 @@ function CreateInspectionForm({
           </div>
 
           <div>
-            <Label htmlFor="inspection_date" className="block mb-2 dark:text-gray-300">
+            <Label htmlFor="inspection_date" className="block mb-2 text-foreground">
               Inspection Date <span className="text-red-500">*</span>
             </Label>
             <Input

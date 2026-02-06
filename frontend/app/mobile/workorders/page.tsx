@@ -162,12 +162,12 @@ export default function MobileWorkOrdersPage() {
                     {wo.vehicle_display || wo.vehicle_info || "Vehicle"}
                   </div>
                   {wo.customer_name && (
-                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       {wo.customer_name}
                     </div>
                   )}
                   {wo.customer_concerns && (
-                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-2 line-clamp-2">
+                    <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
                       {wo.customer_concerns}
                     </div>
                   )}

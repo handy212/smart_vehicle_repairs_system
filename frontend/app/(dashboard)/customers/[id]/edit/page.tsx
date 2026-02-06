@@ -326,7 +326,7 @@ export default function EditCustomerPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 dark:bg-gray-900">
+      <div className="flex items-center justify-center h-64 bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
       </div>
     );
@@ -334,9 +334,9 @@ export default function EditCustomerPage() {
 
   if (error || !customer) {
     return (
-      <div className="space-y-4 dark:bg-gray-900 min-h-screen p-6">
+      <div className="space-y-4 bg-background min-h-screen p-6">
         <Link href="/customers">
-          <Button variant="secondary" className="border-border dark:text-gray-200">
+          <Button variant="secondary" className="border-border text-foreground">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -351,11 +351,11 @@ export default function EditCustomerPage() {
   }
 
   return (
-    <div className="space-y-6 dark:bg-gray-900 min-h-screen p-6">
+    <div className="space-y-6 bg-background min-h-screen p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Button variant="secondary" className="border-border dark:text-gray-200">
+            <Button variant="secondary" className="border-border text-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -369,7 +369,7 @@ export default function EditCustomerPage() {
         </div>
         <div className="flex space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Button variant="secondary" className="border-border dark:text-gray-200">
+            <Button variant="secondary" className="border-border text-foreground">
               Cancel
             </Button>
           </Link>
@@ -637,7 +637,7 @@ export default function EditCustomerPage() {
                         grantPortalAccessMutation.mutate({ sendEmail });
                       }}
                       disabled={grantPortalAccessMutation.isPending}
-                      className="border-border dark:text-gray-300 flex-1"
+                      className="border-border text-foreground flex-1"
                     >
                       {grantPortalAccessMutation.isPending ? (
                         <span className="flex items-center gap-2">
@@ -659,7 +659,7 @@ export default function EditCustomerPage() {
                         type="button"
                         variant="secondary"
                         onClick={() => setShowPasswordReset(true)}
-                        className="border-border dark:text-gray-300 flex-1"
+                        className="border-border text-foreground flex-1"
                       >
                         <KeyRound className="w-4 h-4 mr-2" />
                         Reset Password
@@ -669,7 +669,7 @@ export default function EditCustomerPage() {
                         variant="secondary"
                         onClick={() => sendResetLinkMutation.mutate()}
                         disabled={sendResetLinkMutation.isPending}
-                        className="border-border dark:text-gray-300 flex-1"
+                        className="border-border text-foreground flex-1"
                       >
                         {sendResetLinkMutation.isPending ? (
                           <span className="flex items-center gap-2">
@@ -737,7 +737,7 @@ export default function EditCustomerPage() {
                               type="button"
                               variant="secondary"
                               onClick={generatePassword}
-                              className="border-border dark:text-gray-300"
+                              className="border-border text-foreground"
                               title="Generate secure password"
                             >
                               <RefreshCw className="w-4 h-4" />
@@ -747,7 +747,7 @@ export default function EditCustomerPage() {
                                 type="button"
                                 variant="secondary"
                                 onClick={handleCopyPassword}
-                                className="border-border dark:text-gray-300"
+                                className="border-border text-foreground"
                                 title="Copy password"
                               >
                                 {passwordCopied ? (
@@ -777,7 +777,7 @@ export default function EditCustomerPage() {
                               setShowPasswordReset(false);
                               setNewPassword("");
                             }}
-                            className="border-border dark:text-gray-300 flex-1"
+                            className="border-border text-foreground flex-1"
                           >
                             Cancel
                           </Button>

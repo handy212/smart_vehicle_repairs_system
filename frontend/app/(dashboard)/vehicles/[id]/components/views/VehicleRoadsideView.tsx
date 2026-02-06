@@ -78,7 +78,7 @@ export function VehicleRoadsideView({ roadsideRequests }: VehicleRoadsideViewPro
                 ) : (
                     <div className="text-center py-12 text-muted-foreground">
                         <Truck className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                        <p className="text-base font-medium text-gray-900 dark:text-gray-200">No roadside requests found</p>
+                        <p className="text-base font-medium text-gray-900 text-foreground">No roadside requests found</p>
                         <p className="text-sm mt-1 mb-4 text-gray-500">This vehicle hasn't requested any roadside assistance yet.</p>
                     </div>
                 )}

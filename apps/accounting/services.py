@@ -515,7 +515,7 @@ class AccountingService:
             account=sales_returns,
             amount=amount,
             transaction_type='debit',
-            description=f"Credit Note for {credit_note.customer.name}"
+            description=f"Credit Note for {credit_note.customer.full_name}"
         )
         
         # Credit: AR
@@ -524,7 +524,7 @@ class AccountingService:
             account=ar_account,
             amount=amount,
             transaction_type='credit',
-            description=f"Credit Note for {credit_note.customer.name}"
+            description=f"Credit Note for {credit_note.customer.full_name}"
         )
 
     @classmethod
@@ -562,7 +562,7 @@ class AccountingService:
             account=ar_account,
             amount=amount,
             transaction_type='debit',
-            description=f"Refund to {refund.customer.name}"
+            description=f"Refund to {refund.customer.full_name}"
         )
         
         # Credit: Cash
@@ -571,7 +571,7 @@ class AccountingService:
             account=cash_account,
             amount=amount,
             transaction_type='credit',
-            description=f"Refund to {refund.customer.name}"
+            description=f"Refund to {refund.customer.full_name}"
         )
 
     @classmethod
@@ -1357,7 +1357,7 @@ class ReportingService:
             results.append({
                 'work_order_id': wo.id,
                 'work_order_number': wo.work_order_number,
-                'customer': wo.customer.name if wo.customer else 'N/A',
+                'customer': wo.customer.full_name if wo.customer else 'N/A',
                 'vehicle': f"{wo.vehicle.year} {wo.vehicle.make} {wo.vehicle.model}" if wo.vehicle else 'N/A',
                 'branch': wo.branch.name if wo.branch else 'N/A',
                 'status': wo.status,

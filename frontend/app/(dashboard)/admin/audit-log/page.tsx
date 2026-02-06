@@ -277,7 +277,7 @@ export default function AuditLogPage() {
                     setActionFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-2 py-1 h-8 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary dark:bg-slate-950 dark:border-slate-800"
+                  className="w-full px-2 py-1 h-8 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-background border-border"
                 >
                   <option value="all">All</option>
                   {ACTION_CHOICES.map((action) => (
@@ -450,7 +450,7 @@ export default function AuditLogPage() {
               <div className="flex-1 overflow-y-auto">
                 {/* Top Meta Section */}
                 <div className="grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-800 border-b">
-                  <div className="bg-white dark:bg-slate-950 p-6">
+                  <div className="bg-white bg-background p-6">
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">User / Actor</h4>
                     <div className="flex items-center space-x-3">
                       <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-lg">
@@ -462,7 +462,7 @@ export default function AuditLogPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-slate-950 p-6">
+                  <div className="bg-white bg-background p-6">
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Action Info</h4>
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant={getActionVariant(selectedLog.action)} className="px-3 py-1 capitalize">
@@ -473,7 +473,7 @@ export default function AuditLogPage() {
                       </span>
                     </div>
                     <div className="text-sm text-gray-500 mt-2">
-                      IP: <span className="font-mono text-gray-900 dark:text-gray-200">{selectedLog.ip_address || "N/A"}</span>
+                      IP: <span className="font-mono text-gray-900 text-foreground">{selectedLog.ip_address || "N/A"}</span>
                     </div>
                   </div>
                 </div>
@@ -485,7 +485,7 @@ export default function AuditLogPage() {
                       <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
                       Affected Entity
                     </h4>
-                    <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-border">
+                    <div className="bg-gray-50 bg-background rounded-lg p-4 border border-border">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <span className="text-xs text-gray-500 block">Model</span>
@@ -515,7 +515,7 @@ export default function AuditLogPage() {
                       <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-gray-50 dark:bg-slate-900">
+                            <TableRow className="bg-gray-50 bg-background">
                               <TableHead className="w-[25%]">Field Changed</TableHead>
                               <TableHead className="w-[37.5%] text-red-600/80">From (Old Value)</TableHead>
                               <TableHead className="w-[37.5%] text-success/80">To (New Value)</TableHead>
@@ -538,7 +538,7 @@ export default function AuditLogPage() {
 
                               return (
                                 <TableRow key={key}>
-                                  <TableCell className="font-medium font-mono text-xs bg-gray-50/50 dark:bg-slate-900/30">
+                                  <TableCell className="font-medium font-mono text-xs bg-gray-50/50 bg-background/30">
                                     {key.replace(/_/g, " ")}
                                   </TableCell>
                                   <TableCell className="font-mono text-xs break-all bg-red-50/30 dark:bg-red-900/10">

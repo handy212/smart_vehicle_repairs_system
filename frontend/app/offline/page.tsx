@@ -34,7 +34,7 @@ export default function OfflinePage() {
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
         </Button>
-        <p className="text-sm text-gray-500 dark:text-gray-500 mt-4">
+        <p className="text-sm text-muted-foreground mt-4">
           You can continue using the app offline. Your changes will sync when
           you're back online.
         </p>

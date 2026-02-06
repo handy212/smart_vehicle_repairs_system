@@ -268,7 +268,7 @@ export default function PaymentHistoryPage() {
           <CardContent className="py-12 text-center">
             <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">No payments found</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Your payment history will appear here once you make a payment
             </p>
           </CardContent>

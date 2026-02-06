@@ -176,7 +176,7 @@ export default function DashboardPage() {
 
       {/* Error Banner */}
       {hasApiErrors && (
-        <Card className="border-warning bg-warning/10/50 dark:bg-yellow-900/10 backdrop-blur-sm">
+        <Card className="border-warning bg-warning/10 backdrop-blur-sm">
           <CardContent className="pt-4">
             <div className="flex items-center space-x-2 text-warning">
               <PremiumIcons.AlertCircle className="w-5 h-5 flex-shrink-0" />
