@@ -83,10 +83,10 @@ export function UserMenu() {
                         {user?.first_name?.[0] || user?.email?.[0] || "U"}
                     </div>
                     <div className="hidden md:block text-left">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <p className="text-sm font-medium text-foreground text-foreground">
                             {user?.first_name} {user?.last_name}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
+                        <p className="text-xs text-muted-foreground text-muted-foreground capitalize">{user?.role}</p>
                     </div>
                 </Button>
             </DropdownMenuTrigger>
@@ -94,10 +94,10 @@ export function UserMenu() {
             <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                     <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        <p className="text-sm font-semibold text-foreground text-foreground truncate">
                             {user?.first_name} {user?.last_name}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{user?.email}</p>
+                        <p className="text-xs text-muted-foreground text-muted-foreground mt-0.5 truncate">{user?.email}</p>
                         <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full font-medium capitalize">
                             {user?.role}
                         </span>
@@ -110,8 +110,8 @@ export function UserMenu() {
                     <>
                         <DropdownMenuLabel className="pb-1">
                             <div className="flex items-center gap-2">
-                                <PremiumIcons.Building2 className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Switch Branch</span>
+                                <PremiumIcons.Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Switch Branch</span>
                             </div>
                         </DropdownMenuLabel>
                         <div className="px-2 pb-2">
@@ -119,7 +119,7 @@ export function UserMenu() {
                                 value={currentBranchId ? currentBranchId.toString() : ""}
                                 onChange={handleBranchChange}
                                 disabled={isBranchesLoading || sortedBranches.length === 0}
-                                className="w-full h-8 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg text-xs px-2 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                                className="w-full h-8 bg-muted border-border border-border rounded-lg text-xs px-2 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                             >
                                 {sortedBranches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>

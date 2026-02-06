@@ -23,19 +23,19 @@ export function PageHeader({ title, breadcrumbs, actions, className, children }:
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                     {breadcrumbs && breadcrumbs.length > 0 && (
-                        <nav className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
+                        <nav className="flex items-center space-x-1 text-sm text-muted-foreground text-muted-foreground">
                             {breadcrumbs.map((item, index) => (
                                 <div key={index} className="flex items-center">
                                     {index > 0 && <ChevronRight className="w-4 h-4 mx-1" />}
                                     {item.href ? (
                                         <Link
                                             href={item.href}
-                                            className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                                            className="hover:text-foreground dark:hover:text-gray-100 transition-colors"
                                         >
                                             {item.label}
                                         </Link>
                                     ) : (
-                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        <span className="font-medium text-foreground text-foreground">
                                             {item.label}
                                         </span>
                                     )}
@@ -43,7 +43,7 @@ export function PageHeader({ title, breadcrumbs, actions, className, children }:
                             ))}
                         </nav>
                     )}
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{title}</h1>
+                    <h1 className="text-xl font-bold text-foreground text-foreground tracking-tight">{title}</h1>
                 </div>
 
                 {actions && (

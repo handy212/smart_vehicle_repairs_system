@@ -118,15 +118,15 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
     return (
         <Card className="w-full max-w-md mx-auto border-none shadow-none">
             <CardHeader className="text-center pb-2">
-                <div className="mx-auto w-16 h-16 rounded-full overflow-hidden border-2 border-orange-100 mb-4 bg-gray-50 flex items-center justify-center">
+                <div className="mx-auto w-16 h-16 rounded-full overflow-hidden border-2 border-orange-100 mb-4 bg-muted flex items-center justify-center">
                     {userData.profile_picture ? (
                         <img src={userData.profile_picture} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
-                        <User className="w-8 h-8 text-gray-400" />
+                        <User className="w-8 h-8 text-muted-foreground" />
                     )}
                 </div>
                 <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
-                <p className="text-gray-500 text-sm mt-2">
+                <p className="text-muted-foreground text-sm mt-2">
                     Almost there! We just need a few more details to set up your account.
                 </p>
             </CardHeader>
@@ -151,13 +151,13 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
 
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" readOnly disabled {...register('email')} className="bg-gray-50" />
+                        <Input id="email" type="email" readOnly disabled {...register('email')} className="bg-muted" />
                     </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
                         <div className="relative">
-                            <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                            <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="phone"
                                 placeholder="+233 XX XXX XXXX"
@@ -229,7 +229,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
                                     type="button"
                                     onClick={handleResendOTP}
                                     disabled={resendTimer > 0}
-                                    className={`text-xs font-medium ${resendTimer > 0 ? 'text-gray-400' : 'text-primary hover:text-orange-800 underline'}`}
+                                    className={`text-xs font-medium ${resendTimer > 0 ? 'text-muted-foreground' : 'text-primary hover:text-orange-800 underline'}`}
                                 >
                                     {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Didn\'t receive a code? Resend'}
                                 </button>

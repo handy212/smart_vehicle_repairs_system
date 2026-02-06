@@ -107,7 +107,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const totalMargin = isDesktop ? sidebarWidth + subNavWidth : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-muted dark:bg-gray-950">
       <div className="print:hidden">
         <Navbar
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}

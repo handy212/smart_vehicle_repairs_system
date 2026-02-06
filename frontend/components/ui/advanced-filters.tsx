@@ -103,7 +103,7 @@ export function AdvancedFilters({
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0">
-          <DialogHeader className="border-b px-6 py-4 bg-gray-50/50 dark:bg-gray-800/50">
+          <DialogHeader className="border-b px-6 py-4 bg-muted/50 dark:bg-gray-800/50">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg font-semibold tracking-tight">{title}</DialogTitle>
               {/* Close handled by Dialog primitives usually, but custom button here is fine */}
@@ -123,7 +123,7 @@ export function AdvancedFilters({
                         variant="outline"
                         size="sm"
                         onClick={() => handleQuickFilter(quickFilter)}
-                        className="text-xs h-7 font-normal bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800"
+                        className="text-xs h-7 font-normal bg-transparent hover:bg-muted dark:hover:bg-gray-800"
                       >
                         <Calendar className="w-3 h-3 mr-1.5 opacity-70" />
                         {quickFilter.label}
@@ -139,7 +139,7 @@ export function AdvancedFilters({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {filters.map((filter) => (
                     <div key={filter.key} className="space-y-2">
-                      <Label htmlFor={filter.key} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <Label htmlFor={filter.key} className="text-sm font-medium text-foreground text-foreground">
                         {filter.label}
                       </Label>
                       {filter.type === "text" && (
@@ -256,7 +256,7 @@ export function AdvancedFilters({
             </div>
           </div>
 
-          <DialogFooter className="border-t p-4 bg-gray-50/50 dark:bg-gray-800/50 mt-0">
+          <DialogFooter className="border-t p-4 bg-muted/50 dark:bg-gray-800/50 mt-0">
             <div className="flex justify-between w-full items-center">
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={handleReset} type="button" className="text-muted-foreground hover:text-foreground">

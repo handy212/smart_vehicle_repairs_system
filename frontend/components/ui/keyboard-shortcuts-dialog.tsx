@@ -42,14 +42,14 @@ export function KeyboardShortcutsDialog({
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Global Shortcuts</h3>
+            <h3 className="text-sm font-semibold text-foreground text-foreground mb-2">Global Shortcuts</h3>
             <div className="space-y-2">
               {allShortcuts.map((shortcut, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border border-border border-border hover:bg-muted dark:hover:bg-gray-800 transition-colors"
                 >
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-sm text-foreground text-foreground">
                     {shortcut.description || 'Custom shortcut'}
                   </span>
                   <Badge variant="secondary" className="font-mono text-xs">
@@ -59,8 +59,8 @@ export function KeyboardShortcutsDialog({
               ))}
             </div>
           </div>
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="pt-4 border-t border-border border-border">
+            <p className="text-xs text-muted-foreground text-muted-foreground">
               Tip: Press <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">?</kbd> to open this dialog
             </p>
           </div>

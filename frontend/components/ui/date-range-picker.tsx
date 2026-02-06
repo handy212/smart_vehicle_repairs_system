@@ -26,7 +26,7 @@ export function DateRangePicker({
       {label && <Label>{label}</Label>}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             type="date"
             value={startDate}
@@ -35,9 +35,9 @@ export function DateRangePicker({
             placeholder="Start date"
           />
         </div>
-        <span className="text-gray-500">to</span>
+        <span className="text-muted-foreground">to</span>
         <div className="relative flex-1">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             type="date"
             value={endDate}

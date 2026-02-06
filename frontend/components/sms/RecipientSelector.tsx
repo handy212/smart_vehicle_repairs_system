@@ -131,7 +131,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
             </div>
 
             {isOpen && search && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 text-foreground rounded-md border border-border shadow-lg animate-in fade-in-0 zoom-in-95">
+                <div className="absolute z-50 w-full mt-1 bg-card dark:bg-gray-950 text-foreground rounded-md border border-border shadow-lg animate-in fade-in-0 zoom-in-95">
                     <ScrollArea className="max-h-[300px]">
                         <div className="p-1 space-y-1">
                             {/* Raw Phone Option */}
@@ -140,7 +140,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
                                     className="w-full flex items-center gap-2 p-2 rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-left text-sm"
                                     onClick={handleAddRawPhone}
                                 >
-                                    <div className="h-7 w-7 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-primary dark:text-primary">
+                                    <div className="h-7 w-7 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-primary">
                                         <Plus className="h-4 w-4" />
                                     </div>
                                     <div>

@@ -78,24 +78,24 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
                 {data.slice(0, 6).map((item) => (
                     <div
                         key={item.part.id}
-                        className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800"
+                        className="p-4 rounded-xl bg-muted/50 border border-border border-border"
                     >
                         <div className="flex justify-between items-start mb-2">
                             <div>
                                 <p className="text-sm font-bold truncate max-w-[150px]">{item.part.name}</p>
-                                <p className="text-[10px] text-gray-500 uppercase font-medium">{item.part.part_number}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-medium">{item.part.part_number}</p>
                             </div>
-                            <div className="px-2 py-1 rounded bg-orange-100 dark:bg-orange-900/30 text-primary dark:text-primary text-[10px] font-bold">
+                            <div className="px-2 py-1 rounded bg-orange-100 dark:bg-orange-900/30 text-primary text-[10px] font-bold">
                                 {item.metrics.turnover_rate.toFixed(1)}x Turn
                             </div>
                         </div>
                         <div className="flex justify-between items-end mt-4">
                             <div>
-                                <p className="text-[10px] text-gray-400 uppercase">Usage (90d)</p>
+                                <p className="text-[10px] text-muted-foreground uppercase">Usage (90d)</p>
                                 <p className="text-lg font-bold">{item.metrics.usage}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[10px] text-gray-400 uppercase">Days of Stock</p>
+                                <p className="text-[10px] text-muted-foreground uppercase">Days of Stock</p>
                                 <p className={cn(
                                     "text-lg font-bold",
                                     item.metrics.days_of_stock < 10 ? "text-red-500" :

@@ -337,7 +337,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                 {/* Sidebar */}
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
                                 <Package className="w-4 h-4 text-orange-500" />
                                 Supplier
@@ -355,20 +355,20 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Status</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">
                             <label className="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" {...register("is_active")} className="rounded border-gray-300 text-primary focus:ring-primary" />
+                                <input type="checkbox" {...register("is_active")} className="rounded border-border text-primary focus:ring-primary" />
                                 <span className="text-sm">Active</span>
                             </label>
                             <label className="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" {...register("is_taxable")} className="rounded border-gray-300 text-primary focus:ring-primary" />
+                                <input type="checkbox" {...register("is_taxable")} className="rounded border-border text-primary focus:ring-primary" />
                                 <span className="text-sm">Taxable</span>
                             </label>
                             <label className="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" {...register("is_core")} className="rounded border-gray-300 text-primary focus:ring-primary" />
+                                <input type="checkbox" {...register("is_core")} className="rounded border-border text-primary focus:ring-primary" />
                                 <span className="text-sm">Core Part</span>
                             </label>
                             {watch("is_core") && (
@@ -381,7 +381,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">

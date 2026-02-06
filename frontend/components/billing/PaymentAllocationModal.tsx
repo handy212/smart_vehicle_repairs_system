@@ -217,21 +217,21 @@ export function PaymentAllocationModal({
 
                 <div className="space-y-6">
                     {/* Payment Summary */}
-                    <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
                         <div>
-                            <Label className="text-xs text-gray-500">Payment Amount</Label>
-                            <div className="text-lg font-bold text-gray-900">
+                            <Label className="text-xs text-muted-foreground">Payment Amount</Label>
+                            <div className="text-lg font-bold text-foreground">
                                 {formatCurrency(paymentAmountNum)}
                             </div>
                         </div>
                         <div>
-                            <Label className="text-xs text-gray-500">Allocated</Label>
+                            <Label className="text-xs text-muted-foreground">Allocated</Label>
                             <div className={`text-lg font-bold ${isOverAllocated ? 'text-red-600' : 'text-green-600'}`}>
                                 {formatCurrency(totalAllocated)}
                             </div>
                         </div>
                         <div>
-                            <Label className="text-xs text-gray-500">Remaining</Label>
+                            <Label className="text-xs text-muted-foreground">Remaining</Label>
                             <div className={`text-lg font-bold ${remainingAmount < 0 ? 'text-red-600' : 'text-primary'}`}>
                                 {formatCurrency(remainingAmount)}
                             </div>
@@ -255,9 +255,9 @@ export function PaymentAllocationModal({
                         </Label>
 
                         {loadingInvoices ? (
-                            <div className="text-center py-8 text-gray-500">Loading invoices...</div>
+                            <div className="text-center py-8 text-muted-foreground">Loading invoices...</div>
                         ) : outstandingInvoices.length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
+                            <div className="text-center py-8 text-muted-foreground">
                                 No outstanding invoices for this customer
                             </div>
                         ) : (

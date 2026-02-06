@@ -129,14 +129,14 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-800/50 shadow-sm backdrop-blur-xl sticky-navbar">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 bg-background/80 border-b border-border/50 border-border/50 shadow-sm backdrop-blur-xl sticky-navbar">
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Logo and Menu Toggle */}
           <div className="flex items-center space-x-4">
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="lg:hidden p-2 rounded-md text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
               aria-expanded={isSidebarOpen}
             >
@@ -147,7 +147,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
@@ -161,7 +161,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
 
             <Link href="/portal" className="flex items-center space-x-2" aria-label="Go to dashboard">
               {logoSrc ? (
-                <div className="h-8 w-8 rounded-lg overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-700 relative">
+                <div className="h-8 w-8 rounded-lg overflow-hidden bg-card flex items-center justify-center shadow-sm border border-border border-border relative">
                   <img
                     src={logoSrc}
                     alt={branding.siteName}
@@ -192,39 +192,39 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             <div className="relative ml-2" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-muted-foreground text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-transparent hover:border-border dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-sm text-white text-xs font-bold tracking-wider ring-2 ring-white dark:ring-gray-900">
                   {user?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
                 </div>
                 <div className="hidden sm:block text-left mr-1">
-                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100 leading-none mb-0.5">
+                  <p className="text-xs font-bold text-foreground text-foreground leading-none mb-0.5">
                     {user?.first_name} {user?.last_name}
                   </p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-none truncate max-w-[100px] opacity-80">{user?.email}</p>
+                  <p className="text-[10px] text-muted-foreground text-muted-foreground leading-none truncate max-w-[100px] opacity-80">{user?.email}</p>
                 </div>
               </button>
 
               {/* User Dropdown Menu */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 py-2 z-50 transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 mb-1 bg-gray-50/50 dark:bg-gray-800/50">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Signed in as</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5 font-medium">{user?.email}</p>
+                <div className="absolute right-0 mt-2 w-64 bg-card rounded-xl shadow-xl border border-border border-border py-2 z-50 transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-5 py-3 border-b border-border border-border mb-1 bg-muted/50 dark:bg-gray-800/50">
+                    <p className="text-sm font-semibold text-foreground text-foreground">Signed in as</p>
+                    <p className="text-xs text-muted-foreground text-muted-foreground truncate mt-0.5 font-medium">{user?.email}</p>
                   </div>
 
                   <div className="p-1">
                     <Link
                       href="/portal/profile"
                       onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary/10 dark:hover:bg-orange-900/20 hover:text-primary dark:hover:text-orange-400 rounded-lg transition-colors group"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground text-foreground hover:bg-primary/10 dark:hover:bg-orange-900/20 hover:text-primary dark:hover:text-orange-400 rounded-lg transition-colors group"
                     >
-                      <User className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+                      <User className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       <span>My Profile</span>
                     </Link>
                   </div>
 
-                  <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+                  <div className="my-1 border-t border-border border-border" />
 
                   <div className="p-1">
                     <button

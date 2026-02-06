@@ -44,7 +44,7 @@ export function Toast({ id, title, message, type = "info", onClose }: ToastProps
       </div>
       <button
         onClick={() => onClose(id)}
-        className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+        className="flex-shrink-0 text-muted-foreground hover:text-muted-foreground"
       >
         <X className="w-4 h-4" />
       </button>

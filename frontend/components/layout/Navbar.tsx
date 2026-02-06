@@ -201,7 +201,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
 
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-800/50 shadow-sm backdrop-blur-xl">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 bg-background/80 border-b border-border/50 border-border/50 shadow-sm backdrop-blur-xl">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Menu Toggle + Logo/Brand */}
@@ -209,7 +209,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {/* Mobile Menu Toggle */}
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="lg:hidden p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Toggle menu"
             >
               {isSidebarOpen ? (
@@ -223,7 +223,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
@@ -237,7 +237,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
 
             <Link href="/dashboard" className="flex items-center space-x-2 group">
               {logoSrc ? (
-                <div className="h-8 w-8 rounded-lg overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700 relative">
+                <div className="h-8 w-8 rounded-lg overflow-hidden bg-card flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow border border-border border-border relative">
                   <img
                     src={logoSrc}
                     alt={branding.siteName}
@@ -302,11 +302,11 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                 </div>
               )}
               <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
+                <h1 className="text-lg font-bold text-foreground text-foreground group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                   {branding.siteName}
                 </h1>
                 {branding.tagline && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">{branding.tagline}</p>
+                  <p className="text-xs text-muted-foreground text-muted-foreground hidden lg:block">{branding.tagline}</p>
                 )}
               </div>
             </Link>
@@ -323,11 +323,11 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                 });
                 document.dispatchEvent(event);
               }}
-              className="group flex items-center gap-3 px-4 py-2 w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all text-sm shadow-sm hover:shadow-md"
+              className="group flex items-center gap-3 px-4 py-2 w-full bg-muted border border-border border-border rounded-xl text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300 hover:bg-card dark:hover:bg-gray-700 transition-all text-sm shadow-sm hover:shadow-md"
             >
-              <PremiumIcons.Search className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+              <PremiumIcons.Search className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               <span className="flex-1 text-left font-medium opacity-70">Search...</span>
-              <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 group-hover:border-orange-200 dark:group-hover:border-orange-900 transition-colors shadow-none">
+              <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-border dark:border-gray-600 bg-card group-hover:border-orange-200 dark:group-hover:border-orange-900 transition-colors shadow-none">
                 <span className="text-[10px] font-bold uppercase tracking-tighter">Ctrl K</span>
               </div>
             </button>

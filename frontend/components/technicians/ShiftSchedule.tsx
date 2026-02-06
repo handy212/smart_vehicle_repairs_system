@@ -68,10 +68,10 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
         switch (status) {
             case 'scheduled': return "text-primary bg-primary/10 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
             case 'active': return "text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
-            case 'completed': return "text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
+            case 'completed': return "text-muted-foreground bg-muted border-border dark:bg-gray-800 text-muted-foreground border-border";
             case 'absent': return "text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
             case 'cancelled': return "text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
-            default: return "text-gray-600 bg-gray-50 border-gray-200";
+            default: return "text-muted-foreground bg-muted border-border";
         }
     };
 
@@ -141,7 +141,7 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
 
                                             {/* Actual Hours (if completed or active) */}
                                             {shift.actual_hours !== null && shift.actual_hours !== undefined && (
-                                                <div className="bg-white/50 dark:bg-black/20 p-1.5 rounded text-[10px] space-y-0.5">
+                                                <div className="bg-card/50 dark:bg-black/20 p-1.5 rounded text-[10px] space-y-0.5">
                                                     <div className="flex justify-between">
                                                         <span className="opacity-70">Actual:</span>
                                                         <span className="font-semibold">{formatHours(shift.actual_hours)}</span>

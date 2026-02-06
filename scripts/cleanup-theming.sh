@@ -37,6 +37,9 @@ replace_in_tsx 's/bg-white dark:bg-gray-900/bg-card/g'
 echo "  ✓ Replacing dark:bg-gray-900 with bg-background..."
 replace_in_tsx 's/dark:bg-gray-900/bg-background/g'
 
+echo "  ✓ Replacing dark:bg-gray-950 with bg-background..."
+replace_in_tsx 's/dark:bg-gray-950/bg-background/g'
+
 echo "  ✓ Replacing dark:bg-slate-900 with bg-background..."
 replace_in_tsx 's/dark:bg-slate-900/bg-background/g'
 
@@ -52,6 +55,8 @@ replace_in_tsx 's/\bbg-white\b/bg-card/g'
 echo "  ✓ Replacing transparent card backgrounds..."
 replace_in_tsx 's/bg-white\/60 dark:bg-gray-900\/40/bg-card\/60/g'
 replace_in_tsx 's/bg-white\/50 dark:bg-gray-800\/50/bg-card\/50/g'
+replace_in_tsx 's/bg-card\/50 dark:bg-gray-800\/50/bg-card\/50/g'
+replace_in_tsx 's/bg-muted\/30 dark:bg-gray-800\/30/bg-muted\/30/g'
 
 echo "  ✓ Replacing bg-gray-50 dark:bg-gray-900 with bg-muted/50..."
 replace_in_tsx 's/bg-gray-50 dark:bg-gray-900/bg-muted\/50/g'
@@ -67,6 +72,9 @@ replace_in_tsx 's/\bbg-gray-50\b/bg-muted/g'
 
 echo "  ✓ Replacing dark:bg-gray-700 (often in inputs) with bg-muted..."
 replace_in_tsx 's/dark:bg-gray-700/bg-muted/g'
+
+echo "  ✓ Replacing dark:bg-gray-800 with bg-muted..."
+replace_in_tsx 's/dark:bg-gray-800/bg-muted/g'
 
 echo "  ✓ Replacing dark:bg-slate-800 with bg-muted..."
 replace_in_tsx 's/dark:bg-slate-800/bg-muted/g'
@@ -131,22 +139,32 @@ replace_in_tsx 's/text-primary dark:text-primary/text-primary/g'
 replace_in_tsx 's/text-info dark:text-info/text-info/g'
 replace_in_tsx 's/text-success dark:text-success/text-success/g'
 replace_in_tsx 's/text-warning dark:text-warning/text-warning/g'
+replace_in_tsx 's/dark:text-primary/text-primary/g'
+replace_in_tsx 's/dark:text-success/text-success/g'
+replace_in_tsx 's/dark:text-warning/text-warning/g'
+replace_in_tsx 's/dark:text-info/text-info/g'
 
 # 6. Specific cleanup for dashboard components found in investigation
-echo "  ✓ Fixing DashboardHeader specific issues..."
+echo "  ✓ Fixing DashboardHeader and ShopPulse specific issues..."
 replace_in_tsx 's/border-gray-200\/50/border-border\/50/g'
+replace_in_tsx 's/dark:hover:bg-gray-800/hover:bg-muted/g'
+
+# Final check for any remaining dark grays that should be semantic
+echo "  ✓ Final pass on remaining dark grays..."
+replace_in_tsx 's/dark:bg-gray-800/bg-card/g'
+replace_in_tsx 's/dark:bg-slate-800/bg-card/g'
 
 # Count instances after
-AFTER_COUNT=$(find frontend/app -name "*.tsx" -o -name "*.ts" | xargs grep -o "dark:bg-gray-" 2>/dev/null | wc -l)
-AFTER_TEXT_COUNT=$(find frontend/app -name "*.tsx" -o -name "*.ts" | xargs grep -o "text-gray-900" 2>/dev/null | wc -l)
+AFTER_COUNT=$(find frontend -name "*.tsx" -o -name "*.ts" | xargs grep -o "dark:bg-gray-" 2>/dev/null | wc -l)
+AFTER_TEXT_COUNT=$(find frontend -name "*.tsx" -o -name "*.ts" | xargs grep -o "text-gray-900" 2>/dev/null | wc -l)
 
 echo ""
 echo "================================================"
 echo "✅ Theming cleanup complete!"
 echo ""
 echo "📊 Statistics:"
-echo "   Hardcoded backgrounds remaining: $AFTER_COUNT"
-echo "   Hardcoded text-gray-900 remaining: $AFTER_TEXT_COUNT"
+echo "   Hardcoded backgrounds (dark:bg-gray-) remaining: $AFTER_COUNT"
+echo "   Hardcoded text (text-gray-900) remaining: $AFTER_TEXT_COUNT"
 echo ""
 echo "📝 Manual review recommended for remaining edge cases."
 echo ""

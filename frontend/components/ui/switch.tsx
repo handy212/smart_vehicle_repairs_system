@@ -22,14 +22,14 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           "disabled:cursor-not-allowed disabled:opacity-50",
           checked
             ? "bg-primary dark:bg-primary"
-            : "bg-gray-200 dark:bg-gray-700",
+            : "bg-gray-200 bg-muted",
           className
         )}
         {...props}
       >
         <span
           className={cn(
-            "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+            "inline-block h-4 w-4 transform rounded-full bg-card transition-transform",
             checked ? "translate-x-6" : "translate-x-1"
           )}
         />

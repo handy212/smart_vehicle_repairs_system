@@ -31,7 +31,7 @@ export function StatCard({
         <Card className={cn("", className)}>
             <CardContent className="p-6">
                 <div className="flex items-center justify-between space-y-0 pb-2">
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <p className="text-sm font-medium text-muted-foreground text-muted-foreground">
                         {title}
                     </p>
                     <Icon className={cn("h-4 w-4", iconColor)} />
@@ -39,9 +39,9 @@ export function StatCard({
                 <div className="flex items-center justify-between pt-2">
                     <div className="space-y-1">
                         {loading ? (
-                            <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+                            <div className="h-8 w-24 bg-gray-200 bg-muted animate-pulse rounded" />
                         ) : (
-                            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+                            <div className="text-2xl font-bold text-foreground text-foreground">{value}</div>
                         )}
 
                         {(change || description) && (
@@ -50,12 +50,12 @@ export function StatCard({
                                     <span className={cn(
                                         "font-medium",
                                         change.trend === 'up' ? "text-green-600" :
-                                            change.trend === 'down' ? "text-red-600" : "text-gray-600"
+                                            change.trend === 'down' ? "text-red-600" : "text-muted-foreground"
                                     )}>
                                         {change.value > 0 ? '+' : ''}{change.value}%
                                     </span>
                                 )}
-                                {description && <span className="text-gray-500">{description}</span>}
+                                {description && <span className="text-muted-foreground">{description}</span>}
                             </p>
                         )}
                     </div>

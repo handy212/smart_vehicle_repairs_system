@@ -103,7 +103,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                 <div className="lg:col-span-2 space-y-6">
                     {/* Customer & Vehicle */}
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium flex justify-between">
                                 Customer & Vehicle
                                 {mode === 'edit' && <Badge variant="outline">Editing</Badge>}
@@ -165,7 +165,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
 
                     {/* Scheduling Details */}
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Schedule</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
@@ -194,7 +194,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
 
                     {/* Service Info */}
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Service Info</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
@@ -257,7 +257,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                 {/* Actions */}
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">

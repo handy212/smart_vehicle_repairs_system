@@ -92,7 +92,7 @@ export function BillingSubmitActions({
                         <span>{getLabel("send")}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLastAction("save")}>
-                        <Save className="mr-2 h-4 w-4 text-gray-500" />
+                        <Save className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span>{getLabel("save")}</span>
                     </DropdownMenuItem>
                     {onRecordPayment && resourceType === "invoice" && (

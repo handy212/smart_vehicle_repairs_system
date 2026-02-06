@@ -132,19 +132,19 @@ export function CommandPalette() {
                 onClick={() => setOpen(false)}
             />
 
-            <div className="relative w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-900 shadow-2xl ring-1 ring-gray-200 dark:ring-gray-800 transition-all">
-                <div className="flex items-center border-b border-gray-100 dark:border-gray-800 px-4">
-                    <Search className="h-5 w-5 text-gray-400" />
+            <div className="relative w-full max-w-2xl transform overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-gray-200 dark:ring-gray-800 transition-all">
+                <div className="flex items-center border-b border-border border-border px-4">
+                    <Search className="h-5 w-5 text-muted-foreground" />
                     <input
                         ref={inputRef}
                         type="text"
-                        className="h-14 w-full border-0 bg-transparent px-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-0 sm:text-sm"
+                        className="h-14 w-full border-0 bg-transparent px-4 text-foreground text-foreground placeholder:text-muted-foreground focus:ring-0 sm:text-sm"
                         placeholder="Search or type a command..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onKeyDown={handleKeyDown}
                     />
-                    <kbd className="hidden sm:flex items-center gap-1 rounded bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 font-mono text-[10px] font-medium text-gray-400">
+                    <kbd className="hidden sm:flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
                         <span className="text-xs">ESC</span>
                     </kbd>
                 </div>
@@ -155,7 +155,7 @@ export function CommandPalette() {
                             {/* Quick Actions */}
                             <div>
                                 <div className="px-3 py-2">
-                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-muted-foreground">
                                         Quick Actions
                                     </h3>
                                 </div>
@@ -169,20 +169,20 @@ export function CommandPalette() {
                                             className={cn(
                                                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                 isSelected
-                                                    ? "bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary"
-                                                    : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                                                    ? "bg-primary/10 dark:bg-orange-900/20 text-primary"
+                                                    : "hover:bg-muted dark:hover:bg-gray-800 text-foreground text-foreground"
                                             )}
                                             onMouseEnter={() => setSelectedIndex(idx)}
                                         >
                                             <div className={cn(
                                                 "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
-                                                isSelected ? "border-orange-200 dark:border-orange-800 bg-white dark:bg-orange-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                                isSelected ? "border-orange-200 dark:border-orange-800 bg-card dark:bg-orange-950" : "border-border border-border bg-card"
                                             )}>
                                                 <Icon className="h-4 w-4" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <span className="block truncate text-sm font-semibold">{action.title}</span>
-                                                <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{action.subtitle}</span>
+                                                <span className="block truncate text-xs text-muted-foreground text-muted-foreground">{action.subtitle}</span>
                                             </div>
                                         </button>
                                     );
@@ -193,10 +193,10 @@ export function CommandPalette() {
                             {recentItems.length > 0 && (
                                 <div>
                                     <div className="px-3 py-2 flex items-center justify-between">
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-muted-foreground">
                                             Recently Viewed
                                         </h3>
-                                        <History className="w-3 h-3 text-gray-400" />
+                                        <History className="w-3 h-3 text-muted-foreground" />
                                     </div>
                                     {recentItems.map((item, idx) => {
                                         const globalIdx = QUICK_ACTIONS.length + idx;
@@ -209,20 +209,20 @@ export function CommandPalette() {
                                                 className={cn(
                                                     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                     isSelected
-                                                        ? "bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary"
-                                                        : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                                                        ? "bg-primary/10 dark:bg-orange-900/20 text-primary"
+                                                        : "hover:bg-muted dark:hover:bg-gray-800 text-foreground text-foreground"
                                                 )}
                                                 onMouseEnter={() => setSelectedIndex(globalIdx)}
                                             >
                                                 <div className={cn(
                                                     "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
-                                                    isSelected ? "border-orange-200 dark:border-orange-800 bg-white dark:bg-orange-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                                    isSelected ? "border-orange-200 dark:border-orange-800 bg-card dark:bg-orange-950" : "border-border border-border bg-card"
                                                 )}>
                                                     <Icon className="h-4 w-4" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <span className="block truncate text-sm font-semibold">{item.name}</span>
-                                                    <span className="block truncate text-xs text-gray-500 dark:text-gray-400 capitalize">{item.type}</span>
+                                                    <span className="block truncate text-xs text-muted-foreground text-muted-foreground capitalize">{item.type}</span>
                                                 </div>
                                             </button>
                                         );
@@ -234,9 +234,9 @@ export function CommandPalette() {
 
                     {query.length > 0 && results.length === 0 && !isLoading && (
                         <div className="py-14 px-6 text-center sm:px-14">
-                            <Search className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
-                            <p className="mt-4 text-sm text-gray-900 dark:text-gray-100 font-semibold">No results found</p>
-                            <p className="mt-2 text-sm text-gray-500">We couldn't find anything matching "{query}".</p>
+                            <Search className="mx-auto h-8 w-8 text-gray-300 text-muted-foreground" />
+                            <p className="mt-4 text-sm text-foreground text-foreground font-semibold">No results found</p>
+                            <p className="mt-2 text-sm text-muted-foreground">We couldn't find anything matching "{query}".</p>
                         </div>
                     )}
 
@@ -252,7 +252,7 @@ export function CommandPalette() {
                             ).map(([type, items]) => (
                                 <div key={type}>
                                     <div className="px-3 py-2">
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-muted-foreground">
                                             {type}s
                                         </h3>
                                     </div>
@@ -267,14 +267,14 @@ export function CommandPalette() {
                                                 className={cn(
                                                     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                     isSelected
-                                                        ? "bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary"
-                                                        : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                                                        ? "bg-primary/10 dark:bg-orange-900/20 text-primary"
+                                                        : "hover:bg-muted dark:hover:bg-gray-800 text-foreground text-foreground"
                                                 )}
                                                 onMouseEnter={() => setSelectedIndex(results.indexOf(item))}
                                             >
                                                 <div className={cn(
                                                     "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
-                                                    isSelected ? "border-orange-200 dark:border-orange-800 bg-white dark:bg-orange-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                                    isSelected ? "border-orange-200 dark:border-orange-800 bg-card dark:bg-orange-950" : "border-border border-border bg-card"
                                                 )}>
                                                     <Icon className="h-4 w-4" />
                                                 </div>
@@ -288,7 +288,7 @@ export function CommandPalette() {
                                                         )}
                                                     </div>
                                                     {item.subtitle && (
-                                                        <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                                                        <span className="block truncate text-xs text-muted-foreground text-muted-foreground">
                                                             {item.subtitle}
                                                         </span>
                                                     )}
@@ -302,14 +302,14 @@ export function CommandPalette() {
                     )}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-3 text-xs text-gray-500 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-900/50">
+                <div className="flex items-center justify-between border-t border-border border-border px-4 py-3 text-xs text-muted-foreground text-muted-foreground bg-muted/50 bg-background/50">
                     <div className="flex items-center gap-4">
                         <span className="flex items-center gap-1.5">
-                            <kbd className="rounded bg-white dark:bg-gray-800 px-1.5 py-0.5 font-mono text-[10px] shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">↑↓</kbd>
+                            <kbd className="rounded bg-card px-1.5 py-0.5 font-mono text-[10px] shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">↑↓</kbd>
                             Navigate
                         </span>
                         <span className="flex items-center gap-1.5">
-                            <kbd className="rounded bg-white dark:bg-gray-800 px-1.5 py-0.5 font-mono text-[10px] shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">Enter</kbd>
+                            <kbd className="rounded bg-card px-1.5 py-0.5 font-mono text-[10px] shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">Enter</kbd>
                             Select
                         </span>
                     </div>

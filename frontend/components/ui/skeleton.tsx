@@ -15,7 +15,7 @@ function Skeleton({
 // Predefined skeleton patterns for common use cases
 export function CardSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+    <div className="rounded-lg border border-border border-border p-6 space-y-4">
       <Skeleton className="h-4 w-1/4" />
       <Skeleton className="h-8 w-1/2" />
       <Skeleton className="h-4 w-3/4" />
@@ -51,11 +51,11 @@ export function DashboardSkeleton() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div className="rounded-lg border border-border border-border p-6">
           <Skeleton className="h-6 w-48 mb-4" />
           <Skeleton className="h-64 w-full" />
         </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div className="rounded-lg border border-border border-border p-6">
           <Skeleton className="h-6 w-48 mb-4" />
           <Skeleton className="h-64 w-full" />
         </div>

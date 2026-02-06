@@ -77,7 +77,7 @@ export function ColumnVisibility({
         <Settings2 className="w-4 h-4 mr-2" />
         Columns
         {visibleCount < totalCount && (
-          <span className="ml-2 text-xs text-gray-500">({visibleCount}/{totalCount})</span>
+          <span className="ml-2 text-xs text-muted-foreground">({visibleCount}/{totalCount})</span>
         )}
       </Button>
 
@@ -119,7 +119,7 @@ export function ColumnVisibility({
                   return (
                     <div
                       key={column.key}
-                      className="flex items-center space-x-3 p-2 rounded hover:bg-gray-50 transition-colors"
+                      className="flex items-center space-x-3 p-2 rounded hover:bg-muted transition-colors"
                     >
                       <Checkbox
                         id={`column-${column.key}`}
@@ -131,11 +131,11 @@ export function ColumnVisibility({
                         className="flex-1 cursor-pointer flex items-center gap-2"
                       >
                         {isVisible ? (
-                          <Eye className="w-4 h-4 text-gray-400" />
+                          <Eye className="w-4 h-4 text-muted-foreground" />
                         ) : (
                           <EyeOff className="w-4 h-4 text-gray-300" />
                         )}
-                        <span className={isVisible ? "text-gray-900" : "text-gray-400"}>
+                        <span className={isVisible ? "text-foreground" : "text-muted-foreground"}>
                           {column.label}
                         </span>
                       </Label>

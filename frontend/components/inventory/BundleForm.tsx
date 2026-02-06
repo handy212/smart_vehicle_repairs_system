@@ -185,12 +185,12 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                                     onChange={(e) => setPartSearch(e.target.value)}
                                 />
                                 {partSearch.length > 2 && parts.length > 0 && (
-                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-card border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
                                         {parts.map(part => (
                                             <button
                                                 key={part.id}
                                                 type="button"
-                                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
+                                                className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center justify-between"
                                                 onClick={() => handleAddPart(part)}
                                             >
                                                 <div>
@@ -259,7 +259,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                 {/* Sidebar */}
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Status & Settings</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
@@ -267,7 +267,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                                 <input
                                     type="checkbox"
                                     {...register("is_active")}
-                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                    className="rounded border-border text-primary focus:ring-primary"
                                 />
                                 <span className="text-sm font-medium">Bundle is Active</span>
                             </label>

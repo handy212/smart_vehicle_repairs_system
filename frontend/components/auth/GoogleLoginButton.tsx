@@ -166,11 +166,11 @@ export default function GoogleLoginButton({
         <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className={`flex items-center justify-center gap-3 w-full px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+            className={`flex items-center justify-center gap-3 w-full px-4 py-3 border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
             type="button"
         >
             {loading ? (
-                <div className="w-5 h-5 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-border border-t-primary rounded-full animate-spin" />
             ) : (
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
@@ -191,7 +191,7 @@ export default function GoogleLoginButton({
                     />
                 </svg>
             )}
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-foreground">
                 {loading ? 'Signing in...' : 'Continue with Google'}
             </span>
         </button>

@@ -104,7 +104,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
         className={cn(
           "fixed left-0 top-16 bottom-0 overflow-y-auto z-40 transition-all duration-300 ease-out",
           "lg:translate-x-0",
-          "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/60 dark:border-gray-800/60 shadow-xl", // Premium glass effect
+          "bg-card/80 bg-background/80 backdrop-blur-xl border-r border-border/60 border-border/60 shadow-xl", // Premium glass effect
           isOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-20" : "w-72" // Slightly wider for premium feel
         )}
@@ -115,7 +115,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
           {navigationGroups.map((group) => (
             <div key={group.name}>
               {!isCollapsed && (
-                <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider">
                   {group.name}
                 </h3>
               )}
@@ -139,7 +139,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                         isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
                         isActive
                           ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-50/80 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100"
+                          : "text-muted-foreground text-muted-foreground hover:bg-muted/80 dark:hover:bg-gray-800/50 hover:text-foreground dark:hover:text-gray-100"
                       )}
                       style={isActive ? {
                         backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
@@ -153,7 +153,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                         className={cn(
                           "transition-transform duration-300 flex-shrink-0",
                           isCollapsed ? "w-6 h-6" : "w-5 h-5 mr-3.5",
-                          isActive ? "scale-110" : "group-hover:scale-110 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                          isActive ? "scale-110" : "group-hover:scale-110 text-muted-foreground group-hover:text-muted-foreground dark:group-hover:text-gray-300"
                         )}
                         style={isActive ? { color: branding.primary_color } : undefined}
                       />
@@ -176,8 +176,8 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
 
         {/* Footer section with user info when expanded */}
         {!isCollapsed && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-            {/* <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border border-border bg-muted bg-background/50">
+            {/* <div className="text-xs text-muted-foreground text-muted-foreground text-center">
               <p>Version 1.0</p>
             </div> */}
           </div>

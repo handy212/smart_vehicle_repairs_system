@@ -193,9 +193,9 @@ export function NotificationDropdown() {
                     size="sm"
                     className={cn(
                         "relative p-2.5 rounded-lg transition-all h-auto",
-                        "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
+                        "text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
                         "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-                        unreadCount > 0 && "text-primary dark:text-primary"
+                        unreadCount > 0 && "text-primary"
                     )}
                 >
                     <PremiumIcons.Bell className="w-5 h-5" />
@@ -209,7 +209,7 @@ export function NotificationDropdown() {
 
             <DropdownMenuContent align="end" className="w-96 max-h-[600px] overflow-hidden">
                 <DropdownMenuLabel className="flex items-center justify-between py-3 px-4">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    <span className="text-sm font-semibold text-foreground text-foreground">
                         Notifications
                         {unreadCount > 0 && (
                             <Badge variant="default" className="ml-2 text-[10px] px-1.5 py-0 bg-primary">
@@ -245,7 +245,7 @@ export function NotificationDropdown() {
                                 <DropdownMenuItem
                                     key={notification.id}
                                     className={cn(
-                                        "px-3 py-3 cursor-pointer focus:bg-gray-50 dark:focus:bg-gray-800 outline-none",
+                                        "px-3 py-3 cursor-pointer focus:bg-muted dark:focus:bg-gray-800 outline-none",
                                         isUnread && "bg-primary/5 dark:bg-orange-950/20"
                                     )}
                                     onClick={(e) => {
@@ -266,19 +266,19 @@ export function NotificationDropdown() {
                                         {!isUnread && <div className="w-2 flex-shrink-0" />}
 
                                         {/* Icon */}
-                                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300">
+                                        <div className="w-8 h-8 rounded-full bg-gray-100 bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground text-foreground">
                                             {getTypeIcon(notification.notification_type)}
                                         </div>
 
                                         {/* Content */}
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">
+                                            <p className="text-sm font-medium text-foreground text-foreground line-clamp-1">
                                                 {notification.title}
                                             </p>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">
+                                            <p className="text-xs text-muted-foreground text-muted-foreground line-clamp-2 mt-0.5">
                                                 {notification.message}
                                             </p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                            <p className="text-xs text-muted-foreground text-muted-foreground mt-1">
                                                 {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                                             </p>
                                         </div>
@@ -295,7 +295,7 @@ export function NotificationDropdown() {
                                                 className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/20 flex-shrink-0 cursor-pointer"
                                                 title="Mark as read"
                                             >
-                                                <PremiumIcons.CheckCircle className="w-4 h-4 text-primary dark:text-primary" />
+                                                <PremiumIcons.CheckCircle className="w-4 h-4 text-primary" />
                                             </div>
                                         )}
                                     </div>
@@ -304,9 +304,9 @@ export function NotificationDropdown() {
                         })
                     ) : (
                         <div className="px-4 py-8 text-center">
-                            <PremiumIcons.Bell className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">No notifications</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">You're all caught up!</p>
+                            <PremiumIcons.Bell className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-3" />
+                            <p className="text-sm text-muted-foreground text-muted-foreground font-medium">No notifications</p>
+                            <p className="text-xs text-muted-foreground text-muted-foreground mt-1">You're all caught up!</p>
                         </div>
                     )}
                 </div>
@@ -316,7 +316,7 @@ export function NotificationDropdown() {
                 <DropdownMenuItem asChild>
                     <Link
                         href="/notifications"
-                        className="w-full text-center py-2.5 text-sm font-medium text-primary dark:text-primary hover:text-orange-700 dark:hover:text-orange-300 hover:bg-primary/10 dark:hover:bg-orange-950/20 cursor-pointer"
+                        className="w-full text-center py-2.5 text-sm font-medium text-primary hover:text-orange-700 dark:hover:text-orange-300 hover:bg-primary/10 dark:hover:bg-orange-950/20 cursor-pointer"
                     >
                         View all notifications →
                     </Link>

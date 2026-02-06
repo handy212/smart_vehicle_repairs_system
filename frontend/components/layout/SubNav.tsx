@@ -71,7 +71,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     <aside
       className={cn(
         "fixed top-16 bottom-0 z-10 transition-all duration-300",
-        "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/60 dark:border-gray-800/60 shadow-lg", // Premium glass effect
+        "bg-card/80 bg-background/80 backdrop-blur-xl border-r border-border/60 border-border/60 shadow-lg", // Premium glass effect
         isCollapsed ? "w-12" : "w-56" // Slightly wider for premium feel
       )}
       style={{ left: `${sidebarLeft}px` }}
@@ -79,7 +79,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
       <div className={cn("p-4", isCollapsed && "px-2")}>
         <div className={cn("flex items-center mb-3", isCollapsed ? "justify-center" : "justify-between")}>
           {!isCollapsed && (
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <h2 className="text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider">
               {title}
             </h2>
           )}
@@ -120,7 +120,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
                   "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
                   isActive
                     ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100",
+                    : "text-muted-foreground text-muted-foreground hover:bg-card/60 dark:hover:bg-gray-800/50 hover:text-foreground dark:hover:text-gray-100",
                   isCollapsed && "justify-center"
                 )}
                 style={isActive ? {

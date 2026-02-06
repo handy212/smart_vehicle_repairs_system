@@ -41,20 +41,20 @@ export function Breadcrumbs() {
     });
 
     return (
-        <nav aria-label="Breadcrumb" className="hidden md:flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400 ml-4 pl-4 border-l border-gray-200 dark:border-gray-800 h-6">
-            <span className="font-medium text-gray-400 dark:text-gray-500">System</span>
+        <nav aria-label="Breadcrumb" className="hidden md:flex items-center space-x-1 text-sm text-muted-foreground text-muted-foreground ml-4 pl-4 border-l border-border border-border h-6">
+            <span className="font-medium text-muted-foreground text-muted-foreground">System</span>
 
             {items.map((item, index) => (
                 <div key={item.href} className="flex items-center">
-                    <ChevronRight className="w-4 h-4 mx-1 text-gray-400" />
+                    <ChevronRight className="w-4 h-4 mx-1 text-muted-foreground" />
                     {item.isLast ? (
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                        <span className="font-medium text-foreground text-foreground">
                             {item.label}
                         </span>
                     ) : (
                         <Link
                             href={item.href}
-                            className="hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                            className="hover:text-foreground dark:hover:text-gray-100 transition-colors"
                         >
                             {item.label}
                         </Link>

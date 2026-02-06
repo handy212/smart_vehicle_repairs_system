@@ -57,11 +57,11 @@ export function PrintLayout({
             <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-black print-header">
                 <div className="flex items-center gap-4">
                     {/* Logo Placeholder */}
-                    <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center font-bold text-gray-500 text-lg print-header-logo">S</div>
+                    <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center font-bold text-muted-foreground text-lg print-header-logo">S</div>
 
                     <div className="company-details">
-                        <h1 className="text-xl font-bold text-gray-900 leading-none mb-1">{companyInfo?.name || COMPANY_NAME}</h1>
-                        <div className="text-xs text-gray-500 space-y-0.5">
+                        <h1 className="text-xl font-bold text-foreground leading-none mb-1">{companyInfo?.name || COMPANY_NAME}</h1>
+                        <div className="text-xs text-muted-foreground space-y-0.5">
                             <p>{companyInfo?.address || '123 Repair Lane, Auto City, AC 12345'}</p>
                             <p>{companyInfo?.phone || '(555) 123-4567'}</p>
                         </div>
@@ -70,7 +70,7 @@ export function PrintLayout({
                 </div>
 
                 {/* Right: Tax/Branch Info */}
-                <div className="text-right text-xs text-gray-500">
+                <div className="text-right text-xs text-muted-foreground">
                     <p>Tax ID: <span className="font-semibold text-black">TR-8842-19</span></p>
                     <p>{companyInfo?.name || COMPANY_NAME} Service Center</p>
                 </div>
@@ -78,10 +78,10 @@ export function PrintLayout({
 
             {/* 2. Document Title Bar */}
             {documentType && (
-                <div className="flex justify-between items-end mb-6 pb-2 border-b border-gray-200 print-section">
+                <div className="flex justify-between items-end mb-6 pb-2 border-b border-border print-section">
                     <div className="text-left">
                         <div className="text-2xl font-bold uppercase text-primary leading-none mb-1">{documentType}</div>
-                        <div className="text-lg font-bold text-gray-900 leading-none"># {documentNumber}</div>
+                        <div className="text-lg font-bold text-foreground leading-none"># {documentNumber}</div>
                     </div>
 
                     <div className="text-right text-sm">
@@ -96,7 +96,7 @@ export function PrintLayout({
             </div>
 
             {/* Footer */}
-            <div className="print-footer mt-8 pt-4 border-t border-gray-300 text-center text-xs text-gray-500 print-only">
+            <div className="print-footer mt-8 pt-4 border-t border-border text-center text-xs text-muted-foreground print-only">
                 <p>{companyInfo?.name || COMPANY_NAME} &bull; {companyInfo?.website || 'www.smartvehiclerepairs.com'}</p>
                 <div className="mt-1 flex justify-center items-center gap-4">
                     <span>Generated on {currentDate}</span>

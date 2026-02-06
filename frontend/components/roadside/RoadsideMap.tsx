@@ -38,7 +38,7 @@ export default function RoadsideMap({ latitude, longitude, address }: RoadsideMa
     const position: [number, number] = [latitude, longitude];
 
     return (
-        <div className="h-[300px] w-full rounded-xl overflow-hidden shadow-inner border dark:border-gray-700 relative z-0">
+        <div className="h-[300px] w-full rounded-xl overflow-hidden shadow-inner border border-border relative z-0">
             <MapContainer
                 key={`${latitude}-${longitude}`}
                 center={position}

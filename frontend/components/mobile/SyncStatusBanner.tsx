@@ -75,7 +75,7 @@ export function SyncStatusBanner() {
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     {isOnline ? (
                         <>
-                            <Wifi className="h-4 w-4 text-primary dark:text-primary flex-shrink-0" />
+                            <Wifi className="h-4 w-4 text-primary flex-shrink-0" />
                             <span className="text-sm font-medium text-orange-900 dark:text-orange-200">
                                 Online
                             </span>
@@ -109,7 +109,7 @@ export function SyncStatusBanner() {
                 {/* Right: Sync Button & Last Sync */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                     {lastSync && (
-                        <div className="hidden sm:flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground text-muted-foreground">
                             <Check className="h-3 w-3" />
                             <span>
                                 {new Date(lastSync).toLocaleTimeString([], {

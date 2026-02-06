@@ -125,7 +125,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                 <div className="lg:col-span-2 space-y-6">
                     {/* Personal Info */}
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
                                 <User className="w-4 h-4 text-primary" />
                                 Personal Information
@@ -178,7 +178,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                     {/* Business Info (Conditional) */}
                     {(customerType === "business" || customerType === "fleet") && (
                         <Card className="border-l-4 border-l-primary">
-                            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                            <CardHeader className="pb-3 border-b border-border border-border">
                                 <CardTitle className="text-base font-medium flex items-center gap-2">
                                     <Building2 className="w-4 h-4 text-primary" />
                                     Business Details
@@ -217,7 +217,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
 
                     {/* Portal Access */}
                     <Card className="border-l-4 border-l-green-500">
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Portal Access</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
@@ -226,7 +226,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                     type="checkbox"
                                     id="grant_portal_access"
                                     {...register("grant_portal_access")}
-                                    className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4"
+                                    className="rounded border-border text-primary focus:ring-primary w-4 h-4"
                                 />
                                 <Label htmlFor="grant_portal_access" className="font-normal cursor-pointer">
                                     Grant portal access to customer
@@ -249,7 +249,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                                                 >
                                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                 </button>
@@ -269,9 +269,9 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                             type="checkbox"
                                             id="send_welcome_email"
                                             {...register("send_welcome_email")}
-                                            className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4"
+                                            className="rounded border-border text-primary focus:ring-primary w-4 h-4"
                                         />
-                                        <Label htmlFor="send_welcome_email" className="font-normal cursor-pointer text-sm text-gray-600">
+                                        <Label htmlFor="send_welcome_email" className="font-normal cursor-pointer text-sm text-muted-foreground">
                                             Send welcome email with login details
                                         </Label>
                                     </div>
@@ -284,7 +284,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                 {/* Sidebar Column */}
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Configuration</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
@@ -342,7 +342,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                        <CardHeader className="pb-3 border-b border-border border-border">
                             <CardTitle className="text-base font-medium">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">

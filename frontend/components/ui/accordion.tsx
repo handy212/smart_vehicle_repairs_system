@@ -117,7 +117,7 @@ export function AccordionItem({ value, children, className }: AccordionItemProps
     <AccordionItemContext.Provider value={{ value, isOpen, onToggle }}>
       <div
         className={cn(
-          "border-b border-gray-200 dark:border-gray-800",
+          "border-b border-border border-border",
           className
         )}
       >

@@ -167,14 +167,14 @@ export function ImportDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="border-b pb-4">
           <div className="flex items-center justify-between pr-8">
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-foreground text-foreground">{title}</DialogTitle>
             <DialogClose onOpenChange={handleClose} />
           </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {description && (
-            <p className="text-sm text-gray-600">{description}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           )}
 
           {(downloadTemplateUrl || onDownloadTemplate) && (
@@ -200,7 +200,7 @@ export function ImportDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="file-upload" className="text-sm font-medium text-gray-700">Select File</Label>
+            <Label htmlFor="file-upload" className="text-sm font-medium text-foreground">Select File</Label>
             <div className="flex items-center gap-2">
               <input
                 ref={fileInputRef}
@@ -222,7 +222,7 @@ export function ImportDialog({
             </div>
             {file && (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
                 </p>
                 {preview && (
@@ -249,7 +249,7 @@ export function ImportDialog({
                   </div>
                 )}
                 {isLoadingPreview && (
-                  <p className="text-xs text-gray-500">Loading preview...</p>
+                  <p className="text-xs text-muted-foreground">Loading preview...</p>
                 )}
               </div>
             )}
@@ -259,19 +259,19 @@ export function ImportDialog({
           </div>
           
           {showPreview && preview && (
-            <div className="space-y-2 border border-gray-200 dark:border-gray-700 rounded-md p-3 bg-gray-50 dark:bg-gray-900">
+            <div className="space-y-2 border border-border border-border rounded-md p-3 bg-muted bg-background">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">CSV Preview</h4>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <h4 className="text-sm font-medium text-foreground text-foreground">CSV Preview</h4>
+                <span className="text-xs text-muted-foreground text-muted-foreground">
                   Showing first {preview.rows.length} of {preview.totalRows} rows
                 </span>
               </div>
-              <div className="overflow-x-auto max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800">
+              <div className="overflow-x-auto max-h-64 overflow-y-auto border border-border border-border rounded bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       {preview.headers.map((header, idx) => (
-                        <TableHead key={idx} className="text-xs font-semibold bg-gray-50 dark:bg-gray-800 sticky top-0">
+                        <TableHead key={idx} className="text-xs font-semibold bg-muted sticky top-0">
                           {header}
                         </TableHead>
                       ))}
@@ -282,7 +282,7 @@ export function ImportDialog({
                       <TableRow key={rowIdx}>
                         {preview.headers.map((header, colIdx) => (
                           <TableCell key={colIdx} className="text-xs">
-                            {row.data[header] || <span className="text-gray-400 dark:text-gray-500">-</span>}
+                            {row.data[header] || <span className="text-muted-foreground text-muted-foreground">-</span>}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -294,7 +294,7 @@ export function ImportDialog({
           )}
 
           {result && (
-            <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+            <div className="space-y-2 p-4 bg-muted bg-background rounded-md border border-border border-border">
               <div className="flex items-center gap-2">
                 {result.imported > 0 ? (
                   <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -322,7 +322,7 @@ export function ImportDialog({
                         <li key={idx}>{error}</li>
                       ))}
                       {result.errors.length > 10 && (
-                        <li className="text-gray-500 dark:text-gray-400">
+                        <li className="text-muted-foreground text-muted-foreground">
                           ... and {result.errors.length - 10} more errors
                         </li>
                       )}

@@ -57,9 +57,9 @@ export function TechnicianProductivityHeatmap({ data }: TechnicianProductivityHe
             <TooltipProvider>
                 <div className="min-w-[600px] w-full">
                     <div className="grid grid-cols-[150px_repeat(4,1fr)] gap-2 mb-4">
-                        <div className="text-sm font-bold text-gray-500 uppercase tracking-wider">Technician</div>
+                        <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Technician</div>
                         {metrics.map((m) => (
-                            <div key={m.key} className="text-sm font-bold text-gray-500 uppercase tracking-wider text-center">
+                            <div key={m.key} className="text-sm font-bold text-muted-foreground uppercase tracking-wider text-center">
                                 {m.label}
                             </div>
                         ))}
@@ -92,7 +92,7 @@ export function TechnicianProductivityHeatmap({ data }: TechnicianProductivityHe
                                         return (
                                             <Tooltip key={m.key}>
                                                 <TooltipTrigger asChild>
-                                                    <div className="relative h-10 w-full bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800">
+                                                    <div className="relative h-10 w-full bg-muted rounded-lg overflow-hidden border border-border border-border">
                                                         <div
                                                             className={cn("absolute inset-0 transition-all duration-500", m.color)}
                                                             style={{ opacity: 0.1 + intensity * 0.8 }}

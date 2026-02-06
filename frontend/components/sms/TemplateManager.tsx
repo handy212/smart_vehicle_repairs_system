@@ -113,7 +113,7 @@ export function TemplateManager() {
                 <div className="flex flex-1 overflow-hidden">
                     {/* Left: List */}
                     <div className="w-1/3 border-r bg-muted/10 flex flex-col">
-                        <div className="p-4 border-b flex justify-between items-center bg-white dark:bg-gray-950">
+                        <div className="p-4 border-b flex justify-between items-center bg-card dark:bg-gray-950">
                             <span className="text-sm font-medium">Templates</span>
                             <Button size="sm" variant="ghost" onClick={resetForm} disabled={!editingTemplate}>
                                 <Plus className="h-4 w-4" /> New
@@ -143,7 +143,7 @@ export function TemplateManager() {
                     </div>
 
                     {/* Right: Form */}
-                    <div className="flex-1 p-6 flex flex-col bg-white dark:bg-gray-950">
+                    <div className="flex-1 p-6 flex flex-col bg-card dark:bg-gray-950">
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="t-name">Template Name</Label>

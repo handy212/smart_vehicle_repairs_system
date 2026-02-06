@@ -62,12 +62,12 @@ export function DataTable<T>({
             <div className="overflow-x-auto">
                 <Table className="table-fixed w-full">
                     <TableHeader>
-                        <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-gray-100 dark:border-gray-800">
+                        <TableRow className="bg-muted/50 hover:bg-muted/50 border-border border-border">
                             {columns.map((col, index) => (
                                 <TableHead
                                     key={index}
                                     className={cn(
-                                        "px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 select-none",
+                                        "px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground select-none",
                                         col.sortable && "cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-800/50",
                                         col.className
                                     )}
@@ -91,7 +91,7 @@ export function DataTable<T>({
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}
-                                    className="h-24 text-center text-sm text-gray-500"
+                                    className="h-24 text-center text-sm text-muted-foreground"
                                 >
                                     {emptyMessage}
                                 </TableCell>
@@ -101,7 +101,7 @@ export function DataTable<T>({
                                 <TableRow
                                     key={item.id || rowIndex}
                                     className={cn(
-                                        "group hover:bg-gray-50/80 transition-colors border-b border-gray-100 dark:border-gray-800",
+                                        "group hover:bg-muted/80 transition-colors border-b border-border border-border",
                                         (onRowClick || onRowDoubleClick) && "cursor-pointer"
                                     )}
                                     onClick={() => onRowClick && onRowClick(item)}

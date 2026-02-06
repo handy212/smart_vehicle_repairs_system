@@ -67,13 +67,13 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground text-muted-foreground">
                 We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.
               </p>
               
               {process.env.NODE_ENV === "development" && this.state.error && (
                 <details className="mt-4">
-                  <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <summary className="cursor-pointer text-sm font-medium text-foreground text-foreground mb-2">
                     Error Details (Development Only)
                   </summary>
                   <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-auto max-h-48">
