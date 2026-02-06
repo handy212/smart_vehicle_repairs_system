@@ -183,7 +183,7 @@ export default function CashFlowPage() {
                 <div className="p-4 text-red-500">Error loading report</div>
             ) : (
                 <Card>
-                    <CardHeader className="bg-slate-50 border-b">
+                    <CardHeader className="bg-muted border-b">
                         <div className="flex justify-between items-center">
                             <CardTitle>Cash Flow Summary</CardTitle>
                             <div className="text-sm font-medium">
@@ -202,7 +202,7 @@ export default function CashFlowPage() {
                         <ActivitySection title="Financing Activities" data={report.financing_activities} />
                         <Separator />
 
-                        <div className="flex justify-between items-center p-4 bg-slate-50 rounded-lg border">
+                        <div className="flex justify-between items-center p-4 bg-muted rounded-lg border">
                             <span className="font-bold text-lg">Net Increase / Decrease in Cash</span>
                             <span className={cn(
                                 "font-bold text-xl",

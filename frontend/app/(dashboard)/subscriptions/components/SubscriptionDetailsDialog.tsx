@@ -74,12 +74,12 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl p-0 gap-0 rounded-xl overflow-hidden shadow-2xl border-none">
-                <DialogHeader className="p-5 bg-slate-50/50 border-b">
+                <DialogHeader className="p-5 bg-muted/50 border-b">
                     <div className="flex justify-between items-center pr-6">
                         <div className="flex items-center gap-3">
                             <div className={cn(
                                 "p-2 rounded-lg",
-                                subscription.status === 'active' ? "bg-green-100 text-green-700" : "bg-slate-100 text-muted-foreground"
+                                subscription.status === 'active' ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
                             )}>
                                 {getStatusIcon(subscription.status)}
                             </div>
@@ -109,7 +109,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 Customer & Vehicle
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground font-bold border border-border text-xs">
+                                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold border border-border text-xs">
                                     {subscription.customer_name?.substring(0, 2).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
@@ -117,7 +117,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                     <div className="text-[11px] text-muted-foreground font-mono">ID: {subscription.customer}</div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 py-1.5 px-2 bg-slate-50/80 rounded-lg border border-border">
+                            <div className="flex items-center gap-3 py-1.5 px-2 bg-muted/80 rounded-lg border border-border">
                                 <Car className="w-4 h-4 text-muted-foreground" />
                                 <div className="min-w-0">
                                     <div className="text-[9px] font-bold text-muted-foreground uppercase leading-none">Vehicle ID</div>
@@ -138,7 +138,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                         {format(new Date(subscription.start_date), "MMM dd")} - {format(new Date(subscription.end_date), "MMM dd, yyyy")}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center px-2 py-1 bg-slate-50 rounded-md">
+                                <div className="flex justify-between items-center px-2 py-1 bg-muted rounded-md">
                                     <span className="text-[12px] font-medium text-muted-foreground">Remaining</span>
                                     <span className={cn(
                                         "text-sm font-black",
@@ -175,7 +175,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                     {subscription.remaining_allowances && Object.keys(subscription.remaining_allowances).length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 px-2">
                             {Object.entries(subscription.remaining_allowances).map(([key, value]) => (
-                                <div key={key} className="p-2.5 bg-slate-50/50 rounded-lg border border-border hover:border-primary/30 transition-colors group">
+                                <div key={key} className="p-2.5 bg-muted/50 rounded-lg border border-border hover:border-primary/30 transition-colors group">
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className="p-1 rounded bg-card text-muted-foreground group-hover:text-primary transition-colors border border-border">
                                             {iconMap[key] || iconMap.default}
@@ -198,7 +198,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 Recent Activity
                             </div>
                             {usageHistory && usageHistory.length > 0 && (
-                                <span className="text-[10px] font-bold text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-full">{usageHistory.length} Total</span>
+                                <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{usageHistory.length} Total</span>
                             )}
                         </div>
 
@@ -207,7 +207,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 <div className="p-8 text-center text-muted-foreground text-xs">Loading history...</div>
                             ) : usageHistory && usageHistory.length > 0 ? (
                                 <Table>
-                                    <TableHeader className="bg-slate-50/50">
+                                    <TableHeader className="bg-muted/50">
                                         <TableRow className="h-9">
                                             <TableHead className="text-[11px] font-bold text-muted-foreground uppercase h-9">Date</TableHead>
                                             <TableHead className="text-[11px] font-bold text-muted-foreground uppercase h-9">Service</TableHead>
@@ -216,7 +216,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                     </TableHeader>
                                     <TableBody>
                                         {usageHistory.slice(0, 5).map((usage: any) => (
-                                            <TableRow key={usage.id} className="hover:bg-slate-50/30 h-10 border-slate-50">
+                                            <TableRow key={usage.id} className="hover:bg-muted/30 h-10 border-slate-50">
                                                 <TableCell className="p-2 align-middle">
                                                     <div className="text-[11px] font-medium text-foreground">{format(new Date(usage.service_date), "MMM dd, yyyy")}</div>
                                                     <div className="text-[9px] text-muted-foreground">{format(new Date(usage.service_date), "h:mm a")}</div>
@@ -244,7 +244,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                     </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 border-t flex items-center justify-between">
+                <div className="p-4 bg-muted border-t flex items-center justify-between">
                     {subscription.payment_status === "paid" ? (
                         <Button
                             variant="link"

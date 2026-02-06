@@ -68,7 +68,7 @@ export function PerformanceMetrics({ technicianId }: PerformanceMetricsProps) {
 
             {/* Productivity Metrics */}
             <div>
-                <h4 className="text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Briefcase className="h-3 w-3" />
                     Productivity
                 </h4>
@@ -102,7 +102,7 @@ export function PerformanceMetrics({ technicianId }: PerformanceMetricsProps) {
 
             {/* Financial Metrics */}
             <div>
-                <h4 className="text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
                     <DollarSign className="h-3 w-3" />
                     Financial Performance
                 </h4>
@@ -124,7 +124,7 @@ export function PerformanceMetrics({ technicianId }: PerformanceMetricsProps) {
 
             {/* Availability Metrics */}
             <div>
-                <h4 className="text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Calendar className="h-3 w-3" />
                     Availability & Hours
                 </h4>
@@ -210,12 +210,12 @@ function MetricCard({ title, value, icon: Icon, color }: MetricCardProps) {
         <Card className={cn("shadow-none border-none bg-gradient-to-br", colorClasses[color])}>
             <CardContent className="p-4 flex flex-col gap-1">
                 <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {title}
                     </p>
                     <Icon className={cn("h-5 w-5 opacity-50", iconColors[color])} />
                 </div>
-                <p className="text-xl font-bold text-foreground text-foreground">
+                <p className="text-xl font-bold text-foreground">
                     {value}
                 </p>
             </CardContent>

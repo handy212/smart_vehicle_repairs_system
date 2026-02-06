@@ -125,7 +125,7 @@ export function InspectionForm({
 
             <form onSubmit={handleSubmit(onSubmit)}>
                 <Card>
-                    <CardHeader className="pb-4 border-b border-border border-border">
+                    <CardHeader className="pb-4 border-b border-border">
                         <CardTitle className="text-lg font-semibold flex items-center gap-2">
                             <FileText className="w-5 h-5 text-primary" />
                             Inspection Details
@@ -250,7 +250,7 @@ export function InspectionForm({
                             )}
                         </div>
 
-                        <div className="flex justify-end space-x-3 pt-4 border-t border-border border-border">
+                        <div className="flex justify-end space-x-3 pt-4 border-t border-border">
                             <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                                 Cancel
                             </Button>

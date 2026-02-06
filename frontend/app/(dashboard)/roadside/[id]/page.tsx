@@ -366,7 +366,7 @@ export default function RoadsideDetailPage() {
                             <CardTitle>Service History</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-700">
+                            <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-muted dark:before:bg-gray-700">
                                 <div className="relative pl-8">
                                     <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-primary"></div>
                                     <div className="flex items-center justify-between">

@@ -407,7 +407,7 @@ function TestDialog({
                                 </div>
                                 {templateResults.length > 0 && (
                                     <div className="mt-2 border border-border rounded-lg bg-card shadow-sm overflow-hidden z-10 relative">
-                                        <div className="p-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b border-border border-border">
+                                        <div className="p-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b border-border">
                                             Recommended Templates
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">

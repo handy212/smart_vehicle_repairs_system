@@ -209,7 +209,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {/* Mobile Menu Toggle */}
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Toggle menu"
             >
               {isSidebarOpen ? (
@@ -223,7 +223,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
@@ -237,7 +237,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
 
             <Link href="/dashboard" className="flex items-center space-x-2 group">
               {logoSrc ? (
-                <div className="h-8 w-8 rounded-lg overflow-hidden bg-card flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow border border-border border-border relative">
+                <div className="h-8 w-8 rounded-lg overflow-hidden bg-card flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow border border-border relative">
                   <img
                     src={logoSrc}
                     alt={branding.siteName}
@@ -302,11 +302,11 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                 </div>
               )}
               <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-foreground text-foreground group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
+                <h1 className="text-lg font-bold text-foreground group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                   {branding.siteName}
                 </h1>
                 {branding.tagline && (
-                  <p className="text-xs text-muted-foreground text-muted-foreground hidden lg:block">{branding.tagline}</p>
+                  <p className="text-xs text-muted-foreground hidden lg:block">{branding.tagline}</p>
                 )}
               </div>
             </Link>
@@ -323,7 +323,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                 });
                 document.dispatchEvent(event);
               }}
-              className="group flex items-center gap-3 px-4 py-2 w-full bg-muted border border-border border-border rounded-xl text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300 hover:bg-card dark:hover:bg-gray-700 transition-all text-sm shadow-sm hover:shadow-md"
+              className="group flex items-center gap-3 px-4 py-2 w-full bg-muted border border-border rounded-xl text-muted-foreground hover:text-muted-foreground  hover:bg-card  transition-all text-sm shadow-sm hover:shadow-md"
             >
               <PremiumIcons.Search className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               <span className="flex-1 text-left font-medium opacity-70">Search...</span>

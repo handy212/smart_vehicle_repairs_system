@@ -321,7 +321,7 @@ export default function RolesPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
-                        <code className="text-[10px] bg-slate-100 text-muted-foreground px-1.5 py-0.5 rounded font-mono border border-border">
+                        <code className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono border border-border">
                           {role.code}
                         </code>
                       </TableCell>
@@ -354,7 +354,7 @@ export default function RolesPage() {
                             </div>
                           )}
                           {role.is_system && (
-                            <Badge variant="secondary" className="text-[9px] px-1 h-4 font-normal bg-gray-100 text-muted-foreground border-border">
+                            <Badge variant="secondary" className="text-[9px] px-1 h-4 font-normal bg-muted text-muted-foreground border-border">
                               System
                             </Badge>
                           )}
@@ -426,7 +426,7 @@ export default function RolesPage() {
                       log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
                     }`}></span>
                   <span className="text-xs font-medium text-foreground">{log.object_repr}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1.5 bg-gray-100 rounded-sm">{log.action}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1.5 bg-muted rounded-sm">{log.action}</span>
                 </div>
                 <div className="text-[10px] text-muted-foreground">
                   <span className="font-medium text-muted-foreground mr-2">{log.user_name || "System"}</span>
@@ -842,7 +842,7 @@ function PermissionsDialog({
                           variant="ghost"
                           size="sm"
                           onClick={(e) => { e.stopPropagation(); toggleCategory(category, perms); }}
-                          className="h-6 w-6 p-0 hover:bg-gray-200"
+                          className="h-6 w-6 p-0 hover:bg-muted"
                         >
                           {allSelected ? (
                             <CheckSquare className="w-4 h-4 text-primary" />

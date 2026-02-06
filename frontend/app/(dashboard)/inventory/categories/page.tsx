@@ -209,7 +209,7 @@ export default function PartCategoriesPage() {
                         {category.full_path || category.name}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-center">
-                        <Badge variant="secondary" className="bg-border text-muted-foreground hover:bg-gray-100">
+                        <Badge variant="secondary" className="bg-border text-muted-foreground hover:bg-muted">
                           {category.subcategories_count || 0}
                         </Badge>
                       </TableCell>
@@ -226,7 +226,7 @@ export default function PartCategoriesPage() {
                       <TableCell className="px-4 py-2 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 text-muted-foreground">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground">
                               <MoreVertical className="w-3.5 h-3.5" />
                             </Button>
                           </DropdownMenuTrigger>

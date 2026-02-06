@@ -115,7 +115,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
           {navigationGroups.map((group) => (
             <div key={group.name}>
               {!isCollapsed && (
-                <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {group.name}
                 </h3>
               )}
@@ -139,7 +139,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                         isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
                         isActive
                           ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-                          : "text-muted-foreground text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground dark:hover:text-gray-100"
+                          : "text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground "
                       )}
                       style={isActive ? {
                         backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
@@ -176,8 +176,8 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
 
         {/* Footer section with user info when expanded */}
         {!isCollapsed && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border border-border bg-muted bg-background/50">
-            {/* <div className="text-xs text-muted-foreground text-muted-foreground text-center">
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-muted bg-background/50">
+            {/* <div className="text-xs text-muted-foreground text-center">
               <p>Version 1.0</p>
             </div> */}
           </div>

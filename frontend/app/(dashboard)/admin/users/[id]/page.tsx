@@ -586,7 +586,7 @@ export default function UserDetailPage() {
                                 return (
                                   <label
                                     key={branch.id}
-                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-border border-border transition-colors"
+                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-border transition-colors"
                                   >
                                     <input
                                       type="checkbox"
@@ -769,7 +769,7 @@ export default function UserDetailPage() {
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
                             title={showPassword ? "Hide password" : "Show password"}
                           >
                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -1009,13 +1009,13 @@ export default function UserDetailPage() {
                   <div className="pt-4 border-t border-border">
                     <dt className="text-sm font-medium text-muted-foreground mb-3">Notification Preferences</dt>
                     <dd className="space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-muted bg-muted/50 rounded-md">
+                      <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">Email</span>
                         <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.email_notifications ? "On" : "Off"}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between p-2 bg-muted bg-muted/50 rounded-md">
+                      <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
                         <span className="text-sm text-card-foreground">SMS</span>
                         <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
                           {user.sms_notifications ? "On" : "Off"}
@@ -1058,7 +1058,7 @@ export default function UserDetailPage() {
                       <p className="text-base font-semibold text-foreground">{user.branch_name}</p>
                     </div>
                   ) : (
-                    <div className="p-4 bg-muted bg-muted/50 rounded-lg border border-border">
+                    <div className="p-4 bg-muted/50 rounded-lg border border-border">
                       <p className="text-sm text-muted-foreground italic">No branch assigned</p>
                     </div>
                   )}
@@ -1155,7 +1155,7 @@ export default function UserDetailPage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
                           title={showPassword ? "Hide password" : "Show password"}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

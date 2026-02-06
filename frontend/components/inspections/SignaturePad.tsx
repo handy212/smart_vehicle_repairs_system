@@ -77,7 +77,7 @@ export function SignaturePad({
           className={cn(
             "border-2 border-dashed rounded-lg bg-background",
             disabled ? "pointer-events-none opacity-50" : "border-border",
-            !disabled && "border-border border-border"
+            !disabled && "border-border"
           )}
         >
           <SignatureCanvas

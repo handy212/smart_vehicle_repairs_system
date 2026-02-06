@@ -46,7 +46,7 @@ export function TabsList({ children, className }: TabsListProps) {
   return (
     <div
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-md bg-gray-100 bg-muted p-1 text-muted-foreground text-muted-foreground",
+        "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
         className
       )}
     >
@@ -75,7 +75,7 @@ export function TabsTrigger({ value, children, className, ...props }: TabsTrigge
         "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white dark:ring-offset-gray-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 dark:focus-visible:ring-gray-300 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
         isActive
           ? "bg-card text-gray-950 text-foreground shadow-sm"
-          : "text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-100",
+          : "text-muted-foreground hover:text-foreground ",
         className
       )}
       {...props}

@@ -466,7 +466,7 @@ function PartFormDialog({
                     {/* Items Queue List (Only for new requests) */}
                     {!initialData && queuedParts.length > 0 && (
                         <div className="rounded-md border border-border bg-muted/50 bg-muted/20 overflow-hidden">
-                            <div className="px-3 py-2 border-b border-border bg-gray-100/50 bg-muted/50 flex justify-between items-center">
+                            <div className="px-3 py-2 border-b border-border bg-muted/50 bg-muted/50 flex justify-between items-center">
                                 <span className="text-xs font-semibold text-card-foreground">Parts to Submit ({queuedParts.length})</span>
                                 <Button
                                     variant="ghost"
@@ -636,7 +636,7 @@ function PartFormDialog({
                                         size="sm"
                                         onClick={handleAddToQueue}
                                         disabled={!formData.part_name}
-                                        className="border-dashed border-border border-border"
+                                        className="border-dashed border-border"
                                     >
                                         <Plus className="w-3.5 h-3.5 mr-1.5" />
                                         Add to List

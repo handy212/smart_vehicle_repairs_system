@@ -205,7 +205,7 @@ export default function TemplateDetailPage() {
                 className={
                   template.is_active
                     ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-foreground"
+                    : "bg-muted text-foreground"
                 }
               >
                 {template.is_active ? "Active" : "Inactive"}
@@ -298,7 +298,7 @@ export default function TemplateDetailPage() {
                       </div>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <div
-                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-gray-100 hover:text-foreground h-8 px-3 cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-muted hover:text-foreground h-8 px-3 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedCategoryId(category.id);
@@ -317,7 +317,7 @@ export default function TemplateDetailPage() {
                           Add Item
                         </div>
                         <div
-                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-gray-100 hover:text-foreground h-8 w-8 p-0 cursor-pointer"
+                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-muted hover:text-foreground h-8 w-8 p-0 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingCategory(category);

@@ -113,7 +113,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-5xl p-0 gap-0 overflow-hidden bg-slate-50/50">
+            <DialogContent className="max-w-5xl p-0 gap-0 overflow-hidden bg-muted/50">
 
                 {/* Header */}
                 <div className="bg-card border-b px-8 py-6 flex justify-between items-center shadow-sm relative z-10">
@@ -136,7 +136,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                         {/* Step 1: Customer & Vehicle */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-widest">
-                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground text-xs">1</span>
+                                <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">1</span>
                                 Customer Details
                             </div>
 
@@ -192,7 +192,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                         {/* Step 2: Plan Selection */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-widest">
-                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground text-xs">2</span>
+                                <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">2</span>
                                 Select Plan
                             </div>
 
@@ -205,7 +205,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                             "relative cursor-pointer border-2 rounded-xl p-4 transition-all duration-200 hover:shadow-md",
                                             selectedPackageId === pkg.id
                                                 ? "border-primary bg-primary/5"
-                                                : "border-border bg-card hover:border-slate-300"
+                                                : "border-border bg-card hover:border-border"
                                         )}
                                     >
                                         {selectedPackageId === pkg.id && (
@@ -223,10 +223,10 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                         </div>
 
                                         <div className="mt-4 flex flex-wrap gap-2">
-                                            <Badge variant="secondary" className="bg-slate-100 text-muted-foreground hover:bg-slate-200 border-0">
+                                            <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-slate-200 border-0">
                                                 {pkg.features?.towing_services_km || 0}km Towing
                                             </Badge>
-                                            <Badge variant="secondary" className="bg-slate-100 text-muted-foreground hover:bg-slate-200 border-0">
+                                            <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-slate-200 border-0">
                                                 {pkg.features?.total_service_calls || 0} Calls
                                             </Badge>
                                         </div>
@@ -239,7 +239,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                         {/* Step 3: Settings */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-widest">
-                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground text-xs">3</span>
+                                <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs">3</span>
                                 Configuration
                             </div>
 
@@ -272,7 +272,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                     </div>
 
                     {/* Sidebar Summary */}
-                    <div className="w-full md:w-[320px] bg-slate-50 border-l flex flex-col">
+                    <div className="w-full md:w-[320px] bg-muted border-l flex flex-col">
                         <div className="p-6 border-b bg-card">
                             <h3 className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2">
                                 Order Summary

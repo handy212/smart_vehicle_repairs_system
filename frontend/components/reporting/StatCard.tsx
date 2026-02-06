@@ -31,7 +31,7 @@ export function StatCard({
         <Card className={cn("", className)}>
             <CardContent className="p-6">
                 <div className="flex items-center justify-between space-y-0 pb-2">
-                    <p className="text-sm font-medium text-muted-foreground text-muted-foreground">
+                    <p className="text-sm font-medium text-muted-foreground">
                         {title}
                     </p>
                     <Icon className={cn("h-4 w-4", iconColor)} />
@@ -39,9 +39,9 @@ export function StatCard({
                 <div className="flex items-center justify-between pt-2">
                     <div className="space-y-1">
                         {loading ? (
-                            <div className="h-8 w-24 bg-gray-200 bg-muted animate-pulse rounded" />
+                            <div className="h-8 w-24 bg-muted animate-pulse rounded" />
                         ) : (
-                            <div className="text-2xl font-bold text-foreground text-foreground">{value}</div>
+                            <div className="text-2xl font-bold text-foreground">{value}</div>
                         )}
 
                         {(change || description) && (

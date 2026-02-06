@@ -161,7 +161,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
         >
           {/* Loading Skeleton */}
           {imageLoading && !imageError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse">
+            <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
                 <p className="text-sm text-muted-foreground">Loading vehicle diagram...</p>

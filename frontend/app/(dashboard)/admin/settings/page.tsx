@@ -494,7 +494,7 @@ export default function SystemSettingsPage() {
                 onClick={() => handleCategorySelect(cat.value)}
                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isSelected
                   ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-card text-muted-foreground border-border hover:bg-muted border-border text-foreground dark:hover:bg-gray-700"
+                  : "bg-card text-muted-foreground border-border hover:bg-muted border-border text-foreground "
                   }`}
               >
                 {cat.label}
@@ -1107,7 +1107,7 @@ export default function SystemSettingsPage() {
                                             }
                                           }}
                                           disabled={!canManage}
-                                          className="h-7 px-2 text-[10px] text-foreground bg-gray-100 hover:bg-gray-200"
+                                          className="h-7 px-2 text-[10px] text-foreground bg-muted hover:bg-muted"
                                         >
                                           Edit
                                         </Button>

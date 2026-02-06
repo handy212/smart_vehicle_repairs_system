@@ -57,7 +57,7 @@ export function PrintLayout({
             <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-black print-header">
                 <div className="flex items-center gap-4">
                     {/* Logo Placeholder */}
-                    <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center font-bold text-muted-foreground text-lg print-header-logo">S</div>
+                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center font-bold text-muted-foreground text-lg print-header-logo">S</div>
 
                     <div className="company-details">
                         <h1 className="text-xl font-bold text-foreground leading-none mb-1">{companyInfo?.name || COMPANY_NAME}</h1>

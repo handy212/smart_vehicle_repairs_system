@@ -146,7 +146,7 @@ export default function ServiceBundlesPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="px-4 py-3 text-center">
-                                                <Badge variant="secondary" className="bg-gray-100 text-muted-foreground font-normal">
+                                                <Badge variant="secondary" className="bg-muted text-muted-foreground font-normal">
                                                     {bundle.items?.length || 0} Parts
                                                 </Badge>
                                             </TableCell>
@@ -158,7 +158,7 @@ export default function ServiceBundlesPage() {
                                             <TableCell className="px-4 py-3 text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 text-muted-foreground">
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground">
                                                             <MoreVertical className="w-3.5 h-3.5" />
                                                         </Button>
                                                     </DropdownMenuTrigger>

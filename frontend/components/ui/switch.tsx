@@ -22,7 +22,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           "disabled:cursor-not-allowed disabled:opacity-50",
           checked
             ? "bg-primary dark:bg-primary"
-            : "bg-gray-200 bg-muted",
+            : "bg-muted",
           className
         )}
         {...props}

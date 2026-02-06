@@ -92,7 +92,7 @@ export function TechnicianProductivityHeatmap({ data }: TechnicianProductivityHe
                                         return (
                                             <Tooltip key={m.key}>
                                                 <TooltipTrigger asChild>
-                                                    <div className="relative h-10 w-full bg-muted rounded-lg overflow-hidden border border-border border-border">
+                                                    <div className="relative h-10 w-full bg-muted rounded-lg overflow-hidden border border-border">
                                                         <div
                                                             className={cn("absolute inset-0 transition-all duration-500", m.color)}
                                                             style={{ opacity: 0.1 + intensity * 0.8 }}

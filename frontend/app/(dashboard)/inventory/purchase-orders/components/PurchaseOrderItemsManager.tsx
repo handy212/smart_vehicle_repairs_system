@@ -304,7 +304,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-muted-foreground hover:bg-gray-100"
+                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-muted-foreground hover:bg-muted"
                                                         onClick={() => setEditingItemId(null)}
                                                     >
                                                         <X className="w-4 h-4" />
@@ -385,7 +385,7 @@ function SearchResultItem({ part, onAdd, isAdding }: { part: any, onAdd: (data: 
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center text-muted-foreground shrink-0">
+                    <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center text-muted-foreground shrink-0">
                         <Package className="h-5 w-5" />
                     </div>
                     <div>

@@ -123,7 +123,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
           {navigationGroups.map((group) => (
             <div key={group.name}>
               {!isCollapsed && group.name !== "Main" && (
-                <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {group.name}
                 </h3>
               )}
@@ -147,7 +147,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                         isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
                         isActive
                           ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-                          : "text-muted-foreground text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground dark:hover:text-gray-100"
+                          : "text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground "
                       )}
                       style={isActive ? {
                         backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
@@ -203,26 +203,26 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
 
         {/* Footer */}
         {!isCollapsed && (
-          <div className="flex-shrink-0 p-4 border-t border-border border-border bg-muted/50 bg-background/50">
+          <div className="flex-shrink-0 p-4 border-t border-border bg-muted/50 bg-background/50">
             <div className="space-y-2">
               <Link
                 href="/help"
-                className="flex items-center px-3 py-2 text-sm text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-100 hover:bg-gray-100 hover:bg-muted rounded-lg transition-colors"
+                className="flex items-center px-3 py-2 text-sm text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted rounded-lg transition-colors"
               >
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Help & Support
               </Link>
-              <div className="px-3 py-2 text-xs text-muted-foreground text-muted-foreground">
+              <div className="px-3 py-2 text-xs text-muted-foreground">
                 Version {APP_CONFIG.version}
               </div>
             </div>
           </div>
         )}
         {isCollapsed && (
-          <div className="flex-shrink-0 p-2 border-t border-border border-border bg-muted/50 bg-background/50">
+          <div className="flex-shrink-0 p-2 border-t border-border bg-muted/50 bg-background/50">
             <button
               title="Help & Support"
-              className="w-full flex items-center justify-center p-2 text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-100 hover:bg-gray-100 hover:bg-muted rounded-lg transition-colors"
+              className="w-full flex items-center justify-center p-2 text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted rounded-lg transition-colors"
             >
               <HelpCircle className="w-5 h-5" />
             </button>

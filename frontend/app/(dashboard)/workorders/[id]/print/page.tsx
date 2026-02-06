@@ -72,7 +72,7 @@ export default function WorkOrderPrintPage() {
   const total = parseFloat(workOrder.total_cost || '0') || subtotal;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-muted">
       <PrintControls
         onPrint={() => window.print()}
         onDownloadPDF={handleDownloadPDF}
@@ -124,7 +124,7 @@ export default function WorkOrderPrintPage() {
             <h2 className="text-lg font-semibold text-foreground mb-2 border-b border-border pb-1">SERVICE TASKS</h2>
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-gray-100">
+                <tr className="bg-muted">
                   <th className="border border-border px-3 py-2 text-left">Task</th>
                   <th className="border border-border px-3 py-2 text-left">Status</th>
                   <th className="border border-border px-3 py-2 text-right">Hours</th>
@@ -159,7 +159,7 @@ export default function WorkOrderPrintPage() {
             <h2 className="text-lg font-semibold text-foreground mb-2 border-b border-border pb-1">PARTS USED</h2>
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-gray-100">
+                <tr className="bg-muted">
                   <th className="border border-border px-3 py-2 text-left">Part Number</th>
                   <th className="border border-border px-3 py-2 text-left">Description</th>
                   <th className="border border-border px-3 py-2 text-right">Qty</th>
@@ -203,7 +203,7 @@ export default function WorkOrderPrintPage() {
                     <td className="border border-border px-3 py-2 text-right font-semibold">Subtotal:</td>
                     <td className="border border-border px-3 py-2 text-right">{formatCurrency(subtotal)}</td>
                   </tr>
-                  <tr className="bg-gray-100">
+                  <tr className="bg-muted">
                     <td className="border border-border px-3 py-2 text-right font-bold text-lg">TOTAL:</td>
                     <td className="border border-border px-3 py-2 text-right font-bold text-lg">{formatCurrency(total)}</td>
                   </tr>

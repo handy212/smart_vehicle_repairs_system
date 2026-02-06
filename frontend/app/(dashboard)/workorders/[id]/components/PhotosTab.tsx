@@ -194,7 +194,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                       key={photo.id}
                       className="relative group border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
                     >
-                      <div className="aspect-square bg-gray-100 relative">
+                      <div className="aspect-square bg-muted relative">
                         <img
                           src={photo.photo}
                           alt={photo.caption || "Work order photo"}

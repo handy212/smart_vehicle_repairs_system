@@ -65,7 +65,7 @@ function KanbanColumn({ status, workOrders }: KanbanColumnProps) {
         <div className="min-h-[500px] space-y-3">
           {workOrders.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
                 <PremiumIcons.ClipboardList className="w-8 h-8 text-muted-foreground" />
               </div>
               <p className="text-xs">No work orders</p>

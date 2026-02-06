@@ -77,16 +77,16 @@ export function UserMenu() {
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
-                    className="flex items-center space-x-2 h-auto px-3 py-2 hover:bg-gray-100 hover:bg-muted"
+                    className="flex items-center space-x-2 h-auto px-3 py-2 hover:bg-muted hover:bg-muted"
                 >
                     <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center text-white font-semibold shadow-sm">
                         {user?.first_name?.[0] || user?.email?.[0] || "U"}
                     </div>
                     <div className="hidden md:block text-left">
-                        <p className="text-sm font-medium text-foreground text-foreground">
+                        <p className="text-sm font-medium text-foreground">
                             {user?.first_name} {user?.last_name}
                         </p>
-                        <p className="text-xs text-muted-foreground text-muted-foreground capitalize">{user?.role}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
                     </div>
                 </Button>
             </DropdownMenuTrigger>
@@ -94,10 +94,10 @@ export function UserMenu() {
             <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                     <div>
-                        <p className="text-sm font-semibold text-foreground text-foreground truncate">
+                        <p className="text-sm font-semibold text-foreground truncate">
                             {user?.first_name} {user?.last_name}
                         </p>
-                        <p className="text-xs text-muted-foreground text-muted-foreground mt-0.5 truncate">{user?.email}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{user?.email}</p>
                         <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full font-medium capitalize">
                             {user?.role}
                         </span>
@@ -119,7 +119,7 @@ export function UserMenu() {
                                 value={currentBranchId ? currentBranchId.toString() : ""}
                                 onChange={handleBranchChange}
                                 disabled={isBranchesLoading || sortedBranches.length === 0}
-                                className="w-full h-8 bg-muted border-border border-border rounded-lg text-xs px-2 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                                className="w-full h-8 bg-muted border-border rounded-lg text-xs px-2 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                             >
                                 {sortedBranches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>

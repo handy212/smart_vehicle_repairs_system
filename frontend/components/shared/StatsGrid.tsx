@@ -33,19 +33,19 @@ export function StatsGrid({ stats, className, columns = 4 }: StatsGridProps) {
             {stats.map((stat, index) => (
                 <Card
                     key={index}
-                    className="shadow-none border border-border border-border bg-muted/50 bg-muted/20 p-3 flex flex-col justify-between"
+                    className="shadow-none border border-border bg-muted/50 bg-muted/20 p-3 flex flex-col justify-between"
                 >
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-[10px] font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                                 {stat.label}
                             </p>
-                            <h3 className={cn("text-lg font-bold mt-0.5 text-foreground text-foreground", stat.color)}>
+                            <h3 className={cn("text-lg font-bold mt-0.5 text-foreground", stat.color)}>
                                 {stat.value}
                             </h3>
                         </div>
                         {stat.icon && (
-                            <stat.icon className="w-5 h-5 text-muted-foreground text-muted-foreground opacity-70" />
+                            <stat.icon className="w-5 h-5 text-muted-foreground opacity-70" />
                         )}
                     </div>
 
@@ -61,7 +61,7 @@ export function StatsGrid({ stats, className, columns = 4 }: StatsGridProps) {
                             >
                                 {stat.change.value}
                             </span>
-                            <span className="text-muted-foreground text-muted-foreground ml-1">vs last month</span>
+                            <span className="text-muted-foreground ml-1">vs last month</span>
                         </div>
                     )}
                 </Card>

@@ -510,7 +510,7 @@ export default function EmailTemplatesPage() {
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold">Content</Label>
                     <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "plain" | "html")} className="h-7">
-                      <TabsList className="h-7 p-0.5 bg-gray-100">
+                      <TabsList className="h-7 p-0.5 bg-muted">
                         <TabsTrigger value="plain" className="h-6 text-[10px] px-2">Plain Text</TabsTrigger>
                         <TabsTrigger value="html" className="h-6 text-[10px] px-2">HTML</TabsTrigger>
                       </TabsList>
@@ -626,7 +626,7 @@ export default function EmailTemplatesPage() {
                   onValueChange={setPreviewTab}
                   className="w-full"
                 >
-                  <TabsList className="w-full justify-start h-9 p-1 bg-gray-100 border-b border-border rounded-none mb-4">
+                  <TabsList className="w-full justify-start h-9 p-1 bg-muted border-b border-border rounded-none mb-4">
                     <TabsTrigger value="plain" className="text-xs h-7">Plain Text</TabsTrigger>
                     <TabsTrigger value="html" className="text-xs h-7" disabled={!previewTemplate.html_body}>HTML</TabsTrigger>
                   </TabsList>

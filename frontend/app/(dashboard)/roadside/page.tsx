@@ -431,7 +431,7 @@ export default function RoadsidePage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-6 w-6 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
+                                                            className="h-6 w-6 p-0  data-[state=open]:bg-muted dark:data-[state=open]:bg-gray-800"
                                                         >
                                                             <span className="sr-only">Open menu</span>
                                                             <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />

@@ -187,7 +187,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
 
                 {/* Left Col: Image Upload */}
                 <Card className="lg:col-span-1 overflow-hidden h-fit">
-                    <div className="aspect-video bg-muted bg-background/50 relative flex items-center justify-center border-b border-border border-border">
+                    <div className="aspect-video bg-muted bg-background/50 relative flex items-center justify-center border-b border-border">
                         {imagePreview ? (
                             <>
                                 <Image
@@ -214,8 +214,8 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                     </div>
                     <div className="p-4">
                         <label className="block w-full">
-                            <div className="flex items-center justify-center w-full px-4 py-2 border border-dashed border-border border-border rounded-md cursor-pointer hover:bg-muted hover:bg-muted/50 transition-colors">
-                                <span className="text-sm text-muted-foreground text-muted-foreground">
+                            <div className="flex items-center justify-center w-full px-4 py-2 border border-dashed border-border rounded-md cursor-pointer hover:bg-muted hover:bg-muted/50 transition-colors">
+                                <span className="text-sm text-muted-foreground">
                                     {imagePreview ? "Change Photo" : "Upload Photo"}
                                 </span>
                                 <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
@@ -230,7 +230,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                 {/* Right Col: Basic Info & VIN */}
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium flex items-center justify-between">
                                 Vehicle Identity
                                 {mode === 'edit' && <Badge variant="outline">Editing</Badge>}
@@ -289,7 +289,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Details & Specs</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 grid sm:grid-cols-3 gap-4">
@@ -389,7 +389,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Ownership</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4">
@@ -432,8 +432,8 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 {Object.entries(vinOtherInfo).slice(0, 8).map(([key, val]) => (
                                     val && typeof val === 'string' ? (
                                         <div key={key}>
-                                            <span className="block text-muted-foreground text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
-                                            <span className="font-medium text-foreground text-foreground">{val}</span>
+                                            <span className="block text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                                            <span className="font-medium text-foreground">{val}</span>
                                         </div>
                                     ) : null
                                 ))}

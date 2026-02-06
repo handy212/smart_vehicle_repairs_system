@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
             {dashboardStats?.recent_logs && dashboardStats.recent_logs.length > 0 ? (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {dashboardStats.recent_logs.slice(0, 5).map((log) => (
-                  <div key={log.id} className="p-4 hover:bg-muted dark:hover:bg-gray-900 transition-colors">
+                  <div key={log.id} className="p-4 hover:bg-muted  transition-colors">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center space-x-2">
                         <span className={cn("w-2 h-2 rounded-full",
@@ -206,7 +206,7 @@ export default function AdminDashboardPage() {
             {dashboardStats?.recent_backups && dashboardStats.recent_backups.length > 0 ? (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {dashboardStats.recent_backups.map((backup) => (
-                  <div key={backup.id} className="p-4 flex items-center justify-between hover:bg-muted dark:hover:bg-gray-900 transition-colors">
+                  <div key={backup.id} className="p-4 flex items-center justify-between hover:bg-muted  transition-colors">
                     <div>
                       <div className="flex items-center space-x-2">
                         <Database className="w-3.5 h-3.5 text-muted-foreground" />

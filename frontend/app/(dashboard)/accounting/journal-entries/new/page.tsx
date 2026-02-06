@@ -116,7 +116,7 @@ export default function NewJournalEntryPage() {
         <div className="space-y-6 p-6 max-w-5xl mx-auto">
             <div className="flex items-center gap-4">
                 <Link href="/accounting">
-                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground text-muted-foreground dark:hover:text-gray-100">
+                    <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground text-muted-foreground ">
                         <ArrowLeft className="w-4 h-4 mr-1" />
                         Back
                     </Button>

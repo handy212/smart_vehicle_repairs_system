@@ -354,7 +354,7 @@ export default function EstimateDetailPage() {
                         window.print();
                         setShowActionsMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
                     >
                       <Printer className="w-4 h-4" />
                       Print
@@ -369,7 +369,7 @@ export default function EstimateDetailPage() {
                         setShowActionsMenu(false);
                       }}
                       disabled={isDownloading}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Download className="w-4 h-4" />
                       {isDownloading ? 'Generating...' : 'Download PDF'}
@@ -380,7 +380,7 @@ export default function EstimateDetailPage() {
                         setShowActionsMenu(false);
                       }}
                       disabled={sendEmailMutation.isPending}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Mail className="w-4 h-4" />
                       {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
@@ -388,7 +388,7 @@ export default function EstimateDetailPage() {
                     <Link href={`/billing/estimates/${estimateId}/edit`}>
                       <button
                         onClick={() => setShowActionsMenu(false)}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
                       >
                         <Edit className="w-4 h-4" />
                         Edit
@@ -401,7 +401,7 @@ export default function EstimateDetailPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={approveEstimateMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-t border-border mt-1"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-t border-border mt-1"
                       >
                         <CheckCircle className="w-4 h-4" />
                         {approveEstimateMutation.isPending ? "Approving..." : "Approve Estimate"}
@@ -416,7 +416,7 @@ export default function EstimateDetailPage() {
                             setShowActionsMenu(false);
                           }}
                           disabled={isConverting}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <FileText className="w-4 h-4" />
                           To Invoice
@@ -427,7 +427,7 @@ export default function EstimateDetailPage() {
                             setShowActionsMenu(false);
                           }}
                           disabled={isConverting}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Wrench className="w-4 h-4" />
                           To Work Order

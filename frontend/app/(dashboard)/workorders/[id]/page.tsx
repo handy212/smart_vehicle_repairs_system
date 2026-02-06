@@ -346,7 +346,7 @@ export default function WorkOrderDetailPage() {
               variant="ghost"
               size="sm"
               onClick={() => router.back()}
-              className="mb-1 -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground dark:hover:text-gray-100"
+              className="mb-1 -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground "
             >
               <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
               Back
@@ -394,7 +394,7 @@ export default function WorkOrderDetailPage() {
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-card/90 backdrop-blur-xl bg-muted/90 rounded-xl shadow-xl border border-border/50 border-border/50 z-20 overflow-hidden ring-1 ring-black/5">
                     <div
-                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
                       onClick={() => {
                         setShowPrintMenu(false);
                         downloadPDF({
@@ -410,7 +410,7 @@ export default function WorkOrderDetailPage() {
                     <Link
                       href={`/workorders/${workOrderId}/jobcard`}
                       target="_blank"
-                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted "
                       onClick={() => setShowPrintMenu(false)}
                     >
                       <FileText className="w-4 h-4 inline mr-2" />
@@ -420,7 +420,7 @@ export default function WorkOrderDetailPage() {
                       <>
                         <div className="border-t border-border my-1" />
                         <div
-                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
                           onClick={() => {
                             setShowPrintMenu(false);
                             handlePrintRecommendations("pdf");
@@ -430,7 +430,7 @@ export default function WorkOrderDetailPage() {
                           Print Recommendations (PDF)
                         </div>
                         <div
-                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
                           onClick={() => {
                             setShowPrintMenu(false);
                             handlePrintRecommendations("html");

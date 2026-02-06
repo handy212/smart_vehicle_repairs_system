@@ -319,7 +319,7 @@ export default function TimeTrackingPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono font-semibold text-foreground text-foreground">
+                        <div className="font-mono font-semibold text-foreground">
                           {formatDuration(log.duration_hours)}
                         </div>
                         {!log.synced && (

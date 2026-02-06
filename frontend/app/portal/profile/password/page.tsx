@@ -123,7 +123,7 @@ export default function ChangePasswordPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
                                     >
                                         {showCurrentPassword ? (
                                             <EyeOff className="w-4 h-4" />
@@ -152,7 +152,7 @@ export default function ChangePasswordPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowNewPassword(!showNewPassword)}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
                                     >
                                         {showNewPassword ? (
                                             <EyeOff className="w-4 h-4" />
@@ -184,7 +184,7 @@ export default function ChangePasswordPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
                                     >
                                         {showConfirmPassword ? (
                                             <EyeOff className="w-4 h-4" />

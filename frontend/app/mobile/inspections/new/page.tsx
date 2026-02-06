@@ -142,7 +142,7 @@ export default function NewInspectionPage() {
             onChange={(e) =>
               setFormData({ ...formData, inspection_type: e.target.value })
             }
-            className="w-full px-3 py-2 border border-border border-border rounded-md bg-card text-foreground"
+            className="w-full px-3 py-2 border border-border rounded-md bg-card text-foreground"
           >
             <option value="pre_service">Pre-Service</option>
             <option value="post_service">Post-Service</option>

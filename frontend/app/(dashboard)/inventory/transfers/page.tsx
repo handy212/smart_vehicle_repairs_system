@@ -276,7 +276,7 @@ export default function TransfersPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-7 w-7 p-0 hover:bg-gray-100 text-muted-foreground"
+                                                            className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <MoreVertical className="w-3.5 h-3.5" />

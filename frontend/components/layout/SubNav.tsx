@@ -79,7 +79,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
       <div className={cn("p-4", isCollapsed && "px-2")}>
         <div className={cn("flex items-center mb-3", isCollapsed ? "justify-center" : "justify-between")}>
           {!isCollapsed && (
-            <h2 className="text-xs font-semibold text-muted-foreground text-muted-foreground uppercase tracking-wider">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {title}
             </h2>
           )}
@@ -120,7 +120,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
                   "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
                   isActive
                     ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                    : "text-muted-foreground text-muted-foreground hover:bg-card/60 hover:bg-muted/50 hover:text-foreground dark:hover:text-gray-100",
+                    : "text-muted-foreground hover:bg-card/60 hover:bg-muted/50 hover:text-foreground ",
                   isCollapsed && "justify-center"
                 )}
                 style={isActive ? {

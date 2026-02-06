@@ -259,7 +259,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                 {/* Sidebar */}
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Status & Settings</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">

@@ -449,11 +449,11 @@ export default function AuditLogPage() {
             {selectedLog && (
               <div className="flex-1 overflow-y-auto">
                 {/* Top Meta Section */}
-                <div className="grid grid-cols-2 gap-px bg-gray-200 bg-muted border-b">
+                <div className="grid grid-cols-2 gap-px bg-muted border-b">
                   <div className="bg-card bg-background p-6">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User / Actor</h4>
                     <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-muted-foreground font-bold text-lg">
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-lg">
                         {selectedLog.user_name?.charAt(0) || "S"}
                       </div>
                       <div>
@@ -473,7 +473,7 @@ export default function AuditLogPage() {
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-2">
-                      IP: <span className="font-mono text-foreground text-foreground">{selectedLog.ip_address || "N/A"}</span>
+                      IP: <span className="font-mono text-foreground">{selectedLog.ip_address || "N/A"}</span>
                     </div>
                   </div>
                 </div>

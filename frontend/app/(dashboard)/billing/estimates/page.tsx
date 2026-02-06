@@ -278,8 +278,8 @@ export default function EstimatesPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-9 w-48 bg-muted rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-muted rounded animate-pulse"></div>
           </div>
         </div>
         <Card>
@@ -376,7 +376,7 @@ export default function EstimatesPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         <Download className="w-4 h-4" />
                         Export CSV
@@ -734,7 +734,7 @@ export default function EstimatesPage() {
                               });
                               setOpenMenuId(openMenuId === estimate.id ? null : estimate.id);
                             }}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-gray-100"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                           >
                             <MoreVertical className="w-3.5 h-3.5" />
                           </Button>
@@ -789,7 +789,7 @@ export default function EstimatesPage() {
                           setOpenMenuId(null);
                           setMenuPosition(null);
                         }}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
                       >
                         <Eye className="w-4 h-4" />
                         View
@@ -802,7 +802,7 @@ export default function EstimatesPage() {
                               setOpenMenuId(null);
                               setMenuPosition(null);
                             }}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
                           >
                             <Edit className="w-4 h-4" />
                             Edit
@@ -830,7 +830,7 @@ export default function EstimatesPage() {
                               });
                             }
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
                         >
                           <Copy className="w-4 h-4" />
                           Duplicate
@@ -854,7 +854,7 @@ export default function EstimatesPage() {
                                 });
                               }
                             }}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
                           >
                             <Mail className="w-4 h-4" />
                             Send

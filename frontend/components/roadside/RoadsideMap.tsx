@@ -33,7 +33,7 @@ export default function RoadsideMap({ latitude, longitude, address }: RoadsideMa
         setIsMounted(true);
     }, []);
 
-    if (!isMounted) return <div className="h-[300px] w-full bg-gray-100 bg-muted rounded-xl animate-pulse flex items-center justify-center text-muted-foreground">Loading Map...</div>;
+    if (!isMounted) return <div className="h-[300px] w-full bg-muted rounded-xl animate-pulse flex items-center justify-center text-muted-foreground">Loading Map...</div>;
 
     const position: [number, number] = [latitude, longitude];
 

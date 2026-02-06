@@ -240,8 +240,8 @@ export default function InvoicesPage() {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
-                        <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-9 w-48 bg-muted rounded animate-pulse mb-2"></div>
+                        <div className="h-5 w-64 bg-muted rounded animate-pulse"></div>
                     </div>
                 </div>
                 <Card>
@@ -346,7 +346,7 @@ export default function InvoicesPage() {
                                                     setShowActionsMenu(false);
                                                 }}
                                                 disabled={!data?.results || data.results.length === 0}
-                                                className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                             >
                                                 <Download className="w-4 h-4" />
                                                 Export CSV
@@ -773,7 +773,7 @@ export default function InvoicesPage() {
                             <div className="col-span-3">
                                 <select
                                     id="status"
-                                    className="flex h-10 w-full rounded-md border border-border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={bulkStatus}
                                     onChange={(e) => setBulkStatus(e.target.value)}
                                 >

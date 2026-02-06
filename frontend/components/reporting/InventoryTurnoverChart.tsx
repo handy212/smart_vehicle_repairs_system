@@ -78,7 +78,7 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
                 {data.slice(0, 6).map((item) => (
                     <div
                         key={item.part.id}
-                        className="p-4 rounded-xl bg-muted/50 border border-border border-border"
+                        className="p-4 rounded-xl bg-muted/50 border border-border"
                     >
                         <div className="flex justify-between items-start mb-2">
                             <div>

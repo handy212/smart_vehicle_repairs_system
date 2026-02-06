@@ -30,7 +30,7 @@ export function SortableHeader({
   return (
     <th
       className={cn(
-        "px-6 py-3 text-left text-xs font-medium text-muted-foreground text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none",
+        "px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted  transition-colors select-none",
         className
       )}
       onClick={() => onSort(field)}
@@ -43,7 +43,7 @@ export function SortableHeader({
           ) : direction === "desc" ? (
             <ArrowDown className="w-4 h-4 text-muted-foreground text-foreground" />
           ) : (
-            <ArrowUpDown className="w-4 h-4 text-muted-foreground text-muted-foreground" />
+            <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
           )}
         </span>
       </div>

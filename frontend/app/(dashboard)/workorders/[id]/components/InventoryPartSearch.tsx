@@ -82,7 +82,7 @@ export default function InventoryPartSearch({ onSelect, className }: InventoryPa
                                 <button
                                     key={part.id}
                                     type="button"
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 flex flex-col items-start gap-1"
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted focus:bg-muted flex flex-col items-start gap-1"
                                     onClick={() => handleSelect(part)}
                                 >
                                     <div className="flex justify-between w-full font-medium text-foreground">

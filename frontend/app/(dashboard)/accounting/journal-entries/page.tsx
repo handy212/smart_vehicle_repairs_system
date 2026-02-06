@@ -65,7 +65,7 @@ export default function JournalEntriesPage() {
                                 {entries?.results?.map((entry: any) => (
                                     <TableRow
                                         key={entry.id}
-                                        className="cursor-pointer hover:bg-muted dark:hover:bg-gray-900"
+                                        className="cursor-pointer hover:bg-muted "
                                         onClick={() => router.push(`/accounting/journal-entries/${entry.id}`)}
                                     >
                                         <TableCell className="font-medium">

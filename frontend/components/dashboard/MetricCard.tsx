@@ -39,7 +39,7 @@ export function MetricCard({ title, value, trend, icon, variant = "default", dat
             case "warning": return { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-600 dark:text-amber-400", stroke: "#f59e0b", fill: "#f59e0b" };
             case "danger": return { bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-600 dark:text-rose-400", stroke: "#f43f5e", fill: "#f43f5e" };
             case "info": return { bg: "bg-primary/10 dark:bg-orange-950/30", text: "text-primary", stroke: "#3b82f6", fill: "#3b82f6" };
-            default: return { bg: "bg-muted/50", text: "text-muted-foreground text-muted-foreground", stroke: "#6b7280", fill: "#6b7280" };
+            default: return { bg: "bg-muted/50", text: "text-muted-foreground", stroke: "#6b7280", fill: "#6b7280" };
         }
     };
 

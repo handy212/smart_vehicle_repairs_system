@@ -482,7 +482,7 @@ export default function NewUserPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
                         title={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -535,7 +535,7 @@ export default function NewUserPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword2(!showPassword2)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground "
                       title={showPassword2 ? "Hide password" : "Show password"}
                     >
                       {showPassword2 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -578,7 +578,7 @@ export default function NewUserPage() {
                           branches.map((branch) => (
                             <label
                               key={branch.id}
-                              className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-border border-border transition-colors"
+                              className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-border transition-colors"
                             >
                               <input
                                 type="checkbox"

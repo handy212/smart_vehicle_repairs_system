@@ -15,7 +15,7 @@ export default function PublicLayout({
                         </div>
                         <div className="font-bold text-lg text-foreground">Smart Repairs</div>
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground bg-gray-100 px-3 py-1 rounded-full">
+                    <div className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
                         Customer Portal
                     </div>
                 </div>

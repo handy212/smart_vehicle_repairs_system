@@ -264,7 +264,7 @@ export default function UsersManagementPage() {
                     <TableRow key={user.id} className="group hover:bg-muted/80 hover:bg-muted/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/admin/users/${user.id}`)}>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-muted-foreground font-bold text-xs flex-shrink-0 border border-border bg-muted text-muted-foreground border-border">
+                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-xs flex-shrink-0 border border-border bg-muted text-muted-foreground border-border">
                             {user.first_name?.[0] || user.email[0].toUpperCase()}
                           </div>
                           <div className="ml-3">
@@ -313,7 +313,7 @@ export default function UsersManagementPage() {
                         <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100 hover:bg-muted">
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted hover:bg-muted">
                                 <div className="flex gap-0.5">
                                   <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
                                   <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />

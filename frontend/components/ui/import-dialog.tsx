@@ -167,7 +167,7 @@ export function ImportDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="border-b pb-4">
           <div className="flex items-center justify-between pr-8">
-            <DialogTitle className="text-xl font-semibold text-foreground text-foreground">{title}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-foreground">{title}</DialogTitle>
             <DialogClose onOpenChange={handleClose} />
           </div>
         </DialogHeader>
@@ -259,14 +259,14 @@ export function ImportDialog({
           </div>
           
           {showPreview && preview && (
-            <div className="space-y-2 border border-border border-border rounded-md p-3 bg-muted bg-background">
+            <div className="space-y-2 border border-border rounded-md p-3 bg-muted bg-background">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-foreground text-foreground">CSV Preview</h4>
-                <span className="text-xs text-muted-foreground text-muted-foreground">
+                <h4 className="text-sm font-medium text-foreground">CSV Preview</h4>
+                <span className="text-xs text-muted-foreground">
                   Showing first {preview.rows.length} of {preview.totalRows} rows
                 </span>
               </div>
-              <div className="overflow-x-auto max-h-64 overflow-y-auto border border-border border-border rounded bg-card">
+              <div className="overflow-x-auto max-h-64 overflow-y-auto border border-border rounded bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -282,7 +282,7 @@ export function ImportDialog({
                       <TableRow key={rowIdx}>
                         {preview.headers.map((header, colIdx) => (
                           <TableCell key={colIdx} className="text-xs">
-                            {row.data[header] || <span className="text-muted-foreground text-muted-foreground">-</span>}
+                            {row.data[header] || <span className="text-muted-foreground">-</span>}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -294,7 +294,7 @@ export function ImportDialog({
           )}
 
           {result && (
-            <div className="space-y-2 p-4 bg-muted bg-background rounded-md border border-border border-border">
+            <div className="space-y-2 p-4 bg-muted bg-background rounded-md border border-border">
               <div className="flex items-center gap-2">
                 {result.imported > 0 ? (
                   <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -322,7 +322,7 @@ export function ImportDialog({
                         <li key={idx}>{error}</li>
                       ))}
                       {result.errors.length > 10 && (
-                        <li className="text-muted-foreground text-muted-foreground">
+                        <li className="text-muted-foreground">
                           ... and {result.errors.length - 10} more errors
                         </li>
                       )}

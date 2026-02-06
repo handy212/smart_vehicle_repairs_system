@@ -125,7 +125,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                 <div className="lg:col-span-2 space-y-6">
                     {/* Personal Info */}
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
                                 <User className="w-4 h-4 text-primary" />
                                 Personal Information
@@ -178,7 +178,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                     {/* Business Info (Conditional) */}
                     {(customerType === "business" || customerType === "fleet") && (
                         <Card className="border-l-4 border-l-primary">
-                            <CardHeader className="pb-3 border-b border-border border-border">
+                            <CardHeader className="pb-3 border-b border-border">
                                 <CardTitle className="text-base font-medium flex items-center gap-2">
                                     <Building2 className="w-4 h-4 text-primary" />
                                     Business Details
@@ -217,7 +217,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
 
                     {/* Portal Access */}
                     <Card className="border-l-4 border-l-green-500">
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Portal Access</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
@@ -284,7 +284,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                 {/* Sidebar Column */}
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Configuration</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
@@ -342,7 +342,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">

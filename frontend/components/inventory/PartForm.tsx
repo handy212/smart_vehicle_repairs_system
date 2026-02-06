@@ -337,7 +337,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                 {/* Sidebar */}
                 <div className="space-y-6">
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
                                 <Package className="w-4 h-4 text-orange-500" />
                                 Supplier
@@ -355,7 +355,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Status</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">
@@ -381,7 +381,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3 border-b border-border border-border">
+                        <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium">Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">

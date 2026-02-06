@@ -374,7 +374,7 @@ export default function ReconciliationDetailPage() {
                             setViewMatched(v);
                             setSelectedBankLine(null);
                         }} className="w-auto">
-                            <TabsList className="grid w-full grid-cols-2 h-7 bg-gray-200/50">
+                            <TabsList className="grid w-full grid-cols-2 h-7 bg-muted/50">
                                 <TabsTrigger value="unmatched" className="text-xs px-2 h-6 data-[state=active]:bg-card">Unmatched</TabsTrigger>
                                 <TabsTrigger value="matched" className="text-xs px-2 h-6 data-[state=active]:bg-card">Matched</TabsTrigger>
                             </TabsList>

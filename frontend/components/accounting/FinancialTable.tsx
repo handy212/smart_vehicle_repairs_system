@@ -63,15 +63,15 @@ export function FinancialTable({
     };
 
     return (
-        <div className={cn("rounded-lg border border-border border-border overflow-hidden", className)}>
+        <div className={cn("rounded-lg border border-border overflow-hidden", className)}>
             <Table>
                 <TableHeader>
-                    <TableRow className="bg-muted bg-background hover:bg-muted dark:hover:bg-gray-900">
+                    <TableRow className="bg-muted bg-background hover:bg-muted ">
                         {columns.map((column) => (
                             <TableHead
                                 key={column.key}
                                 className={cn(
-                                    "text-[10px] uppercase tracking-wider font-bold text-muted-foreground text-muted-foreground",
+                                    "text-[10px] uppercase tracking-wider font-bold text-muted-foreground",
                                     compact ? "h-8 px-3" : "h-10 px-4",
                                     column.align === "right" && "text-right",
                                     column.align === "center" && "text-center",
@@ -87,11 +87,11 @@ export function FinancialTable({
                     {sections.map((section, sectionIndex) => (
                         <React.Fragment key={sectionIndex}>
                             {section.title && (
-                                <TableRow className="bg-gray-100 bg-muted hover:bg-gray-100 hover:bg-muted">
+                                <TableRow className="bg-muted hover:bg-muted hover:bg-muted">
                                     <TableCell
                                         colSpan={columns.length}
                                         className={cn(
-                                            "font-bold text-foreground text-foreground",
+                                            "font-bold text-foreground",
                                             compact ? "py-2 px-3 text-sm" : "py-3 px-4 text-base"
                                         )}
                                     >
@@ -103,7 +103,7 @@ export function FinancialTable({
                                 <TableRow
                                     key={rowIndex}
                                     className={cn(
-                                        "border-b border-border border-border",
+                                        "border-b border-border",
                                         rowIndex % 2 === 0 ? "bg-card bg-background" : "bg-muted/50 bg-background/50",
                                         section.className
                                     )}
@@ -115,7 +115,7 @@ export function FinancialTable({
                                                 compact ? "py-1.5 px-3 text-xs" : "py-2 px-4 text-sm",
                                                 column.align === "right" && "text-right font-mono",
                                                 column.align === "center" && "text-center",
-                                                column.format === "currency" && "font-mono text-foreground text-foreground",
+                                                column.format === "currency" && "font-mono text-foreground",
                                                 column.className
                                             )}
                                         >
@@ -125,10 +125,10 @@ export function FinancialTable({
                                 </TableRow>
                             ))}
                             {section.showTotal && section.data.length > 0 && (
-                                <TableRow className="bg-gray-100 bg-muted font-bold border-t-2 border-border border-border">
+                                <TableRow className="bg-muted font-bold border-t-2 border-border">
                                     <TableCell
                                         className={cn(
-                                            "font-bold text-foreground text-foreground",
+                                            "font-bold text-foreground",
                                             compact ? "py-2 px-3 text-sm" : "py-3 px-4 text-base"
                                         )}
                                     >
@@ -141,7 +141,7 @@ export function FinancialTable({
                                                 "font-bold",
                                                 compact ? "py-2 px-3 text-sm" : "py-3 px-4 text-base",
                                                 column.align === "right" && "text-right font-mono",
-                                                column.format === "currency" && "text-foreground text-foreground"
+                                                column.format === "currency" && "text-foreground"
                                             )}
                                         >
                                             {column.format === "currency" || column.format === "number"

@@ -555,7 +555,7 @@ export default function NewWorkOrderPage() {
               variant="ghost"
               size="sm"
               onClick={() => router.back()}
-              className="w-fit -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground dark:hover:text-gray-100"
+              className="w-fit -ml-2 h-8 text-muted-foreground hover:text-foreground text-muted-foreground "
             >
               <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
               Back
@@ -1013,7 +1013,7 @@ export default function NewWorkOrderPage() {
                           {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
                             <label
                               key={concern.value}
-                              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 hover:bg-muted p-1.5 rounded"
+                              className="flex items-center space-x-2 cursor-pointer hover:bg-muted hover:bg-muted p-1.5 rounded"
                             >
                               <input
                                 type="checkbox"
@@ -1119,7 +1119,7 @@ export default function NewWorkOrderPage() {
             <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-card/60 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
               <CardContent className="p-0">
                 {/* Header / Toggle Area */}
-                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted hover:bg-muted/50 border border-dashed border-border border-border'}`}
+                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted hover:bg-muted/50 border border-dashed border-border'}`}
                   onClick={() => {
                     const newState = !isWarrantyRework;
                     setIsWarrantyRework(newState);
@@ -1130,7 +1130,7 @@ export default function NewWorkOrderPage() {
                     }
                   }}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-muted-foreground bg-muted text-muted-foreground'}`}>
+                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-muted text-muted-foreground bg-muted text-muted-foreground'}`}>
                       <AlertCircle className="w-5 h-5" />
                     </div>
                     <div>
@@ -1145,7 +1145,7 @@ export default function NewWorkOrderPage() {
 
                   <div className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isWarrantyRework} readOnly />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer bg-muted peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-border peer-checked:bg-primary"></div>
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer bg-muted peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-border peer-checked:bg-primary"></div>
                   </div>
                 </div>
 
@@ -1189,7 +1189,7 @@ export default function NewWorkOrderPage() {
                               >
                                 <div className="flex justify-between items-start mb-1">
                                   <span className="font-bold text-sm text-foreground">{wo.work_order_number}</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 bg-muted text-muted-foreground font-medium uppercase tracking-wide">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium uppercase tracking-wide">
                                     {wo.days_ago !== null ? `${wo.days_ago} DAYS AGO` : 'N/A'}
                                   </span>
                                 </div>

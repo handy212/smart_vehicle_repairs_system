@@ -24,8 +24,12 @@ echo "---"
 # Function to replace in TSX/TS files
 replace_in_tsx() {
     # Match both text and background grays more aggressively
-    # Uses sed with basic regex, but handles common variations
-    find frontend -type f \( -name "*.tsx" -o -name "*.ts" \) -exec sed -i "$1" {} +
+    # Exclude build artifacts and dependencies
+    find frontend -type f \( -name "*.tsx" -o -name "*.ts" \) \
+        -not -path "*/node_modules/*" \
+        -not -path "*/.next/*" \
+        -not -path "*/.git/*" \
+        -exec sed -i "$1" {} +
 }
 
 # 1. Background Colors

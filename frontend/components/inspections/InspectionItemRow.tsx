@@ -71,7 +71,7 @@ export function InspectionItemRow({
 
     return (
         <div className={cn(
-            "border-b border-border border-border transition-colors",
+            "border-b border-border transition-colors",
             isCriticalRemaining && "bg-red-50/30 dark:bg-red-950/20 border-l-4 border-l-red-500",
             !isLast && "border-b",
             isLast && "border-b-0"
@@ -82,8 +82,8 @@ export function InspectionItemRow({
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                         <h4 className={cn(
-                            "text-sm font-semibold text-foreground text-foreground truncate",
-                            !hasResult && "text-muted-foreground text-muted-foreground"
+                            "text-sm font-semibold text-foreground truncate",
+                            !hasResult && "text-muted-foreground"
                         )}>
                             {item.name}
                         </h4>
@@ -99,7 +99,7 @@ export function InspectionItemRow({
                         )}
                     </div>
                     {item.description && (
-                        <p className="text-xs text-muted-foreground text-muted-foreground line-clamp-1">
+                        <p className="text-xs text-muted-foreground line-clamp-1">
                             {item.description}
                         </p>
                     )}
@@ -176,7 +176,7 @@ export function InspectionItemRow({
                                     "w-7 h-7 text-xs font-semibold rounded border transition-all",
                                     result.rating_value === n
                                         ? "bg-primary text-white border-primary"
-                                        : "bg-card border-border border-border hover:border-orange-400"
+                                        : "bg-card border-border hover:border-orange-400"
                                 )}
                             >
                                 {n}
@@ -189,7 +189,7 @@ export function InspectionItemRow({
                     <select
                         value={result.condition || ""}
                         onChange={(e) => onUpdate("condition", e.target.value || null)}
-                        className="h-8 w-32 rounded-md border border-border border-border bg-card bg-background px-2 text-xs shadow-sm"
+                        className="h-8 w-32 rounded-md border border-border bg-card bg-background px-2 text-xs shadow-sm"
                     >
                         <option value="">Select...</option>
                         <option value="excellent">Excellent</option>
@@ -244,7 +244,7 @@ export function InspectionItemRow({
 
             {/* Expanded Content */}
             {isExpanded && (
-                <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border border-border bg-muted/50 bg-background/50">
+                <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border bg-muted/50 bg-background/50">
                     {/* Text Input */}
                     {item.item_type === "text" && (
                         <div className="pt-2">
@@ -280,7 +280,7 @@ export function InspectionItemRow({
                             </Label>
                             <div className="flex flex-wrap gap-2">
                                 {result.photos.map((photo: InspectionPhoto) => (
-                                    <div key={photo.id} className="relative group w-20 h-20 rounded overflow-hidden border border-border border-border">
+                                    <div key={photo.id} className="relative group w-20 h-20 rounded overflow-hidden border border-border">
                                         <Image
                                             src={photo.image}
                                             alt="Inspection"
@@ -301,7 +301,7 @@ export function InspectionItemRow({
                     )}
 
                     {/* Needs Attention */}
-                    <div className="pt-2 border-t border-border border-border">
+                    <div className="pt-2 border-t border-border">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"

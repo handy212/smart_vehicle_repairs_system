@@ -272,7 +272,7 @@ export default function ImportHistoryPage() {
                   {data.count > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/50">
                       <p className="text-xs text-muted-foreground">
-                        Showing <span className="font-medium text-foreground text-foreground">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-foreground text-foreground">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-foreground text-foreground">{data.count}</span> results
+                        Showing <span className="font-medium text-foreground">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-foreground">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-foreground">{data.count}</span> results
                       </p>
                       <div className="flex items-center gap-2">
                         <Button

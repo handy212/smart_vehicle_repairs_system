@@ -305,7 +305,7 @@ export default function NotificationsPage() {
 
                 <div className="flex items-start gap-3">
                   {/* Avatar/Icon */}
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 bg-muted flex items-center justify-center text-muted-foreground">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                     {getTypeIcon(notification.notification_type)}
                   </div>
 

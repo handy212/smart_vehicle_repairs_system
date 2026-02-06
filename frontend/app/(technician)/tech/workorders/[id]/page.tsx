@@ -73,8 +73,8 @@ export default function TechnicianWorkOrderPage() {
             case "in_progress": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
             case "assigned": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
             case "paused": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
-            case "completed": return "bg-gray-100 text-foreground bg-background/30 text-foreground";
-            default: return "bg-gray-100 text-foreground";
+            case "completed": return "bg-muted text-foreground bg-background/30 text-foreground";
+            default: return "bg-muted text-foreground";
         }
     };
 
@@ -232,7 +232,7 @@ export default function TechnicianWorkOrderPage() {
                         size="lg"
                         className={`h-14 px-8 rounded-full shadow-lg transition-all ${isWorking
                             ? "bg-primary hover:bg-primary/90 text-white"
-                            : "bg-gray-200 text-muted-foreground cursor-not-allowed hidden"
+                            : "bg-muted text-muted-foreground cursor-not-allowed hidden"
                             }`}
                         onClick={() => {
                             if (confirm("Are you sure you want to complete this job?")) {

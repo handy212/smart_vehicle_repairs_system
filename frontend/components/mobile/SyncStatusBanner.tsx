@@ -109,7 +109,7 @@ export function SyncStatusBanner() {
                 {/* Right: Sync Button & Last Sync */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                     {lastSync && (
-                        <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground text-muted-foreground">
+                        <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
                             <Check className="h-3 w-3" />
                             <span>
                                 {new Date(lastSync).toLocaleTimeString([], {

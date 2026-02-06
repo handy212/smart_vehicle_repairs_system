@@ -139,7 +139,7 @@ export function AdvancedFilters({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {filters.map((filter) => (
                     <div key={filter.key} className="space-y-2">
-                      <Label htmlFor={filter.key} className="text-sm font-medium text-foreground text-foreground">
+                      <Label htmlFor={filter.key} className="text-sm font-medium text-foreground">
                         {filter.label}
                       </Label>
                       {filter.type === "text" && (

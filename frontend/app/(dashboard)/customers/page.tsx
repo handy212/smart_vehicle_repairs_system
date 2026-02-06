@@ -171,7 +171,7 @@ const CustomerRow = memo(function CustomerRow({
           <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-gray-100 hover:bg-muted">
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-muted hover:bg-muted">
                   <div className="flex gap-0.5">
                     <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
                     <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />

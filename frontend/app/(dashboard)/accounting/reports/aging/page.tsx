@@ -151,7 +151,7 @@ export default function AgingReportPage() {
                         <>
                             {/* Summary Cards */}
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                                <Card className="bg-slate-50 border-border">
+                                <Card className="bg-muted border-border">
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground">Current</CardTitle>
                                     </CardHeader>
@@ -191,7 +191,7 @@ export default function AgingReportPage() {
                                         <div className="text-lg font-bold text-red-900">{formatCurrency(report.summary['90+'])}</div>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-gray-100 border-border">
+                                <Card className="bg-muted border-border">
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-foreground">Total</CardTitle>
                                     </CardHeader>

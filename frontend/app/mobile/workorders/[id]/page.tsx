@@ -377,7 +377,7 @@ export default function MobileWorkOrderDetailPage() {
 
   const getPartStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      draft: "bg-gray-100 text-foreground",
+      draft: "bg-muted text-foreground",
       pending: "bg-yellow-100 text-yellow-700",
       ordered: "bg-orange-100 text-primary",
       ready: "bg-green-100 text-green-700",
@@ -385,7 +385,7 @@ export default function MobileWorkOrderDetailPage() {
       installed: "bg-green-100 text-green-700",
       returned: "bg-red-100 text-red-700",
     };
-    return colors[status] || "bg-gray-100 text-foreground";
+    return colors[status] || "bg-muted text-foreground";
   };
 
   return (

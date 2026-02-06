@@ -63,14 +63,14 @@ export function InspectionItemCard({
     return (
         <Card className={cn(
             "shadow-none border transition-all duration-200",
-            isCriticalRemaining ? "border-red-500 ring-1 ring-red-500/20 bg-red-50/10" : "border-border border-border hover:border-border dark:hover:border-gray-700"
+            isCriticalRemaining ? "border-red-500 ring-1 ring-red-500/20 bg-red-50/10" : "border-border hover:border-border dark:hover:border-gray-700"
         )}>
             <CardContent className="p-4">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-sm font-bold text-foreground text-foreground leading-tight">
+                            <h4 className="text-sm font-bold text-foreground leading-tight">
                                 {item.name}
                             </h4>
                             {item.is_critical && (
@@ -80,7 +80,7 @@ export function InspectionItemCard({
                             )}
                         </div>
                         {item.description && (
-                            <p className="text-[11px] text-muted-foreground text-muted-foreground line-clamp-1">
+                            <p className="text-[11px] text-muted-foreground line-clamp-1">
                                 {item.description}
                             </p>
                         )}
@@ -195,7 +195,7 @@ export function InspectionItemCard({
                                             "w-8 h-8 text-[11px] font-bold rounded border transition-all duration-200",
                                             result.rating_value === n
                                                 ? "bg-primary text-white border-primary"
-                                                : "bg-card border-border border-border hover:border-orange-400"
+                                                : "bg-card border-border hover:border-orange-400"
                                         )}
                                     >
                                         {n}
@@ -213,7 +213,7 @@ export function InspectionItemCard({
                             <select
                                 value={result.condition || ""}
                                 onChange={(e) => onUpdate("condition", e.target.value || null)}
-                                className="flex-1 h-9 rounded-md border border-border border-border bg-card bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex-1 h-9 rounded-md border border-border bg-card bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="">Select condition...</option>
                                 <option value="excellent">Excellent</option>
@@ -259,7 +259,7 @@ export function InspectionItemCard({
                 {result.photos && result.photos.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2 animate-in fade-in zoom-in-95 duration-200">
                         {result.photos.map((photo: InspectionPhoto) => (
-                            <div key={photo.id} className="relative group w-16 h-16 rounded overflow-hidden border border-border border-border">
+                            <div key={photo.id} className="relative group w-16 h-16 rounded overflow-hidden border border-border">
                                 <Image
                                     src={photo.image}
                                     alt="Inspection"
@@ -279,7 +279,7 @@ export function InspectionItemCard({
                 )}
 
                 {/* Needs Attention Toggle */}
-                <div className="mt-4 pt-4 border-t border-border border-border">
+                <div className="mt-4 pt-4 border-t border-border">
                     <label className="flex items-center gap-2 cursor-pointer group">
                         <input
                             type="checkbox"

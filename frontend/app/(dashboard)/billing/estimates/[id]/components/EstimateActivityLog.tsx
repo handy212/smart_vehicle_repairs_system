@@ -32,7 +32,7 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
             case 'create': return 'bg-green-100 text-green-800 border-green-200';
             case 'update': return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'delete': return 'bg-red-100 text-red-800 border-red-200';
-            default: return 'bg-gray-100 text-foreground border-border';
+            default: return 'bg-muted text-foreground border-border';
         }
     };
 
@@ -94,7 +94,7 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
                     <div className="text-center py-8 text-muted-foreground">Loading activity history...</div>
                 ) : logs && logs.length > 0 ? (
                     <ScrollArea className="h-[400px] pr-4">
-                        <div className="space-y-6 relative ml-2 before:absolute before:left-[11px] before:top-2 before:h-[95%] before:w-[2px] before:bg-gray-100">
+                        <div className="space-y-6 relative ml-2 before:absolute before:left-[11px] before:top-2 before:h-[95%] before:w-[2px] before:bg-muted">
                             {logs.map((log: LogEntry) => (
                                 <div key={log.id} className="relative pl-8">
                                     <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-card border-2 border-border flex items-center justify-center z-10">

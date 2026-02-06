@@ -348,7 +348,7 @@ export default function PartDetailPage() {
                                     {txn.reference_number ? (
                                       <div className="flex items-center gap-1.5 text-muted-foreground">
                                         <Hash className="w-3 h-3 opacity-60" />
-                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-muted px-1.5 py-0.5 rounded border border-border border-border">
+                                        <span className="font-mono text-[11px] font-medium tracking-tight bg-muted px-1.5 py-0.5 rounded border border-border">
                                           {txn.reference_number}
                                         </span>
                                       </div>

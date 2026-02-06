@@ -193,7 +193,7 @@ export function NotificationDropdown() {
                     size="sm"
                     className={cn(
                         "relative p-2.5 rounded-lg transition-all h-auto",
-                        "text-muted-foreground text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:bg-gray-100 hover:bg-muted",
+                        "text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted",
                         "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                         unreadCount > 0 && "text-primary"
                     )}
@@ -209,7 +209,7 @@ export function NotificationDropdown() {
 
             <DropdownMenuContent align="end" className="w-96 max-h-[600px] overflow-hidden">
                 <DropdownMenuLabel className="flex items-center justify-between py-3 px-4">
-                    <span className="text-sm font-semibold text-foreground text-foreground">
+                    <span className="text-sm font-semibold text-foreground">
                         Notifications
                         {unreadCount > 0 && (
                             <Badge variant="default" className="ml-2 text-[10px] px-1.5 py-0 bg-primary">
@@ -266,19 +266,19 @@ export function NotificationDropdown() {
                                         {!isUnread && <div className="w-2 flex-shrink-0" />}
 
                                         {/* Icon */}
-                                        <div className="w-8 h-8 rounded-full bg-gray-100 bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground text-foreground">
+                                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground text-foreground">
                                             {getTypeIcon(notification.notification_type)}
                                         </div>
 
                                         {/* Content */}
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground text-foreground line-clamp-1">
+                                            <p className="text-sm font-medium text-foreground line-clamp-1">
                                                 {notification.title}
                                             </p>
-                                            <p className="text-xs text-muted-foreground text-muted-foreground line-clamp-2 mt-0.5">
+                                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                                                 {notification.message}
                                             </p>
-                                            <p className="text-xs text-muted-foreground text-muted-foreground mt-1">
+                                            <p className="text-xs text-muted-foreground mt-1">
                                                 {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                                             </p>
                                         </div>
@@ -305,8 +305,8 @@ export function NotificationDropdown() {
                     ) : (
                         <div className="px-4 py-8 text-center">
                             <PremiumIcons.Bell className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-3" />
-                            <p className="text-sm text-muted-foreground text-muted-foreground font-medium">No notifications</p>
-                            <p className="text-xs text-muted-foreground text-muted-foreground mt-1">You're all caught up!</p>
+                            <p className="text-sm text-muted-foreground font-medium">No notifications</p>
+                            <p className="text-xs text-muted-foreground mt-1">You're all caught up!</p>
                         </div>
                     )}
                 </div>

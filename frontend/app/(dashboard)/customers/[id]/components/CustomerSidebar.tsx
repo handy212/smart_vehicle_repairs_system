@@ -66,8 +66,8 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                 isActive
-                                    ? "bg-card text-primary shadow-sm border border-border border-border"
-                                    : "text-muted-foreground hover:bg-gray-100 hover:bg-muted hover:text-foreground"
+                                    ? "bg-card text-primary shadow-sm border border-border"
+                                    : "text-muted-foreground hover:bg-muted hover:bg-muted hover:text-foreground"
                             )}
                         >
                             <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />

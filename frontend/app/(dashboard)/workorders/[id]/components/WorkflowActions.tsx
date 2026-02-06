@@ -1052,7 +1052,7 @@ export default function WorkflowActions({
       variant={primaryAction.variant || "default"}
       onClick={primaryAction.onClick}
       disabled={primaryAction.disabled}
-      className={inline ? "bg-muted text-foreground dark:hover:bg-gray-700" : "w-full h-12 text-base font-medium bg-muted text-foreground dark:hover:bg-gray-700"}
+      className={inline ? "bg-muted text-foreground " : "w-full h-12 text-base font-medium bg-muted text-foreground "}
       size={inline ? "default" : "lg"}
     >
       <PrimaryIcon className={inline ? "w-4 h-4 mr-2" : "w-5 h-5 mr-2"} />
@@ -1327,7 +1327,7 @@ export default function WorkflowActions({
                     disabled={action.disabled}
                     title={action.description}
                     size="sm"
-                    className="bg-muted text-foreground dark:hover:bg-gray-700"
+                    className="bg-muted text-foreground "
                   >
                     <Icon className="w-4 h-4 mr-1" />
                     {action.label}
@@ -1370,7 +1370,7 @@ export default function WorkflowActions({
                     disabled={action.disabled}
                     title={action.description}
                     size="sm"
-                    className="bg-muted text-foreground dark:hover:bg-gray-700"
+                    className="bg-muted text-foreground "
                   >
                     <Icon className="w-4 h-4 mr-1" />
                     {action.label}

@@ -496,7 +496,7 @@ export default function GatePassDetailPage() {
             </div>
           </div>
 
-          <Separator className="bg-gray-200" />
+          <Separator className="bg-muted" />
 
           {/* Pickup Details */}
           <div>

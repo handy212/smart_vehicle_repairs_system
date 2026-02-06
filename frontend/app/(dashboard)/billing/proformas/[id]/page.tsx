@@ -192,7 +192,7 @@ export default function ProformaDetailPage() {
                                                 setShowActionsMenu(false);
                                             }}
                                             disabled={sendEmailMutation.isPending}
-                                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-100 flex items-center gap-2 disabled:opacity-50"
+                                            className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center gap-2 disabled:opacity-50"
                                         >
                                             <Mail className="w-4 h-4" />
                                             {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
@@ -213,7 +213,7 @@ export default function ProformaDetailPage() {
                                         </button>
                                         <div className="border-t border-border my-1" />
                                         <Link href={`/billing/invoices/${invoiceId}/edit`}>
-                                            <button className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-100 flex items-center gap-2">
+                                            <button className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center gap-2">
                                                 <Edit className="w-4 h-4" />
                                                 Edit
                                             </button>
@@ -227,7 +227,7 @@ export default function ProformaDetailPage() {
             </div>
 
             <Tabs defaultValue="invoice" className="w-full">
-                <TabsList className="w-full justify-start h-auto p-1 bg-gray-100/50 mb-6 flex-wrap">
+                <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 mb-6 flex-wrap">
                     <TabsTrigger value="invoice" className="gap-2">
                         <FileText className="w-4 h-4" /> Proforma
                     </TabsTrigger>

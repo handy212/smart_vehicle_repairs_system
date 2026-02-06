@@ -125,7 +125,7 @@ export default function InvoicePrintPage() {
       <div className="mb-8">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-gray-100 border-b-2 border-border">
+            <tr className="bg-muted border-b-2 border-border">
               <th className="text-left p-3 font-semibold text-foreground">Description</th>
               <th className="text-right p-3 font-semibold text-foreground">Quantity</th>
               <th className="text-right p-3 font-semibold text-foreground">Unit Price</th>

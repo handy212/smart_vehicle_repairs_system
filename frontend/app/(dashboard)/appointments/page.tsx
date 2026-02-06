@@ -271,8 +271,8 @@ export default function AppointmentsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-9 w-48 bg-muted rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-muted rounded animate-pulse"></div>
           </div>
         </div>
         <Card>
@@ -638,7 +638,7 @@ export default function AppointmentsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
+                              className="h-8 w-8 p-0  data-[state=open]:bg-muted dark:data-[state=open]:bg-gray-800"
                             >
                               <span className="sr-only">Open menu</span>
                               <PremiumIcons.MoreVertical className="w-4 h-4" />

@@ -32,7 +32,7 @@ const itemResultColors: Record<string, string> = {
   pass: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200",
   fail: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200",
   advisory: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200",
-  na: "bg-gray-100 text-foreground bg-muted text-muted-foreground hover:bg-gray-200",
+  na: "bg-muted text-foreground bg-muted text-muted-foreground hover:bg-muted",
 };
 
 export default function InspectionDetailPage() {
@@ -198,7 +198,7 @@ export default function InspectionDetailPage() {
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Progress</p>
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold">{inspection.completion_percentage || 0}%</span>
-              <div className="flex-1 bg-gray-100 bg-muted h-1.5 rounded-full overflow-hidden max-w-[100px]">
+              <div className="flex-1 bg-muted h-1.5 rounded-full overflow-hidden max-w-[100px]">
                 <div className="bg-primary h-full" style={{ width: `${inspection.completion_percentage || 0}%` }} />
               </div>
             </div>
@@ -290,7 +290,7 @@ export default function InspectionDetailPage() {
                                 {result.photos && result.photos.length > 0 && (
                                   <div className="flex gap-2 mt-2">
                                     {result.photos.map(p => (
-                                      <div key={p.id} className="w-12 h-12 rounded border bg-gray-100 overflow-hidden relative">
+                                      <div key={p.id} className="w-12 h-12 rounded border bg-muted overflow-hidden relative">
                                         <img src={p.image} className="w-full h-full object-cover" alt="Thumb" />
                                       </div>
                                     ))}
@@ -314,7 +314,7 @@ export default function InspectionDetailPage() {
                   {allPhotos.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {allPhotos.map((photo) => (
-                        <div key={photo.id} className="aspect-square relative rounded-lg overflow-hidden border border-border bg-gray-100 group">
+                        <div key={photo.id} className="aspect-square relative rounded-lg overflow-hidden border border-border bg-muted group">
                           <img src={photo.image} alt={photo.caption || "Inspection"} className="w-full h-full object-cover" />
                           {photo.caption && (
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 text-white text-xs truncate">

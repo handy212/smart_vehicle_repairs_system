@@ -69,7 +69,7 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
                                         "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                         isActive
                                             ? "bg-primary/10 text-primary dark:bg-primary/20 text-primary"
-                                            : "text-card-foreground hover:bg-gray-100 hover:bg-muted"
+                                            : "text-card-foreground hover:bg-muted hover:bg-muted"
                                     )}
                                 >
                                     <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
@@ -87,7 +87,7 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
                                     "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                     isActive
                                         ? "bg-primary/10 text-primary dark:bg-orange-900/20 dark:text-orange-300"
-                                        : "text-card-foreground hover:bg-gray-100 hover:bg-muted"
+                                        : "text-card-foreground hover:bg-muted hover:bg-muted"
                                 )}
                             >
                                 <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />

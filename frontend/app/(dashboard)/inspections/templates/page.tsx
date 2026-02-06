@@ -125,7 +125,7 @@ export default function InspectionTemplatesPage() {
                       <TableCell className="text-right py-2.5">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-7 w-7 p-0 hover:bg-gray-100">
+                            <Button variant="ghost" className="h-7 w-7 p-0 hover:bg-muted">
                               <span className="sr-only">Open menu</span>
                               <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
                             </Button>

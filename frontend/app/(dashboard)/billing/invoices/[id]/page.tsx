@@ -312,7 +312,7 @@ export default function InvoiceDetailPage() {
                           setShowActionsMenu(false);
                         }}
                         disabled={sendEmailMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Mail className="w-4 h-4" />
                         {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
@@ -329,7 +329,7 @@ export default function InvoiceDetailPage() {
                               setShowActionsMenu(false);
                             }}
                             disabled={convertToInvoiceMutation.isPending}
-                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <FileCheck className="w-4 h-4" />
                             {convertToInvoiceMutation.isPending ? "Converting..." : "Convert to Invoice"}
@@ -340,7 +340,7 @@ export default function InvoiceDetailPage() {
                       <Link href={`/billing/invoices/${invoiceId}/edit`}>
                         <button
                           onClick={() => setShowActionsMenu(false)}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
                         >
                           <Edit className="w-4 h-4" />
                           Edit
@@ -355,7 +355,7 @@ export default function InvoiceDetailPage() {
         </div>
 
         <Tabs defaultValue="invoice" className="w-full">
-          <TabsList className="w-full justify-start h-auto p-1 bg-gray-100/50 bg-muted/50 mb-6 flex-wrap">
+          <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 bg-muted/50 mb-6 flex-wrap">
             <TabsTrigger value="invoice" className="gap-2">
               <FileText className="w-4 h-4" /> Invoice
             </TabsTrigger>
@@ -697,7 +697,7 @@ export default function InvoiceDetailPage() {
                   </div>
                 ) : (
                   <div className="text-center py-16 px-4">
-                    <div className="bg-gray-100 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground">
+                    <div className="bg-muted h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground">
                       <CreditCard className="w-10 h-10" />
                     </div>
                     <h3 className="text-xl font-semibold text-foreground mb-2">No payments recorded</h3>

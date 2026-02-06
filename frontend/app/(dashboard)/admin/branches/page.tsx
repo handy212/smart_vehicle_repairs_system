@@ -290,7 +290,7 @@ export default function BranchesPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2.5">
-                        <code className="text-[10px] bg-slate-100 text-muted-foreground px-1.5 py-0.5 rounded font-mono border border-border">
+                        <code className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono border border-border">
                           {branch.code}
                         </code>
                       </TableCell>

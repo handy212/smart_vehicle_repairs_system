@@ -63,12 +63,12 @@ export default function TechnicianLayout({
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 bg-background flex flex-col">
+        <div className="min-h-screen bg-muted bg-background flex flex-col">
             {/* Technician Header */}
             <header className="bg-card border-b border-border h-16 px-4 flex items-center justify-between shadow-sm sticky top-0 z-50">
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-gray-100 hover:bg-muted">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-muted hover:bg-muted">
                             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                         </Button>
                     </Link>

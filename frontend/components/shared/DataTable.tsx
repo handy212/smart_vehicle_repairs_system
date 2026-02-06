@@ -62,13 +62,13 @@ export function DataTable<T>({
             <div className="overflow-x-auto">
                 <Table className="table-fixed w-full">
                     <TableHeader>
-                        <TableRow className="bg-muted/50 hover:bg-muted/50 border-border border-border">
+                        <TableRow className="bg-muted/50 hover:bg-muted/50 border-border">
                             {columns.map((col, index) => (
                                 <TableHead
                                     key={index}
                                     className={cn(
                                         "px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground select-none",
-                                        col.sortable && "cursor-pointer hover:bg-gray-100/50 hover:bg-muted/50",
+                                        col.sortable && "cursor-pointer hover:bg-muted/50 hover:bg-muted/50",
                                         col.className
                                     )}
                                     onClick={() => col.sortable && col.accessorKey && onSort && onSort(col.accessorKey as string)}
@@ -101,7 +101,7 @@ export function DataTable<T>({
                                 <TableRow
                                     key={item.id || rowIndex}
                                     className={cn(
-                                        "group hover:bg-muted/80 transition-colors border-b border-border border-border",
+                                        "group hover:bg-muted/80 transition-colors border-b border-border",
                                         (onRowClick || onRowDoubleClick) && "cursor-pointer"
                                     )}
                                     onClick={() => onRowClick && onRowClick(item)}

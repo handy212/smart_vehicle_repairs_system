@@ -472,7 +472,7 @@ export default function DiagnosisPage() {
                 className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-primary border-orange-200' :
                   diagnosis.status === 'paused' ? 'bg-orange-50 text-primary border-orange-200' :
                     diagnosis.status === 'completed' ? 'bg-success/10 text-green-700 border-green-200' :
-                      'bg-gray-100 text-foreground border-border'
+                      'bg-muted text-foreground border-border'
                   }`}
               >
                 <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -1784,7 +1784,7 @@ function PhotoUploadDialog({
           </div>
 
           <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-border bg-muted/50 rounded-b-xl">
-            <Button type="button" variant="ghost" onClick={handleClose} className="hover:bg-gray-200/50">
+            <Button type="button" variant="ghost" onClick={handleClose} className="hover:bg-muted/50">
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending || !selectedFile} className="bg-primary hover:bg-primary/90 text-white min-w-[100px]">

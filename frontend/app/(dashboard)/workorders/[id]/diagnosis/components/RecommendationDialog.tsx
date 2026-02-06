@@ -241,7 +241,7 @@ export function RecommendationDialog({
                     </div>
 
                     <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-border bg-muted/50 rounded-b-xl">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="hover:bg-gray-200/50">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="hover:bg-muted/50">
                             Cancel
                         </Button>
                         <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90 text-white min-w-[100px]">
