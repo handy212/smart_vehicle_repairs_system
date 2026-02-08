@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Car, DollarSign, Calendar, Wrench, AlertCircle, Link as LinkIcon, FileText, Edit2, Save, X } from "lucide-react";
+import { User, Car, DollarSign, Calendar, Wrench, AlertCircle, Link as LinkIcon, FileText, Edit2, Save, X, Sparkles, TrendingUp, AlertTriangle, ShieldCheck, Microscope } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +19,8 @@ interface OverviewTabProps {
 }
 
 export default function WorkOrderOverviewTab({
-    workOrder, onStatusChange }: OverviewTabProps) {
-    const { formatCurrency } = useCurrency();
+  workOrder, onStatusChange }: OverviewTabProps) {
+  const { formatCurrency } = useCurrency();
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
     const sc = workOrder?.service_coordinator;
@@ -35,23 +35,30 @@ export default function WorkOrderOverviewTab({
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   const workOrderId = workOrder?.id;
-  
+
   // Fetch service coordinators
   const { data: serviceCoordinators } = useQuery({
     queryKey: ["service-coordinators"],
     queryFn: () => adminApi.users.serviceCoordinators(),
   });
-  
+
+  // Fetch AI Service Prediction
+  const { data: prediction, isLoading: isPredicting } = useQuery({
+    queryKey: ["workorder-prediction", workOrderId],
+    queryFn: () => workordersApi.predictService(workOrderId),
+    enabled: !!workOrderId && !!workOrder?.vehicle?.id,
+  });
+
   const serviceCoordinatorsList = serviceCoordinators || [];
-  
+
   // Update service coordinator mutation
   const updateServiceCoordinatorMutation = useMutation({
     mutationFn: async (serviceCoordinatorId: number | null) => {
       if (!workOrderId) throw new Error("Work order ID is required");
-      return workordersApi.update(workOrderId, { 
-        service_coordinator: serviceCoordinatorId || undefined 
+      return workordersApi.update(workOrderId, {
+        service_coordinator: serviceCoordinatorId || undefined
       });
     },
     onSuccess: () => {
@@ -72,12 +79,12 @@ export default function WorkOrderOverviewTab({
       });
     },
   });
-  
+
   const handleSaveServiceCoordinator = () => {
     const scId = selectedServiceCoordinator ? Number(selectedServiceCoordinator) : null;
     updateServiceCoordinatorMutation.mutate(scId);
   };
-  
+
   const handleCancelEdit = () => {
     setSelectedServiceCoordinator(() => {
       const sc = workOrder?.service_coordinator;
@@ -92,7 +99,7 @@ export default function WorkOrderOverviewTab({
     });
     setIsEditingServiceCoordinator(false);
   };
-  
+
   const getServiceCoordinatorName = () => {
     const sc = workOrder?.service_coordinator;
     if (!sc) return "Not assigned";
@@ -115,21 +122,21 @@ export default function WorkOrderOverviewTab({
     }
     return "Not assigned";
   };
-  
+
   const canEditServiceCoordinator = workOrder?.status === "intake" || workOrder?.status === "draft" || workOrder?.status === "inspection";
-  
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column - Work Order Info */}
       <div className="lg:col-span-2 space-y-6">
         {/* Customer & Vehicle */}
         <Card>
-  <CardHeader>
-    <CardTitle>Customer & Vehicle</CardTitle>
-  </CardHeader>
+          <CardHeader>
+            <CardTitle>Customer & Vehicle</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Customer */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Customer */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <User className="w-5 h-5 text-muted-foreground" />
@@ -137,7 +144,7 @@ export default function WorkOrderOverviewTab({
                 </div>
                 {workOrder.customer ? (
                   <>
-        <div>
+                    <div>
                       {typeof workOrder.customer === "object" && workOrder.customer !== null ? (
                         <Link
                           href={`/customers/${workOrder.customer.id}`}
@@ -146,12 +153,12 @@ export default function WorkOrderOverviewTab({
                           {workOrder.customer.full_name || workOrder.customer_name || "View Customer"}
                         </Link>
                       ) : (
-            <Link
+                        <Link
                           href={`/customers/${workOrder.customer}`}
                           className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
-            >
-              {workOrder.customer_name || "View Customer"}
-            </Link>
+                        >
+                          {workOrder.customer_name || "View Customer"}
+                        </Link>
                       )}
                     </div>
                     {typeof workOrder.customer === "object" && workOrder.customer !== null && (
@@ -179,17 +186,17 @@ export default function WorkOrderOverviewTab({
                                 {workOrder.customer.customer_type.replace('_', ' ')}
                               </span>
                             </div>
-          )}
-        </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </>
                 ) : (
                   <p className="text-foreground">{workOrder.customer_name || "-"}</p>
                 )}
-      </div>
+              </div>
 
-      {/* Vehicle */}
+              {/* Vehicle */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Car className="w-5 h-5 text-muted-foreground" />
@@ -197,7 +204,7 @@ export default function WorkOrderOverviewTab({
                 </div>
                 {workOrder.vehicle ? (
                   <>
-        <div>
+                    <div>
                       {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null ? (
                         <Link
                           href={`/vehicles/${workOrder.vehicle.id}`}
@@ -206,12 +213,12 @@ export default function WorkOrderOverviewTab({
                           {workOrder.vehicle.year} {workOrder.vehicle.make} {workOrder.vehicle.model}
                         </Link>
                       ) : (
-            <Link
+                        <Link
                           href={`/vehicles/${workOrder.vehicle}`}
                           className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
-            >
-              {workOrder.vehicle_info || "View Vehicle"}
-            </Link>
+                        >
+                          {workOrder.vehicle_info || "View Vehicle"}
+                        </Link>
                       )}
                     </div>
                     {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null && (
@@ -237,18 +244,18 @@ export default function WorkOrderOverviewTab({
                               <span className="font-medium text-card-foreground w-24 flex-shrink-0">VIN:</span>
                               <span className="text-foreground font-mono text-xs break-all">{workOrder.vehicle.vin}</span>
                             </div>
-          )}
-        </div>
-      </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </>
                 ) : (
                   <p className="text-foreground">{workOrder.vehicle_info || "-"}</p>
                 )}
               </div>
-    </div>
-  </CardContent>
-</Card>
+            </div>
+          </CardContent>
+        </Card>
 
 
         {/* Customer Concerns */}
@@ -357,7 +364,7 @@ export default function WorkOrderOverviewTab({
                       <div key={rework.id} className="p-2 bg-muted rounded-md border border-border">
                         <div className="flex items-center justify-between">
                           <div>
-                            <Link 
+                            <Link
                               href={`/workorders/${rework.id}`}
                               className="font-mono text-sm text-primary hover:underline"
                             >
@@ -414,11 +421,10 @@ export default function WorkOrderOverviewTab({
             <div className="border-t border-border pt-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-card-foreground">Estimated Total</span>
-                <span className={`text-lg font-bold ${
-                  parseFloat((workOrder as any).estimated_total || "0") > 0 
-                    ? "text-foreground" 
-                    : "text-muted-foreground"
-                }`}>
+                <span className={`text-lg font-bold ${parseFloat((workOrder as any).estimated_total || "0") > 0
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+                  }`}>
                   {formatCurrency(parseFloat((workOrder as any).estimated_total || workOrder.total_cost || "0"))}
                 </span>
               </div>
@@ -449,11 +455,10 @@ export default function WorkOrderOverviewTab({
                   <div className="pt-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">Variance</span>
-                      <span className={`font-medium ${
-                        parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0")
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-success"
-                      }`}>
+                      <span className={`font-medium ${parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0")
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-success"
+                        }`}>
                         {parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0") ? "+" : ""}
                         {formatCurrency((parseFloat((workOrder as any).actual_total) - parseFloat((workOrder as any).estimated_total || "0")))}
                       </span>
@@ -497,7 +502,7 @@ export default function WorkOrderOverviewTab({
                 <p className="text-sm">{(workOrder as any).primary_technician_name}</p>
               </div>
             )}
-            
+
             {/* Service Coordinator */}
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -516,7 +521,7 @@ export default function WorkOrderOverviewTab({
                   </Button>
                 )}
               </div>
-              
+
               {isEditingServiceCoordinator ? (
                 <div className="space-y-2">
                   <select
@@ -543,7 +548,7 @@ export default function WorkOrderOverviewTab({
                       Save
                     </Button>
                     <Button
-                     variant="secondary"
+                      variant="secondary"
                       size="sm"
                       onClick={handleCancelEdit}
                       disabled={updateServiceCoordinatorMutation.isPending}
@@ -562,6 +567,75 @@ export default function WorkOrderOverviewTab({
             </div>
           </CardContent>
         </Card>
+
+        {/* AI Predictive Maintenance Card */}
+        {prediction && !prediction.message && (
+          <Card className="border-purple-200 bg-purple-50/10 overflow-hidden">
+            <div className="bg-purple-600 h-1 w-full" />
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center text-purple-900 group">
+                  <Sparkles className="w-4 h-4 mr-2 text-purple-600 group-hover:animate-pulse" />
+                  Smart Health Prediction
+                </CardTitle>
+                <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-200 text-[10px] uppercase font-bold tracking-wider">
+                  AI-Powered
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
+                  <div className="flex items-center text-xs text-purple-600 mb-1">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    Projected Date
+                  </div>
+                  <p className="text-sm font-bold text-gray-900">
+                    {prediction.predicted_date}
+                  </p>
+                </div>
+                <div className="p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
+                  <div className="flex items-center text-xs text-purple-600 mb-1">
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    Target Odometer
+                  </div>
+                  <p className="text-sm font-bold text-gray-900">
+                    {prediction.predicted_odometer.toLocaleString()} km
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-white rounded-lg border border-purple-100 italic space-y-2">
+                <div className="flex items-start gap-2">
+                  <Microscope className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-purple-900 leading-relaxed">
+                    {prediction.recommendation}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-purple-600">
+                  <span>Prediction Confidence</span>
+                  <span>{Math.round(prediction.confidence_score * 100)}%</span>
+                </div>
+                <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-600 transition-all duration-1000"
+                    style={{ width: `${prediction.confidence_score * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center pt-2">
+                <p className="text-[10px] text-muted-foreground flex items-center">
+                  <ShieldCheck className="w-3 h-3 mr-1 text-green-500" />
+                  Verified by Vehicle Repair History Analysis
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

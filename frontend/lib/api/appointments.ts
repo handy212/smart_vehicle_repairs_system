@@ -128,5 +128,22 @@ export const appointmentsApi = {
     });
     return response.data;
   },
+
+  getSuggestedMessage: async (id: number, channel: "sms" | "email"): Promise<{ subject: string; message: string }> => {
+    const response = await apiClient.get(`/appointments/appointments/${id}/suggested_message/`, {
+      params: { channel },
+    });
+    return response.data;
+  },
+
+  sendSms: async (id: number, message: string): Promise<any> => {
+    const response = await apiClient.post(`/appointments/appointments/${id}/send_customer_sms/`, { message });
+    return response.data;
+  },
+
+  sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
+    const response = await apiClient.post(`/appointments/appointments/${id}/send_customer_email/`, { subject, message });
+    return response.data;
+  },
 };
 

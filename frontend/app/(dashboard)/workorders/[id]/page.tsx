@@ -22,6 +22,7 @@ import WorkOrderTasksTab from "./components/TasksTab";
 import WorkOrderPartsTab from "./components/PartsTab";
 import WorkOrderNotesTab from "./components/NotesTab";
 import PhotosTab from "./components/PhotosTab";
+import DocumentsTab from "./components/DocumentsTab";
 import DiagnosisTab from "./components/DiagnosisTab";
 import WorkflowActions from "./components/WorkflowActions";
 import { usePermissions } from "@/lib/hooks/usePermissions";
@@ -498,6 +499,10 @@ export default function WorkOrderDetailPage() {
             <Image className="w-4 h-4 mr-2" />
             Photos
           </TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileText className="w-4 h-4 mr-2" />
+            Documents
+          </TabsTrigger>
           <TabsTrigger value="diagnosis">
             <Search className="w-4 h-4 mr-2" />
             Diagnosis
@@ -539,6 +544,10 @@ export default function WorkOrderDetailPage() {
 
         <TabsContent value="photos" className="mt-6">
           <PhotosTab workOrderId={workOrderId} />
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-6">
+          <DocumentsTab workOrderId={workOrderId} />
         </TabsContent>
 
         <TabsContent value="diagnosis" className="mt-6">

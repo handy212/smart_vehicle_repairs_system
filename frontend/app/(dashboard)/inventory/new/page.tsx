@@ -48,7 +48,7 @@ export default function NewPartPage() {
     try {
       // Exclude quantity_in_stock - stock is managed via StockItem per branch
       const { quantity_in_stock, ...dataWithoutStock } = data as any;
-      
+
       if (imageFile) {
         const formData = new FormData();
         Object.keys(dataWithoutStock).forEach((key) => {
@@ -77,7 +77,7 @@ export default function NewPartPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/inventory">

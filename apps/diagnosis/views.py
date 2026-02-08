@@ -14,6 +14,7 @@ from apps.diagnosis.models import (
     TestProcedureLibrary, DiagnosticCodeLibrary,
     DiagnosisHistory
 )
+from apps.core.services.ai_service import AIService
 from apps.branches.utils import resolve_branch, get_user_accessible_branches
 from django.db.models import Q
 from apps.diagnosis.serializers import (
@@ -283,6 +284,13 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         recommendations = diagnosis.repair_recommendations.all()
         serializer = RepairRecommendationSerializer(recommendations, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def suggest_recommendations(self, request, pk=None):
+        """Get AI-powered repair recommendations based on diagnostic data"""
+        diagnosis = self.get_object()
+        suggestions = AIService.suggest_recommendations(diagnosis)
+        return Response(suggestions)
     
     @action(detail=True, methods=['post'])
     def add_recommendation(self, request, pk=None):
@@ -557,6 +565,9 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         diagnosis = self.get_object()
         format_type = request.query_params.get('format', 'html')  # html, pdf, text
         
+        from apps.core.services.ai_service import AIService
+        ai_summary = AIService.generate_report_summary(diagnosis)
+
         # Prepare context
         context = {
             'diagnosis': diagnosis,
@@ -568,9 +579,10 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             'tests': diagnosis.diagnostic_tests.all(),
             'findings': diagnosis.findings.all(),
             'photos': diagnosis.photos.all(),
+            'ai_summary': ai_summary,
             'generated_at': timezone.now(),
             'total_cost': sum(
-                rec.estimated_total_cost for rec in diagnosis.repair_recommendations.all()
+                rec.estimated_total_cost or 0 for rec in diagnosis.repair_recommendations.all()
             ),
         }
         
@@ -806,6 +818,18 @@ class DiagnosisPhotoViewSet(viewsets.ModelViewSet):
             serializer.save(taken_by=self.request.user)
         else:
             serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def analyze_damage(self, request, pk=None):
+        """Analyze photo for damage using AI"""
+        photo = self.get_object()
+        from apps.core.services.ai_service import AIService
+        
+        try:
+            analysis = AIService.analyze_photo_damage(photo.photo.url)
+            return Response(analysis)
+        except Exception as e:
+            return Response({'error': f"AI Analysis failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ============================================================================

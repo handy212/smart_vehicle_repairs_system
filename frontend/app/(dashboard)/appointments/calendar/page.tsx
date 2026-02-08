@@ -149,38 +149,42 @@ export default function AppointmentCalendarPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
-            <span>/</span>
-            <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
-            <span>/</span>
-            <span className="text-foreground font-medium">Calendar</span>
+      <div className="flex flex-col space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+              <span>/</span>
+              <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
+              <span>/</span>
+              <span className="text-foreground font-medium">Calendar</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Appointment Calendar
+            </h1>
           </div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Appointment Calendar</h1>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Link href="/appointments">
-            <Button variant="outline" size="sm" className="h-9 bg-muted text-foreground border-border">
-              <ArrowLeft className="w-3.5 h-3.5 mr-2" />
-              List View
-            </Button>
-          </Link>
-          <Link href="/appointments/new">
-            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
-              <Plus className="w-3.5 h-3.5 mr-2" />
-              New Appointment
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/appointments">
+              <Button variant="outline" size="sm" className="h-9 border-border text-xs font-semibold">
+                <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+                List View
+              </Button>
+            </Link>
+            <Link href="/appointments/new">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm text-xs font-bold uppercase tracking-wider">
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                New Appointment
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Calendar */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="border-border shadow-sm overflow-hidden">
+        <CardContent className="p-0">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
@@ -240,29 +244,27 @@ export default function AppointmentCalendarPage() {
       </Card>
 
       {/* Legend */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-primary"></div>
-              <span className="text-sm text-foreground">Normal</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-success/100"></div>
-              <span className="text-sm text-foreground">Confirmed</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-amber-500"></div>
-              <span className="text-sm text-foreground">Pending / High Priority</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-red-500"></div>
-              <span className="text-sm text-foreground">Urgent / Cancelled</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-gray-500"></div>
-              <span className="text-sm text-foreground">Completed</span>
-            </div>
+      <Card className="border-border shadow-sm">
+        <CardContent className="py-3 px-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-primary ring-2 ring-primary/20"></div>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Normal</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-success/100 ring-2 ring-green-500/20"></div>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Confirmed</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20"></div>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Pending / High</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-red-500 ring-2 ring-red-500/20"></div>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Urgent / Cancelled</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-gray-500 ring-2 ring-gray-500/20"></div>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Completed</span>
           </div>
         </CardContent>
       </Card>

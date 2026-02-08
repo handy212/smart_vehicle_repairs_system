@@ -58,6 +58,7 @@ import {
   PlayCircle,
   CheckCircle2,
   User,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -830,6 +831,25 @@ function RecommendationsTab({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<any>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+
+  // AI Suggestion mutation
+  const getAiSuggestionsMutation = useMutation({
+    mutationFn: () => diagnosisApi.getAiSuggestions(diagnosis.id),
+    onSuccess: (data) => {
+      setAiSuggestions(data);
+      setShowAiDialog(true);
+      toast({ title: "AI suggestions generated", variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "AI analysis failed",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Load line items from localStorage to check for linked items
   const [lineItems, setLineItems] = React.useState<any[]>([]);
@@ -969,10 +989,10 @@ function RecommendationsTab({
   });
   const unapprovedRecommendations = recommendations.filter((r: any) => !r.customer_approved);
   const convertedRecommendations = recommendations.filter((r: any) => r.converted_to_task_id);
-  
+
   // Check if work order is in a status that allows printing recommendations
   const canPrintRecommendations = workOrder && ["completed", "invoiced", "closed"].includes(workOrder.status);
-  
+
   const handlePrintRecommendations = async (format: "html" | "pdf" = "pdf") => {
     try {
       if (format === "pdf") {
@@ -1104,6 +1124,16 @@ function RecommendationsTab({
             <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add
+            </Button>
+            <Button
+              onClick={() => getAiSuggestionsMutation.mutate()}
+              disabled={getAiSuggestionsMutation.isPending || isDisabled}
+              size="sm"
+              variant="outline"
+              className="h-8 border-primary/30 text-primary hover:bg-primary/5"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              {getAiSuggestionsMutation.isPending ? "Analyzing..." : "AI Suggest"}
             </Button>
           </div>
         </CardHeader>
@@ -1400,6 +1430,72 @@ function RecommendationsTab({
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
 
+      {/* AI Suggestion Dialog */}
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI Repair Recommendations
+            </DialogTitle>
+            <DialogDescription>
+              Based on DTCs, findings, and customer complaints, AI suggests the following repairs.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            {aiSuggestions.length > 0 ? (
+              aiSuggestions.map((suggestion, index) => (
+                <div key={index} className="p-4 border border-border rounded-lg bg-muted/30 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={suggestion.priority === 'critical' ? 'danger' : 'secondary'} className="capitalize">
+                        {suggestion.priority}
+                      </Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {suggestion.recommendation_type}
+                      </Badge>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{formatCurrency(suggestion.estimated_total_cost || (Number(suggestion.estimated_labor_cost || 0) + Number(suggestion.estimated_parts_cost || 0)))}</p>
+                      <p className="text-[10px] text-muted-foreground">Estimated Total</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">{suggestion.description}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <span className="font-semibold text-card-foreground">Parts:</span> {suggestion.parts_needed}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        createMutation.mutate(suggestion);
+                        // Optional: remove from list after adding
+                        setAiSuggestions(prev => prev.filter((_, i) => i !== index));
+                        if (aiSuggestions.length <= 1) setShowAiDialog(false);
+                      }}
+                      disabled={createMutation.isPending}
+                    >
+                      Add Recommendation
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No specific AI suggestions found for this diagnostic data.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowAiDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

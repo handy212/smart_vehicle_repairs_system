@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Mail, BookOpen, ChevronRight, ExternalLink } from "lucide-react";
+import { Search, Mail, BookOpen, ChevronRight, ExternalLink, ArrowLeft, LayoutDashboard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { helpContent, type HelpModule } from "@/lib/help-data";
 import { useRouter } from "next/navigation";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils/cn";
 
 export default function HelpPage() {
     const [searchQuery, setSearchQuery] = useState("");
-    const [activeModuleId, setActiveModuleId] = useState("accounting"); // Default to Accounting
+    const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
     const router = useRouter();
 
     // Filter logic
@@ -37,156 +39,204 @@ export default function HelpPage() {
     };
 
     const filteredContent = getFilteredContent();
-    const hasResults = Object.keys(filteredContent).length > 0;
+    const modulesArray = Object.values(filteredContent);
+    const hasResults = modulesArray.length > 0;
 
-    // Derived active module (fallback if filter hides current selection)
-    const activeModule = filteredContent[activeModuleId]
-        ? filteredContent[activeModuleId]
-        : Object.values(filteredContent)[0];
+    // Determine what to show in the main area
+    const activeModule = activeModuleId ? filteredContent[activeModuleId] : null;
+
+    // Reset view if search yields no results for current selection
+    if (activeModuleId && !activeModule && hasResults) {
+        // Find another one or show home
+    }
 
     return (
-        <div className="container max-w-7xl mx-auto p-6 md:p-8 h-[calc(100vh-4rem)] flex flex-col gap-6">
+        <div className="container max-w-7xl mx-auto p-4 md:p-6 lg:p-8 h-[calc(100vh-5rem)] flex flex-col gap-4 md:gap-6">
 
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                        <BookOpen className="w-8 h-8 text-primary" />
-                        Help Center
-                    </h1>
-                    <p className="text-muted-foreground mt-1">Documentation and guides for smart Vehicle Repairs</p>
+            {/* Header Area - More Compact */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 bg-card p-4 rounded-xl border border-border/50 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <BookOpen className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl md:text-2xl font-bold text-foreground">Help Center</h1>
+                        <p className="text-xs text-muted-foreground">Documentation and guides for Smart Vehicle Repairs</p>
+                    </div>
                 </div>
-                <div className="relative w-full md:w-96">
+                <div className="relative w-full md:w-80 lg:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                         type="text"
                         placeholder="Search documentation..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-10 bg-background"
+                        className="pl-10 h-10 bg-muted/30 border-border/50 focus:bg-background transition-all"
                     />
                 </div>
             </div>
 
             {/* Main Content Area */}
             {hasResults ? (
-                <div className="flex flex-1 gap-6 overflow-hidden rounded-xl border bg-card shadow-sm">
+                <div className="flex flex-1 gap-4 md:gap-6 overflow-hidden min-h-0">
 
-                    {/* Sidebar Navigation */}
-                    <aside className="w-64 border-r hidden md:flex flex-col bg-muted/10">
-                        <div className="p-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                            Modules
+                    {/* Left Sidebar - Always visible on desktop */}
+                    <aside className="w-64 shrink-0 hidden md:flex flex-col bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden">
+                        <div className="p-4 border-b bg-muted/10">
+                            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Explore Modules</h2>
                         </div>
                         <ScrollArea className="flex-1">
-                            <div className="px-3 pb-4 space-y-1">
-                                {Object.values(filteredContent).map((module) => {
+                            <div className="p-2 space-y-0.5">
+                                <button
+                                    onClick={() => setActiveModuleId(null)}
+                                    className={cn(
+                                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                                        !activeModuleId ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                                    )}
+                                >
+                                    <LayoutDashboard className="w-4 h-4" />
+                                    All Modules
+                                </button>
+                                <div className="h-px bg-border my-2" />
+                                {modulesArray.map((module) => {
                                     const Icon = module.icon;
-                                    const isActive = activeModule && activeModule.id === module.id;
+                                    const isActive = activeModuleId === module.id;
                                     return (
                                         <button
                                             key={module.id}
                                             onClick={() => setActiveModuleId(module.id)}
-                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
-                                                    ? "bg-primary/10 text-primary"
-                                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                }`}
+                                            className={cn(
+                                                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                                                isActive ? "bg-primary/10 text-primary border-l-2 border-primary rounded-l-none" : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                                            )}
                                         >
-                                            <Icon className={`w-4 h-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                                            {module.title}
-                                            {isActive && <ChevronRight className="w-4 h-4 ml-auto opacity-50" />}
+                                            <Icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                                            <span className="truncate">{module.title}</span>
                                         </button>
                                     );
                                 })}
                             </div>
                         </ScrollArea>
-
-                        {/* Compact Support Link in Sidebar Footer */}
-                        <div className="p-4 border-t bg-muted/20">
-                            <a href="mailto:support@smartrepairs.com" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
-                                <Mail className="w-3 h-3" />
-                                Contact Support
+                        <div className="p-4 border-t bg-muted/5 mt-auto">
+                            <a href="mailto:support@smartrepairs.com" className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-border/50 bg-muted/20 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all">
+                                <Mail className="w-3.5 h-3.5" />
+                                Support Ticket
                             </a>
                         </div>
                     </aside>
 
-                    {/* Content Area */}
-                    <main className="flex-1 flex flex-col min-w-0 bg-background">
-                        {activeModule ? (
-                            <ScrollArea className="flex-1 h-full">
-                                <div className="p-6 md:p-8 max-w-4xl">
-                                    <div className="flex items-start gap-4 mb-6">
-                                        <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                                            <activeModule.icon className="w-8 h-8" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl font-bold text-foreground">{activeModule.title}</h2>
-                                            <p className="text-muted-foreground">{activeModule.description}</p>
+                    {/* Center Content Area */}
+                    <main className="flex-1 min-w-0 bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden flex flex-col">
+                        <ScrollArea className="flex-1">
+                            {activeModule ? (
+                                <div className="p-6 md:p-8">
+                                    {/* Mobile Back Button */}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setActiveModuleId(null)}
+                                        className="md:hidden mb-4 -ml-2 text-muted-foreground"
+                                    >
+                                        <ArrowLeft className="w-4 h-4 mr-2" />
+                                        Back to All
+                                    </Button>
+
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 rounded-xl bg-primary/10 text-primary shrink-0 ring-1 ring-primary/20 shadow-sm">
+                                                <activeModule.icon className="w-6 h-6 md:w-8 md:h-8" />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">{activeModule.title}</h2>
+                                                <p className="text-sm text-muted-foreground font-medium">{activeModule.description}</p>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-6">
+                                    <Accordion type="single" collapsible className="space-y-4">
                                         {activeModule.topics.map((topic, idx) => (
-                                            <Card key={idx} className="border shadow-none bg-card/50">
-                                                <CardHeader className="pb-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <CardTitle className="text-lg font-semibold">{topic.title}</CardTitle>
+                                            <AccordionItem key={idx} value={`item-${idx}`} className="border rounded-xl px-4 md:px-6 bg-muted/5 hover:bg-muted/10 transition-colors border-border/50">
+                                                <AccordionTrigger className="hover:no-underline py-4 text-base font-semibold group">
+                                                    <span className="text-left group-data-[state=open]:text-primary transition-colors">
+                                                        {topic.title}
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="pb-6">
+                                                    <div className="pt-2 space-y-6">
+                                                        <ol className="relative border-l border-primary/20 ml-3 space-y-6">
+                                                            {topic.steps.map((step, stepIdx) => (
+                                                                <li key={stepIdx} className="ml-8 relative">
+                                                                    <span className="absolute flex items-center justify-center w-6 h-6 bg-primary/10 text-primary border border-primary/20 rounded-full -left-[45px] top-0 text-[10px] font-bold shadow-sm">
+                                                                        {stepIdx + 1}
+                                                                    </span>
+                                                                    <p className="text-sm text-foreground/80 leading-relaxed font-medium pt-0.5">{step}</p>
+                                                                </li>
+                                                            ))}
+                                                        </ol>
+
                                                         {topic.actionLink && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8 text-xs gap-2 ml-4 hidden sm:flex"
-                                                                onClick={() => router.push(topic.actionLink!)}
-                                                            >
-                                                                {topic.actionLabel || "Open Page"}
-                                                                <ExternalLink className="w-3 h-3" />
-                                                            </Button>
+                                                            <div className="flex items-center gap-4 pl-8">
+                                                                <Button
+                                                                    size="sm"
+                                                                    className="gap-2 h-9 px-4 shadow-sm"
+                                                                    onClick={() => router.push(topic.actionLink!)}
+                                                                >
+                                                                    {topic.actionLabel || "Open Module"}
+                                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                                </Button>
+                                                            </div>
                                                         )}
                                                     </div>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <ol className="relative border-l border-muted ml-3 space-y-4">
-                                                        {topic.steps.map((step, stepIdx) => (
-                                                            <li key={stepIdx} className="ml-6 relative">
-                                                                <span className="absolute flex items-center justify-center w-6 h-6 bg-muted rounded-full -left-9 ring-4 ring-background text-xs font-medium text-muted-foreground">
-                                                                    {stepIdx + 1}
-                                                                </span>
-                                                                <p className="text-sm text-foreground/80 leading-relaxed">{step}</p>
-                                                            </li>
-                                                        ))}
-                                                    </ol>
-
-                                                    {topic.actionLink && (
-                                                        <Button
-                                                            variant="link"
-                                                            className="mt-4 p-0 h-auto text-primary sm:hidden"
-                                                            onClick={() => router.push(topic.actionLink!)}
-                                                        >
-                                                            {topic.actionLabel || "Open Page"} →
-                                                        </Button>
-                                                    )}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        ))}
+                                    </Accordion>
+                                </div>
+                            ) : (
+                                <div className="p-6 md:p-8">
+                                    <div className="mb-6">
+                                        <h2 className="text-lg font-bold text-foreground">Browse Modules</h2>
+                                        <p className="text-sm text-muted-foreground">Select a category below to view detailed guides</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {modulesArray.map((module) => (
+                                            <Card
+                                                key={module.id}
+                                                className="group hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all duration-300 border-border/50 shadow-none border-dashed"
+                                                onClick={() => setActiveModuleId(module.id)}
+                                            >
+                                                <CardContent className="p-5 flex flex-col gap-3">
+                                                    <div className="p-2.5 rounded-lg bg-muted group-hover:bg-primary/10 text-muted-foreground group-hover:text-primary w-fit transition-colors">
+                                                        <module.icon className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{module.title}</h3>
+                                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{module.description}</p>
+                                                    </div>
+                                                    <div className="flex items-center text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity mt-1 uppercase tracking-widest">
+                                                        View Details <ChevronRight className="w-3 h-3 ml-1" />
+                                                    </div>
                                                 </CardContent>
                                             </Card>
                                         ))}
                                     </div>
                                 </div>
-                            </ScrollArea>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                                Select a module to view documentation
-                            </div>
-                        )}
+                            )}
+                        </ScrollArea>
                     </main>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 border rounded-xl bg-muted/5 border-dashed">
-                    <Search className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                    <h3 className="text-lg font-medium text-foreground">No results found</h3>
-                    <p className="text-muted-foreground max-w-sm mt-2">
-                        We couldn't find any help topics matching "{searchQuery}". Try searching for specific keywords like "invoice", "stock", or "report".
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 border border-dashed rounded-2xl bg-card">
+                    <div className="bg-muted/50 p-4 rounded-full mb-4">
+                        <Search className="w-8 h-8 text-muted-foreground/30" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground">No results found</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mt-2">
+                        We couldn't find any help topics matching "{searchQuery}".
                     </p>
                     <Button
-                        variant="ghost"
-                        className="mt-4"
+                        variant="outline"
+                        className="mt-6"
                         onClick={() => setSearchQuery("")}
                     >
                         Clear Search
@@ -196,3 +246,4 @@ export default function HelpPage() {
         </div>
     );
 }
+

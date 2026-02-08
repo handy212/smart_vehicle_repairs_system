@@ -191,47 +191,6 @@ export default function NewPurchaseOrderPage() {
                         </CardContent>
                     </Card>
                 </div>
-
-                <div className="space-y-6">
-                    <Card className="bg-gradient-to-br from-orange-50 to-white dark:from-gray-800 dark:to-gray-900 border-orange-100 border-border">
-                        <CardHeader className="py-4 border-b border-orange-100/50 border-border/50">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                <span className="p-1 bg-orange-100 dark:bg-orange-900/40 rounded text-primary">
-                                    <Save className="w-3.5 h-3.5" />
-                                </span>
-                                Next Steps
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4 space-y-4">
-                            <div className="space-y-3">
-                                <div className="flex gap-3">
-                                    <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 text-primary flex items-center justify-center text-xs font-bold shrink-0">1</div>
-                                    <p className="text-xs text-muted-foreground">Initialize the order by selecting a supplier and basic dates.</p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="w-6 h-6 rounded-full bg-border text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0">2</div>
-                                    <p className="text-xs text-muted-foreground font-medium">Add parts and items to the order after it has been created.</p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="w-6 h-6 rounded-full bg-border text-muted-foreground flex items-center justify-center text-xs font-bold shrink-0">3</div>
-                                    <p className="text-xs text-muted-foreground">Review the order summary and submit it to the provider.</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-t shadow-sm">
-                        <CardHeader className="py-4 border-b bg-muted/30">
-                            <CardTitle className="text-sm font-semibold">Important Note</CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4 px-4 pb-4">
-                            <p className="text-xs text-muted-foreground leading-relaxed italic">
-                                Once an order is initialized, it will be saved as a <span className="font-semibold text-foreground">Draft</span>.
-                                You can continue editing and adding items at any time before final submission.
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
         </div>
     );

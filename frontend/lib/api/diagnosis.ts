@@ -269,6 +269,15 @@ export const diagnosisApi = {
     return response.data;
   },
 
+  getAiSuggestions: async (
+    id: number
+  ): Promise<Partial<RepairRecommendation>[]> => {
+    const response = await apiClient.get(
+      `/diagnosis/diagnoses/${id}/suggest_recommendations/`
+    );
+    return response.data;
+  },
+
   approveRecommendations: async (
     id: number,
     data: {
@@ -516,6 +525,15 @@ export const diagnosisApi = {
     },
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/diagnosis/photos/${id}/`);
+    },
+    analyzeDamage: async (id: number): Promise<{
+      detected_issues: string[];
+      confidence_score: number;
+      summary: string;
+      suggested_severity: string;
+    }> => {
+      const response = await apiClient.post(`/diagnosis/photos/${id}/analyze_damage/`);
+      return response.data;
     },
   },
 };

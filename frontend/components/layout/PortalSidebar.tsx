@@ -43,6 +43,7 @@ const navigationGroups: NavigationGroup[] = [
       { name: "Appointments", href: "/portal/appointments", icon: PremiumIcons.Calendar },
       { name: "Book Appointment", href: "/portal/book", icon: PlusCircle }, // Keep PlusCircle for now
       { name: "Roadside Assistance", href: "/portal/roadside", icon: PremiumIcons.Truck },
+      { name: "Work Orders", href: "/portal/work-orders", icon: PremiumIcons.ClipboardList },
     ],
   },
   {

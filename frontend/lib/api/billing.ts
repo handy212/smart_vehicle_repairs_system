@@ -423,6 +423,23 @@ export const billingApi = {
       const response = await apiClient.get("/billing/invoices/stats/");
       return response.data;
     },
+
+    getSuggestedMessage: async (id: number, channel: "sms" | "email"): Promise<{ subject: string; message: string }> => {
+      const response = await apiClient.get(`/billing/invoices/${id}/suggested_message/`, {
+        params: { channel },
+      });
+      return response.data;
+    },
+
+    sendSms: async (id: number, message: string): Promise<any> => {
+      const response = await apiClient.post(`/billing/invoices/${id}/send_customer_sms/`, { message });
+      return response.data;
+    },
+
+    sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
+      const response = await apiClient.post(`/billing/invoices/${id}/send_customer_email/`, { subject, message });
+      return response.data;
+    },
   },
 
   creditNotes: {

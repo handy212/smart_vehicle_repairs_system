@@ -12,7 +12,7 @@ import {
     MapPin, Clock, CheckCircle, XCircle,
     Wrench, Navigation,
     ExternalLink, MessageSquare, ShieldCheck,
-    Car
+    Car, Mail, Sparkles, RefreshCcw
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -23,12 +23,13 @@ import {
     DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const RoadsideMap = dynamic(() => import("@/components/roadside/RoadsideMap"), {
     ssr: false,
@@ -64,8 +65,11 @@ export default function RoadsideDetailPage() {
 
     const [isDispatchDialogOpen, setIsDispatchDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
+    const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false); // We'll keep the name for now to avoid refactor friction, but it's a general message dialog
+    const [communicationMethod, setCommunicationMethod] = useState<"sms" | "email">("sms");
     const [smsMessage, setSmsMessage] = useState("");
+    const [emailSubject, setEmailSubject] = useState("");
+    const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
     const [selectedTechnicianId, setSelectedTechnicianId] = useState<string>("");
 
     const { data: request, isLoading } = useQuery({
@@ -155,20 +159,51 @@ export default function RoadsideDetailPage() {
     });
 
     const sendSmsMutation = useMutation({
-        mutationFn: (message: string) => roadsideApi.sendCustomerSms(requestId, message),
-        onSuccess: () => {
-            toast({ title: "Success", description: "SMS sent to customer successfully" });
+        mutationFn: (data: { method: "sms" | "email", message: string, subject?: string }) => {
+            if (data.method === "email") {
+                return roadsideApi.sendCustomerEmail(requestId, data.message, data.subject);
+            }
+            return roadsideApi.sendCustomerSms(requestId, data.message);
+        },
+        onSuccess: (data, variables) => {
+            toast({
+                title: "Success",
+                description: variables.method === "email" ? "Email sent to customer successfully" : "SMS sent to customer successfully"
+            });
             setIsSmsDialogOpen(false);
             setSmsMessage("");
+            setEmailSubject("");
         },
-        onError: (error: any) => {
+        onError: (error: any, variables) => {
             toast({
-                title: "SMS Failed",
-                description: error.response?.data?.error || "Failed to send SMS",
+                title: variables.method === "email" ? "Email Failed" : "SMS Failed",
+                description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
                 variant: "destructive"
             });
         }
     });
+
+    const fetchSuggestion = async (method: "sms" | "email") => {
+        setIsFetchingSuggestion(true);
+        try {
+            const suggestion = await roadsideApi.getSuggestedMessage(requestId, method);
+            if (method === "email") {
+                setEmailSubject(suggestion.subject);
+            }
+            setSmsMessage(suggestion.message);
+        } catch (error) {
+            console.error("Failed to fetch suggestion", error);
+        } finally {
+            setIsFetchingSuggestion(false);
+        }
+    };
+
+    // Auto-fetch suggestion when dialog opens or method changes
+    useEffect(() => {
+        if (isSmsDialogOpen && !smsMessage.trim()) {
+            fetchSuggestion(communicationMethod);
+        }
+    }, [isSmsDialogOpen, communicationMethod]);
 
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -213,37 +248,41 @@ export default function RoadsideDetailPage() {
     }
 
     return (
-        <div className="space-y-5">
-            {/* Compact Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                    <Button variant="ghost" size="sm" onClick={() => router.back()} className="h-8">
-                        <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
-                    </Button>
+        <div className="space-y-6 pb-12">
+            {/* Header */}
+            <div className="flex flex-col space-y-4">
+                <div className="flex justify-between items-center">
                     <div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-0.5">
-                            <Link href="/roadside" className="hover:underline">Roadside</Link>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+                            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+                            <span>/</span>
+                            <Link href="/roadside" className="hover:text-primary transition-colors">Roadside</Link>
                             <span>/</span>
                             <span className="text-foreground font-medium">{request.request_number}</span>
                         </div>
-                        <h1 className="text-lg font-bold text-foreground tracking-tight">
-                            {request.service_type_display}
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                                {request.service_type_display}
+                            </h1>
+                            <Badge variant={getStatusVariant(request.status) as any} className="text-[10px] px-2 py-0.5 uppercase tracking-wider font-bold">
+                                {request.status_display}
+                            </Badge>
+                            {request.is_covered_by_subscription && (
+                                <Badge variant="success" className="text-[10px] px-2 py-0.5 uppercase tracking-wider font-bold flex items-center gap-1">
+                                    <ShieldCheck className="h-3 w-3" /> AA Member
+                                </Badge>
+                            )}
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Badge variant={getStatusVariant(request.status) as any} className="text-[10px] px-2 py-0.5">
-                        {request.status_display}
-                    </Badge>
-                    {request.is_covered_by_subscription && (
-                        <Badge variant="success" className="text-[10px] px-2 py-0.5">
-                            <ShieldCheck className="h-3 w-3 mr-0.5" /> AA
-                        </Badge>
-                    )}
-                    <Button variant="ghost" size="sm" className="h-8" onClick={handleOpenEdit}>
-                        <Wrench className="w-3.5 h-3.5 mr-1" />
-                        Edit
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-9" onClick={handleOpenEdit}>
+                            <Wrench className="w-4 h-4 mr-2" />
+                            Edit Request
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => router.back()} className="h-9">
+                            <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -255,13 +294,13 @@ export default function RoadsideDetailPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Location Card */}
                         <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <MapPin className="h-4 w-4" />
-                                    Location
+                            <CardHeader className="py-3 px-4 border-b">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-primary" />
+                                    Location Details
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-3">
+                            <CardContent className="p-4 space-y-4">
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">Breakdown Location</p>
                                     <p className="text-sm text-foreground">{request.breakdown_location}</p>
@@ -292,13 +331,13 @@ export default function RoadsideDetailPage() {
 
                         {/* Customer & Vehicle Card */}
                         <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <UserIcon className="h-4 w-4" />
+                            <CardHeader className="py-3 px-4 border-b">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <UserIcon className="h-4 w-4 text-primary" />
                                     Customer & Vehicle
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-3">
+                            <CardContent className="p-4 space-y-4">
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">Customer</p>
                                     <p className="text-sm font-medium text-foreground">{request.customer_name}</p>
@@ -320,10 +359,10 @@ export default function RoadsideDetailPage() {
                     {/* Description & Notes */}
                     {(request.description || request.notes) && (
                         <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base">Details</CardTitle>
+                            <CardHeader className="py-3 px-4 border-b">
+                                <CardTitle className="text-sm font-semibold">Technical Findings & Notes</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-3">
+                            <CardContent className="p-4 space-y-4">
                                 {request.description && (
                                     <div>
                                         <p className="text-xs font-medium text-muted-foreground mb-1.5">Problem Description</p>
@@ -366,9 +405,9 @@ export default function RoadsideDetailPage() {
                             <CardTitle>Service History</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-muted dark:before:bg-gray-700">
+                            <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
                                 <div className="relative pl-8">
-                                    <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-primary"></div>
+                                    <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-primary"></div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm font-semibold">Request Created</span>
                                         <span className="text-xs text-muted-foreground">{format(new Date(request.requested_at), "h:mm a")}</span>
@@ -377,7 +416,7 @@ export default function RoadsideDetailPage() {
 
                                 {request.dispatched_at && (
                                     <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-indigo-600"></div>
+                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-indigo-600"></div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-semibold">Technician Dispatched</span>
                                             <span className="text-xs text-muted-foreground">{format(new Date(request.dispatched_at), "h:mm a")}</span>
@@ -390,7 +429,7 @@ export default function RoadsideDetailPage() {
 
                                 {request.arrived_at && (
                                     <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-emerald-600"></div>
+                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-emerald-600"></div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-semibold">Technician Arrived</span>
                                             <span className="text-xs text-muted-foreground">{format(new Date(request.arrived_at), "h:mm a")}</span>
@@ -400,7 +439,7 @@ export default function RoadsideDetailPage() {
 
                                 {request.completed_at && (
                                     <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-success"></div>
+                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-success"></div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-semibold">Service Completed</span>
                                             <span className="text-xs text-muted-foreground">{format(new Date(request.completed_at), "h:mm a")}</span>
@@ -421,7 +460,7 @@ export default function RoadsideDetailPage() {
 
                                 {request.status === 'cancelled' && (
                                     <div className="relative pl-8">
-                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-red-600"></div>
+                                        <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-card bg-red-600"></div>
                                         <span className="text-sm font-semibold">Request Cancelled</span>
                                     </div>
                                 )}
@@ -509,7 +548,7 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Request</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
 
                                     {/* Dispatched */}
                                     <div className="flex flex-col items-center">
@@ -523,7 +562,7 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Dispatch</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
 
                                     {/* En Route */}
                                     <div className="flex flex-col items-center">
@@ -537,7 +576,7 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">En Route</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
 
                                     {/* On Site */}
                                     <div className="flex flex-col items-center">
@@ -551,7 +590,7 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">On Site</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-success/100' : 'bg-muted'}`} />
 
                                     {/* In Progress */}
                                     <div className="flex flex-col items-center">
@@ -565,7 +604,7 @@ export default function RoadsideDetailPage() {
                                         </div>
                                         <span className="text-[9px] mt-0.5 text-muted-foreground">Working</span>
                                     </div>
-                                    <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-success/100' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                    <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-success/100' : 'bg-muted'}`} />
 
                                     {/* Completed */}
                                     <div className="flex flex-col items-center">
@@ -758,34 +797,78 @@ export default function RoadsideDetailPage() {
                     <DialogHeader>
                         <DialogTitle>Message Customer</DialogTitle>
                         <DialogDescription>
-                            Send an SMS to {request.customer_name} at {request.customer_phone}
+                            Send a message to {request.customer_name}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="sms-message">Message</Label>
-                            <Textarea
-                                id="sms-message"
-                                placeholder="Enter your message here..."
-                                value={smsMessage}
-                                onChange={(e) => setSmsMessage(e.target.value)}
-                                rows={5}
-                                maxLength={160}
-                            />
-                            <p className="text-xs text-muted-foreground text-right">
-                                {smsMessage.length}/160 characters
-                            </p>
+                    <Tabs value={communicationMethod} onValueChange={(v) => setCommunicationMethod(v as any)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                            <TabsTrigger value="sms" className="flex items-center gap-2">
+                                <MessageSquare className="h-3.5 w-3.5" /> SMS
+                            </TabsTrigger>
+                            <TabsTrigger value="email" className="flex items-center gap-2">
+                                <Mail className="h-3.5 w-3.5" /> Email
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <div className="py-2 space-y-4">
+                            <div className="flex justify-end">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs gap-1.5"
+                                    onClick={() => fetchSuggestion(communicationMethod)}
+                                    disabled={isFetchingSuggestion}
+                                >
+                                    <Sparkles className="h-3 w-3" />
+                                    {isFetchingSuggestion ? "Thinking..." : "Auto-generate Content"}
+                                </Button>
+                            </div>
+                            {communicationMethod === "email" && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="email-subject">Subject</Label>
+                                    <Input
+                                        id="email-subject"
+                                        placeholder="Update on your Roadside Request..."
+                                        value={emailSubject}
+                                        onChange={(e) => setEmailSubject(e.target.value)}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="message">
+                                    {communicationMethod === "sms" ? "SMS Message" : "Email Content"}
+                                </Label>
+                                <Textarea
+                                    id="message"
+                                    placeholder={communicationMethod === "sms" ? "Enter SMS message..." : "Enter email content..."}
+                                    value={smsMessage}
+                                    onChange={(e) => setSmsMessage(e.target.value)}
+                                    rows={communicationMethod === "email" ? 8 : 5}
+                                    maxLength={communicationMethod === "sms" ? 160 : undefined}
+                                />
+                                {communicationMethod === "sms" && (
+                                    <p className="text-xs text-muted-foreground text-right">
+                                        {smsMessage.length}/160 characters
+                                    </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Recipient: <span className="font-medium">
+                                        {communicationMethod === "sms" ? request.customer_phone : (request.customer_email || "No email available")}
+                                    </span>
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    </Tabs>
                     <DialogFooter>
-                        <Button variant="secondary" onClick={() => { setIsSmsDialogOpen(false); setSmsMessage(""); }}>
+                        <Button variant="secondary" onClick={() => { setIsSmsDialogOpen(false); setSmsMessage(""); setEmailSubject(""); }}>
                             Cancel
                         </Button>
                         <Button
-                            onClick={() => sendSmsMutation.mutate(smsMessage)}
-                            disabled={!smsMessage.trim() || sendSmsMutation.isPending}
+                            onClick={() => sendSmsMutation.mutate({ method: communicationMethod, message: smsMessage, subject: emailSubject })}
+                            disabled={!smsMessage.trim() || sendSmsMutation.isPending || (communicationMethod === "email" && !request.customer_email)}
                         >
-                            {sendSmsMutation.isPending ? "Sending..." : "Send SMS"}
+                            {sendSmsMutation.isPending ? "Sending..." : `Send ${communicationMethod === "sms" ? "SMS" : "Email"}`}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

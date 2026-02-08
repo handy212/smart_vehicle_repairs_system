@@ -20,6 +20,7 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
     can_be_cancelled = serializers.BooleanField(read_only=True)
     subscription_number = serializers.SerializerMethodField()
     invoice_number = serializers.SerializerMethodField()
+    customer_email = serializers.ReadOnlyField(source='customer.user.email')
     
     def get_customer_name(self, obj):
         """Get customer name safely"""
@@ -68,7 +69,7 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoadsideRequest
         fields = [
-            'id', 'request_number', 'customer', 'customer_name',
+            'id', 'request_number', 'customer', 'customer_name', 'customer_email',
             'vehicle', 'vehicle_display', 'branch',
             'service_type', 'service_type_display',
             'status', 'status_display',

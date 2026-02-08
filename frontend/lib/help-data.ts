@@ -1,7 +1,8 @@
 
 import {
     ClipboardList, Package, CreditCard, Users, Car, Calendar,
-    BarChart3, Settings, Truck, Wrench, Search, LayoutDashboard, FileCheck
+    BarChart3, Settings, Truck, Wrench, Search, LayoutDashboard, FileCheck,
+    Bell, Ticket, FileBarChart, MessageSquare, ShieldAlert
 } from "lucide-react";
 
 export type HelpTopic = {
@@ -430,31 +431,61 @@ export const helpContent: Record<string, HelpModule> = {
     admin: {
         id: "admin",
         title: "Administration",
-        description: "User management and system configuration.",
+        description: "User management, security, and system configuration.",
         icon: Settings,
         topics: [
             {
                 title: "User Management",
                 steps: [
-                    "Go to Administration → Users",
-                    "Click 'New User' to create account",
-                    "Enter user details and assign role (Admin, Manager, Technician, etc.)",
-                    "Set specific permissions if custom access needed",
-                    "Send invitation email with temporary password",
-                    "User changes password on first login",
+                    "Go to Administration → Users.",
+                    "Click 'New User' to create account.",
+                    "Enter user details and assign a Role (Admin, Manager, Technician, etc.).",
+                    "Assign a default Branch to restrict their data view to a specific location if needed.",
+                    "The system sends an invitation email; users set their password upon first login.",
                 ],
                 actionLink: "/admin/users",
                 actionLabel: "Manage Users"
             },
             {
-                title: "System Configuration",
+                title: "Roles & Permissions (RBAC)",
                 steps: [
-                    "Navigate to Administration → Settings",
-                    "Configure business details: name, address, tax ID",
-                    "Set tax rates and default payment terms",
-                    "Customize invoice template and email notifications",
-                    "Set up integrations: payment gateway, email provider",
-                    "Configure backup schedule and retention policy",
+                    "Navigate to Administration → Roles.",
+                    "Standard roles (Super Admin, Manager, Technician) are pre-configured.",
+                    "Create 'Custom Roles' to define granular access to specific modules (e.g., 'Inventory Only').",
+                    "Toggle specific permissions (View, Create, Edit, Delete) for each module.",
+                ],
+                actionLink: "/admin/roles",
+                actionLabel: "Manage Roles"
+            },
+            {
+                title: "Audit Logs",
+                steps: [
+                    "Go to Administration → Audit Log.",
+                    "Track every action taken in the system, including who did it and when.",
+                    "Filter by User, Action Type (Create, Update, Delete), or Date Range.",
+                    "Use this for troubleshooting data changes or security reviews.",
+                ],
+                actionLink: "/admin/audit-log",
+                actionLabel: "View Audit Log"
+            },
+            {
+                title: "Backups & Recovery",
+                steps: [
+                    "Navigate to Administration → Backups.",
+                    "The system performs automatic daily backups.",
+                    "Manually trigger a backup before major configuration changes.",
+                    "Download backup files to secure offline storage.",
+                ],
+                actionLink: "/admin/backups",
+                actionLabel: "Manage Backups"
+            },
+            {
+                title: "System Branding & Settings",
+                steps: [
+                    "Navigate to Administration → Settings.",
+                    "Set Company Logo, Colors, and Website Name.",
+                    "Configure Branch details and Currency settings.",
+                    "Manage 'Categories' for Inventory, Vehicles, and Assets.",
                 ],
                 actionLink: "/admin/settings",
                 actionLabel: "Go to Settings"
@@ -543,6 +574,112 @@ export const helpContent: Record<string, HelpModule> = {
                 ],
                 actionLink: "/subscriptions",
                 actionLabel: "View Subscriptions"
+            }
+        ]
+    },
+    servicesdue: {
+        id: "servicesdue",
+        title: "Services Due",
+        description: "Track and manage upcoming maintenance services.",
+        icon: Bell,
+        topics: [
+            {
+                title: "Monitoring Due Services",
+                steps: [
+                    "Navigate to 'Services Due' from the sidebar.",
+                    "View vehicles requiring immediate attention (Oil changes, Brake checks, etc.).",
+                    "Filter by time horizon (Due Today, Next 7 Days, Overdue).",
+                    "Filter by service type and customer priority.",
+                ],
+                actionLink: "/services-due",
+                actionLabel: "View Services Due"
+            },
+            {
+                title: "Customer Outreach",
+                steps: [
+                    "Select cars that are overdue for service.",
+                    "Click 'Send Reminder' to trigger an automated SMS/Email.",
+                    "Log follow-up calls in the customer notes profile.",
+                ],
+            }
+        ]
+    },
+    gatepasses: {
+        id: "gatepasses",
+        title: "Gate Passes",
+        description: "Control vehicle entry and exit from the facility.",
+        icon: Ticket,
+        topics: [
+            {
+                title: "Issuing a Gate Pass",
+                steps: [
+                    "Navigate to Gate Passes → 'Issue Pass'.",
+                    "Select the Work Order or Vehicle being released.",
+                    "Confirm that the balance is fully paid or an exception is authorized.",
+                    "Enter the person authorized to pick up the vehicle.",
+                    "Print the pass or send a digital version to the gate security.",
+                ],
+                actionLink: "/gatepass",
+                actionLabel: "Manage Passes"
+            },
+            {
+                title: "Security Verification",
+                steps: [
+                    "Security staff can search for a pass via the 'Verify' interface.",
+                    "Scan the QR code or enter the pass ID.",
+                    "Mark the vehicle as 'Exited' once it leaves the facility.",
+                ],
+            }
+        ]
+    },
+    reports: {
+        id: "reports",
+        title: "Operational Reports",
+        description: "Analyze shop performance, technician productivity, and sales.",
+        icon: FileBarChart,
+        topics: [
+            {
+                title: "Standard Reports",
+                steps: [
+                    "Visit the Reports module for high-level summaries.",
+                    "Sales Report: Analyze revenue by branch, service type, or time period.",
+                    "Technician Efficiency: Monitor productivity and billing performance.",
+                    "Customer Retention: Track repeat visits and churn rates.",
+                ],
+                actionLink: "/reports",
+                actionLabel: "View Reports"
+            },
+            {
+                title: "Exporting Data",
+                steps: [
+                    "Use 'Export to Excel' for the raw data used in reports.",
+                    "Generate PDF summaries for management meetings or board packs.",
+                ],
+            }
+        ]
+    },
+    sms: {
+        id: "sms",
+        title: "SMS Console",
+        description: "Direct customer communication and automated notifications.",
+        icon: MessageSquare,
+        topics: [
+            {
+                title: "Manual Messaging",
+                steps: [
+                    "Open the SMS Console to chat directly with a customer.",
+                    "Search for a customer by name or phone number.",
+                    "View thread history including automated alerts.",
+                ],
+                actionLink: "/sms",
+                actionLabel: "Manage SMS"
+            },
+            {
+                title: "Automated Triggers",
+                steps: [
+                    "Configure triggers in Administration → Settings → SMS Templates.",
+                    "Automated messages are sent for: Appointment Reminders, Work Order Updates, and Payment Confirmations.",
+                ],
             }
         ]
     }

@@ -50,4 +50,18 @@ export const documentsApi = {
         });
         return response.data;
     },
+
+    processVoiceNote: async (id: number): Promise<{
+        id: number;
+        transcription: string;
+        analysis: {
+            summary: string;
+            suggested_category: string;
+            suggested_severity: string;
+        };
+        message: string;
+    }> => {
+        const response = await apiClient.post(`/documents/documents/${id}/process_voice_notes/`);
+        return response.data;
+    },
 };

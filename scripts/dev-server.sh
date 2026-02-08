@@ -313,7 +313,7 @@ sleep 3
 # Start Next.js development server
 echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
 cd "$FRONTEND_DIR"
-NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api PORT=$NEXTJS_PORT npm run dev -- --webpack > /tmp/nextjs-dev.log 2>&1 &
+NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api PORT=$NEXTJS_PORT npm run dev > /tmp/nextjs-dev.log 2>&1 &
 NEXTJS_PID=$!
 
 # Start Celery Worker

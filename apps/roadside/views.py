@@ -20,6 +20,7 @@ from .serializers import (
 from apps.accounts.permissions import HasPermission, HasAnyPermission
 from apps.branches.utils import resolve_branch
 from apps.branches.utils import filter_queryset_for_user_branches
+from apps.core.services.ai_service import AIService
 
 
 class RoadsideRequestViewSet(viewsets.ModelViewSet):
@@ -114,6 +115,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                  return [IsAuthenticated(), HasAnyPermission(['manage_roadside'])] # Effectively blocks customers
              return [IsAuthenticated()]
         elif action in ['update', 'partial_update']:
+             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
+        elif action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
              return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
         return [IsAuthenticated()]
     
@@ -633,4 +636,77 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 {'error': f'Failed to send SMS: {response}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=True, methods=['post'])
+    def send_customer_email(self, request, pk=None):
+        """Send Email to customer for this roadside request"""
+        roadside_request = self.get_object()
+        
+        # Get message and subject from request body
+        message = request.data.get('message', '').strip()
+        subject = request.data.get('subject', f'Update on your Roadside Request {roadside_request.request_number}').strip()
+        
+        if not message:
+            return Response(
+                {'error': 'Message is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if customer has an email
+        customer_user = roadside_request.customer.user if roadside_request.customer else None
+        if not customer_user or not customer_user.email:
+            return Response(
+                {'error': 'Customer email address not available'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from apps.notifications_app.models import Notification
+            from apps.notifications_app.services import NotificationService
+            
+            # Create a notification object
+            notification = Notification.objects.create(
+                recipient=customer_user,
+                notification_type='custom',
+                channel='email',
+                priority='high',
+                title=subject,
+                message=message,
+                data={
+                    'request_id': roadside_request.id,
+                    'request_number': roadside_request.request_number,
+                },
+                related_object_type='roadside',
+                related_object_id=roadside_request.id
+            )
+            
+            # Send the notification
+            success = NotificationService().send_notification(notification)
+            
+            if success:
+                return Response({
+                    'success': True,
+                    'message': 'Email sent successfully'
+                })
+            else:
+                return Response(
+                    {'error': 'Failed to send email. Please check notification logs.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error sending custom email: {e}", exc_info=True)
+            return Response(
+                {'error': f'An error occurred while sending email: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def suggested_message(self, request, pk=None):
+        """Get a suggested message using the centralized AI service"""
+        roadside_request = self.get_object()
+        channel = request.query_params.get('channel', 'email')
+        suggestion = AIService.get_suggested_message(roadside_request, channel=channel, context_type='roadside')
+        return Response(suggestion)
 

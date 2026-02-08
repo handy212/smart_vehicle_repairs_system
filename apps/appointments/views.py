@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, time
 # Notification triggers
 from apps.notifications_app.triggers import notification_triggers
 from apps.branches.utils import filter_queryset_for_user_branches, resolve_branch
+from apps.core.services.ai_service import AIService
 
 from .models import Appointment, ServiceBay, AppointmentReminder
 from .serializers import (
@@ -78,6 +79,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('edit_appointments')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('delete_appointments')]
+        elif self.action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
+            return [IsAuthenticated(), HasPermission('edit_appointments')]
         return [IsAuthenticated()]
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -353,6 +356,85 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             'message': 'Reminder sent successfully',
             'reminder_type': reminder_type
         })
+
+    @action(detail=True, methods=['get'])
+    def suggested_message(self, request, pk=None):
+        """Get a suggested message using the centralized AI service"""
+        appointment = self.get_object()
+        channel = request.query_params.get('channel', 'email')
+        suggestion = AIService.get_suggested_message(appointment, channel=channel, context_type='appointment')
+        return Response(suggestion)
+
+    @action(detail=True, methods=['post'])
+    def send_customer_sms(self, request, pk=None):
+        """Send a custom SMS to the customer"""
+        appointment = self.get_object()
+        message = request.data.get('message', '').strip()
+        if not message:
+            return Response({'error': 'Message is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        customer_user = appointment.customer.user if appointment.customer else None
+        if not customer_user or not customer_user.phone:
+            return Response({'error': 'Customer phone number not available'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from apps.notifications_app.models import Notification
+            from apps.notifications_app.services import NotificationService
+            notification = Notification.objects.create(
+                recipient=customer_user,
+                notification_type='custom',
+                channel='sms',
+                priority='high',
+                message=message,
+                data={'appointment_id': appointment.id, 'appointment_number': appointment.appointment_number},
+                related_object_type='appointment',
+                related_object_id=appointment.id
+            )
+            success = NotificationService().send_notification(notification)
+            if success:
+                return Response({'success': True, 'message': 'SMS sent successfully'})
+            else:
+                return Response({'error': 'Failed to send SMS. Please check notification logs.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            logger.error(f"Error sending custom SMS: {e}", exc_info=True)
+            return Response({'error': f'An error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def send_customer_email(self, request, pk=None):
+        """Send a custom email to the customer"""
+        appointment = self.get_object()
+        message = request.data.get('message', '').strip()
+        subject = request.data.get('subject', f'Update on your Appointment {appointment.appointment_number}').strip()
+        
+        if not message:
+            return Response({'error': 'Message is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        customer_user = appointment.customer.user if appointment.customer else None
+        if not customer_user or not customer_user.email:
+            return Response({'error': 'Customer email address not available'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from apps.notifications_app.models import Notification
+            from apps.notifications_app.services import NotificationService
+            notification = Notification.objects.create(
+                recipient=customer_user,
+                notification_type='custom',
+                channel='email',
+                priority='high',
+                title=subject,
+                message=message,
+                data={'appointment_id': appointment.id, 'appointment_number': appointment.appointment_number},
+                related_object_type='appointment',
+                related_object_id=appointment.id
+            )
+            success = NotificationService().send_notification(notification)
+            if success:
+                return Response({'success': True, 'message': 'Email sent successfully'})
+            else:
+                return Response({'error': 'Failed to send email. Please check notification logs.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            logger.error(f"Error sending custom email: {e}", exc_info=True)
+            return Response({'error': f'An error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['get'])
     def calendar(self, request):

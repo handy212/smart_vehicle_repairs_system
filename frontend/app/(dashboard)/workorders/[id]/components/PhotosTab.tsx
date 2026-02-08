@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, Image as ImageIcon, X, Eye } from "lucide-react";
+import { Plus, Trash2, Image as ImageIcon, X, Eye, Sparkles, Loader2, Info } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface PhotosTabProps {
   workOrderId: number;
@@ -23,6 +25,12 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<WorkOrderPhoto | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<{
+    detected_issues: string[];
+    confidence_score: number;
+    summary: string;
+    suggested_severity: string;
+  } | null>(null);
 
   const { data: photos = [], isLoading } = useQuery({
     queryKey: ["workorder-photos", workOrderId],
@@ -80,6 +88,24 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
     },
   });
 
+  const analyzeMutation = useMutation({
+    mutationFn: (id: number) => workOrderPhotosApi.analyzeDamage(id),
+    onSuccess: (data) => {
+      setAnalysisResult(data);
+      toast({
+        title: "Analysis Complete",
+        description: "AI has finished scanning the photo for damage.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Analysis Failed",
+        description: error.response?.data?.error || "Failed to analyze photo",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileSelect = (file: File | null) => {
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
@@ -111,6 +137,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
   const handleViewPhoto = (photo: WorkOrderPhoto) => {
     setSelectedPhoto(photo);
     setPreviewUrl(photo.photo);
+    setAnalysisResult(null); // Reset analysis when viewing new photo
   };
 
   const groupedPhotos = photos.reduce((acc, photo) => {
@@ -166,7 +193,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <ImageIcon className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
+              <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-sm font-medium text-foreground mb-1">
                 No photos uploaded yet
               </p>
@@ -209,6 +236,23 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                               onClick={() => handleViewPhoto(photo)}
                             >
                               <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              title="Smart Scan"
+                              className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200"
+                              onClick={() => {
+                                handleViewPhoto(photo);
+                                analyzeMutation.mutate(photo.id);
+                              }}
+                              disabled={analyzeMutation.isPending}
+                            >
+                              {analyzeMutation.isPending && analyzeMutation.variables === photo.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-4 h-4" />
+                              )}
                             </Button>
                             <Button
                               variant="destructive"
@@ -275,6 +319,104 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                     <p>Taken by: {selectedPhoto.taken_by_name}</p>
                   )}
                   <p>{format(new Date(selectedPhoto.created_at), "MMM dd, yyyy HH:mm")}</p>
+                </div>
+
+                {/* AI Analysis Section */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-sm font-semibold flex items-center">
+                      <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+                      AI Visual Triage
+                    </h4>
+                    {!analysisResult && !analyzeMutation.isPending && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-8 border-purple-200 hover:bg-purple-50"
+                        onClick={() => analyzeMutation.mutate(selectedPhoto.id)}
+                      >
+                        <Sparkles className="w-3 h-3 mr-1 text-purple-500" />
+                        Run Smart Scan
+                      </Button>
+                    )}
+                  </div>
+
+                  {analyzeMutation.isPending && (
+                    <div className="flex flex-col items-center justify-center py-8 bg-muted/30 rounded-lg border border-dashed">
+                      <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-2" />
+                      <p className="text-sm text-muted-foreground animate-pulse">
+                        Analyzing photo for structural damage and wear...
+                      </p>
+                    </div>
+                  )}
+
+                  {analysisResult && (
+                    <div className="space-y-4">
+                      <Alert className="bg-purple-50/50 border-purple-100 italic">
+                        <Info className="h-4 w-4 text-purple-600" />
+                        <AlertDescription className="text-purple-900">
+                          {analysisResult.summary}
+                        </AlertDescription>
+                      </Alert>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="bg-white shadow-none border-dashed border-purple-100">
+                          <CardHeader className="p-3">
+                            <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">
+                              Detected Issues
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-3 pt-0">
+                            <ul className="space-y-1">
+                              {analysisResult.detected_issues.map((issue, i) => (
+                                <li key={i} className="text-sm flex items-start">
+                                  <span className="text-purple-500 mr-2">•</span>
+                                  {issue}
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+
+                        <div className="space-y-4">
+                          <div className="p-3 rounded-lg border bg-white border-purple-50">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                              AI Confidence
+                            </p>
+                            <div className="flex items-center space-x-2">
+                              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-purple-500 rounded-full"
+                                  style={{ width: `${analysisResult.confidence_score * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium">
+                                {Math.round(analysisResult.confidence_score * 100)}%
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg border bg-white border-purple-50">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                              Suggested Severity
+                            </p>
+                            <Badge
+                              variant="outline"
+                              className={
+                                analysisResult.suggested_severity === "critical"
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : analysisResult.suggested_severity === "major"
+                                    ? "bg-orange-50 text-orange-700 border-orange-200"
+                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                              }
+                            >
+                              {analysisResult.suggested_severity.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -454,4 +596,3 @@ function UploadPhotoDialog({
     </Dialog>
   );
 }
-

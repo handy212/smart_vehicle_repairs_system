@@ -1508,6 +1508,31 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         
         # Cost variance analysis
         from django.db import models as db_models
+
+    @action(detail=True, methods=['get'])
+    def predict_service(self, request, pk=None):
+        """Predict next service date and odometer using AI based on vehicle history"""
+        work_order = self.get_object()
+        vehicle = work_order.vehicle
+        
+        # Get history of completed/closed work orders for this vehicle
+        # We need this to calculate usage patterns (km per day)
+        from .models import WorkOrder
+        history = WorkOrder.objects.filter(
+            vehicle=vehicle,
+            status__in=['completed', 'closed']
+        ).order_by('created_at')
+        
+        from apps.core.services.ai_service import AIService
+        prediction = AIService.predict_next_service(history)
+        
+        if not prediction:
+            return Response(
+                {'message': 'Insufficient historical data for prediction (at least one completed work order with odometer required)'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        return Response(prediction)
         cost_variance_data = queryset.filter(
             status='completed',
             estimated_total__gt=0
@@ -2349,6 +2374,18 @@ class WorkOrderPhotoViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return WorkOrderPhotoCreateSerializer
         return WorkOrderPhotoSerializer
+
+    @action(detail=True, methods=['post'])
+    def analyze_damage(self, request, pk=None):
+        """Analyze photo for damage using AI"""
+        photo = self.get_object()
+        from apps.core.services.ai_service import AIService
+        
+        try:
+            analysis = AIService.analyze_photo_damage(photo.photo.url)
+            return Response(analysis)
+        except Exception as e:
+            return Response({'error': f"AI Analysis failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ============= Public Portal Views =============
 

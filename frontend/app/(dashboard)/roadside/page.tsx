@@ -203,12 +203,24 @@ export default function RoadsidePage() {
     return (
         <div className="space-y-5">
             {/* Header with Stats */}
-            <div className="space-y-4">
-                <div>
-                    <h1 className="text-xl font-bold tracking-tight text-foreground">Roadside Assistance</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Manage roadside breakdown requests.
-                    </p>
+            <div className="flex flex-col space-y-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+                            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+                            <span>/</span>
+                            <span className="text-foreground font-medium">Roadside Assistance</span>
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                            Roadside Activity
+                        </h1>
+                    </div>
+                    <Link href="/roadside/new">
+                        <Button className="h-9 shadow-sm">
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Request
+                        </Button>
+                    </Link>
                 </div>
                 <StatsGrid />
             </div>
@@ -306,14 +318,6 @@ export default function RoadsidePage() {
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <PermissionGuard permission="manage_roadside">
-                        <Link href="/roadside/new">
-                            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
-                                <Plus className="w-4 h-4 mr-2" />
-                                New Request
-                            </Button>
-                        </Link>
-                    </PermissionGuard>
                 </div>
             </div>
 

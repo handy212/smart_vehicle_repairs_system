@@ -294,6 +294,19 @@ export const workordersApi = {
     return response.data;
   },
 
+  predictService: async (id: number): Promise<{
+    latest_odometer: number;
+    predicted_odometer: number;
+    predicted_date: string;
+    km_per_day: number;
+    confidence_score: number;
+    recommendation: string;
+    message?: string;
+  }> => {
+    const response = await apiClient.get(`/workorders/work-orders/${id}/predict_service/`);
+    return response.data;
+  },
+
   checkReadiness: async (id: number): Promise<{
     can_start: boolean;
     errors: string[];

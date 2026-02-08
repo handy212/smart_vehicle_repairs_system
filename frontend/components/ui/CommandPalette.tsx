@@ -13,12 +13,10 @@ import {
     Command as CommandIcon,
     PlusCircle,
     BarChart3,
-    Clock,
-    History,
 } from "lucide-react";
 import { searchApi, type SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
-import { useRecentItems, type RecentItem } from "@/lib/hooks/useRecentItems";
+
 
 export function CommandPalette() {
     const [open, setOpen] = React.useState(false);
@@ -28,7 +26,7 @@ export function CommandPalette() {
     const [selectedIndex, setSelectedIndex] = React.useState(0);
     const inputRef = React.useRef<HTMLInputElement>(null);
     const router = useRouter();
-    const { recentItems } = useRecentItems();
+
 
     const QUICK_ACTIONS = React.useMemo(() => [
         { id: "new-workorder", title: "Create Work Order", type: "action", icon: PlusCircle, url: "/workorders/new", subtitle: "Start a new repair order" },
@@ -41,19 +39,8 @@ export function CommandPalette() {
     const viewableItems = React.useMemo(() => {
         if (query.trim().length > 0) return results;
 
-        const items: any[] = [
-            ...QUICK_ACTIONS.map(a => ({ ...a, isAction: true })),
-            ...recentItems.map(i => ({
-                id: i.id,
-                title: i.name,
-                type: i.type,
-                url: i.href,
-                subtitle: `Recently viewed ${i.type}`,
-                isRecent: true
-            }))
-        ];
-        return items;
-    }, [query, results, recentItems, QUICK_ACTIONS]);
+        return QUICK_ACTIONS.map(a => ({ ...a, isAction: true }));
+    }, [query, results, QUICK_ACTIONS]);
 
     React.useEffect(() => {
         const down = (e: KeyboardEvent) => {
@@ -189,46 +176,7 @@ export function CommandPalette() {
                                 })}
                             </div>
 
-                            {/* Recent Items */}
-                            {recentItems.length > 0 && (
-                                <div>
-                                    <div className="px-3 py-2 flex items-center justify-between">
-                                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                            Recently Viewed
-                                        </h3>
-                                        <History className="w-3 h-3 text-muted-foreground" />
-                                    </div>
-                                    {recentItems.map((item, idx) => {
-                                        const globalIdx = QUICK_ACTIONS.length + idx;
-                                        const isSelected = selectedIndex === globalIdx;
-                                        const Icon = getIconForType(item.type);
-                                        return (
-                                            <button
-                                                key={`recent-${item.type}-${item.id}`}
-                                                onClick={() => handleSelect({ url: item.href })}
-                                                className={cn(
-                                                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
-                                                    isSelected
-                                                        ? "bg-primary/10 dark:bg-orange-900/20 text-primary"
-                                                        : "hover:bg-muted hover:bg-muted text-foreground"
-                                                )}
-                                                onMouseEnter={() => setSelectedIndex(globalIdx)}
-                                            >
-                                                <div className={cn(
-                                                    "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
-                                                    isSelected ? "border-orange-200 dark:border-orange-800 bg-card dark:bg-orange-950" : "border-border bg-card"
-                                                )}>
-                                                    <Icon className="h-4 w-4" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <span className="block truncate text-sm font-semibold">{item.name}</span>
-                                                    <span className="block truncate text-xs text-muted-foreground capitalize">{item.type}</span>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
+
                         </div>
                     )}
 

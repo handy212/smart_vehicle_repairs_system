@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck } from "lucide-react";
-import Link from "next/link";
-import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageSquare, Mail, Sparkles, Loader2, ArrowLeft, Edit, Calendar, Clock, User, Car, FileText, AlertCircle, CheckCircle, XCircle, CheckCheck } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -23,6 +25,12 @@ export default function AppointmentDetailPage() {
   const { toast } = useToast();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [communicationMethod, setCommunicationMethod] = useState<"sms" | "email">("sms");
+  const [messageSubject, setMessageSubject] = useState("");
+  const [messageBody, setMessageBody] = useState("");
+  const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
 
   const { data: appointment, isLoading, error } = useQuery({
     queryKey: ["appointment", appointmentId],
@@ -94,6 +102,57 @@ export default function AppointmentDetailPage() {
       });
     },
   });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: (data: { method: "sms" | "email", message: string, subject?: string }) => {
+      if (data.method === "email") {
+        return appointmentsApi.sendEmail(appointmentId, data.subject || "", data.message);
+      }
+      return appointmentsApi.sendSms(appointmentId, data.message);
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Success",
+        description: variables.method === "email" ? "Email sent to customer successfully" : "SMS sent to customer successfully"
+      });
+      setIsMessageDialogOpen(false);
+      setMessageBody("");
+      setMessageSubject("");
+    },
+    onError: (error: any, variables) => {
+      toast({
+        title: variables.method === "email" ? "Email Failed" : "SMS Failed",
+        description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const fetchSuggestion = async (method: "sms" | "email") => {
+    setIsFetchingSuggestion(true);
+    try {
+      const suggestion = await appointmentsApi.getSuggestedMessage(appointmentId, method);
+      if (method === "email") {
+        setMessageSubject(suggestion.subject);
+      }
+      setMessageBody(suggestion.message);
+    } catch (error) {
+      console.error("Failed to fetch suggestion", error);
+      toast({
+        title: "Suggestion Failed",
+        description: "Could not fetch AI suggestion. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFetchingSuggestion(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isMessageDialogOpen && !messageBody.trim() && !isFetchingSuggestion) {
+      fetchSuggestion(communicationMethod);
+    }
+  }, [isMessageDialogOpen, communicationMethod]);
 
   const handleCancel = () => {
     if (cancelReason.trim()) {
@@ -346,6 +405,16 @@ export default function AppointmentDetailPage() {
                   Cancel Appointment
                 </Button>
               )}
+              <PermissionGuard permission="edit_appointments">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => setIsMessageDialogOpen(true)}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Message Customer
+                </Button>
+              </PermissionGuard>
               <Link href={`/workorders/new?appointment=${appointmentId}`} className="block">
                 <Button variant="secondary" className="w-full">
                   <FileText className="w-4 h-4 mr-2" />
@@ -422,6 +491,126 @@ export default function AppointmentDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Sub-component for the Messaging Dialog
+function MessageCustomerDialog({
+  open,
+  onOpenChange,
+  onSend,
+  method,
+  onMethodChange,
+  subject,
+  onSubjectChange,
+  message,
+  onMessageChange,
+  isSending,
+  isFetching,
+  onRefresh
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSend: () => void;
+  method: "sms" | "email";
+  onMethodChange: (method: "sms" | "email") => void;
+  subject: string;
+  onSubjectChange: (val: string) => void;
+  message: string;
+  onMessageChange: (val: string) => void;
+  isSending: boolean;
+  isFetching: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Message Customer
+          </DialogTitle>
+          <DialogDescription>
+            Send a professional update to the customer about their appointment.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs value={method} onValueChange={(val) => onMethodChange(val as "sms" | "email")} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="sms" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              SMS
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Email
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="space-y-4 py-2">
+            {method === "email" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Subject</label>
+                <Input
+                  value={subject}
+                  onChange={(e) => onSubjectChange(e.target.value)}
+                  placeholder="Email subject..."
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Message Body</label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-primary hover:text-primary hover:bg-primary/10 transition-all font-medium"
+                  onClick={onRefresh}
+                  disabled={isFetching}
+                >
+                  {isFetching ? (
+                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 mr-2" />
+                  )}
+                  {isFetching ? "Thinking..." : "Auto-generate Content"}
+                </Button>
+              </div>
+              <Textarea
+                value={message}
+                onChange={(e) => onMessageChange(e.target.value)}
+                placeholder={`Type your ${method} message here...`}
+                rows={method === "email" ? 10 : 5}
+                className="resize-none"
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                ✨ AI suggestions are based on the current appointment status.
+              </p>
+            </div>
+          </div>
+        </Tabs>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
+            Cancel
+          </Button>
+          <Button onClick={onSend} disabled={isSending || !message.trim() || (method === "email" && !subject.trim())}>
+            {isSending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                {method === "email" ? <Mail className="mr-2 h-4 w-4" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+                Send {method === "email" ? "Email" : "SMS"}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { getContrastColor } from "@/lib/utils/color-utils";
 
 export function BrandingThemeSync() {
     const { data: brandingSettings } = useQuery<SystemSetting[]>({
@@ -21,12 +22,18 @@ export function BrandingThemeSync() {
 
         if (primaryColor) {
             root.style.setProperty("--primary", primaryColor);
-            // Optional: compute a foreground color if it's too bright?
-            // For now we assume white as specified in globals.css
+
+            // Calculate contrast color for text on primary background
+            const contrast = getContrastColor(primaryColor);
+            const foreground = contrast === "black" ? "oklch(0.145 0 0)" : "oklch(1 0 0)";
+            root.style.setProperty("--primary-foreground", foreground);
         }
 
         if (secondaryColor) {
             root.style.setProperty("--secondary", secondaryColor);
+            const contrast = getContrastColor(secondaryColor);
+            const foreground = contrast === "black" ? "oklch(0.145 0 0)" : "oklch(1 0 0)";
+            root.style.setProperty("--secondary-foreground", foreground);
         }
 
         // Favicon handling

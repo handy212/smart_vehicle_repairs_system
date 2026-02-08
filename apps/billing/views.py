@@ -40,6 +40,7 @@ from apps.billing.models import (
 from apps.billing.services import PDFService
 from apps.billing.filters import InvoiceFilter_branch, EstimateFilter_branch, CreditNoteFilter_branch, PaymentFilter_branch
 from apps.branches.utils import filter_queryset_for_user_branches, resolve_branch
+from apps.core.services.ai_service import AIService
 from apps.billing.serializers import (
     TaxRateSerializer, TaxRateCreateSerializer,
     EstimateListSerializer, EstimateDetailSerializer, EstimateCreateSerializer, EstimateUpdateSerializer,
@@ -939,6 +940,8 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('edit_invoices')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('delete_invoices')]
+        elif self.action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
+            return [IsAuthenticated(), HasPermission('edit_invoices')]
         return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
@@ -1407,6 +1410,85 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 "status_breakdown": status_counts
             }
         })
+
+    @action(detail=True, methods=['get'])
+    def suggested_message(self, request, pk=None):
+        """Get a suggested message using the centralized AI service"""
+        invoice = self.get_object()
+        channel = request.query_params.get('channel', 'email')
+        suggestion = AIService.get_suggested_message(invoice, channel=channel, context_type='invoice')
+        return Response(suggestion)
+
+    @action(detail=True, methods=['post'])
+    def send_customer_sms(self, request, pk=None):
+        """Send a custom SMS to the customer"""
+        invoice = self.get_object()
+        message = request.data.get('message', '').strip()
+        if not message:
+            return Response({'error': 'Message is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        customer_user = invoice.customer.user if invoice.customer else None
+        if not customer_user or not customer_user.phone:
+            return Response({'error': 'Customer phone number not available'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from apps.notifications_app.models import Notification
+            from apps.notifications_app.services import NotificationService
+            notification = Notification.objects.create(
+                recipient=customer_user,
+                notification_type='custom',
+                channel='sms',
+                priority='high',
+                message=message,
+                data={'invoice_id': invoice.id, 'invoice_number': invoice.invoice_number},
+                related_object_type='invoice',
+                related_object_id=invoice.id
+            )
+            success = NotificationService().send_notification(notification)
+            if success:
+                return Response({'success': True, 'message': 'SMS sent successfully'})
+            else:
+                return Response({'error': 'Failed to send SMS. Please check notification logs.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            logger.error(f"Error sending custom SMS for invoice: {e}", exc_info=True)
+            return Response({'error': f'An error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def send_customer_email(self, request, pk=None):
+        """Send a custom email to the customer"""
+        invoice = self.get_object()
+        message = request.data.get('message', '').strip()
+        subject = request.data.get('subject', f'Invoice Update: {invoice.invoice_number}').strip()
+        
+        if not message:
+            return Response({'error': 'Message is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        customer_user = invoice.customer.user if invoice.customer else None
+        if not customer_user or not customer_user.email:
+            return Response({'error': 'Customer email address not available'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from apps.notifications_app.models import Notification
+            from apps.notifications_app.services import NotificationService
+            notification = Notification.objects.create(
+                recipient=customer_user,
+                notification_type='custom',
+                channel='email',
+                priority='high',
+                title=subject,
+                message=message,
+                data={'invoice_id': invoice.id, 'invoice_number': invoice.invoice_number},
+                related_object_type='invoice',
+                related_object_id=invoice.id
+            )
+            success = NotificationService().send_notification(notification)
+            if success:
+                return Response({'success': True, 'message': 'Email sent successfully'})
+            else:
+                return Response({'error': 'Failed to send email. Please check notification logs.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            logger.error(f"Error sending custom email for invoice: {e}", exc_info=True)
+            return Response({'error': f'An error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'])
     def bulk_send(self, request):

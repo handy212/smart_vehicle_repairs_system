@@ -431,6 +431,13 @@ export default function WorkOrdersPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          <Link href="/workorders/kanban">
+            <Button variant="outline" size="sm" className="h-8 text-xs font-semibold">
+              <LayoutGrid className="w-3.5 h-3.5 mr-1.5" />
+              Kanban View
+            </Button>
+          </Link>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 text-xs">
@@ -449,19 +456,13 @@ export default function WorkOrdersPage() {
                   Export CSV
                 </DropdownMenuItem>
               </PermissionGuard>
-              <Link href="/workorders/kanban">
-                <DropdownMenuItem className="text-xs">
-                  <LayoutGrid className="w-3.5 h-3.5 mr-2" />
-                  Kanban View
-                </DropdownMenuItem>
-              </Link>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <PermissionGuard permission="create_workorders">
             <Link href="/workorders/new">
-              <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90 text-white shadow-sm">
-                <Plus className="w-3.5 h-3.5 mr-2" />
+              <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90 text-white shadow-sm font-bold uppercase tracking-wider">
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
                 New Work Order
               </Button>
             </Link>

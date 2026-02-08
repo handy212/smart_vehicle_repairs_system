@@ -94,7 +94,7 @@ export default function EditBundlePage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 pb-12">
+        <div className="space-y-6 pb-12">
             <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-4">
                     <Link href="/inventory/bundles">

@@ -15,6 +15,7 @@ export interface RoadsideRequest {
             first_name: string;
             last_name: string;
             phone: string;
+            email: string;
         }
     };
     vehicle: {
@@ -29,6 +30,7 @@ export interface RoadsideRequest {
     longitude?: string;
     description: string;
     customer_phone: string;
+    customer_email?: string;
     tow_distance_km?: string | number;
     destination?: string;
     notes?: string;
@@ -187,6 +189,22 @@ export const roadsideApi = {
      */
     sendCustomerSms: async (id: number | string, message: string) => {
         const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/requests/${id}/send_customer_sms/`, { message });
+        return response.data;
+    },
+
+    /**
+     * Admin: Send Email to customer
+     */
+    sendCustomerEmail: async (id: number | string, message: string, subject?: string) => {
+        const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/requests/${id}/send_customer_email/`, { message, subject });
+        return response.data;
+    },
+
+    /**
+     * Get a suggested message based on request status
+     */
+    getSuggestedMessage: async (id: number | string, channel: 'sms' | 'email') => {
+        const response = await apiClient.get<{ subject: string; message: string; channel: string }>(`/roadside/requests/${id}/suggested_message/`, { params: { channel } });
         return response.data;
     },
 

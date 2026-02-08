@@ -59,84 +59,97 @@ export default function ForecastingPage() {
     }
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Parts Forecasting</h1>
-                    <p className="text-muted-foreground">
-                        Bundle availability based on current branch stock levels.
-                    </p>
+        <div className="space-y-6 pb-12">
+            {/* Header */}
+            <div className="flex flex-col space-y-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+                            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+                            <span>/</span>
+                            <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
+                            <span>/</span>
+                            <span className="text-foreground font-medium">Forecasting</span>
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                            Parts Forecasting
+                        </h1>
+                    </div>
+                    <Badge variant="outline" className="h-fit py-1 px-2 text-[10px] uppercase font-bold tracking-wide">
+                        <TrendingUp className="mr-1 h-3 w-3" />
+                        System Generated
+                    </Badge>
                 </div>
-                <Badge variant="outline" className="h-fit">
-                    <TrendingUp className="mr-1 h-3 w-3" />
-                    System Generated
-                </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {forecasts?.map((bundle) => (
-                    <Card key={bundle.id} className="overflow-hidden border-2 transition-all hover:border-primary/50">
-                        <CardHeader className="bg-muted/30 pb-4">
+                    <Card key={bundle.id} className="overflow-hidden border border-border shadow-sm hover:border-primary/50 transition-colors">
+                        <CardHeader className="py-3 px-4 border-b bg-muted/30">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <CardTitle className="text-xl">{bundle.name}</CardTitle>
-                                    <CardDescription>{bundle.service_type || "Custom Bundle"}</CardDescription>
+                                    <CardTitle className="text-sm font-bold truncate max-w-[180px]">{bundle.name}</CardTitle>
+                                    <CardDescription className="text-[10px] uppercase font-medium">{bundle.service_type || "Custom Bundle"}</CardDescription>
                                 </div>
                                 {bundle.bundles_available > 0 ? (
-                                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
                                 ) : (
-                                    <AlertTriangle className="h-6 w-6 text-amber-500" />
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent className="pt-6 space-y-4">
-                            <div className="text-center py-4">
-                                <span className="text-5xl font-black text-primary">
-                                    {bundle.bundles_available}
-                                </span>
-                                <p className="text-sm font-medium text-muted-foreground mt-2">
-                                    Full Bundles Ready
-                                </p>
+                        <CardContent className="p-4 space-y-4">
+                            <div className="flex items-center justify-between pb-2 border-b">
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Ready to Build</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-2xl font-black text-primary leading-none">
+                                            {bundle.bundles_available}
+                                        </span>
+                                        <span className="text-xs font-medium text-muted-foreground">Units</span>
+                                    </div>
+                                </div>
+                                <div className="h-10 w-10 rounded-full bg-primary/5 flex items-center justify-center">
+                                    <Package className="h-5 w-5 text-primary/40" />
+                                </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center">
-                                    <Package className="mr-2 h-3 w-3" />
-                                    Part Breakdown
+                            <div className="space-y-2.5">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                    Part Availability
                                 </h4>
                                 {bundle.part_breakdown.map((part: any, idx: number) => {
                                     const isCritical = part.potential_contribution === bundle.bundles_available;
                                     return (
                                         <div key={idx} className="space-y-1">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-medium truncate max-w-[150px]" title={part.part_name}>
+                                            <div className="flex justify-between text-[11px]">
+                                                <span className="font-medium text-foreground truncate max-w-[140px]" title={part.part_name}>
                                                     {part.part_name}
                                                 </span>
-                                                <span className={`font-mono text-xs ${isCritical ? 'text-amber-600 font-bold' : 'text-muted-foreground'}`}>
+                                                <span className={`font-mono ${isCritical ? 'text-amber-600 font-bold' : 'text-muted-foreground'}`}>
                                                     {part.available_qty}/{part.required_qty}
                                                 </span>
                                             </div>
                                             <Progress
                                                 value={Math.min(100, (part.available_qty / part.required_qty) * 100)}
-                                                className="h-1"
-                                                style={{ '--progress-foreground': isCritical ? '#f59e0b' : '#3b82f6' } as any}
+                                                className="h-1 bg-muted"
                                             />
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            <div className="pt-4 mt-2 border-t flex justify-between items-center text-sm font-medium">
+                            <div className="pt-3 border-t flex justify-between items-center text-[11px] font-bold">
                                 <Link
                                     href={`/inventory/bundles/${bundle.id}/edit`}
-                                    className="text-primary hover:underline inline-flex items-center"
+                                    className="text-primary hover:text-primary/80 flex items-center gap-1"
                                 >
-                                    Edit Bundle <ArrowRight className="ml-1 h-3 w-3" />
+                                    Manage bundle <ArrowRight className="h-3 w-3" />
                                 </Link>
                                 {bundle.bundles_available < 5 && (
                                     <Link
                                         href="/inventory/purchase-orders/new"
-                                        className="text-amber-600 hover:text-amber-700 font-bold"
+                                        className="text-amber-600 hover:text-amber-700 uppercase tracking-tight"
                                     >
                                         Restock
                                     </Link>

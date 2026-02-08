@@ -311,7 +311,7 @@ export default function NewUserPage() {
   };
 
   return (
-    <div className="space-y-6 bg-background min-h-screen p-6">
+    <div className="space-y-6 bg-background min-h-screen p-4 md:p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/users">
@@ -596,7 +596,7 @@ export default function NewUserPage() {
                                     return [...current, branchId];
                                   },
                                 })}
-                                className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
+                                className="rounded border-border text-primary focus:ring-primary dark:bg-muted dark:border-border w-5 h-5"
                               />
                               <div className="flex-1">
                                 <span className="text-sm font-medium text-card-foreground">{branch.name}</span>
@@ -628,7 +628,7 @@ export default function NewUserPage() {
                             type="checkbox"
                             id="is_active"
                             {...register("is_active")}
-                            className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                            className="rounded border-border text-primary focus:ring-primary dark:bg-muted dark:border-border w-4 h-4"
                           />
                           <label htmlFor="is_active" className="text-sm font-medium text-card-foreground">
                             User is active
@@ -639,7 +639,7 @@ export default function NewUserPage() {
                             type="checkbox"
                             id="send_welcome_email"
                             {...register("send_welcome_email")}
-                            className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                            className="rounded border-border text-primary focus:ring-primary dark:bg-muted dark:border-border w-4 h-4"
                           />
                           <label htmlFor="send_welcome_email" className="text-sm font-medium text-card-foreground">
                             Do not send welcome letter
@@ -692,7 +692,7 @@ export default function NewUserPage() {
                             type="checkbox"
                             id="is_active"
                             {...register("is_active")}
-                            className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                            className="rounded border-border text-primary focus:ring-primary dark:bg-muted dark:border-border w-4 h-4"
                           />
                           <label htmlFor="is_active" className="text-sm font-medium text-card-foreground">
                             User is active
@@ -703,7 +703,7 @@ export default function NewUserPage() {
                             type="checkbox"
                             id="send_welcome_email"
                             {...register("send_welcome_email")}
-                            className="rounded border-border text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                            className="rounded border-border text-primary focus:ring-primary dark:bg-muted dark:border-border w-4 h-4"
                           />
                           <label htmlFor="send_welcome_email" className="text-sm font-medium text-card-foreground">
                             Do not send welcome letter

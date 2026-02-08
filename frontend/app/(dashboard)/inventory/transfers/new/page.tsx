@@ -106,7 +106,7 @@ export default function NewTransferPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">New Stock Transfer</h1>
                 <Link href="/inventory/transfers">

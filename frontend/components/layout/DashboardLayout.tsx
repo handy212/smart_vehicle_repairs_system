@@ -8,6 +8,8 @@ import { SubNav, getSubNavConfig } from "./SubNav";
 import { useKeyboardShortcut } from "@/lib/hooks/useKeyboardShortcut";
 import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dialog";
 import { CommandPalette } from "@/components/ui/CommandPalette";
+import { ProgressBar } from "@/components/ui/ProgressBar";
+import { Suspense } from "react";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -93,12 +95,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   // Calculate margin: sidebar (288px = w-72 when expanded, 80px = w-20 when collapsed) + sub-nav (224px when expanded, 48px when collapsed)
   // Use default collapsed state during SSR to avoid hydration mismatch
-  const sidebarWidthExpanded = 288; // w-72 = 18rem = 288px
-  const sidebarWidthCollapsed = 80; // w-20 = 5rem = 80px
+  const sidebarWidthExpanded = 256; // w-64 = 16rem = 256px
+  const sidebarWidthCollapsed = 64; // w-16 = 4rem = 64px
   const sidebarCollapsed = mounted ? isSidebarCollapsed : false; // Default to expanded during SSR
   const sidebarWidth = sidebarCollapsed ? sidebarWidthCollapsed : sidebarWidthExpanded;
 
-  const subNavWidthExpanded = 224; // w-56 = 14rem = 224px
+  const subNavWidthExpanded = 208; // w-52 = 13rem = 208px
   const subNavWidthCollapsed = 48; // w-12 = 3rem = 48px
   const subNavCollapsed = mounted ? isSubNavCollapsed : false; // Default to expanded during SSR
   const subNavWidth = hasSubNav && !subNavCollapsed ? subNavWidthExpanded : hasSubNav && subNavCollapsed ? subNavWidthCollapsed : 0;
@@ -150,13 +152,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         )}
       </div>
       <main
-        className="min-h-screen px-4 py-0 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300 print:!m-0 print:!p-0"
+        className="min-h-screen px-4 py-0 sm:px-6 lg:px-4 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300 print:!m-0 print:!p-0"
         style={{
-          marginLeft: `${totalMargin}px`,
+          marginLeft: isDesktop ? `${totalMargin}px` : '0',
           paddingTop: '5rem' // 80px to account for header (64px) + extra space for mobile search
         }}
       >
-        {children}
+        <Suspense fallback={null}>
+          <ProgressBar />
+        </Suspense>
+
+        <div key={pathname} className="animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+          {children}
+        </div>
       </main>
 
       {/* Keyboard Shortcuts Dialog */}

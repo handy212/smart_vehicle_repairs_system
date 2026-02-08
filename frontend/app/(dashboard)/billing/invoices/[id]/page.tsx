@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt, FileCheck, Plus, CreditCard, Wrench, Clock, StickyNote, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt, FileCheck, Plus, CreditCard, Wrench, Clock, StickyNote, FileText, MessageSquare, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils/cn";
@@ -46,6 +48,12 @@ export default function InvoiceDetailPage() {
   const [selectedPaymentForAllocation, setSelectedPaymentForAllocation] = useState<any | null>(null);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [communicationMethod, setCommunicationMethod] = useState<"sms" | "email">("email");
+  const [messageSubject, setMessageSubject] = useState("");
+  const [messageBody, setMessageBody] = useState("");
+  const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { downloadPDF, isDownloading } = usePrint();
@@ -145,6 +153,57 @@ export default function InvoiceDetailPage() {
       });
     },
   });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: (data: { method: "sms" | "email", message: string, subject?: string }) => {
+      if (data.method === "email") {
+        return billingApi.invoices.sendEmail(invoiceId, data.subject || "", data.message);
+      }
+      return billingApi.invoices.sendSms(invoiceId, data.message);
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Success",
+        description: variables.method === "email" ? "Email sent to customer successfully" : "SMS sent to customer successfully"
+      });
+      setIsMessageDialogOpen(false);
+      setMessageBody("");
+      setMessageSubject("");
+    },
+    onError: (error: any, variables) => {
+      toast({
+        title: variables.method === "email" ? "Email Failed" : "SMS Failed",
+        description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const fetchSuggestion = async (method: "sms" | "email") => {
+    setIsFetchingSuggestion(true);
+    try {
+      const suggestion = await billingApi.invoices.getSuggestedMessage(invoiceId, method);
+      if (method === "email") {
+        setMessageSubject(suggestion.subject);
+      }
+      setMessageBody(suggestion.message);
+    } catch (error) {
+      console.error("Failed to fetch suggestion", error);
+      toast({
+        title: "Suggestion Failed",
+        description: "Could not fetch AI suggestion. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFetchingSuggestion(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isMessageDialogOpen && !messageBody.trim() && !isFetchingSuggestion) {
+      fetchSuggestion(communicationMethod);
+    }
+  }, [isMessageDialogOpen, communicationMethod]);
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
@@ -346,6 +405,17 @@ export default function InvoiceDetailPage() {
                           Edit
                         </button>
                       </Link>
+                      <div className="border-t border-border my-1" />
+                      <button
+                        onClick={() => {
+                          setIsMessageDialogOpen(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        Message Customer
+                      </button>
                     </div>
                   </div>
                 </>
@@ -795,7 +865,160 @@ export default function InvoiceDetailPage() {
         )
       }
 
+      {/* Message Dialog */}
+      <MessageCustomerDialog
+        open={isMessageDialogOpen}
+        onOpenChange={setIsMessageDialogOpen}
+        method={communicationMethod}
+        onMethodChange={setCommunicationMethod}
+        subject={messageSubject}
+        onSubjectChange={setMessageSubject}
+        message={messageBody}
+        onMessageChange={setMessageBody}
+        isSending={sendMessageMutation.isPending}
+        isFetching={isFetchingSuggestion}
+        onRefresh={() => fetchSuggestion(communicationMethod)}
+        onSend={() => sendMessageMutation.mutate({
+          method: communicationMethod,
+          message: messageBody,
+          subject: messageSubject
+        })}
+      />
     </>
+  );
+}
+
+// Sub-component for the Messaging Dialog
+function MessageCustomerDialog({
+  open,
+  onOpenChange,
+  onSend,
+  method,
+  onMethodChange,
+  subject,
+  onSubjectChange,
+  message,
+  onMessageChange,
+  isSending,
+  isFetching,
+  onRefresh
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSend: () => void;
+  method: "sms" | "email";
+  onMethodChange: (method: "sms" | "email") => void;
+  subject: string;
+  onSubjectChange: (val: string) => void;
+  message: string;
+  onMessageChange: (val: string) => void;
+  isSending: boolean;
+  isFetching: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Message Customer
+          </DialogTitle>
+          <DialogDescription>
+            Send a billing update or payment reminder to the customer.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs value={method} onValueChange={(val) => onMethodChange(val as "sms" | "email")} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="sms" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              SMS
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Email
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="space-y-4 py-2">
+            {method === "email" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Subject</label>
+                <Input
+                  value={subject}
+                  onChange={(e) => onSubjectChange(e.target.value)}
+                  placeholder="Email subject..."
+                  className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Message Body</label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-primary hover:text-primary hover:bg-primary/10 transition-all font-medium"
+                  onClick={onRefresh}
+                  disabled={isFetching}
+                >
+                  {isFetching ? (
+                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 mr-2" />
+                  )}
+                  {isFetching ? "Thinking..." : "Auto-generate Content"}
+                </Button>
+              </div>
+              <Textarea
+                value={message}
+                onChange={(e) => onMessageChange(e.target.value)}
+                placeholder={`Type your ${method} message here...`}
+                rows={method === "email" ? 10 : 5}
+                className="resize-none"
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                ✨ AI suggestions are based on current invoice status (paid, overdue, etc.).
+              </p>
+            </div>
+          </div>
+        </Tabs>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
+            Cancel
+          </Button>
+          <Button onClick={onSend} disabled={isSending || !message.trim() || (method === "email" && !subject.trim())}>
+            {isSending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                {method === "email" ? <Mail className="mr-2 h-4 w-4" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+                Send {method === "email" ? "Email" : "SMS"}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Add a simple Input component if not already available
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={cn(
+        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        props.className
+      )}
+    />
   );
 }
 

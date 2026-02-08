@@ -24,11 +24,11 @@ import {
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { Textarea } from "@/components/ui/textarea";
-import { useDebounce } from "@/lib/hooks/useDebounce";
 import { cn } from "@/lib/utils/cn";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
+import { CustomerSelector } from "@/components/customers/CustomerSelector";
 
 const roadsideRequestSchema = z.object({
     customer: z.number().min(1, "Customer is required"),
@@ -71,8 +71,6 @@ export default function NewRoadsideRequestDashboardPage() {
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    const [customerSearch, setCustomerSearch] = useState("");
-    const debouncedCustomerSearch = useDebounce(customerSearch, 500);
     const [serverError, setServerError] = useState<string | null>(null);
     const [isLocating, setIsLocating] = useState(false);
 
@@ -96,14 +94,10 @@ export default function NewRoadsideRequestDashboardPage() {
     const serviceType = watch("service_type");
     const towDistance = watch("tow_distance_km");
 
-    // Fetch customers - if no search, just get regular list
-    const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
-        queryKey: ["customers", "search", debouncedCustomerSearch],
-        queryFn: () => customersApi.list({
-            search: debouncedCustomerSearch || undefined,
-            page_size: 10,
-            status: 'active'
-        }),
+    const { data: selectedCustomer, isLoading: isLoadingCustomer } = useQuery({
+        queryKey: ["customer", selectedCustomerId],
+        queryFn: () => customersApi.get(selectedCustomerId!),
+        enabled: !!selectedCustomerId,
     });
 
     const { data: customerVehicles, isLoading: isLoadingVehicles } = useQuery({
@@ -111,8 +105,6 @@ export default function NewRoadsideRequestDashboardPage() {
         queryFn: () => customersApi.vehicles(selectedCustomerId!),
         enabled: !!selectedCustomerId,
     });
-
-    const selectedCustomer = customersData?.results.find(c => c.id === selectedCustomerId);
 
     // Check for active subscription
     const { data: activeSubscriptionData, isLoading: isLoadingSubscription } = useQuery({
@@ -218,19 +210,21 @@ export default function NewRoadsideRequestDashboardPage() {
     ];
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-12">
+        <div className="space-y-6 pb-12">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                    <Link href="/roadside">
-                        <Button variant="secondary">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Back
-                        </Button>
-                    </Link>
+            <div className="flex flex-col space-y-4">
+                <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-foreground">New Roadside Request</h1>
-                        <p className="text-sm text-muted-foreground mt-1">Log a new breakdown assistance request</p>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+                            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+                            <span>/</span>
+                            <Link href="/roadside" className="hover:text-primary transition-colors">Roadside</Link>
+                            <span>/</span>
+                            <span className="text-foreground font-medium">New Request</span>
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                            New Roadside Request
+                        </h1>
                     </div>
                 </div>
             </div>
@@ -258,48 +252,15 @@ export default function NewRoadsideRequestDashboardPage() {
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-3">
-                                        <Label htmlFor="customer_search" className="font-semibold">Search Customer *</Label>
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                id="customer_search"
-                                                placeholder="Name, Phone, or Customer #"
-                                                value={customerSearch}
-                                                onChange={(e) => setCustomerSearch(e.target.value)}
-                                                className="pl-9 h-11 border-border"
-                                            />
-                                            {isLoadingCustomers && <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-primary border-r-transparent animate-spin" />}
-                                        </div>
-                                        <div className="relative">
-                                            <select
-                                                id="customer"
-                                                className={cn(
-                                                    "w-full px-3 py-2.5 border rounded-lg bg-card transition-all",
-                                                    errors.customer ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
-                                                )}
-                                                value={selectedCustomerId || ""}
-                                                onChange={(e) => {
-                                                    const id = parseInt(e.target.value);
-                                                    if (!isNaN(id)) {
-                                                        setValue("customer", id, { shouldValidate: true });
-                                                        const cust = customersData?.results.find(c => c.id === id);
-                                                        if (cust?.phone) setValue("customer_phone", cust.phone);
-                                                        resetField("vehicle");
-                                                    } else {
-                                                        setValue("customer", 0);
-                                                    }
-                                                }}
-                                            >
-                                                <option value="">
-                                                    {isLoadingCustomers ? "Loading customers..." : "-- Choose Customer --"}
-                                                </option>
-                                                {customersData?.results.map(c => (
-                                                    <option key={c.id} value={c.id}>
-                                                        {c.full_name || c.company_name} ({c.customer_number})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                        <Label className="font-semibold">Customer *</Label>
+                                        <CustomerSelector
+                                            selectedCustomerId={selectedCustomerId}
+                                            onSelect={(cust) => {
+                                                setValue("customer", cust.id, { shouldValidate: true });
+                                                if (cust.phone) setValue("customer_phone", cust.phone);
+                                                resetField("vehicle");
+                                            }}
+                                        />
                                         {errors.customer && (
                                             <p className="text-xs text-red-600 font-medium flex items-center gap-1">
                                                 <AlertCircle className="w-3 h-3" />
@@ -309,7 +270,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                     </div>
 
                                     <div className="space-y-3">
-                                        <Label htmlFor="vehicle" className="font-semibold">Select Vehicle *</Label>
+                                        <Label htmlFor="vehicle" className="font-semibold">Selected Vehicle *</Label>
                                         <div className="relative">
                                             <select
                                                 id="vehicle"
@@ -339,9 +300,6 @@ export default function NewRoadsideRequestDashboardPage() {
                                         )}
                                         {!selectedCustomerId && (
                                             <p className="text-xs text-amber-600 font-medium px-1">← Select a customer first</p>
-                                        )}
-                                        {selectedCustomerId && !isLoadingVehicles && customerVehicles?.length === 0 && (
-                                            <p className="text-xs text-red-600 font-medium px-1">This customer has no vehicles registered.</p>
                                         )}
                                     </div>
                                 </div>
@@ -394,14 +352,13 @@ export default function NewRoadsideRequestDashboardPage() {
 
                         {/* Location Details */}
                         <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <MapIcon className="w-4 h-4" />
+                            <CardHeader className="py-3 px-4 border-b">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <MapIcon className="w-4 h-4 text-primary" />
                                     Location Information
                                 </CardTitle>
-                                <CardDescription className="text-xs">Where did the breakdown happen?</CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="p-4 space-y-4">
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <Label htmlFor="breakdown_location" className="font-semibold">Breakdown Location *</Label>
@@ -465,13 +422,13 @@ export default function NewRoadsideRequestDashboardPage() {
                     {/* Right Column - Service & Summary */}
                     <div className="space-y-3">
                         <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <Truck className="w-4 h-4" />
-                                    Service Configuration
+                            <CardHeader className="py-3 px-4 border-b">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <Truck className="w-4 h-4 text-primary" />
+                                    Service Details
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-3">
+                            <CardContent className="p-4 space-y-4">
                                 <div className="space-y-3">
                                     <Label htmlFor="service_type" className="font-semibold">Service Type *</Label>
                                     <select

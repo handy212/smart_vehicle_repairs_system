@@ -74,7 +74,7 @@ export default function AccountingDashboardPage() {
     const cashFlowSpark = trends.map((t: any) => ({ value: t.cash_flow }));
 
     return (
-        <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+        <div className="p-4 md:p-6 space-y-6 max-w-[1600px]">
             {/* Header Controls */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>

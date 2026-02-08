@@ -10,6 +10,8 @@ import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { inventoryApi } from "@/lib/api/inventory";
 import { adminApi } from "@/lib/api/admin";
+import { workordersApi } from "@/lib/api/workorders";
+import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +45,7 @@ const lineItemSchema = z.object({
 const estimateSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
   vehicle: z.number().optional(),
+  work_order: z.number().optional(),
   reference_number: z.string().optional(),
   sales_agent: z.number().optional(),
   status: z.enum(["draft", "sent", "expired", "declined", "approved"]),
@@ -136,13 +139,82 @@ export default function NewEstimatePage() {
     },
   });
 
+  // Fetch Work Orders for selected customer
+  const { data: workOrdersData } = useQuery({
+    queryKey: ["workorders", "customer", selectedCustomer],
+    queryFn: () => workordersApi.list({ customer: selectedCustomer || undefined }),
+    enabled: !!selectedCustomer,
+  });
+
+  const handleWorkOrderChange = async (workOrderIdStr: string) => {
+    const wId = parseInt(workOrderIdStr);
+    setValue("work_order", wId);
+
+    // Fetch WO details to get line items
+    try {
+      const [tasks, parts] = await Promise.all([
+        workOrderTasksApi.list({ work_order: wId }),
+        workordersApi.parts.list({ work_order: wId })
+      ]);
+
+      const newLineItems: ExtendedLineItem[] = [];
+
+      // Labor from Tasks
+      if (Array.isArray(tasks)) {
+        tasks.forEach((t: any) => {
+          newLineItems.push({
+            item_type: 'labor',
+            description: t.description || "Labor Service",
+            quantity: 1,
+            labor_hours: parseFloat(t.estimated_hours || "1"),
+            labor_rate: 0,
+            unit_price: 0,
+            is_taxable: true,
+            notes: t.detailed_notes
+          });
+        });
+      }
+
+      // Parts
+      if (Array.isArray(parts)) {
+        parts.forEach((p: any) => {
+          newLineItems.push({
+            item_type: 'part',
+            description: p.part_name || "Part",
+            quantity: p.quantity || 1,
+            unit_price: parseFloat(p.selling_price || "0"),
+            part: p.part,
+            part_number: p.part_number,
+            part_name: p.part_name,
+            is_taxable: true
+          });
+        });
+      }
+
+      if (newLineItems.length > 0) {
+        setLineItems(newLineItems);
+        setValue("line_items", newLineItems);
+
+        // Auto-select vehicle if available in WO
+        // use query cache or finding in list
+        const wo = workOrdersData?.results?.find((w: any) => w.id === wId);
+        if (wo && wo.vehicle) {
+          setValue("vehicle", typeof wo.vehicle === 'object' ? wo.vehicle.id : wo.vehicle);
+        }
+      }
+
+    } catch (e) {
+      console.error("Failed to fetch WO details", e);
+    }
+  };
+
   const customer = watch("customer");
   const discountPercentage = watch("discount_percentage");
   const discountType = watch("discount_type");
 
   // Update selected customer when form value changes
   if (customer && customer !== selectedCustomer) {
-    setSelectedCustomer(customer);
+    setSelectedCustomer(customer || null);
     setValue("vehicle", undefined);
   }
 
@@ -344,7 +416,26 @@ export default function NewEstimatePage() {
                     <SelectContent>
                       {vehiclesData?.results?.map((v) => (
                         <SelectItem key={v.id} value={v.id.toString()}>
-                          {v.year} {v.make} {v.model} - {v.vin}
+                          {v.year} {v.make} {v.model} - {v.license_plate || v.vin}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Link Work Order (Optional)</label>
+                  <Select
+                    value={watch("work_order")?.toString() || ""}
+                    onValueChange={handleWorkOrderChange}
+                    disabled={!selectedCustomer}
+                  >
+                    <SelectTrigger disabled={!selectedCustomer}>
+                      <SelectValue placeholder={!selectedCustomer ? "Select a customer first" : "Select Work Order"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workOrdersData?.results?.map((wo: any) => (
+                        <SelectItem key={wo.id} value={wo.id.toString()}>
+                          #{wo.work_order_number} - {wo.vehicle_display || "Unknown Vehicle"} ({wo.status.replace('_', ' ')})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -632,7 +723,7 @@ export default function NewEstimatePage() {
 
             {watch("discount_type") !== 'none' && (
               <div className="flex justify-between text-sm text-red-600">
-                <span>Discount ({discountPercentage}%)</span>
+                <span>Discount ({discountPercentage || 0}%)</span>
                 <span>- {formatCurrency(discountAmount)}</span>
               </div>
             )}

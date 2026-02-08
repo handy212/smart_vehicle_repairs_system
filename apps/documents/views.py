@@ -500,6 +500,55 @@ class DocumentViewSet(viewsets.ModelViewSet):
         result_serializer = DocumentListSerializer(queryset, many=True)
         return Response(result_serializer.data)
     
+    @action(detail=True, methods=['post'])
+    def process_voice_notes(self, request, pk=None):
+        """Process an audio document using AI to transcribe and analyze"""
+        document = self.get_object()
+        
+        # Simple check for audio files
+        is_audio = 'audio' in document.file_type or document.original_filename.lower().endswith(('.mp3', '.wav', '.m4a', '.ogg'))
+        
+        if not is_audio:
+            return Response(
+                {'error': 'Document is not an audio file'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        from apps.core.services.ai_service import AIService
+        
+        try:
+            # 1. Transcribe
+            transcription = AIService.transcribe_audio(document.file)
+            
+            # 2. Analyze
+            analysis = AIService.analyze_voice_data(transcription)
+            
+            # Store transcription in description if empty or as a tag
+            if not document.description:
+                document.description = transcription
+            
+            # Add analysis results to tags
+            tags = set([t.strip() for t in document.tags.split(',')]) if document.tags else set()
+            tags.add('ai_transcribed')
+            tags.add(f"ai_cat_{analysis['suggested_category']}")
+            tags.add(f"ai_sev_{analysis['suggested_severity']}")
+            document.tags = ', '.join(filter(None, tags))
+            
+            document.save()
+            
+            return Response({
+                'id': document.id,
+                'transcription': transcription,
+                'analysis': analysis,
+                'message': 'Voice note processed successfully'
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Voice processing failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get document statistics"""

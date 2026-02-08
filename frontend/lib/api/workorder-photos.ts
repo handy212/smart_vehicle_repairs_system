@@ -60,5 +60,15 @@ export const workOrderPhotosApi = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/workorders/photos/${id}/`);
   },
+
+  analyzeDamage: async (id: number): Promise<{
+    detected_issues: string[];
+    confidence_score: number;
+    summary: string;
+    suggested_severity: string;
+  }> => {
+    const response = await apiClient.post(`/workorders/photos/${id}/analyze_damage/`);
+    return response.data;
+  },
 };
 

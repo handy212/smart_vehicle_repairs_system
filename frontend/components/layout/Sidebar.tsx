@@ -15,6 +15,8 @@ import { APP_CONFIG } from "@/lib/config";
 import { useQuery } from "@tanstack/react-query";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { useMemo } from "react";
+import { useTheme } from "@/lib/hooks/useTheme";
+import { ensureVisibleColor } from "@/lib/utils/color-utils";
 
 // Group navigation items by category for better organization with permission requirements
 const navigationGroups = [
@@ -73,6 +75,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
+  const { resolvedTheme } = useTheme();
 
   const { data: brandingSettings } = useQuery<SystemSetting[]>({
     queryKey: ["settings", "branding", "public"],
@@ -115,7 +118,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
           "lg:translate-x-0",
           "bg-card/80 bg-background/80 backdrop-blur-xl border-r border-border/60 border-border/60 shadow-xl", // Premium glass effect
           isOpen ? "translate-x-0" : "-translate-x-full",
-          isCollapsed ? "w-20" : "w-72" // Slightly wider for premium feel
+          isCollapsed ? "w-16" : "w-64" // Standard width
         )}
       >
 
@@ -130,6 +133,8 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+                  const isDark = resolvedTheme === "dark";
+                  const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;
                   const Icon = item.icon;
 
                   const navItem = (
@@ -150,8 +155,8 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                           : "text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground "
                       )}
                       style={isActive ? {
-                        backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
-                        color: branding.primary_color,
+                        backgroundColor: `${visiblePrimary}15`, // 10% opacity hex
+                        color: visiblePrimary,
                       } : undefined}
                       title={isCollapsed ? item.name : undefined}
                     >
@@ -159,7 +164,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                       {isActive && (
                         <div
                           className="absolute inset-0 opacity-10"
-                          style={{ backgroundColor: branding.primary_color }}
+                          style={{ backgroundColor: visiblePrimary }}
                         />
                       )}
                       <Icon
@@ -168,7 +173,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                           isCollapsed ? "w-6 h-6" : "w-5 h-5 mr-3.5",
                           isActive ? "scale-110" : "group-hover:scale-110 text-muted-foreground group-hover:text-muted-foreground dark:group-hover:text-gray-300"
                         )}
-                        style={isActive ? { color: branding.primary_color } : undefined}
+                        style={isActive ? { color: visiblePrimary } : undefined}
                       />
                       {!isCollapsed && (
                         <>
@@ -176,7 +181,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                           {isActive && (
                             <div
                               className="w-1.5 h-1.5 rounded-full ml-auto shadow-sm"
-                              style={{ backgroundColor: branding.primary_color }}
+                              style={{ backgroundColor: visiblePrimary }}
                             />
                           )}
                         </>
@@ -204,28 +209,24 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
         {/* Footer */}
         {!isCollapsed && (
           <div className="flex-shrink-0 p-4 border-t border-border bg-muted/50 bg-background/50">
-            <div className="space-y-2">
-              <Link
-                href="/help"
-                className="flex items-center px-3 py-2 text-sm text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted rounded-lg transition-colors"
-              >
-                <HelpCircle className="w-4 h-4 mr-2" />
-                Help & Support
-              </Link>
-              <div className="px-3 py-2 text-xs text-muted-foreground">
-                Version {APP_CONFIG.version}
-              </div>
-            </div>
+            <Link
+              href="/help"
+              className="flex items-center px-3 py-2 text-sm text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted rounded-lg transition-colors"
+            >
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Help & Support
+            </Link>
           </div>
         )}
         {isCollapsed && (
           <div className="flex-shrink-0 p-2 border-t border-border bg-muted/50 bg-background/50">
-            <button
+            <Link
+              href="/help"
               title="Help & Support"
               className="w-full flex items-center justify-center p-2 text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted rounded-lg transition-colors"
             >
               <HelpCircle className="w-5 h-5" />
-            </button>
+            </Link>
           </div>
         )}
       </aside>
