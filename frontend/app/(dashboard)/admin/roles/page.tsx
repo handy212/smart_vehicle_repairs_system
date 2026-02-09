@@ -361,7 +361,7 @@ export default function RolesPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2.5 text-right">
-                        <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end space-x-1 transition-opacity">
                           <PermissionGuard permission="manage_permissions">
                             <Button
                               variant="ghost"

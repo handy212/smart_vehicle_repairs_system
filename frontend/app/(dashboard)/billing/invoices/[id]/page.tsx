@@ -759,7 +759,7 @@ export default function InvoiceDetailPage() {
                         </div>
 
                         {/* Allocation History Component */}
-                        <div className="pl-0 md:pl-16 mt-4">
+                        < div className="pl-0 md:pl-16 mt-4" >
                           <AllocationHistory paymentId={payment.id} />
                         </div>
                       </div>

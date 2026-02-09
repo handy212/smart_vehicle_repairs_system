@@ -332,7 +332,7 @@ export default function NotificationsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex-shrink-0 flex items-center gap-1 transition-opacity">
                     {isUnread && (
                       <Button
                         variant="ghost"

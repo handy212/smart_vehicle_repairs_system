@@ -613,6 +613,21 @@ export const PremiumIcons = {
             <circle cx="12" cy="19" r="1" />
         </svg>
     ),
+    MoreHorizontal: (props: IconProps) => (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <circle cx="12" cy="12" r="1" />
+            <circle cx="19" cy="12" r="1" />
+            <circle cx="5" cy="12" r="1" />
+        </svg>
+    ),
     Download: (props: IconProps) => (
         <svg
             viewBox="0 0 24 24"
@@ -689,6 +704,47 @@ export const PremiumIcons = {
             {...props}
         >
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+    ),
+    TrendingUp: (props: IconProps) => (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+            <polyline points="17 6 23 6 23 12" />
+        </svg>
+    ),
+    PieChart: (props: IconProps) => (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+            <path d="M22 12A10 10 0 0 0 12 2v10z" />
+        </svg>
+    ),
+    Activity: (props: IconProps) => (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
         </svg>
     ),
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,14 @@ import { useState } from "react";
 import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
 import { VINDecoderButton } from "@/components/ui/vin-decoder-button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils/cn";
 
 const vehicleSchema = z.object({
   vin: z.string().min(17, "VIN must be 17 characters").max(17, "VIN must be 17 characters"),
@@ -51,6 +59,7 @@ export default function AddVehiclePage() {
     setValue,
     setError,
     watch,
+    control,
   } = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
@@ -341,17 +350,24 @@ export default function AddVehiclePage() {
             {/* Engine Type */}
             <div className="space-y-2">
               <Label htmlFor="engine_type">Engine Type</Label>
-              <select
-                id="engine_type"
-                {...register("engine_type")}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="gasoline">Gasoline</option>
-                <option value="diesel">Diesel</option>
-                <option value="electric">Electric</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="plug_in_hybrid">Plug-in Hybrid</option>
-              </select>
+              <Controller
+                control={control}
+                name="engine_type"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Engine Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gasoline">Gasoline</SelectItem>
+                      <SelectItem value="diesel">Diesel</SelectItem>
+                      <SelectItem value="electric">Electric</SelectItem>
+                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                      <SelectItem value="plug_in_hybrid">Plug-in Hybrid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
             {/* Submit Buttons */}

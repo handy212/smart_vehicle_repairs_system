@@ -20,6 +20,7 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ customer }: ProfileViewProps) {
+    const { currency } = useCurrency();
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -92,7 +93,7 @@ export function ProfileView({ customer }: ProfileViewProps) {
                             <div className="flex-1">
                                 <p className="text-sm font-medium text-muted-foreground">Currency & Terms</p>
                                 <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="font-normal">{customer.currency || "USD"}</Badge>
+                                    <Badge variant="outline" className="font-normal">{customer.currency || currency || "USD"}</Badge>
                                     <Badge variant="outline" className="font-normal capitalize">{customer.payment_terms?.replace(/_/g, " ")}</Badge>
                                 </div>
                             </div>

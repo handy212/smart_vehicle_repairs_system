@@ -2,7 +2,7 @@
 
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { memo, useMemo } from "react";
-import { CheckCircle2, Clock, AlertCircle, PlayCircle, PauseCircle, FileCheck, DollarSign } from "lucide-react";
+import { PremiumIcons } from "@/components/ui/icons";
 
 interface WorkOrderPieChartProps {
   data: Array<{ status: string; count: number }>;
@@ -44,20 +44,11 @@ const STATUS_LABELS: Record<string, string> = {
   closed: "Closed",
 };
 
-// Status groupings for summary
-const getStatusGroup = (status: string): string => {
-  if (['completed', 'invoiced', 'closed'].includes(status)) return 'completed';
-  if (['draft', 'inspection', 'intake', 'diagnosis', 'awaiting_approval'].includes(status)) return 'pending';
-  if (['approved', 'in_progress', 'assigned'].includes(status)) return 'active';
-  if (['paused', 'quality_check', 'additional_work_found'].includes(status)) return 'attention';
-  return 'other';
-};
 
 const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPieChartProps) {
-  // Process and enhance data
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    
+
     return data
       .map(item => {
         const statusKey = item.status.toLowerCase();
@@ -66,172 +57,80 @@ const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPie
           status: statusKey,
           label: STATUS_LABELS[statusKey] || item.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
           color: STATUS_COLORS[statusKey] || "#94A3B8",
-          group: getStatusGroup(statusKey),
         };
       })
-      .sort((a, b) => b.count - a.count); // Sort by count descending
+      .sort((a, b) => b.count - a.count);
   }, [data]);
 
   const totalCount = useMemo(() => {
     return processedData.reduce((sum, item) => sum + item.count, 0);
   }, [processedData]);
 
-  // Calculate summary by groups
-  const summary = useMemo(() => {
-    const groups = {
-      active: { count: 0, label: 'Active', icon: PlayCircle, color: '#3B82F6' },
-      pending: { count: 0, label: 'Pending', icon: Clock, color: '#F59E0B' },
-      attention: { count: 0, label: 'Needs Attention', icon: AlertCircle, color: '#EF4444' },
-      completed: { count: 0, label: 'Completed', icon: CheckCircle2, color: '#10B981' },
-    };
-
-    processedData.forEach(item => {
-      const group = groups[item.group as keyof typeof groups];
-      if (group) {
-        group.count += item.count;
-      }
-    });
-
-    return Object.values(groups).filter(g => g.count > 0);
-  }, [processedData]);
-
   if (!data || data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
-        <FileCheck className="w-12 h-12 mb-2 opacity-50" />
-        <p className="text-sm font-medium">No work order data available</p>
-        <p className="text-xs mt-1">Work orders created in the last 30 days will appear here</p>
+      <div className="flex flex-col items-center justify-center h-[240px] text-muted-foreground bg-white/5 rounded-3xl border border-dashed border-white/10">
+        <PremiumIcons.Dashboard className="w-10 h-10 mb-2 opacity-20" />
+        <p className="text-xs font-bold uppercase tracking-widest opacity-40">No operational data</p>
       </div>
     );
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const percentage = totalCount > 0 ? ((data.count / totalCount) * 100).toFixed(1) : 0;
-      return (
-        <div className="bg-card border border-border rounded-lg shadow-lg p-3">
-          <p className="font-semibold text-sm text-foreground mb-1">
-            {data.label}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Count: <span className="font-semibold text-foreground">{data.count}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Percentage: <span className="font-semibold text-foreground">{percentage}%</span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (percent < 0.05) return null; // Don't show labels for slices smaller than 5%
-    
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cx ? "start" : "end"}
-        dominantBaseline="central"
-        className="text-xs font-semibold"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
-
   return (
-    <div className="space-y-4">
-      <ResponsiveContainer width="100%" height={300}>
+    <div className="relative h-[240px] flex items-center justify-center">
+      <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
             data={processedData}
             cx="50%"
             cy="50%"
-            labelLine={false}
-            label={CustomLabel}
-            outerRadius={100}
-            innerRadius={40}
-            paddingAngle={2}
+            innerRadius={65}
+            outerRadius={85}
+            paddingAngle={6}
             dataKey="count"
+            stroke="none"
+            animationBegin={0}
+            animationDuration={1500}
+            animationEasing="ease-out"
           >
             {processedData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+              <Cell
+                key={`cell-${index}`}
+                fill={entry.color}
+                className="hover:opacity-80 transition-opacity cursor-pointer"
+                style={{ filter: `drop-shadow(0 0 8px ${entry.color}40)` }}
+              />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              fontSize: '10px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}
+          />
         </PieChart>
       </ResponsiveContainer>
 
-      {/* Legend */}
-      <div className="space-y-2 max-h-[120px] overflow-y-auto">
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          {processedData.map((item, index) => {
-            const percentage = totalCount > 0 ? ((item.count / totalCount) * 100).toFixed(1) : 0;
-            return (
-              <div
-                key={index}
-                className="flex items-center gap-2 p-2 rounded hover:bg-muted hover:bg-muted transition-colors"
-              >
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className="flex-1 text-card-foreground truncate">
-                  {item.label}
-                </span>
-                <span className="font-semibold text-foreground">
-                  {item.count}
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  ({percentage}%)
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      {/* Central Vital Metric */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span className="text-3xl font-black text-foreground tracking-tighter">{totalCount}</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Active Jobs</span>
       </div>
 
-      {/* Summary Cards */}
-      {summary.length > 0 && (
-        <div className="pt-4 border-t border-border">
-          <div className="grid grid-cols-2 gap-3">
-            {summary.map((group, index) => {
-              const Icon = group.icon;
-              const percentage = totalCount > 0 ? ((group.count / totalCount) * 100).toFixed(0) : 0;
-              return (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 p-2 rounded-lg bg-muted"
-                >
-                  <div
-                    className="p-1.5 rounded"
-                    style={{ backgroundColor: `${group.color}20` }}
-                  >
-                    <Icon className="w-4 h-4" style={{ color: group.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground truncate">
-                      {group.label}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {group.count} <span className="text-xs font-normal text-muted-foreground">({percentage}%)</span>
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Simplified Side Legend (Integrated) */}
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden xl:flex flex-col gap-2">
+        {processedData.slice(0, 4).map((item, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="w-1.5 h-4 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{item.label}</span>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 });

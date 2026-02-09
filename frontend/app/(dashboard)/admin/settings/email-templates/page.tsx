@@ -368,7 +368,7 @@ export default function EmailTemplatesPage() {
                   <span className="text-[10px] text-muted-foreground">
                     {format(new Date(template.updated_at), "MMM d, yyyy")}
                   </span>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 transition-opacity">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -559,7 +559,7 @@ export default function EmailTemplatesPage() {
                         className="w-full text-left px-3 py-2 text-[10px] font-mono text-muted-foreground hover:bg-primary/10 hover:text-primary rounded transition-colors flex items-center justify-between group border border-transparent hover:border-orange-100"
                       >
                         {variable}
-                        <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                        <Copy className="w-3 h-3" />
                       </button>
                     ))}
                   </div>

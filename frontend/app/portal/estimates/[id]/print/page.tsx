@@ -5,10 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { PrintLayout } from "@/components/print/PrintLayout";
+import { PrintControls } from "@/components/print/PrintControls";
+
 export default function EstimatePrintPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   const estimateId = parseInt(params.id as string);
 
@@ -40,168 +42,154 @@ export default function EstimatePrintPage() {
   const tax = parseFloat(estimateData.tax || "0");
   const total = parseFloat(estimate.total || "0");
 
+  // Determine watermark based on status
+  const getWatermark = () => {
+    if (estimate.status === 'declined' || estimate.status === 'expired') return 'VOID';
+    if (estimate.status === 'draft') return 'DRAFT';
+    return null;
+  };
+
   return (
-    <div className="min-h-screen bg-card p-8 print:p-4">
-      <style jsx global>{`
-        @media print {
-          @page {
-            size: A4;
-            margin: 1cm;
-          }
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
+    <div className="max-w-4xl mx-auto p-6">
+      <PrintControls
+        onPrint={() => window.print()}
+      />
 
-      {/* Header */}
-      <div className="mb-8 border-b-2 border-border pb-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">ESTIMATE</h1>
-            <p className="text-muted-foreground">Estimate #{estimate.estimate_number}</p>
-          </div>
+      <PrintLayout
+        watermark={getWatermark()}
+        documentType="ESTIMATE"
+        documentNumber={estimate.estimate_number}
+        metaInfo={
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">
-              Date: {format(new Date(estimateData.estimate_date || estimate.created_at), "MMMM d, yyyy")}
-            </p>
+            <div className="mb-1">
+              <span className="font-bold text-foreground">Date:</span> {format(new Date(estimateData.estimate_date || estimate.created_at), "MMMM d, yyyy")}
+            </div>
             {estimateData.expiration_date && (
-              <p className="text-sm text-muted-foreground">
-                Expires: {format(new Date(estimateData.expiration_date), "MMMM d, yyyy")}
-              </p>
+              <div className="mb-1">
+                <span className="font-bold text-foreground">Expires:</span> {format(new Date(estimateData.expiration_date), "MMMM d, yyyy")}
+              </div>
             )}
-            <p className="text-sm font-semibold text-foreground mt-2">
-              Status: <span className="uppercase">{estimate.status}</span>
-            </p>
+            <div className="mb-1">
+              <span className="font-bold text-foreground">Status:</span> <span className={`uppercase font-semibold ${estimate.status === 'approved' ? 'text-success' :
+                  estimate.status === 'declined' ? 'text-red-600' : ''
+                }`}>{estimate.status}</span>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Company & Customer Info */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        <div>
-          <h2 className="font-semibold text-foreground mb-2">Estimate For:</h2>
+        }
+      >
+        {/* Company & Customer Info */}
+        <div className="mb-8">
+          <h2 className="text-base font-semibold border-b border-gray-300 mb-1 pb-1">ESTIMATE FOR</h2>
           {estimateData.customer && (
-            <div className="text-foreground">
-              <p className="font-medium">
+            <div className="text-xs">
+              <p className="font-semibold my-0.5">
                 {typeof estimateData.customer === "object"
                   ? `${(estimateData.customer as any).first_name || ""} ${(estimateData.customer as any).last_name || ""}`.trim()
                   : estimateData.customer}
               </p>
               {typeof estimateData.customer === "object" && (estimateData.customer as any).email && (
-                <p className="text-sm">{(estimateData.customer as any).email}</p>
+                <p className="my-0.5">{(estimateData.customer as any).email}</p>
               )}
               {typeof estimateData.customer === "object" && (estimateData.customer as any).phone && (
-                <p className="text-sm">{(estimateData.customer as any).phone}</p>
+                <p className="my-0.5">{(estimateData.customer as any).phone}</p>
               )}
             </div>
           )}
         </div>
-        <div>
+
+        <div className="grid grid-cols-2 gap-8 mb-8">
           {estimateData.work_order && (
-            <>
-              <h2 className="font-semibold text-foreground mb-2">Work Order:</h2>
-              <p className="text-foreground">
+            <div>
+              <h2 className="text-base font-semibold border-b border-gray-300 mb-1 pb-1">WORK ORDER</h2>
+              <p className="text-xs">
                 #{typeof estimateData.work_order === "object" ? (estimateData.work_order as any).work_order_number : estimateData.work_order}
               </p>
-            </>
+            </div>
           )}
           {estimateData.vehicle && (
-            <>
-              <h2 className="font-semibold text-foreground mb-2 mt-4">Vehicle:</h2>
-              <p className="text-foreground">
+            <div>
+              <h2 className="text-base font-semibold border-b border-gray-300 mb-1 pb-1">VEHICLE</h2>
+              <p className="text-xs">
                 {typeof estimateData.vehicle === "object"
                   ? `${(estimateData.vehicle as any).year || ""} ${(estimateData.vehicle as any).make || ""} ${(estimateData.vehicle as any).model || ""}`.trim()
                   : estimateData.vehicle}
               </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Line Items */}
-      <div className="mb-8">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-muted border-b-2 border-border">
-              <th className="text-left p-3 font-semibold text-foreground">Description</th>
-              <th className="text-right p-3 font-semibold text-foreground">Quantity</th>
-              <th className="text-right p-3 font-semibold text-foreground">Unit Price</th>
-              <th className="text-right p-3 font-semibold text-foreground">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lineItems.map((item: any, index: number) => (
-              <tr key={index} className="border-b border-border">
-                <td className="p-3 text-foreground">
-                  <div>
-                    <p className="font-medium">{item.description || item.name || "Item"}</p>
-                    {item.notes && <p className="text-sm text-muted-foreground">{item.notes}</p>}
-                  </div>
-                </td>
-                <td className="p-3 text-right text-foreground">{item.quantity || 1}</td>
-                <td className="p-3 text-right text-foreground">
-                  {formatCurrency(parseFloat(item.unit_price || item.price || "0"))}
-                </td>
-                <td className="p-3 text-right font-medium text-foreground">
-                  {formatCurrency(parseFloat(item.total || item.line_total || "0"))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Totals */}
-      <div className="flex justify-end mb-8">
-        <div className="w-64">
-          <div className="flex justify-between py-2 border-b border-border">
-            <span className="text-foreground">Subtotal:</span>
-            <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
-          </div>
-          {tax > 0 && (
-            <div className="flex justify-between py-2 border-b border-border">
-              <span className="text-foreground">Tax:</span>
-              <span className="font-medium text-foreground">{formatCurrency(tax)}</span>
             </div>
           )}
-          <div className="flex justify-between py-3 border-t-2 border-border mt-2">
-            <span className="font-bold text-lg text-foreground">Total:</span>
-            <span className="font-bold text-lg text-foreground">{formatCurrency(total)}</span>
-          </div>
         </div>
-      </div>
 
-      {/* Notes */}
-      {estimate.notes && (
+        {/* Line Items */}
         <div className="mb-8">
-          <h3 className="font-semibold text-foreground mb-2">Notes:</h3>
-          <p className="text-foreground whitespace-pre-wrap">{estimate.notes}</p>
+          <h2 className="text-base font-semibold border-b border-gray-300 mb-1 pb-1">SERVICES & PARTS</h2>
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-black p-1 text-left font-bold">Description</th>
+                <th className="border border-black p-1 text-right font-bold">Qty</th>
+                <th className="border border-black p-1 text-right font-bold">Unit Price</th>
+                <th className="border border-black p-1 text-right font-bold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineItems.map((item: any, index: number) => (
+                <tr key={index}>
+                  <td className="border border-black p-1">
+                    <div>
+                      <p>{item.description || item.name || "Item"}</p>
+                      {item.notes && <p className="text-xs text-muted-foreground">{item.notes}</p>}
+                    </div>
+                  </td>
+                  <td className="border border-black p-1 text-right">{item.quantity || 1}</td>
+                  <td className="border border-black p-1 text-right">
+                    {formatCurrency(parseFloat(item.unit_price || item.price || "0"))}
+                  </td>
+                  <td className="border border-black p-1 text-right font-medium">
+                    {formatCurrency(parseFloat(item.total || item.line_total || "0"))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
 
-      {/* Footer */}
-      <div className="mt-12 pt-6 border-t border-border text-center text-sm text-muted-foreground">
-        <p>This is an estimate. Prices may vary based on actual work performed.</p>
-        {estimateData.expiration_date && (
-          <p className="mt-2">Valid until {format(new Date(estimateData.expiration_date), "MMMM d, yyyy")}</p>
+        {/* Totals */}
+        <div className="mb-8">
+          <h2 className="text-base font-semibold border-b border-gray-300 mb-1 pb-1">FINANCIAL SUMMARY</h2>
+          <table className="w-full border-collapse text-xs">
+            <tbody>
+              <tr>
+                <td className="border border-black p-1 font-bold">Subtotal</td>
+                <td className="border border-black p-1 text-right font-bold">{formatCurrency(subtotal)}</td>
+              </tr>
+              {tax > 0 && (
+                <tr>
+                  <td className="border border-black p-1">Tax</td>
+                  <td className="border border-black p-1 text-right">{formatCurrency(tax)}</td>
+                </tr>
+              )}
+              <tr className="bg-gray-100">
+                <td className="border border-black p-1 font-bold">TOTAL</td>
+                <td className="border border-black p-1 text-right font-bold">{formatCurrency(total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Notes */}
+        {estimate.notes && (
+          <div className="mb-8">
+            <h3 className="text-sm font-semibold mb-1">Notes:</h3>
+            <p className="text-xs whitespace-pre-wrap">{estimate.notes}</p>
+          </div>
         )}
-      </div>
 
-      {/* Print Button (hidden when printing) */}
-      <div className="no-print mt-8 text-center">
-        <button
-          onClick={() => window.print()}
-          className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-        >
-          Print Estimate
-        </button>
-      </div>
+        <div className="mt-8 pt-4 border-t border-gray-300 text-center text-xs text-muted-foreground">
+          <p className="mb-1 font-semibold">This is an estimate. Prices may vary based on actual work performed.</p>
+          {estimateData.expiration_date && (
+            <p>Valid until {format(new Date(estimateData.expiration_date), "MMMM d, yyyy")}</p>
+          )}
+        </div>
+      </PrintLayout>
     </div>
   );
 }
-

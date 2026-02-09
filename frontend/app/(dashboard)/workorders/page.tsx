@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Wrench, LayoutGrid, Trash2, Download, X, ChevronDown, MoreVertical, Eye, Edit, FileText, Printer, Calendar, Clock, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { Plus, Search, Wrench, LayoutGrid, Trash2, Download, X, ChevronDown, MoreVertical, MoreHorizontal, Eye, Edit, FileText, Printer, Calendar, Clock, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -35,6 +35,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { getStatusVariant } from "@/lib/utils/workorder-status";
 
@@ -596,16 +601,24 @@ export default function WorkOrdersPage() {
                       </TableCell>
                       <TableCell className="px-3 py-1.5 text-right">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0  data-[state=open]:bg-muted dark:data-[state=open]:bg-gray-800"
-                            >
-                              <span className="sr-only">Open menu</span>
-                              <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors focus-visible:ring-1"
+                                  aria-label="Work order actions"
+                                >
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p>Actions</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}`)} className="text-xs">

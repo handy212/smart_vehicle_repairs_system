@@ -15,6 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/lib/hooks/useToast";
 import { Plus, Edit, Trash2, Search, X, AlertTriangle, Info, AlertCircle as AlertCircleIcon, Code } from "lucide-react";
 import { format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CodesTabProps {
   diagnosisId: number;
@@ -181,28 +186,45 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
                       )}
                     </div>
                     <div className="flex items-center gap-1 ml-2 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => setEditingCode(code)}
-                        disabled={isDisabled}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => {
-                          if (confirm("Delete this code?")) {
-                            deleteMutation.mutate(code.id);
-                          }
-                        }}
-                        disabled={isDisabled}
-                      >
-                        <Trash2 className="w-3 h-3 text-red-500" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
+                            onClick={() => setEditingCode(code)}
+                            disabled={isDisabled}
+                            aria-label="Edit diagnostic code"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit Code</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            onClick={() => {
+                              if (confirm("Delete this code?")) {
+                                deleteMutation.mutate(code.id);
+                              }
+                            }}
+                            disabled={isDisabled}
+                            aria-label="Delete diagnostic code"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Delete Code</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">

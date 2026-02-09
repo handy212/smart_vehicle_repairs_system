@@ -256,7 +256,7 @@ export default function InspectionsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="py-2 text-right">
-                        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-end transition-opacity">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted hover:bg-muted">

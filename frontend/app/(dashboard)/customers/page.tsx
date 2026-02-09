@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package, Users } from "lucide-react";
+import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, MoreHorizontal, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, memo } from "react";
@@ -21,6 +21,11 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ColumnVisibility, ColumnConfig } from "@/components/ui/column-visibility";
 import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadCustomerTemplate } from "@/lib/utils/import-templates";
@@ -145,95 +150,109 @@ const CustomerRow = memo(function CustomerRow({
                 variant="danger"
                 className="text-[10px] px-1.5 py-0.5 mt-1 w-fit"
               >
-                Inactive
-              </Badge>
-            )}
-          </div>
-        </TableCell>
-      )}
-      {visibleColumns.has("status") && (
-        <TableCell className="px-4 py-2 whitespace-nowrap">
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-              customer.status === "active" && "border-green-200 text-green-700 bg-success/10 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
-              customer.status === "inactive" && "border-border text-foreground bg-muted/50 border-border text-foreground bg-muted",
-              customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
-            )}
-          >
-            {customer.status || "-"}
+            Inactive
           </Badge>
+            )}
+        </div>
         </TableCell>
-      )}
-      {visibleColumns.has("actions") && (
-        <TableCell className="px-4 py-2 whitespace-nowrap text-right">
-          <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-muted hover:bg-muted">
-                  <div className="flex gap-0.5">
-                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Details
+  )
+}
+      {
+    visibleColumns.has("status") && (
+      <TableCell className="px-4 py-2 whitespace-nowrap">
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[10px] px-2 py-0.5 font-medium border shadow-none",
+            customer.status === "active" && "border-green-200 text-green-700 bg-success/10 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
+            customer.status === "inactive" && "border-border text-foreground bg-muted/50 border-border text-foreground bg-muted",
+            customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
+          )}
+        >
+          {customer.status || "-"}
+        </Badge>
+      </TableCell>
+    )
+  }
+      {
+    visibleColumns.has("actions") && (
+      <TableCell className="px-4 py-2 whitespace-nowrap text-right">
+        <div className="flex justify-end transition-opacity">
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors focus-visible:ring-1"
+                    aria-label="Customer actions"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>Actions</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
+                <Eye className="w-4 h-4 mr-2" />
+                View Details
+              </DropdownMenuItem>
+              <PermissionGuard permission="edit_customers">
+                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}/edit`)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Customer
                 </DropdownMenuItem>
-                <PermissionGuard permission="edit_customers">
-                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}/edit`)}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit Customer
-                  </DropdownMenuItem>
-                </PermissionGuard>
-                <PermissionGuard permission="edit_customers">
-                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}#notes`)}>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Add Note
-                  </DropdownMenuItem>
-                </PermissionGuard>
-                <PermissionGuard permission="send_notifications">
-                  <DropdownMenuItem onClick={() => router.push(`/sms?recipient_id=${customer.user?.id}&recipient_name=${encodeURIComponent(customer.full_name || customer.company_name || '')}&phone=${customer.user?.phone || ''}`)}>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Send SMS
-                  </DropdownMenuItem>
-                </PermissionGuard>
-                <DropdownMenuSeparator />
-                <PermissionGuard permission="create_vehicles">
-                  <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>
-                    <Package className="w-4 h-4 mr-2" />
-                    Add Vehicle
-                  </DropdownMenuItem>
-                </PermissionGuard>
-                <PermissionGuard permission="create_workorders">
-                  <DropdownMenuItem onClick={() => router.push(`/workorders/new?customer=${customer.id}`)}>
-                    <Wrench className="w-4 h-4 mr-2" />
-                    Create Work Order
-                  </DropdownMenuItem>
-                </PermissionGuard>
-                <PermissionGuard permission="create_appointments">
-                  <DropdownMenuItem onClick={() => router.push(`/appointments/new?customer=${customer.id}`)}>
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Schedule Appointment
-                  </DropdownMenuItem>
-                </PermissionGuard>
-                <DropdownMenuSeparator />
-                <PermissionGuard permission="delete_customers">
-                  <DropdownMenuItem onClick={() => onDelete(customer)} className="text-red-600 dark:text-red-400">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </PermissionGuard>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </TableCell>
-      )}
-    </TableRow>
+              </PermissionGuard>
+              <PermissionGuard permission="edit_customers">
+                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}#notes`)}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Add Note
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <PermissionGuard permission="send_notifications">
+                <DropdownMenuItem onClick={() => router.push(`/sms?recipient_id=${customer.user?.id}&recipient_name=${encodeURIComponent(customer.full_name || customer.company_name || '')}&phone=${customer.user?.phone || ''}`)}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Send SMS
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <DropdownMenuSeparator />
+              <PermissionGuard permission="create_vehicles">
+                <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>
+                  <Package className="w-4 h-4 mr-2" />
+                  Add Vehicle
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <PermissionGuard permission="create_workorders">
+                <DropdownMenuItem onClick={() => router.push(`/workorders/new?customer=${customer.id}`)}>
+                  <Wrench className="w-4 h-4 mr-2" />
+                  Create Work Order
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <PermissionGuard permission="create_appointments">
+                <DropdownMenuItem onClick={() => router.push(`/appointments/new?customer=${customer.id}`)}>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Schedule Appointment
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <DropdownMenuSeparator />
+              <PermissionGuard permission="delete_customers">
+                <DropdownMenuItem onClick={() => onDelete(customer)} className="text-red-600 dark:text-red-400">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </PermissionGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </TableCell>
+    )
+  }
+    </TableRow >
   );
 });
 

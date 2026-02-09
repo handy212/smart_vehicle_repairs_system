@@ -38,6 +38,7 @@ export interface WorkOrder {
   quality_check_required?: boolean;
   quality_check_completed?: boolean;
   quality_check_passed?: boolean;
+  odometer_in?: number;
   odometer_out?: number;
   is_overdue?: boolean;
   days_in_shop?: number;

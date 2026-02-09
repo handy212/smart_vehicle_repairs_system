@@ -9,6 +9,11 @@ import { AlertCircle, FileText, Calendar, DollarSign, Wrench, Eye, ArrowUpRight 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface VehicleHistoryViewProps {
     vehicleId: number;
@@ -148,11 +153,23 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                                                 {formatCurrency(parseFloat(wo.total_cost || "0"))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
-                                                <Link href={`/workorders/${wo.id}`}>
-                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
-                                                    </Button>
-                                                </Link>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Link href={`/workorders/${wo.id}`}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors focus-visible:ring-1"
+                                                                aria-label="View work order details"
+                                                            >
+                                                                <ArrowUpRight className="w-4 h-4" />
+                                                            </Button>
+                                                        </Link>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="left">
+                                                        <p>View Details</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             </TableCell>
                                         </TableRow>
                                     );

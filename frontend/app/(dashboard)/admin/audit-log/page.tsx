@@ -565,65 +565,65 @@ export default function AuditLogPage() {
           </DialogContent>
         </Dialog>
 
-      {/* Archive Dialog */}
-      <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Archive className="w-5 h-5 text-primary" />
-              Archive Audit Logs
-            </DialogTitle>
-            <DialogDescription className="pt-2">
-              Archive logs older than the specified number of days. This will permanently delete logs older than the cutoff date.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Archive logs older than (days)
-              </label>
-              <Input
-                type="number"
-                min="1"
-                value={archiveDays}
-                onChange={(e) => setArchiveDays(parseInt(e.target.value) || 90)}
-                className="h-9"
-                placeholder="90"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Logs older than {archiveDays} days will be permanently deleted.
-              </p>
+        {/* Archive Dialog */}
+        <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Archive className="w-5 h-5 text-primary" />
+                Archive Audit Logs
+              </DialogTitle>
+              <DialogDescription className="pt-2">
+                Archive logs older than the specified number of days. This will permanently delete logs older than the cutoff date.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Archive logs older than (days)
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={archiveDays}
+                  onChange={(e) => setArchiveDays(parseInt(e.target.value) || 90)}
+                  className="h-9"
+                  placeholder="90"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Logs older than {archiveDays} days will be permanently deleted.
+                </p>
+              </div>
+              <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                  <strong>Warning:</strong> This action cannot be undone. Make sure to download logs before archiving if you need to keep a record.
+                </p>
+              </div>
             </div>
-            <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-              <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                <strong>Warning:</strong> This action cannot be undone. Make sure to download logs before archiving if you need to keep a record.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowArchiveDialog(false)}
-              disabled={archiveMutation.isPending}
-              className="h-8 text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleArchive}
-              disabled={archiveMutation.isPending}
-              className="h-8 text-xs bg-primary hover:bg-orange-700"
-            >
-              {archiveMutation.isPending ? "Archiving..." : "Archive Logs"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowArchiveDialog(false)}
+                disabled={archiveMutation.isPending}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleArchive}
+                disabled={archiveMutation.isPending}
+                className="h-8 text-xs bg-primary hover:bg-orange-700"
+              >
+                {archiveMutation.isPending ? "Archiving..." : "Archive Logs"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </PermissionGuard>
 
-);
+  );
 }

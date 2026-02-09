@@ -282,7 +282,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                         {formatCurrency(parseFloat(item.total || "0"))}
                                     </TableCell>
                                     <TableCell className="px-2 py-2 text-right">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-1 transition-opacity">
                                             {editingItemId === item.id ? (
                                                 <>
                                                     <Button

@@ -171,6 +171,6 @@ export function NotesView({ customerId }: NotesViewProps) {
                     ))
                 )}
             </div>
-        </div>
+        </div >
     );
 }

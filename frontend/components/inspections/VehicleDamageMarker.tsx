@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, MapPin, Trash2, Edit2, Loader2 } from "lucide-react";
+import { X, MapPin, Trash2, Edit2, Loader2, AlertTriangle, Info, Sparkles } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface DamageMark {
   id: string;
@@ -41,9 +44,9 @@ const severityColors: Record<DamageMark["severity"], string> = {
 };
 
 const severitySizes: Record<DamageMark["severity"], string> = {
-  minor: "w-10 h-10",
-  moderate: "w-12 h-12",
-  major: "w-14 h-14",
+  minor: "w-6 h-6",
+  moderate: "w-8 h-8",
+  major: "w-10 h-10",
 };
 
 export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamageMarkerProps) {
@@ -108,55 +111,41 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 p-3 bg-muted rounded-lg border border-border text-xs">
-          <div className="font-semibold text-foreground">Legend:</div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-primary"></div>
-            <span>Scratch</span>
+        {/* Summary Breakdown - More Compact */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+          <div className="bg-muted/30 border rounded-md p-2 flex flex-col items-center justify-center text-center">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Total</span>
+            <span className="text-lg font-black text-foreground">{damage.length}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-red-600"></div>
-            <span>Dent</span>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-red-600 dark:text-red-400">Major</span>
+            <span className="text-lg font-black text-red-700 dark:text-red-300">{damage.filter(m => m.severity === "major").length}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <span>Chip</span>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-yellow-600 dark:text-yellow-400">Moderate</span>
+            <span className="text-lg font-black text-yellow-700 dark:text-yellow-300">{damage.filter(m => m.severity === "moderate").length}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-orange-600"></div>
-            <span>Crack</span>
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-green-600 dark:text-green-400">Minor</span>
+            <span className="text-lg font-black text-green-700 dark:text-green-300">{damage.filter(m => m.severity === "minor").length}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-amber-800"></div>
-            <span>Rust</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-gray-600"></div>
-            <span>Other</span>
-          </div>
-          <div className="ml-2 pl-2 border-l border-border flex items-center gap-2">
-            <span className="text-muted-foreground">Severity:</span>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span>Minor</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-              <span>Moderate</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-red-600"></div>
-              <span>Major</span>
-            </div>
-          </div>
+        </div>
+
+        {/* Legend - Even More Compact */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 py-1.5 px-3 bg-muted/30 rounded-full border text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-primary"></div><span>Scratch</span></div>
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-red-600"></div><span>Dent</span></div>
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div><span>Chip</span></div>
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-orange-600"></div><span>Crack</span></div>
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-amber-800"></div><span>Rust</span></div>
+          <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-gray-600"></div><span>Other</span></div>
         </div>
 
         {/* Vehicle Diagram */}
         <div
           ref={canvasRef}
           onClick={handleCanvasClick}
-          className="relative w-full h-[600px] border-2 border-border rounded-lg bg-card cursor-crosshair overflow-hidden"
+          className="relative w-full h-[400px] border-2 border-border rounded-lg bg-card cursor-crosshair overflow-hidden"
           style={{ position: "relative" }}
         >
           {/* Loading Skeleton */}
@@ -183,9 +172,8 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
           <img
             src="/images/car_with_markers.png"
             alt="Vehicle diagram for damage marking"
-            className={`w-full h-full object-contain select-none transition-opacity duration-300 ${
-              imageLoading ? "opacity-0" : "opacity-100"
-            }`}
+            className={`w-full h-full object-contain select-none transition-opacity duration-300 ${imageLoading ? "opacity-0" : "opacity-100"
+              }`}
             draggable={false}
             loading="eager"
             fetchPriority="high"
@@ -199,56 +187,76 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
           />
 
           {/* Damage Marks */}
-          {damage.map((mark, index) => (
-            <div
-              key={mark.id}
-              className="absolute group"
-              style={{
-                left: `${mark.x}%`,
-                top: `${mark.y}%`,
-                transform: "translate(-50%, -50%)",
-                zIndex: 10,
-              }}
-            >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!disabled) setEditingMark(mark);
+          <TooltipProvider>
+            {damage.map((mark, index) => (
+              <div
+                key={mark.id}
+                className="absolute group"
+                style={{
+                  left: `${mark.x}%`,
+                  top: `${mark.y}%`,
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 10,
                 }}
-                className={`relative ${severitySizes[mark.severity]} ${damageTypeColors[mark.type]} ${severityColors[mark.severity]} rounded-full cursor-pointer hover:scale-110 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center group/button`}
-                title={`${mark.type.charAt(0).toUpperCase() + mark.type.slice(1)} - ${mark.severity.charAt(0).toUpperCase() + mark.severity.slice(1)}${mark.description ? `: ${mark.description}` : ""}`}
               >
-                {/* Number Badge */}
-                <span className="text-white font-bold text-sm z-10 drop-shadow-lg">
-                  {index + 1}
-                </span>
-                {/* Pulse animation for major severity */}
-                {mark.severity === "major" && (
-                  <span className="absolute inset-0 rounded-full animate-ping opacity-75 bg-red-600"></span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!disabled) setEditingMark(mark);
+                      }}
+                      className={`relative ${severitySizes[mark.severity]} ${damageTypeColors[mark.type]} ${severityColors[mark.severity]} rounded-full cursor-pointer hover:scale-110 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center group/button`}
+                    >
+                      {/* Number Badge */}
+                      <span className="text-white font-bold text-[10px] z-10 drop-shadow-lg">
+                        {index + 1}
+                      </span>
+                      {/* Pulse animation for major severity */}
+                      {mark.severity === "major" && (
+                        <span className="absolute inset-0 rounded-full animate-ping opacity-75 bg-red-600"></span>
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="p-3 max-w-[200px] border shadow-xl bg-card">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold underline capitalize">{mark.type}</span>
+                        <Badge
+                          variant={mark.severity === "major" ? "danger" : mark.severity === "moderate" ? "secondary" : "outline"}
+                          className="h-4 text-[10px] px-1"
+                        >
+                          {mark.severity}
+                        </Badge>
+                      </div>
+                      {mark.description && (
+                        <p className="text-[11px] leading-relaxed italic text-muted-foreground border-l-2 border-primary/20 pl-2">
+                          {mark.description}
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete ${mark.type} mark?`)) {
+                        handleDeleteMark(mark.id);
+                      }
+                    }}
+                    className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center shadow-lg hover:scale-110 z-20"
+                    title="Delete mark"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
-                {/* Hover label */}
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/button:opacity-100 transition-opacity pointer-events-none z-20">
-                  {mark.type.charAt(0).toUpperCase() + mark.type.slice(1)} - {mark.severity.charAt(0).toUpperCase() + mark.severity.slice(1)}
-                </div>
-              </button>
-              {!disabled && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Delete ${mark.type} mark?`)) {
-                      handleDeleteMark(mark.id);
-                    }
-                  }}
-                  className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center shadow-lg hover:scale-110 z-20"
-                  title="Delete mark"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          ))}
+              </div>
+            ))}
+          </TooltipProvider>
 
           {/* Temporary mark position indicator */}
           {tempMark && (
@@ -296,7 +304,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
                         <span className="text-sm font-semibold capitalize">
                           {mark.type}
                         </span>
-                        <Badge 
+                        <Badge
                           variant={mark.severity === "major" ? "danger" : mark.severity === "moderate" ? "warning" : "success"}
                           className="text-xs capitalize"
                         >
@@ -369,47 +377,51 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
           <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="damage-type">Damage Type *</Label>
-              <select
-                id="damage-type"
+              <Select
                 value={editingMark?.type || (tempMark ? newMarkData.type || "scratch" : "")}
-                onChange={(e) => {
-                  const value = e.target.value as DamageMark["type"];
+                onValueChange={(value: DamageMark["type"]) => {
                   if (editingMark) {
                     setEditingMark({ ...editingMark, type: value });
                   } else if (tempMark) {
                     setNewMarkData({ ...newMarkData, type: value });
                   }
                 }}
-                className="w-full rounded-md border border-border px-3 py-2 text-sm mt-1"
               >
-                <option value="scratch">Scratch</option>
-                <option value="dent">Dent</option>
-                <option value="chip">Chip</option>
-                <option value="crack">Crack</option>
-                <option value="rust">Rust</option>
-                <option value="other">Other</option>
-              </select>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scratch">Scratch</SelectItem>
+                  <SelectItem value="dent">Dent</SelectItem>
+                  <SelectItem value="chip">Chip</SelectItem>
+                  <SelectItem value="crack">Crack</SelectItem>
+                  <SelectItem value="rust">Rust</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label htmlFor="damage-severity">Severity *</Label>
-              <select
-                id="damage-severity"
+              <Select
                 value={editingMark?.severity || (tempMark ? newMarkData.severity || "minor" : "")}
-                onChange={(e) => {
-                  const value = e.target.value as DamageMark["severity"];
+                onValueChange={(value: DamageMark["severity"]) => {
                   if (editingMark) {
                     setEditingMark({ ...editingMark, severity: value });
                   } else if (tempMark) {
                     setNewMarkData({ ...newMarkData, severity: value });
                   }
                 }}
-                className="w-full rounded-md border border-border px-3 py-2 text-sm mt-1"
               >
-                <option value="minor">Minor</option>
-                <option value="moderate">Moderate</option>
-                <option value="major">Major</option>
-              </select>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select severity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="minor">Minor</SelectItem>
+                  <SelectItem value="moderate">Moderate</SelectItem>
+                  <SelectItem value="major">Major</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -433,7 +445,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
 
           <DialogFooter>
             <Button
-             variant="secondary"
+              variant="secondary"
               onClick={() => {
                 setTempMark(null);
                 setEditingMark(null);
@@ -446,15 +458,15 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
               onClick={() => {
                 const markData: Partial<DamageMark> = editingMark
                   ? {
-                      type: editingMark.type,
-                      severity: editingMark.severity,
-                      description: editingMark.description || "",
-                    }
+                    type: editingMark.type,
+                    severity: editingMark.severity,
+                    description: editingMark.description || "",
+                  }
                   : {
-                      type: (newMarkData.type || "scratch") as DamageMark["type"],
-                      severity: (newMarkData.severity || "minor") as DamageMark["severity"],
-                      description: newMarkData.description || "",
-                    };
+                    type: (newMarkData.type || "scratch") as DamageMark["type"],
+                    severity: (newMarkData.severity || "minor") as DamageMark["severity"],
+                    description: newMarkData.description || "",
+                  };
                 handleSaveMark(markData);
               }}
             >

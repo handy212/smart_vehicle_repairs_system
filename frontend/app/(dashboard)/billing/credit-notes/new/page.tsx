@@ -37,7 +37,7 @@ const creditNoteSchema = z.object({
 type CreditNoteFormData = z.infer<typeof creditNoteSchema>;
 
 export default function NewCreditNotePage() {
-    const { formatCurrency } = useCurrency();
+    const { formatCurrency, currencySymbol } = useCurrency();
     const router = useRouter();
     const searchParams = useSearchParams();
     const { toast } = useToast();
@@ -253,7 +253,7 @@ export default function NewCreditNotePage() {
                                 <div className="col-span-4 md:col-span-3 space-y-2">
                                     <Label className={index !== 0 ? "sr-only" : ""}>Price</Label>
                                     <div className="relative">
-                                        <span className="absolute left-2.5 top-2.5 text-muted-foreground">$</span>
+                                        <span className="absolute left-2.5 top-2.5 text-muted-foreground">{currencySymbol || '$'}</span>
                                         <Input
                                             type="number"
                                             step="0.01"

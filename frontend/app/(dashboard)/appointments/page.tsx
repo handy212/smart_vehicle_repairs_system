@@ -34,6 +34,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function AppointmentsPage() {
   const [search, setSearch] = useState("");
@@ -634,16 +639,24 @@ export default function AppointmentsPage() {
                       </TableCell>
                       <TableCell className="text-right py-2.5 pr-4">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0  data-[state=open]:bg-muted dark:data-[state=open]:bg-gray-800"
-                            >
-                              <span className="sr-only">Open menu</span>
-                              <PremiumIcons.MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors focus-visible:ring-1"
+                                  aria-label="Appointment actions"
+                                >
+                                  <span className="sr-only">Open menu</span>
+                                  <PremiumIcons.MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p>Actions</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => router.push(`/appointments/${appointment.id}`)}>

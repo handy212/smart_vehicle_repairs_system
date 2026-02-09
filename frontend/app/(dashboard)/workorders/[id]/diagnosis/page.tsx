@@ -1245,7 +1245,7 @@ function RecommendationsTab({
                               }
                             })()}
 
-                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border transition-opacity">
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -1607,21 +1607,31 @@ function PhotosTab({
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                     {/* Actions */}
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="h-7 w-7 rounded-full shadow-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm("Delete this photo?")) {
-                            deleteMutation.mutate(photo.id);
-                          }
-                        }}
-                        disabled={isDisabled}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                    <div className="absolute top-2 right-2 transition-opacity flex gap-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8 rounded-full shadow-lg bg-red-600 hover:bg-red-700 border-none transition-all duration-200"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Delete this photo?")) {
+                                  deleteMutation.mutate(photo.id);
+                                }
+                              }}
+                              disabled={isDisabled}
+                              aria-label="Delete photo"
+                            >
+                              <Trash2 className="w-4 h-4 text-white" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Delete Photo</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
 
                     {/* Badge */}

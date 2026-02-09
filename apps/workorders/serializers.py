@@ -93,10 +93,39 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     # Related work order info
     related_work_order_detail = serializers.SerializerMethodField()
     rework_work_orders = serializers.SerializerMethodField()
+    customer_name = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
-        fields = '__all__'
+        fields = [
+            'id', 'work_order_number', 'access_token', 'branch', 'appointment',
+            'customer', 'customer_name', 'vehicle', 'status', 'priority',
+            'service_coordinator', 'primary_technician', 'assigned_technicians',
+            'primary_technician_name', 'vehicle_display', 'technician_names',
+            'assigned_technicians_detail', 'created_at', 'updated_at',
+            'started_at', 'completed_at', 'estimated_completion',
+            'customer_concerns', 'special_instructions',
+            'diagnosis_notes', 'diagnosis_completed_at', 'diagnosis_by',
+            'requires_approval', 'approval_requested_at', 'approved_at',
+            'approved_by_customer', 'approval_method', 'approval_notes',
+            'estimated_labor_hours', 'estimated_labor_cost', 'estimated_parts_cost',
+            'estimated_total', 'actual_labor_hours', 'actual_labor_cost',
+            'actual_parts_cost', 'actual_total', 'odometer_in', 'odometer_out',
+            'quality_check_required', 'quality_check_completed', 'quality_check_by',
+            'quality_check_at', 'quality_check_notes', 'quality_check_passed',
+            'created_by', 'created_by_name', 'is_warranty', 'is_recall',
+            'is_customer_waiting', 'is_warranty_rework', 'related_work_order',
+            'related_work_order_detail', 'rework_work_orders', 'warranty_reason',
+            'maintenance_type', 'service_type', 'service_bundle',
+            'is_overdue', 'days_in_shop', 'is_approved',
+            'cost_variance', 'cost_variance_percentage'
+        ]
+
+    def get_customer_name(self, obj):
+        """Get customer name from user"""
+        if obj.customer and obj.customer.user:
+            return obj.customer.user.get_full_name() or obj.customer.user.username or "N/A"
+        return "N/A"
     
     def get_vehicle_display(self, obj):
         if obj.vehicle:

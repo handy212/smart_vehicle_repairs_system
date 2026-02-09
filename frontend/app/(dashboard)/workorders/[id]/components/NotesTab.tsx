@@ -42,7 +42,7 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
               <p className="text-sm text-muted-foreground mb-4">
                 Add notes to track important information, customer communications, and internal updates.
               </p>
-              <Button onClick={() => setShowAddDialog(true)}variant="secondary">
+              <Button onClick={() => setShowAddDialog(true)} variant="secondary">
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Note
               </Button>
@@ -73,11 +73,13 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
                           </span>
                         </div>
                         <p className="text-sm text-foreground whitespace-pre-wrap">{note.note}</p>
-                        {note.created_by_name && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            By: {note.created_by_name}
-                          </p>
-                        )}
+                        {
+                          note.created_by_name && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              By: {note.created_by_name}
+                            </p>
+                          )
+                        }
                       </div>
                     ))}
                   </div>
@@ -118,7 +120,7 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
             </>
           )}
         </CardContent>
-      </Card>
+      </Card >
 
       {showAddDialog && (
         <AddNoteDialog
@@ -130,7 +132,8 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
             onRefresh();
           }}
         />
-      )}
+      )
+      }
     </>
   );
 }

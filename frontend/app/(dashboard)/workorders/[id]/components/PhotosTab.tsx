@@ -228,8 +228,8 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                           className="w-full h-full object-cover cursor-pointer"
                           onClick={() => handleViewPhoto(photo)}
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
-                          <div className="opacity-0 group-hover:opacity-100 flex space-x-2">
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity">
+                          <div className="flex space-x-2 transition-opacity">
                             <Button
                               variant="secondary"
                               size="sm"

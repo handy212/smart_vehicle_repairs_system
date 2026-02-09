@@ -10,6 +10,7 @@ import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dial
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Suspense } from "react";
+import { QuickActionsFAB } from "./QuickActionsFAB";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -152,7 +153,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         )}
       </div>
       <main
-        className="min-h-screen px-4 py-0 sm:px-6 lg:px-4 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300 print:!m-0 print:!p-0"
+        className="min-h-screen px-2 py-0 sm:px-3 lg:px-3 pb-2 sm:pb-3 lg:pb-4 transition-all duration-300 print:!m-0 print:!p-0"
         style={{
           marginLeft: isDesktop ? `${totalMargin}px` : '0',
           paddingTop: '5rem' // 80px to account for header (64px) + extra space for mobile search
@@ -173,6 +174,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         onOpenChange={setShowShortcutsDialog}
       />
 
+      <QuickActionsFAB />
       <CommandPalette />
     </div>
   );

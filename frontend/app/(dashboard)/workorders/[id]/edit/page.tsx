@@ -144,17 +144,18 @@ export default function EditWorkOrderPage() {
   });
 
   // Get selected vehicle details
-  const vehicle = watch("vehicle");
+  const watchedVehicle = watch("vehicle");
   const selectedVehicle = (() => {
-    if (!vehicle) return null;
+    const vehicleId = watchedVehicle;
+    if (!vehicleId) return null;
 
     // Check in fetched list
-    const fromList = vehiclesData?.results?.find((v) => v.id === vehicle);
+    const fromList = vehiclesData?.results?.find((v) => v.id === vehicleId);
     if (fromList) return fromList;
 
     // Fallback to workOrder nested object if it matches
     if (workOrder && typeof workOrder.vehicle === 'object' && workOrder.vehicle !== null) {
-      if (workOrder.vehicle.id === vehicle) {
+      if (workOrder.vehicle.id === vehicleId) {
         return workOrder.vehicle;
       }
     }
@@ -162,29 +163,110 @@ export default function EditWorkOrderPage() {
     return null;
   })();
 
+  // Prepare fallback lists for Select components
+  // This ensures the Select always has the current value as an option
+  const customerOptions = (() => {
+    const items = new Map<number, string>();
+
+    // 1. Add fetched customers
+    customersData?.results?.forEach(c => {
+      const name = c.full_name || `${c.user?.first_name || ''} ${c.user?.last_name || ''}`.trim() || 'Unknown';
+      items.set(c.id, name);
+    });
+
+    // 2. Add current work order customer if not present
+    if (workOrder) {
+      const wCustomer = workOrder.customer;
+      // Handle object case
+      if (typeof wCustomer === 'object' && wCustomer !== null) {
+        if (!items.has(wCustomer.id)) {
+          items.set(wCustomer.id, wCustomer.full_name || 'Current Customer');
+        }
+      }
+      // Handle ID case with display name
+      else if (typeof wCustomer === 'number' && wCustomer > 0) {
+        if (!items.has(wCustomer)) {
+          items.set(wCustomer, workOrder.customer_name || `Customer #${wCustomer}`);
+        }
+      }
+    }
+
+    return Array.from(items.entries()).map(([id, label]) => ({ id, label }));
+  })();
+
+  const vehicleOptions = (() => {
+    const items = new Map<number, string>();
+
+    // 1. Add fetched vehicles
+    vehiclesData?.results?.forEach(v => {
+      items.set(v.id, `${v.make} ${v.model} ${v.year} — ${v.vin}`);
+    });
+
+    // 2. Add current work order vehicle if not present
+    if (workOrder) {
+      const wVehicle = workOrder.vehicle;
+      if (typeof wVehicle === 'object' && wVehicle !== null) {
+        if (!items.has(wVehicle.id)) {
+          items.set(wVehicle.id, workOrder.vehicle_display || workOrder.vehicle_info || 'Current Vehicle');
+        }
+      } else if (typeof wVehicle === 'number' && wVehicle > 0) {
+        if (!items.has(wVehicle)) {
+          items.set(wVehicle, workOrder.vehicle_display || workOrder.vehicle_info || `Vehicle #${wVehicle}`);
+        }
+      }
+    }
+
+    return Array.from(items.entries()).map(([id, label]) => ({ id, label }));
+  })();
+
 
 
   // Populate form when work order data loads
   useEffect(() => {
     if (workOrder && !isLoading) {
-      const customerId = typeof workOrder.customer === 'object' && workOrder.customer !== null
-        ? workOrder.customer.id
-        : workOrder.customer || 0;
-      const vehicleId = typeof workOrder.vehicle === 'object' && workOrder.vehicle !== null
-        ? workOrder.vehicle.id
-        : workOrder.vehicle || 0;
+      // Safer extraction of IDs
+      let customerId = 0;
+      if (workOrder.customer) {
+        if (typeof workOrder.customer === 'object' && 'id' in workOrder.customer) {
+          customerId = workOrder.customer.id;
+        } else if (typeof workOrder.customer === 'number') {
+          customerId = workOrder.customer;
+        }
+      }
+
+      let vehicleId = 0;
+      if (workOrder.vehicle) {
+        if (typeof workOrder.vehicle === 'object' && 'id' in workOrder.vehicle) {
+          vehicleId = workOrder.vehicle.id;
+        } else if (typeof workOrder.vehicle === 'number') {
+          vehicleId = workOrder.vehicle;
+        }
+      }
+
+      const serviceTypeId = typeof workOrder.service_type === 'object' && workOrder.service_type !== null
+        ? workOrder.service_type.id
+        : (typeof workOrder.service_type === 'number' ? workOrder.service_type : undefined);
+
+      console.log('Populating form with:', { customerId, vehicleId, serviceTypeId });
+
+      // Use setValue for critical fields to ensure they register
+      setValue("customer", customerId || 0);
+      setValue("vehicle", vehicleId || 0);
 
       reset({
-        customer: customerId,
-        vehicle: vehicleId,
-        priority: workOrder.priority as any,
-        status: workOrder.status as any,
+        customer: customerId || 0,
+        vehicle: vehicleId || 0,
+        priority: workOrder.priority as any || "normal",
+        status: workOrder.status as any || "draft",
         customer_concerns: workOrder.customer_concerns || "",
         maintenance_type: (workOrder.maintenance_type as any) || "general",
-        service_type: typeof workOrder.service_type === 'object' && workOrder.service_type !== null ? workOrder.service_type.id : (workOrder.service_type || undefined),
+        service_type: serviceTypeId,
       });
-      // Use a brief timeout to ensure state updates or just let useEffect handles it
-      setSelectedCustomer(customerId || null);
+
+      // Explicitly sync local state for immediate feedback
+      if (customerId) {
+        setSelectedCustomer(customerId);
+      }
 
       // Set customer data if available from workOrder
       if (typeof workOrder.customer === 'object' && workOrder.customer !== null) {
@@ -198,17 +280,19 @@ export default function EditWorkOrderPage() {
         });
       }
     }
-  }, [workOrder, isLoading, reset]);
+  }, [workOrder, isLoading, reset, setValue]);
 
-  const customer = watch("customer");
+  const watchedCustomer = watch("customer");
 
-  // Update selected customer when form value changes
+  // Sync selectedCustomer state and data when form value changes
   useEffect(() => {
-    if (customer && customer !== selectedCustomer) {
-      setSelectedCustomer(customer);
+    if (watchedCustomer && watchedCustomer > 0) {
+      if (watchedCustomer !== selectedCustomer) {
+        setSelectedCustomer(watchedCustomer);
+      }
 
       // Find and store selected customer data
-      const customerInList = customersData?.results?.find((c) => c.id === customer);
+      const customerInList = customersData?.results?.find((c) => c.id === watchedCustomer);
       if (customerInList) {
         setSelectedCustomerData({
           id: customerInList.id,
@@ -218,8 +302,8 @@ export default function EditWorkOrderPage() {
           customer_type: customerInList.customer_type,
           customer_number: customerInList.customer_number,
         });
-      } else if (workOrder && typeof workOrder.customer === 'object' && workOrder.customer?.id === customer) {
-        // Fallback to workOrder customer data if not in the current page of customers
+      } else if (workOrder && typeof workOrder.customer === 'object' && workOrder.customer?.id === watchedCustomer) {
+        // Fallback to workOrder customer data
         setSelectedCustomerData({
           id: workOrder.customer.id,
           full_name: workOrder.customer.full_name,
@@ -229,15 +313,16 @@ export default function EditWorkOrderPage() {
           customer_number: workOrder.customer.customer_number,
         });
       }
-    } else if (!customer) {
-      setSelectedCustomerData(null);
+    } else if (watchedCustomer === 0 || !watchedCustomer) {
+      if (selectedCustomer !== null) setSelectedCustomer(null);
+      if (selectedCustomerData !== null) setSelectedCustomerData(null);
     }
-  }, [customer, selectedCustomer, customersData, workOrder]);
+  }, [watchedCustomer, selectedCustomer, customersData, workOrder]);
 
   // Initialize customer data when customersData loads
   useEffect(() => {
-    if (customersData?.results && customer && (!selectedCustomerData || selectedCustomerData.id !== customer)) {
-      const customerData = customersData.results.find((c) => c.id === customer);
+    if (customersData?.results && watchedCustomer && (!selectedCustomerData || selectedCustomerData.id !== watchedCustomer)) {
+      const customerData = customersData.results.find((c) => c.id === watchedCustomer);
       if (customerData) {
         setSelectedCustomerData({
           id: customerData.id,
@@ -249,7 +334,7 @@ export default function EditWorkOrderPage() {
         });
       }
     }
-  }, [customersData, customer, selectedCustomerData]);
+  }, [customersData, watchedCustomer, selectedCustomerData]);
 
   const updateMutation = useMutation({
     mutationFn: (data: WorkOrderFormData) => workordersApi.update(workOrderId, data),
@@ -381,7 +466,8 @@ export default function EditWorkOrderPage() {
                       </label>
 
                       <Select
-                        value={customer?.toString() || ""}
+                        key={`customer-${watchedCustomer || 'empty'}-${workOrder?.created_at || 'loading'}`}
+                        value={watchedCustomer ? String(watchedCustomer) : ""}
                         onValueChange={(val) => {
                           const numVal = parseInt(val);
                           setValue("customer", numVal);
@@ -408,33 +494,11 @@ export default function EditWorkOrderPage() {
                           <SelectValue placeholder="Select a customer" />
                         </SelectTrigger>
                         <SelectContent>
-                          {(() => {
-                            const items: CustomerSelectItem[] = [];
-
-                            // Add all customers from the list
-                            customersData?.results?.forEach(c => {
-                              items.push({
-                                id: c.id,
-                                full_name: c.full_name || `${c.user?.first_name || ''} ${c.user?.last_name || ''}`.trim() || 'Unknown'
-                              });
-                            });
-
-                            // Add current customer from workOrder if missing from list
-                            if (workOrder && typeof workOrder.customer === 'object' && workOrder.customer !== null) {
-                              if (!items.find(i => i.id === (workOrder.customer as any).id)) {
-                                items.push({
-                                  id: (workOrder.customer as any).id,
-                                  full_name: (workOrder.customer as any).full_name || 'Current Customer'
-                                });
-                              }
-                            }
-
-                            return items.map((item) => (
-                              <SelectItem key={item.id} value={item.id.toString()}>
-                                {item.full_name}
-                              </SelectItem>
-                            ));
-                          })()}
+                          {customerOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id.toString()}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
 
@@ -488,9 +552,10 @@ export default function EditWorkOrderPage() {
                       </label>
 
                       <Select
-                        value={vehicle?.toString() || ""}
+                        key={`vehicle-${watchedVehicle || 'empty'}-${workOrder?.created_at || 'loading'}`}
+                        value={watchedVehicle ? String(watchedVehicle) : ""}
                         onValueChange={(val) => setValue("vehicle", parseInt(val))}
-                        disabled={!selectedCustomer || (isLoadingVehicles && !workOrder)}
+                        disabled={!selectedCustomer}
                       >
                         <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}>
                           <SelectValue placeholder={!selectedCustomer
@@ -502,33 +567,11 @@ export default function EditWorkOrderPage() {
                                 : "Select a vehicle"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {(() => {
-                            const items: VehicleSelectItem[] = [];
-
-                            // Add all vehicles from the list
-                            vehiclesData?.results?.forEach(v => {
-                              items.push({
-                                id: v.id,
-                                label: `${v.make} ${v.model} ${v.year} — ${v.vin}`
-                              });
-                            });
-
-                            // Add current vehicle from workOrder if missing from list
-                            if (workOrder && typeof workOrder.vehicle === 'object' && workOrder.vehicle !== null) {
-                              if (!items.find(i => i.id === (workOrder.vehicle as any).id)) {
-                                items.push({
-                                  id: (workOrder.vehicle as any).id,
-                                  label: (workOrder.vehicle_info || 'Current Vehicle')
-                                });
-                              }
-                            }
-
-                            return items.map((item) => (
-                              <SelectItem key={item.id} value={item.id.toString()}>
-                                {item.label}
-                              </SelectItem>
-                            ));
-                          })()}
+                          {vehicleOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id.toString()}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
 
@@ -616,11 +659,11 @@ export default function EditWorkOrderPage() {
                         Service Type
                       </label>
                       <Select
-                        value={watch("service_type")?.toString()}
+                        value={watch("service_type")?.toString() || ""}
                         onValueChange={(val) => {
                           setValue("service_type", parseInt(val));
                           // Auto-fill concerns if empty
-                          const type = serviceTypesData?.results?.find(t => t.id === parseInt(val));
+                          const type = serviceTypesData?.results?.find((t: any) => t.id === parseInt(val));
                           if (type && !watch("customer_concerns")) {
                             setValue("customer_concerns", `Perform ${type.name}`);
                           }
@@ -630,7 +673,7 @@ export default function EditWorkOrderPage() {
                           <SelectValue placeholder="Select service type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {serviceTypesData?.results?.map((type) => (
+                          {serviceTypesData?.results?.map((type: any) => (
                             <SelectItem key={type.id} value={type.id.toString()}>
                               {type.name}
                             </SelectItem>

@@ -5,12 +5,16 @@ import { useParams } from "next/navigation";
 import { billingApi } from "@/lib/api/billing";
 import { format } from "date-fns";
 import { useEffect } from "react";
-
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePrint } from "@/lib/hooks/usePrint";
+import { PrintLayout } from "@/components/print/PrintLayout";
+import { PrintControls } from "@/components/print/PrintControls";
+
 export default function EstimatePrintPage() {
   const { formatCurrency } = useCurrency();
   const params = useParams();
   const estimateId = parseInt(params.id as string);
+  const { downloadPDF, isDownloading } = usePrint();
 
   // Validate estimateId to prevent NaN API calls
   const isValidId = !isNaN(estimateId) && estimateId > 0;
@@ -21,11 +25,14 @@ export default function EstimatePrintPage() {
     enabled: isValidId,
   });
 
-  useEffect(() => {
-    if (!isLoading && estimate) {
-      window.print();
-    }
-  }, [isLoading, estimate]);
+  const handleDownloadPDF = async () => {
+    if (!estimate) return;
+    await downloadPDF({
+      documentType: 'estimate',
+      documentId: estimateId,
+      documentNumber: estimate.estimate_number
+    });
+  };
 
   if (!isValidId) {
     return (
@@ -50,148 +57,41 @@ export default function EstimatePrintPage() {
   const discountAmount = parseFloat(estimate.discount_amount || '0');
   const total = parseFloat(estimate.total || '0');
 
-  return (
-    <>
-      <style jsx global>{`
-        @media print {
-          @page {
-            margin: 1cm;
-          }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          body {
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            font-family: Arial, sans-serif !important;
-            font-size: 12px !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          /* Hide dashboard layout elements */
-          nav,
-          aside,
-          header,
-          [class*="Navbar"],
-          [class*="Sidebar"],
-          [class*="SubNav"],
-          nav[class*="fixed"],
-          aside[class*="fixed"] {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          /* Reset main content margin for print */
-          main {
-            margin-left: 0 !important;
-            padding-top: 0 !important;
-            padding: 0 !important;
-          }
-          /* Hide any other dashboard elements */
-          [class*="dashboard-layout"],
-          [class*="dashboardLayout"],
-          div[class*="min-h-screen"] > nav,
-          div[class*="min-h-screen"] > aside {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          /* Print container styles */
-          .print-container {
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 20px !important;
-            box-shadow: none !important;
-            background: white !important;
-          }
-          /* Table styles */
-          table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            margin: 10px 0 !important;
-            font-size: 12px !important;
-          }
-          th, td {
-            border: 1px solid #000 !important;
-            padding: 5px !important;
-            text-align: left !important;
-          }
-          th {
-            background-color: #f0f0f0 !important;
-            font-weight: bold !important;
-          }
-          .text-right {
-            text-align: right !important;
-          }
-          .text-center {
-            text-align: center !important;
-          }
-          .font-bold {
-            font-weight: bold !important;
-          }
-          .font-semibold {
-            font-weight: 600 !important;
-          }
-        }
-        @media screen {
-          body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            font-size: 12px;
-          }
-          .print-container {
-            max-width: 4xl;
-            margin: 0 auto;
-            padding: 2rem;
-            background: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 10px 0;
-          }
-          th, td {
-            border: 1px solid #000;
-            padding: 5px;
-            text-align: left;
-          }
-          th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-          }
-          .text-right {
-            text-align: right;
-          }
-          .text-center {
-            text-align: center;
-          }
-        }
-      `}</style>
-      <div className="print-container">
+  // Determine watermark based on status
+  const getWatermark = () => {
+    if (estimate.status === 'declined' || estimate.status === 'expired') return 'VOID';
+    if (estimate.status === 'draft') return 'DRAFT';
+    return null;
+  };
 
-        {/* Header */}
-        <div style={{ marginBottom: '20px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>ESTIMATE</h1>
-              <p style={{ fontSize: '14px', marginTop: '5px', margin: 0 }}>#{estimate.estimate_number}</p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              {estimate.estimate_date && (
-                <p style={{ fontSize: '12px', margin: '2px 0' }}>Date: {format(new Date(estimate.estimate_date), 'MMM dd, yyyy')}</p>
-              )}
-              {estimate.valid_until && (
-                <p style={{ fontSize: '12px', margin: '2px 0' }}>Valid Until: {format(new Date(estimate.valid_until), 'MMM dd, yyyy')}</p>
-              )}
-              <p style={{ fontSize: '12px', margin: '2px 0' }}>
-                Status: <span style={{ fontWeight: '600', textTransform: 'uppercase' }}>{estimate.status}</span>
-              </p>
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <PrintControls
+        onPrint={() => window.print()}
+        onDownloadPDF={handleDownloadPDF}
+        isLoading={isDownloading}
+      />
+
+      <PrintLayout
+        watermark={getWatermark()}
+        documentType="ESTIMATE"
+        documentNumber={estimate.estimate_number}
+        metaInfo={
+          <div className="text-right">
+            {estimate.estimate_date && (
+              <div className="mb-1"><span className="font-bold text-foreground">Date:</span> {format(new Date(estimate.estimate_date), 'MMM dd, yyyy')}</div>
+            )}
+            {estimate.valid_until && (
+              <div className="mb-1"><span className="font-bold text-foreground">Valid Until:</span> {format(new Date(estimate.valid_until), 'MMM dd, yyyy')}</div>
+            )}
+            <div className="mb-1">
+              <span className="font-bold text-foreground">Status:</span> <span className={`uppercase font-semibold ${estimate.status === 'approved' ? 'text-success' :
+                  estimate.status === 'declined' ? 'text-red-600' : ''
+                }`}>{estimate.status}</span>
             </div>
           </div>
-        </div>
+        }
+      >
 
         {/* Customer Info */}
         <div style={{ marginBottom: '20px' }}>
@@ -353,14 +253,12 @@ export default function EstimatePrintPage() {
           </div>
         )}
 
-        {/* Footer */}
         <div style={{ marginTop: '30px', paddingTop: '10px', borderTop: '1px solid #ccc', fontSize: '10px', textAlign: 'center', color: '#666' }}>
           <p style={{ margin: '5px 0', fontWeight: '600' }}>This is an estimate, not a final invoice.</p>
           <p style={{ margin: '5px 0' }}>Prices and availability are subject to change. This estimate is valid until {estimate.valid_until ? format(new Date(estimate.valid_until), 'MMMM dd, yyyy') : 'further notice'}.</p>
           <p style={{ margin: '5px 0' }}>Please retain this estimate for your records.</p>
-          <p style={{ margin: '5px 0' }}>Generated on {format(new Date(), 'MMMM dd, yyyy \'at\' h:mm a')}</p>
         </div>
-      </div>
-    </>
+      </PrintLayout>
+    </div>
   );
 }

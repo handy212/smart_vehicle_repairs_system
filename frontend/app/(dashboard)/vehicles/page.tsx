@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Car, Trash2, Download, Upload, X, ChevronDown, MoreVertical, Eye, Edit, History, Wrench, Calendar } from "lucide-react";
+import { Plus, Search, Car, Trash2, Download, Upload, X, ChevronDown, MoreVertical, MoreHorizontal, Eye, Edit, History, Wrench, Calendar } from "lucide-react";
 import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadVehicleTemplate } from "@/lib/utils/import-templates";
 import { exportVehiclesForImport } from "@/lib/utils/export-templates";
@@ -23,6 +23,11 @@ import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/adva
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -592,11 +597,24 @@ export default function VehiclesPage() {
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors focus-visible:ring-1"
+                                  aria-label="Vehicle actions"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p>Actions</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem asChild>
                               <Link href={`/vehicles/${vehicle.id}`} className="flex items-center">
@@ -707,6 +725,6 @@ export default function VehiclesPage() {
         description="Upload a CSV file with vehicle data. Required columns: vin, make, model, year, owner (customer ID or email)."
         onDownloadTemplate={downloadVehicleTemplate}
       />
-    </div>
+    </div >
   );
 }

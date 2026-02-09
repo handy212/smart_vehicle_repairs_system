@@ -34,6 +34,11 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { inventoryApi, Part } from "@/lib/api/inventory";
 import { ChevronsUpDown, Check } from "lucide-react";
@@ -245,31 +250,47 @@ export function PartsRequiredTab({
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-1">
                                                     {canEdit && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                                                            onClick={() => {
-                                                                setEditPart(part);
-                                                                setShowAddDialog(true);
-                                                            }}
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
-                                                        </Button>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-primary transition-colors focus-visible:ring-1"
+                                                                    onClick={() => {
+                                                                        setEditPart(part);
+                                                                        setShowAddDialog(true);
+                                                                    }}
+                                                                    aria-label="Edit part request"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Edit Part</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500"
-                                                        onClick={() => {
-                                                            if (confirm("Remove this part request?")) {
-                                                                deleteMutation.mutate(part.id);
-                                                            }
-                                                        }}
-                                                        disabled={isDisabled}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors focus-visible:ring-1"
+                                                                onClick={() => {
+                                                                    if (confirm("Remove this part request?")) {
+                                                                        deleteMutation.mutate(part.id);
+                                                                    }
+                                                                }}
+                                                                disabled={isDisabled}
+                                                                aria-label="Remove part request"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Remove Part</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

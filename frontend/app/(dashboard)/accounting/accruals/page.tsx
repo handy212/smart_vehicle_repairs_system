@@ -45,12 +45,10 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { useToast } from "@/lib/hooks/useToast"
 import { accountingApi } from "@/lib/api/accounting"
-
-const formatCurrency = (amount: any) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(amount));
-}
+import { useCurrency } from "@/lib/hooks/useCurrency"
 
 export default function AccrualsPage() {
+    const { formatCurrency } = useCurrency()
     const { toast, success, error } = useToast()
     const queryClient = useQueryClient()
     const [selectedTab, setSelectedTab] = useState("active")

@@ -404,7 +404,7 @@ export default function BranchDetailPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 

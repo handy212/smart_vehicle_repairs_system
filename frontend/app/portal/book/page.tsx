@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { portalApi, PortalServiceBundle } from "@/lib/api/portal";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Car, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { portalApi } from "@/lib/api/portal";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Calendar as CalendarIcon, Car, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +12,18 @@ import { cn } from "@/lib/utils/cn";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/lib/hooks/useToast";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PortalPageHeader } from "../components/PortalPageHeader";
 
 const appointmentSchema = z.object({
   vehicle_id: z.string().min(1, "Vehicle is required"),
@@ -62,25 +70,30 @@ export default function BookAppointmentPage() {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
-    reset,
   } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
       service_type: "",
+      appointment_date: "",
+      appointment_time: "",
+      vehicle_id: "",
+      service_bundle_id: "none",
     },
   });
 
   // Watch date to fetch availability
-  const selectedDate = useWatch({ control, name: "appointment_date" });
-  const selectedBundleId = useWatch({ control, name: "service_bundle_id" });
+  const selectedDate = watch("appointment_date");
+  const selectedBundleId = watch("service_bundle_id");
 
   useEffect(() => {
     if (selectedDate) {
       setCheckingAvailability(true);
+      setAvailableSlots([]); // Clear previous slots while loading
       portalApi.checkAvailability(selectedDate)
         .then((data) => {
-          setAvailableSlots(data.slots);
+          setAvailableSlots(data.slots || []);
         })
         .catch(() => {
           setAvailableSlots([]);
@@ -122,7 +135,7 @@ export default function BookAppointmentPage() {
         title: "Appointment Booked!",
         description: "Your service request has been submitted successfully.",
       });
-      router.push("/portal/history");
+      router.push("/portal");
     },
     onError: (error: any) => {
       console.error("Booking failed:", error);
@@ -142,15 +155,16 @@ export default function BookAppointmentPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Schedule Service</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Book an appointment for your vehicle
-        </p>
-      </div>
+      <PortalPageHeader
+        title="Schedule Service"
+        description="Book an appointment for your vehicle"
+      />
 
       {vehiclesLoading ? (
-        <div className="p-8 text-center">Loading vehicles...</div>
+        <div className="p-8 text-center bg-card rounded-xl border border-border">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-muted-foreground">Loading vehicles...</p>
+        </div>
       ) : vehicles.length === 0 ? (
         <Card className="border-l-4 border-l-yellow-500">
           <CardContent className="py-8 text-center flex flex-col items-center">
@@ -159,12 +173,16 @@ export default function BookAppointmentPage() {
             <p className="text-muted-foreground mb-6 max-w-md">
               You need to have a registered vehicle to book a service. Please contact us to add your vehicle.
             </p>
+            <Button onClick={() => router.push("/portal/vehicles/new")}>
+              Add Vehicle
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
             <CardTitle>Service Details</CardTitle>
+            <CardDescription>Fill in the details below to schedule your appointment.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -172,69 +190,82 @@ export default function BookAppointmentPage() {
               {/* 1. Vehicle Selection */}
               <div className="space-y-2">
                 <Label htmlFor="vehicle_id">Select Vehicle <span className="text-red-500">*</span></Label>
-                <select
-                  id="vehicle_id"
-                  {...register("vehicle_id")}
-                  className={cn(
-                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-                    errors.vehicle_id ? "border-red-500" : ""
+                <Controller
+                  control={control}
+                  name="vehicle_id"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger className={cn(errors.vehicle_id && "border-red-500")}>
+                        <SelectValue placeholder="-- Choose a Vehicle --" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vehicles.map((v: any) => (
+                          <SelectItem key={v.id} value={v.id.toString()}>
+                            {v.year} {v.make} {v.model} ({v.license_plate})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
-                >
-                  <option value="">-- Choose a Vehicle --</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.year} {v.make} {v.model} ({v.license_plate})
-                    </option>
-                  ))}
-                </select>
-                {errors.vehicle_id && <p className="text-sm text-red-500">{errors.vehicle_id.message}</p>}
+                />
+                {errors.vehicle_id && <p className="text-xs text-red-500 font-medium">{errors.vehicle_id.message}</p>}
               </div>
 
               {/* 2. Service Selection (Bundle or Custom) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="service_bundle_id">Service Bundle (Recommended)</Label>
-                  <select
-                    id="service_bundle_id"
-                    {...register("service_bundle_id")}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="none">-- No Bundle --</option>
-                    {bundles.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} - {formatCurrency(b.price)}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground">Select a package for best value.</p>
+                  <Controller
+                    control={control}
+                    name="service_bundle_id"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="-- No Bundle --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">-- No Bundle --</SelectItem>
+                          {bundles.map((b: any) => (
+                            <SelectItem key={b.id} value={b.id.toString()}>
+                              {b.name} - {formatCurrency(b.price)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Select a package for best value.</p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="service_type">Service Type <span className="text-red-500">*</span></Label>
-                  <select
-                    id="service_type"
-                    {...register("service_type")}
-                    className={cn(
-                      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      errors.service_type ? "border-red-500" : ""
+                  <Controller
+                    control={control}
+                    name="service_type"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger className={cn(errors.service_type && "border-red-500")}>
+                          <SelectValue placeholder="-- Select Type --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SERVICE_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                          <SelectItem value="other">Other / Custom Request</SelectItem>
+                        </SelectContent>
+                      </Select>
                     )}
-                  >
-                    <option value="">-- Select Type --</option>
-                    {SERVICE_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                    <option value="other">Other / Custom Request</option>
-                  </select>
-                  {errors.service_type && <p className="text-sm text-red-500">{errors.service_type.message}</p>}
+                  />
+                  {errors.service_type && <p className="text-xs text-red-500 font-medium">{errors.service_type.message}</p>}
                 </div>
               </div>
 
               {/* 3. Date & Time Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
                 <div className="space-y-2">
                   <Label htmlFor="appointment_date">Preferred Date <span className="text-red-500">*</span></Label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="appointment_date"
                       type="date"
@@ -243,33 +274,37 @@ export default function BookAppointmentPage() {
                       className={cn("pl-10", errors.appointment_date && "border-red-500")}
                     />
                   </div>
-                  {errors.appointment_date && <p className="text-sm text-red-500">{errors.appointment_date.message}</p>}
+                  {errors.appointment_date && <p className="text-xs text-red-500 font-medium">{errors.appointment_date.message}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="appointment_time">Available Time Slot <span className="text-red-500">*</span></Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <select
-                      id="appointment_time"
-                      {...register("appointment_time")}
-                      disabled={!selectedDate || checkingAvailability || availableSlots.length === 0}
-                      className={cn(
-                        "flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
-                        errors.appointment_time ? "border-red-500" : ""
-                      )}
-                    >
-                      <option value="">
-                        {!selectedDate ? "-- Select Date First --" :
-                          checkingAvailability ? "Checking..." :
-                            availableSlots.length === 0 ? "No slots available" : "-- Select Time --"}
-                      </option>
-                      {availableSlots.map((slot) => (
-                        <option key={slot} value={slot}>{slot}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {errors.appointment_time && <p className="text-sm text-red-500">{errors.appointment_time.message}</p>}
+                  <Controller
+                    control={control}
+                    name="appointment_time"
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        disabled={!selectedDate || checkingAvailability || availableSlots.length === 0}
+                        value={field.value}
+                      >
+                        <SelectTrigger className={cn("pl-10 relative", errors.appointment_time && "border-red-500")}>
+                          <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder={
+                            !selectedDate ? "-- Select Date First --" :
+                              checkingAvailability ? "Checking..." :
+                                availableSlots.length === 0 ? "No slots available" : "-- Select Time --"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableSlots.map((slot) => (
+                            <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.appointment_time && <p className="text-xs text-red-500 font-medium">{errors.appointment_time.message}</p>}
                 </div>
               </div>
 

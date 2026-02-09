@@ -675,7 +675,7 @@ export default function InvoicesPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
-                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center justify-end gap-1 transition-opacity">
                                                     <Link href={`/billing/invoices/${invoice.id}`}>
                                                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary">
                                                             <Eye className="w-3.5 h-3.5" />

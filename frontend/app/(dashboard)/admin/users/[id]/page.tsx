@@ -1244,7 +1244,8 @@ export default function UserDetailPage() {
             </CardContent>
           </Card>
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 }

@@ -16,15 +16,15 @@ apiClient.interceptors.request.use(
       // Check if offline
       const isOnline = navigator.onLine;
       const method = (config.method || "get").toUpperCase();
-      
+
       // For write operations (POST, PATCH, PUT, DELETE), queue if offline
       if (!isOnline && ["POST", "PATCH", "PUT", "DELETE"].includes(method)) {
         const action = method === "DELETE" ? "delete" : method === "POST" ? "create" : "update";
         const endpoint = config.url || "";
-        
+
         // Queue the request
         await queueRequest(action, endpoint, method, config.data);
-        
+
         // Return a mock response that indicates the request was queued
         return Promise.reject({
           isOffline: true,

@@ -4,6 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { Truck, Eye, Plus } from "lucide-react";
 import Link from "next/link";
@@ -64,11 +69,23 @@ export function VehicleRoadsideView({ roadsideRequests }: VehicleRoadsideViewPro
                                             {req.assigned_technician_name || <span className="text-muted-foreground italic">Unassigned</span>}
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-right">
-                                            <Link href={`/roadside/${req.id}`}>
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Eye className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
-                                                </Button>
-                                            </Link>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Link href={`/roadside/${req.id}`}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors focus-visible:ring-1"
+                                                            aria-label="View roadside request details"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </Button>
+                                                    </Link>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="left">
+                                                    <p>View Details</p>
+                                                </TooltipContent>
+                                            </Tooltip>
                                         </TableCell>
                                     </TableRow>
                                 ))}

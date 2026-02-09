@@ -13,6 +13,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { VehicleDamageMarker, DamageMark } from "@/components/inspections/VehicleDamageMarker";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
@@ -192,50 +193,69 @@ export default function InspectionDetailPage() {
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card>
-          <CardContent className="p-4 flex flex-col justify-center">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Progress</p>
+          <CardContent className="p-3 flex flex-col justify-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Progress</p>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold">{inspection.completion_percentage || 0}%</span>
-              <div className="flex-1 bg-muted h-1.5 rounded-full overflow-hidden max-w-[100px]">
-                <div className="bg-primary h-full" style={{ width: `${inspection.completion_percentage || 0}%` }} />
+              <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-primary h-full transition-all duration-500"
+                  style={{ width: `${inspection.completion_percentage}%` }}
+                />
+              </div>
+              <span className="text-sm font-bold">{inspection.completion_percentage}%</span>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3 flex flex-col justify-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Summary</p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                <span className="text-xs font-medium">{inspection.pass_count}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-warning" />
+                <span className="text-xs font-medium">{inspection.advisory_count}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                <span className="text-xs font-medium">{inspection.fail_count}</span>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex flex-col justify-center">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Finding Summary</p>
-            <div className="flex gap-3 text-sm">
-              {(inspection.result_counts?.fail ?? 0) > 0 && <span className="text-red-600 font-medium">{inspection.result_counts?.fail} Fail</span>}
-              {(inspection.result_counts?.advisory ?? 0) > 0 && <span className="text-yellow-600 font-medium">{inspection.result_counts?.advisory} Visual</span>}
-              {(inspection.result_counts?.pass ?? 0) > 0 && <span className="text-success font-medium">{inspection.result_counts?.pass} Pass</span>}
-              {!inspection.result_counts?.fail && !inspection.result_counts?.advisory && !inspection.result_counts?.pass && <span className="text-muted-foreground">No data</span>}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex flex-col justify-center">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Technician</p>
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <User className="w-4 h-4 text-muted-foreground" />
-              {inspection.performed_by_name || "Unassigned"}
-            </div>
+          <CardContent className="p-3 flex flex-col justify-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Vehicle</p>
+            <p className="text-sm font-bold truncate">
+              {vehicle?.make} {vehicle?.model}
+            </p>
           </CardContent>
         </Card>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (Main) */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="results" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
+            <TabsList className="grid w-full grid-cols-5 lg:w-[500px]">
               <TabsTrigger value="results">Results</TabsTrigger>
+              <TabsTrigger value="damage">Damage</TabsTrigger>
               <TabsTrigger value="info">Info</TabsTrigger>
               <TabsTrigger value="photos">Photos ({allPhotos.length})</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
+
+            {/* Damage Tab */}
+            <TabsContent value="damage" className="mt-4">
+              <VehicleDamageMarker
+                damage={(inspection.vehicle_damage as DamageMark[]) || []}
+                onChange={() => { }}
+                disabled={true}
+              />
+            </TabsContent>
 
             {/* Results Tab */}
             <TabsContent value="results" className="mt-4 space-y-6">
@@ -370,7 +390,7 @@ export default function InspectionDetailPage() {
                   <CardContent><p className="text-sm whitespace-pre-wrap">{inspection.notes}</p></CardContent>
                 </Card>
               )}
-              
+
               {/* Individual item notes */}
               {inspection.results && inspection.results.filter((r: any) => r.notes && r.notes.trim()).length > 0 && (
                 <Card>
@@ -403,7 +423,7 @@ export default function InspectionDetailPage() {
                   </CardContent>
                 </Card>
               )}
-              
+
               {/* Recommendations */}
               {inspection.recommendations && (
                 <Card>
@@ -411,13 +431,13 @@ export default function InspectionDetailPage() {
                   <CardContent><p className="text-sm whitespace-pre-wrap">{inspection.recommendations}</p></CardContent>
                 </Card>
               )}
-              
+
               {/* Empty state */}
-              {!inspection.notes && 
-               (!inspection.results || inspection.results.filter((r: any) => r.notes && r.notes.trim()).length === 0) && 
-               !inspection.recommendations && (
-                <div className="text-center py-8 text-muted-foreground">No notes recorded</div>
-              )}
+              {!inspection.notes &&
+                (!inspection.results || inspection.results.filter((r: any) => r.notes && r.notes.trim()).length === 0) &&
+                !inspection.recommendations && (
+                  <div className="text-center py-8 text-muted-foreground">No notes recorded</div>
+                )}
             </TabsContent>
           </Tabs>
         </div>

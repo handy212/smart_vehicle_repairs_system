@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '8000',
+        port: '8001',
         pathname: '/media/**',
       },
     ],
@@ -50,6 +50,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api"}/:path*`,
+      },
+      {
+        source: "/media/:path*",
+        destination: `http://localhost:8001/media/:path*`,
       },
     ];
   },

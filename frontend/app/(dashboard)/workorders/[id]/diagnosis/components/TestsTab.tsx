@@ -32,6 +32,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TestsTabProps {
     diagnosisId: number;
@@ -188,31 +193,46 @@ export function TestsTab({
                                         )}
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 px-2 text-muted-foreground hover:text-primary"
-                                            onClick={() => setEditingTest(test)}
-                                            disabled={isDisabled}
-                                        >
-                                            <Edit className="w-3.5 h-3.5 mr-1.5" />
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 px-2 text-muted-foreground hover:text-red-600"
-                                            onClick={() => {
-                                                if (confirm("Delete this test?")) {
-                                                    deleteMutation.mutate(test.id);
-                                                }
-                                            }}
-                                            disabled={isDisabled}
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                                            Delete
-                                        </Button>
+                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-border transition-opacity">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
+                                                    onClick={() => setEditingTest(test)}
+                                                    disabled={isDisabled}
+                                                    aria-label="Edit diagnostic test"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Edit Test</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                                    onClick={() => {
+                                                        if (confirm("Delete this test?")) {
+                                                            deleteMutation.mutate(test.id);
+                                                        }
+                                                    }}
+                                                    disabled={isDisabled}
+                                                    aria-label="Delete diagnostic test"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Delete Test</p>
+                                            </TooltipContent>
+                                        </Tooltip>
                                     </div>
                                 </div>
                             ))}

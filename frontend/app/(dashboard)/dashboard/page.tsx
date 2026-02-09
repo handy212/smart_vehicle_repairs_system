@@ -6,17 +6,21 @@ import { vehiclesApi } from "@/lib/api/vehicles";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { workordersApi } from "@/lib/api/workorders";
 import { reportingApi } from "@/lib/api/reporting";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumIcons } from "@/components/ui/icons";
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { SummaryStatsGrid } from "./components/SummaryStatsGrid";
 import { ShopPulse } from "./components/ShopPulse";
 import { CompactActivityList } from "./components/CompactActivityList";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { InventoryWatchlist } from "./components/InventoryWatchlist";
+import { ServiceReminders } from "./components/ServiceReminders";
+import { SmartDiagnosisFeed } from "./components/SmartDiagnosisFeed";
+import { AdvancedWidget } from "./components/AdvancedWidget";
 
 // Lazy load heavy chart components
 const RevenueAreaChart = dynamic(() => import("./components/RevenueAreaChart"), {
@@ -29,11 +33,6 @@ const WorkOrderPieChart = dynamic(() => import("./components/WorkOrderPieChart")
   ssr: false,
 });
 
-const PaymentMethodBarChart = dynamic(() => import("./components/PaymentMethodBarChart"), {
-  loading: () => <div className="flex items-center justify-center h-[200px] text-muted-foreground">Loading chart...</div>,
-  ssr: false,
-});
-
 export default function DashboardPage() {
   // Fetch dashboard overview from reporting API
   const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useQuery({
@@ -41,7 +40,7 @@ export default function DashboardPage() {
     queryFn: () => reportingApi.dashboard(),
     retry: 1,
     refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch revenue data for charts (last 7 days)
@@ -50,7 +49,7 @@ export default function DashboardPage() {
     queryFn: () => {
       const today = new Date();
       const startDate = new Date(today);
-      startDate.setDate(startDate.getDate() - 7); // Last 7 days
+      startDate.setDate(startDate.getDate() - 7);
       return reportingApi.revenue({
         start_date: format(startDate, "yyyy-MM-dd"),
         end_date: format(today, "yyyy-MM-dd"),
@@ -59,7 +58,7 @@ export default function DashboardPage() {
     },
     retry: 1,
     refetchOnWindowFocus: false,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
 
   // Fetch work order statistics
@@ -76,35 +75,42 @@ export default function DashboardPage() {
     },
     retry: 1,
     refetchOnWindowFocus: false,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
 
   // Fetch low stock items
-  const { data: lowStockData, error: lowStockError } = useQuery({
+  const { data: lowStockData, isLoading: lowStockLoading } = useQuery({
     queryKey: ["dashboard", "low-stock"],
     queryFn: () => reportingApi.lowStock(),
     retry: 1,
     refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch service due report
+  const { data: serviceDueData, isLoading: serviceDueLoading } = useQuery({
+    queryKey: ["dashboard", "service-due"],
+    queryFn: () => reportingApi.serviceDue(),
+    staleTime: 15 * 60 * 1000,
   });
 
   // Fetch basic counts
   const { data: customersData } = useQuery({
     queryKey: ["customers", "dashboard"],
     queryFn: () => customersApi.list({ page: 1 }),
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: vehiclesData } = useQuery({
     queryKey: ["vehicles", "dashboard"],
     queryFn: () => vehiclesApi.list({ page: 1 }),
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: todayAppointments } = useQuery({
     queryKey: ["appointments", "today"],
     queryFn: () => appointmentsApi.today(),
-    staleTime: 2 * 60 * 1000, // 2 minutes (more frequently updated)
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: activeWorkOrders, error: activeWorkOrdersError } = useQuery({
@@ -112,13 +118,10 @@ export default function DashboardPage() {
     queryFn: () => workordersApi.active(),
     retry: 1,
     refetchOnWindowFocus: false,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
   });
 
   const isLoading = dashboardLoading || !customersData || !vehiclesData;
-
-  // Show error banner if critical APIs are failing
-  const hasApiErrors = dashboardError || revenueError || activeWorkOrdersError;
 
   // Memoize expensive calculations
   const stats = useMemo(
@@ -134,6 +137,7 @@ export default function DashboardPage() {
       overdue_amount: dashboardData?.alerts?.overdue_invoices?.total || 0,
       low_stock_items: dashboardData?.alerts?.low_stock_items || lowStockData?.summary?.total_low_stock || 0,
       active_subscriptions: dashboardData?.subscriptions?.active_count || 0,
+      active_roadside: dashboardData?.today?.roadside_requests || 0,
       mrr: dashboardData?.subscriptions?.mrr || 0,
       arr: dashboardData?.subscriptions?.arr || 0,
     }),
@@ -158,107 +162,72 @@ export default function DashboardPage() {
     [revenueData]
   );
 
-  const paymentMethodData = useMemo(
-    () => revenueData?.revenue_by_payment_method || [],
-    [revenueData]
-  );
-
-  // Early return AFTER all hooks have been called
   if (isLoading) {
     return <DashboardSkeleton />;
   }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
-      {/* Header with Breadcrumbs */}
-      <DynamicPageTitle title="Dashboard" />
+    <div className="space-y-4 p-4 max-w-[1700px] mx-auto pb-10">
+      <DynamicPageTitle title="Command Center" />
       <DashboardHeader />
 
-      {/* Error Banner */}
-      {hasApiErrors && (
-        <Card className="border-warning bg-warning/10 backdrop-blur-sm">
-          <CardContent className="pt-4">
-            <div className="flex items-center space-x-2 text-warning">
-              <PremiumIcons.AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-sm font-medium">
-                Some dashboard data is temporarily unavailable. The page will continue to load with available data.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Summary Stats Grid */}
+      {/* Global Vital Stats Summary */}
       <SummaryStatsGrid stats={stats} />
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column (2/3) - Shop Operations */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Shop Pulse */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* LEFT COLUMN: Operations & Flow (60%) */}
+        <div className="lg:col-span-8 flex flex-col gap-4">
+          {/* Main Operational Hub */}
           <ShopPulse workOrderStats={workOrderStats} />
 
-          {/* Revenue Chart */}
-          <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-            <CardHeader className="py-4 px-6 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                    <PremiumIcons.Receipt className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-semibold text-foreground tracking-tight">
-                      Revenue Performance
-                    </CardTitle>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground">
-                  Daily revenue totals for the last 7 days.
-                </p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Financial Intelligence Wing */}
+            <AdvancedWidget
+              title="Revenue Intelligence"
+              icon="TrendingUp"
+            >
               <RevenueAreaChart data={revenueChartData} />
-            </CardContent>
-          </Card>
+            </AdvancedWidget>
 
-          {/* Work Order Status & Payment Methods Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="py-4 px-6 border-b border-border/50">
-                <CardTitle className="text-base font-semibold text-foreground tracking-tight">
-                  Workload Distribution
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <WorkOrderPieChart data={workOrderStats?.by_status?.map((item: { status: string; count: number }) => ({
-                  status: item.status.replace(/_/g, " "),
-                  count: item.count,
-                })) || []} />
-              </CardContent>
-            </Card>
+            {/* Operational Spread */}
+            <AdvancedWidget
+              title="Workload Distribution"
+              icon="PieChart"
+            >
+              <WorkOrderPieChart data={workOrderStats?.by_status || []} />
+            </AdvancedWidget>
+          </div>
 
-            <Card className="border-none shadow-sm overflow-hidden bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="py-4 px-6 border-b border-border/50">
-                <CardTitle className="text-base font-semibold text-foreground tracking-tight">
-                  Payment Mix
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <PaymentMethodBarChart data={paymentMethodData} />
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Supply Chain & Parts */}
+            <InventoryWatchlist items={lowStockData?.items || []} isLoading={lowStockLoading} />
+
+            {/* Service Intelligence */}
+            <ServiceReminders vehicles={serviceDueData?.vehicles || []} isLoading={serviceDueLoading} />
           </div>
         </div>
 
-        {/* Right Column (1/3) - Activity Feed */}
-        <div className="lg:col-span-1">
-          <CompactActivityList
-            appointments={todayAppointments}
-            workOrders={dashboardData?.recent_activity?.work_orders}
+        {/* RIGHT COLUMN: Real-time Feeds & Activity (40%) */}
+        <div className="lg:col-span-4 flex flex-col gap-4">
+          <SmartDiagnosisFeed
+            isLoading={false}
+            logs={dashboardData?.recent_activity?.work_orders?.slice(0, 5).map((wo: any) => ({
+              id: wo.id,
+              work_order_number: wo.wo_number,
+              description: wo.diagnosis_notes
+                ? `AI Analysis: ${wo.diagnosis_notes}`
+                : `Status Update: ${wo.status.replace(/_/g, ' ').toUpperCase()}`,
+              priority: wo.status === 'diagnosis' ? 'warning' : 'info',
+              timestamp: wo.created_at
+            })) || []}
           />
+
+          <AdvancedWidget title="Live Workshop Activity" icon="Activity">
+            <CompactActivityList
+              appointments={todayAppointments}
+              workOrders={dashboardData?.recent_activity?.work_orders}
+            />
+          </AdvancedWidget>
         </div>
       </div>
     </div>
