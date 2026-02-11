@@ -563,9 +563,15 @@ def create_appointment_api(request):
         
         # Send confirmation if requested
         if data.get('send_confirmation'):
-            # TODO: Implement notification sending
-            pass
-        
+            try:
+                from apps.notifications_app.triggers import notification_triggers
+                notification_triggers.appointment_created(appointment)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Failed to send appointment confirmation: %s", e, exc_info=True
+                )
+
         return JsonResponse({
             'success': True,
             'appointment_id': appointment.id,

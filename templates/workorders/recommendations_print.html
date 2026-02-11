@@ -230,7 +230,7 @@
                 </div>
                 {% if recommendation.estimated_total_cost and recommendation.estimated_total_cost > 0 %}
                 <div class="recommendation-cost">
-                    <strong>Est. Cost: ${{ recommendation.estimated_total_cost|floatformat:2 }}</strong>
+                    <strong>Est. Cost: {{ currency_symbol }}{{ recommendation.estimated_total_cost|floatformat:2 }}</strong>
                 </div>
                 {% endif %}
             </div>

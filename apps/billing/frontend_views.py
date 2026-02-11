@@ -260,8 +260,14 @@ def invoice_create(request):
             vehicle_id = request.POST.get('vehicle_id')
             work_order_id = request.POST.get('work_order_id')
             
-            # Debug form data
-            print(f"DEBUG - Form data: customer_id={customer_id}, vehicle_id={vehicle_id}, work_order_id={work_order_id}")
+            # Log form data in debug mode only
+            from django.conf import settings
+            if settings.DEBUG:
+                import logging
+                logging.getLogger(__name__).debug(
+                    "Invoice create form data: customer_id=%s, vehicle_id=%s, work_order_id=%s",
+                    customer_id, vehicle_id, work_order_id
+                )
             
             # Validate required fields
             if not customer_id:
@@ -380,7 +386,7 @@ def invoice_edit(request, invoice_id):
 
 @login_required
 def invoice_print(request, invoice_id):
-    """Print-friendly invoice view"""
+    """Print-friendly invoice view - uses unified printing templates"""
     
     # Check permissions
     if request.user.role not in ['admin', 'manager', 'receptionist']:
@@ -389,42 +395,36 @@ def invoice_print(request, invoice_id):
     
     invoice = get_object_or_404(
         Invoice.objects.select_related(
-            'customer', 'vehicle', 'work_order', 'branch'
-        ),
+            'customer', 'customer__user', 'vehicle', 'work_order', 'branch',
+            'work_order__branch'
+        ).prefetch_related('line_items'),
         id=invoice_id
     )
     
-    context = {
-        'invoice': invoice,
-        'page_title': f'Print Invoice {invoice.invoice_number}',
-        'print_generated_at': timezone.now(),
-        'print_branch': invoice.branch or (invoice.work_order.branch if invoice.work_order else None),
-    }
+    branch = invoice.branch or (invoice.work_order.branch if invoice.work_order else None)
     
-    # Check if PDF format is requested
+    # PDF: use print service (same as API)
     if request.GET.get('format') == 'pdf':
         try:
-            from weasyprint import HTML
-            
-            # Render HTML template
-            html_string = render_to_string('billing/invoice_print.html', context, request=request)
-            
-            # Generate PDF
-            pdf = HTML(string=html_string).write_pdf()
-            
-            # Return PDF response
-            response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
-            return response
-            
-        except ImportError:
-            messages.error(request, 'PDF generation requires WeasyPrint. Please install it: pip install weasyprint')
-            return redirect('billing:invoice_detail', invoice_id=invoice.id)
+            from apps.core.services.print_service import generate_invoice_pdf
+            return generate_invoice_pdf(invoice, branch=branch)
         except Exception as e:
             messages.error(request, f'Error generating PDF: {str(e)}')
             return redirect('billing:invoice_detail', invoice_id=invoice.id)
     
-    return render(request, 'billing/invoice_print.html', context)
+    # HTML: render printing template with print controls
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from apps.core.services.print_service import _get_watermark
+    
+    context = {
+        'document': invoice,
+        'branch': branch,
+        'watermark': _get_watermark(invoice.status),
+        'show_print_controls': True,
+        **get_company_info(),
+        **get_branding_settings(),
+    }
+    return render(request, 'printing/documents/invoice.html', context)
 
 
 @login_required

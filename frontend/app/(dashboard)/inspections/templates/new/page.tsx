@@ -105,8 +105,6 @@ export default function NewTemplatePage() {
       ...data,
       description: data.description?.trim() || undefined,
     };
-    
-    console.log("Submitting template data:", cleanedData);
     await createMutation.mutateAsync(cleanedData);
   };
 

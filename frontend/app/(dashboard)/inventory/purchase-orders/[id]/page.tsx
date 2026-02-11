@@ -41,7 +41,7 @@ export default function PurchaseOrderDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { downloadPDF, isDownloading } = usePrint();
+  const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const id = parseInt(params.id as string);
 
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
@@ -275,15 +275,11 @@ export default function PurchaseOrderDetailPage() {
                 variant="outline"
                 size="sm"
                 className="h-9"
-                onClick={() => downloadPDF({
-                  documentType: 'purchase_order',
-                  documentId: id,
-                  documentNumber: purchaseOrder.po_number
-                })}
-                disabled={isDownloading}
+                onClick={() => openPrintWindow({ documentType: 'purchase_order', documentId: id })}
+                disabled={isOpeningPrint}
               >
                 <Printer className="w-4 h-4 mr-2" />
-                {isDownloading ? 'Printing...' : 'Print'}
+                {isOpeningPrint ? 'Opening...' : 'Print'}
               </Button>
             )}
             {purchaseOrder.status === "draft" && (

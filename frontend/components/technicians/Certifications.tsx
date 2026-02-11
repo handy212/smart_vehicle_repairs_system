@@ -176,23 +176,12 @@ export function Certifications({ technicianId }: CertificationsProps) {
             formDataToSend.append('notes', formData.notes || '');
             formDataToSend.append('document_file', formData.document_file);
 
-            console.log('Submitting FormData with file:', {
-                technician: technicianId,
-                name: formData.name,
-                issuing_authority: formData.issuing_authority,
-                issue_date: formData.issue_date,
-                hasFile: !!formData.document_file,
-            });
-
             if (editingCert) {
                 updateMutation.mutate({ id: editingCert.id, data: formDataToSend as any });
             } else {
                 createMutation.mutate(formDataToSend as any);
             }
         } else {
-            // Regular JSON submission
-            console.log('Submitting JSON data:', baseData);
-
             if (editingCert) {
                 updateMutation.mutate({ id: editingCert.id, data: baseData });
             } else {

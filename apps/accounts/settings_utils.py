@@ -95,9 +95,10 @@ def get_company_info():
         'company_website',
         'company_tax_id',
         'company_registration',
+        'currency_symbol',
     ]
     
-    return get_settings(keys)
+    return get_settings(keys, {'currency_symbol': '$'})
 
 
 def get_branding_settings():

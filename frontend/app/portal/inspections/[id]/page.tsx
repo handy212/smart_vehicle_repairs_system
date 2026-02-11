@@ -16,12 +16,14 @@ import { Label } from "@/components/ui/label";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { useState, useRef } from "react";
 import SignatureCanvas from "react-signature-canvas";
+import { usePrint } from "@/lib/hooks/usePrint";
 
 export default function InspectionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { openPrintWindow, isOpeningPrint } = usePrint();
   const inspectionId = parseInt(params.id as string);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -97,8 +99,8 @@ export default function InspectionDetailPage() {
     rejectMutation.mutate({ reason: rejectReason });
   };
 
-  const handleDownload = () => {
-    window.open(`/portal/inspections/${inspectionId}/print`, "_blank");
+  const handlePrint = () => {
+    openPrintWindow({ documentType: 'inspection', documentId: inspectionId });
   };
 
   if (isLoading) {
@@ -168,9 +170,9 @@ export default function InspectionDetailPage() {
             </div>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={handleDownload} className="h-8">
+        <Button variant="outline" size="sm" onClick={handlePrint} disabled={isOpeningPrint} className="h-8">
           <Download className="w-3.5 h-3.5 mr-1.5" />
-          Download
+          {isOpeningPrint ? 'Opening...' : 'Print / Download'}
         </Button>
       </div>
 

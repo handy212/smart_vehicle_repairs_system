@@ -235,3 +235,34 @@ class GatePassViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(gate_pass)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate professional PDF for gate pass"""
+        from apps.core.services.print_service import generate_gate_pass_pdf
+        gate_pass = self.get_object()
+        try:
+            return generate_gate_pass_pdf(gate_pass, branch=gate_pass.branch)
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_gate_pass_print_html
+        
+        gate_pass = self.get_object()
+        try:
+            html = render_gate_pass_print_html(gate_pass, branch=gate_pass.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

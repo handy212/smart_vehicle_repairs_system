@@ -71,6 +71,19 @@ if not env('DATABASE_URL', default=None):
         }
     }
 
+# Cache: Use LocMemCache when Redis is not configured (e.g. no REDIS_URL in .env)
+# This allows development without running Redis. Set REDIS_URL to use Redis.
+_redis_url = env('REDIS_URL', default=None)
+if not _redis_url:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }
+# Session: Use database backend when using LocMemCache (session in cache requires Redis)
+if not _redis_url:
+    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
 # Development logging
 LOGGING['root']['level'] = 'DEBUG'
 LOGGING['loggers']['django']['level'] = 'DEBUG'

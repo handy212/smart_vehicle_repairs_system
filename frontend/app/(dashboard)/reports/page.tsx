@@ -170,12 +170,46 @@ export default function ReportsPage() {
     setShowFilters(false);
   };
 
-  const handleExport = () => {
-    toast({
-      title: "Export Started",
-      description: "Preparing report for download...",
-    });
-    // TODO: Implement actual export functionality
+  const handleExport = async () => {
+    try {
+      if (activeTab === "financial") {
+        toast({
+          title: "Generating Report",
+          description: "Please wait while we generate the Revenue Summary...",
+        });
+        const blob = await reportingApi.downloadRevenueSummary({
+          start_date: startDate,
+          end_date: endDate,
+          period: period
+        });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Revenue_Summary_${startDate}_to_${endDate}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast({
+          title: "Report Downloaded",
+          description: "The Revenue Summary has been downloaded successfully.",
+          variant: "success",
+        });
+      } else {
+        toast({
+          title: "Export Started",
+          description: "Preparing report for download...",
+        });
+        // TODO: Implement other exports
+      }
+    } catch (error) {
+      console.error("Failed to download report:", error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the report. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

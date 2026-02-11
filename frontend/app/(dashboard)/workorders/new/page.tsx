@@ -448,9 +448,6 @@ export default function NewWorkOrderPage() {
       router.push(`/workorders/${data.id}`);
     },
     onError: (error: any) => {
-      console.log(">>> onError handler called");
-      console.log(">>> Error object:", error);
-      console.log(">>> Error response data:", error?.response?.data);
       setServerError(null);
 
       // Extract error data from response
@@ -538,10 +535,8 @@ export default function NewWorkOrderPage() {
 
     try {
       await createMutation.mutateAsync(submitData);
-    } catch (error: any) {
-      // Error is handled by onError callback, but we can add fallback here
-      console.log(">>> onSubmit catch block");
-      console.log(">>> Caught error:", error);
+    } catch {
+      // Error is handled by onError callback
     }
   };
 

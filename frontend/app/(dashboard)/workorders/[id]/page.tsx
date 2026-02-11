@@ -216,7 +216,7 @@ export default function WorkOrderDetailPage() {
   const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const { downloadPDF, isDownloading } = usePrint();
+  const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const { addRecentItem } = useRecentItems();
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
@@ -398,6 +398,16 @@ export default function WorkOrderDetailPage() {
                       className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
                       onClick={() => {
                         setShowPrintMenu(false);
+                        openPrintWindow({ documentType: 'work_order', documentId: workOrderId });
+                      }}
+                    >
+                      <Printer className="w-4 h-4 inline mr-2" />
+                      {isOpeningPrint ? 'Opening...' : 'Print Work Order'}
+                    </div>
+                    <div
+                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
+                      onClick={() => {
+                        setShowPrintMenu(false);
                         downloadPDF({
                           documentType: 'work_order',
                           documentId: workOrderId,
@@ -406,17 +416,8 @@ export default function WorkOrderDetailPage() {
                       }}
                     >
                       <FileText className="w-4 h-4 inline mr-2" />
-                      {isDownloading ? 'Generating PDF...' : 'Print Work Order (PDF)'}
+                      {isDownloading ? 'Downloading...' : 'Download PDF'}
                     </div>
-                    <Link
-                      href={`/workorders/${workOrderId}/jobcard`}
-                      target="_blank"
-                      className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted "
-                      onClick={() => setShowPrintMenu(false)}
-                    >
-                      <FileText className="w-4 h-4 inline mr-2" />
-                      Print Job Card
-                    </Link>
                     {canPrintRecommendations && (
                       <>
                         <div className="border-t border-border my-1" />

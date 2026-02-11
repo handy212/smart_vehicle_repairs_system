@@ -42,7 +42,7 @@ export default function InspectionDetailPage() {
   const inspectionId = parseInt(params.id as string);
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { downloadPDF, isDownloading } = usePrint();
+  const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
 
   const { data: inspection, isLoading } = useQuery({
     queryKey: ["inspection", inspectionId],
@@ -151,6 +151,15 @@ export default function InspectionDetailPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => openPrintWindow({ documentType: 'inspection', documentId: inspectionId })}
+            disabled={isOpeningPrint}
+          >
+            <Printer className="w-3.5 h-3.5 mr-2" />
+            {isOpeningPrint ? 'Opening...' : 'Print'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => downloadPDF({
               documentType: 'inspection',
               documentId: inspectionId,
@@ -158,8 +167,8 @@ export default function InspectionDetailPage() {
             })}
             disabled={isDownloading}
           >
-            <Printer className="w-3.5 h-3.5 mr-2" />
-            Print
+            <FileText className="w-3.5 h-3.5 mr-2" />
+            {isDownloading ? 'Downloading...' : 'PDF'}
           </Button>
 
           {inspection.status === "in_progress" && (

@@ -35,7 +35,7 @@ export default function EstimateDetailPage() {
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const { downloadPDF, isDownloading } = usePrint();
+  const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const [activeTab, setActiveTab] = useState("estimate");
   const { user: currentUser } = useAuthStore();
 
@@ -351,13 +351,14 @@ export default function EstimateDetailPage() {
                   <div className="py-1">
                     <button
                       onClick={() => {
-                        window.print();
+                        openPrintWindow({ documentType: 'estimate', documentId: estimateId });
                         setShowActionsMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
+                      disabled={isOpeningPrint}
+                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Printer className="w-4 h-4" />
-                      Print
+                      {isOpeningPrint ? 'Opening...' : 'Print'}
                     </button>
                     <button
                       onClick={() => {

@@ -24,7 +24,7 @@ export default function ProformaDetailPage() {
     const invoiceId = parseInt(params.id as string);
     const queryClient = useQueryClient();
     const { toast } = useToast();
-    const { downloadPDF, isDownloading } = usePrint();
+    const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [localStatus, setLocalStatus] = useState<string | null>(null);
 
@@ -87,7 +87,7 @@ export default function ProformaDetailPage() {
     });
 
     const handlePrint = () => {
-        window.print();
+        openPrintWindow({ documentType: 'invoice', documentId: invoiceId });
     };
 
     const parseAmount = (value?: string | number | null) => {
@@ -158,9 +158,9 @@ export default function ProformaDetailPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 no-print">
-                    <Button variant="outline" size="sm" onClick={handlePrint}>
+                    <Button variant="outline" size="sm" onClick={handlePrint} disabled={isOpeningPrint}>
                         <Printer className="w-4 h-4 mr-2" />
-                        Print
+                        {isOpeningPrint ? 'Opening...' : 'Print'}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => downloadPDF({
                         documentType: 'invoice',

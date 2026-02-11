@@ -91,19 +91,15 @@ export default function DiagnosisPage() {
     queryKey: ["diagnosis", "workorder", workOrderId],
     queryFn: async () => {
       try {
-        console.log("Fetching diagnosis for work order:", workOrderId);
         let existing = await diagnosisApi.getByWorkOrder(workOrderId);
-        console.log("Existing diagnosis:", existing);
 
         if (!existing && workOrder) {
           // Auto-create diagnosis if it doesn't exist
-          console.log("No diagnosis found, creating new one...");
           try {
             existing = await diagnosisApi.create({
               work_order: workOrderId,
               customer_complaint: workOrder.customer_concerns || "",
             });
-            console.log("Diagnosis created:", existing);
           } catch (error: any) {
             console.error("Failed to create diagnosis:", error);
             console.error("Error details:", error.response?.data || error.message);

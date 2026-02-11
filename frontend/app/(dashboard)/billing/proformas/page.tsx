@@ -33,7 +33,7 @@ export default function ProformasPage() {
     const { toast } = useToast();
     const router = useRouter();
     const { formatCurrency } = useCurrency();
-    const { downloadPDF } = usePrint();
+    const { openPrintWindow } = usePrint();
 
     // Advanced filter options (simplified for proformas)
     const filterOptions: FilterOption[] = [
@@ -226,11 +226,7 @@ export default function ProformasPage() {
                                                         size="sm"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            downloadPDF({
-                                                                documentType: 'invoice',
-                                                                documentId: invoice.id,
-                                                                documentNumber: invoice.invoice_number
-                                                            });
+                                                            openPrintWindow({ documentType: 'invoice', documentId: invoice.id });
                                                         }}
                                                         className="h-7 w-7 p-0"
                                                     >

@@ -844,6 +844,25 @@ Thank you for choosing our service.'''
         
         inspection = self.get_object()
         return generate_inspection_pdf(inspection)
+    
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_inspection_print_html
+        
+        inspection = self.get_object()
+        try:
+            html = render_inspection_print_html(inspection, branch=inspection.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            import logging
+            log = logging.getLogger(__name__)
+            log.error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class InspectionResultViewSet(viewsets.ModelViewSet):

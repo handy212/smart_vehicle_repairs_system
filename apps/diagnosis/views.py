@@ -545,8 +545,10 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             triggers = NotificationTriggers()
             notification_count = triggers.parts_estimate_requested(work_order, diagnosis, request.user)
         except Exception as e:
-            # Fallback or log error
-            print(f"Error sending parts estimate notification: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Error sending parts estimate notification: %s", e, exc_info=True
+            )
             notification_count = 0
             
         return Response({

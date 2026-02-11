@@ -2153,6 +2153,24 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         
         po = self.get_object()
         return generate_purchase_order_pdf(po)
+    
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_purchase_order_print_html
+        
+        po = self.get_object()
+        try:
+            html = render_purchase_order_print_html(po, branch=po.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
@@ -2505,6 +2523,19 @@ class TransferViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for transfer note"""
+        from apps.core.services.print_service import generate_transfer_note_pdf
+        transfer = self.get_object()
+        try:
+            return generate_transfer_note_pdf(transfer)
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class StockAlertViewSet(viewsets.ModelViewSet):
     """
@@ -2795,6 +2826,19 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
         
         serializer = PhysicalCountItemSerializer(count_item)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'])
+    def print_count_sheet(self, request, pk=None):
+        """Generate PDF for count sheet"""
+        from apps.core.services.print_service import generate_inventory_count_sheet_pdf
+        session = self.get_object()
+        try:
+            return generate_inventory_count_sheet_pdf(session)
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PhysicalCountItemViewSet(viewsets.ModelViewSet):

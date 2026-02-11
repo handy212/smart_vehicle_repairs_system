@@ -59,10 +59,6 @@ export default function GoogleLoginButton({
 
             if (!google || !clientId) return;
 
-            // [ANTIGRAVITY] VERSION: v2.1-CODE-FLOW
-            console.log('[GoogleLogin] Component ready.');
-            console.log('[GoogleLogin] Current Window Origin:', window.location.origin);
-
         } catch (error) {
             console.error('[GoogleLogin] Initialization error:', error);
         }
@@ -111,8 +107,6 @@ export default function GoogleLoginButton({
 
     const handleCodeResponse = async (code: string) => {
         try {
-            console.log('[GoogleLogin] Received authorization code, exchanging with backend...');
-
             const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/auth/google/login/`, {
                 method: 'POST',
                 headers: {
@@ -132,7 +126,6 @@ export default function GoogleLoginButton({
 
             // Handle multi-step registration
             if (data.registration_required) {
-                console.log('[GoogleLogin] Registration required for new user');
                 if (onRegistrationRequired) {
                     onRegistrationRequired({
                         user_data: data.user_data,

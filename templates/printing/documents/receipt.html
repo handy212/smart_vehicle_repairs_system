@@ -19,7 +19,7 @@
 <div class="mb-8">
     <div class="text-center py-6 bg-gray-50 rounded border border-gray-200">
         <div class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Amount Paid</div>
-        <div class="text-4xl font-bold text-gray-900">{{ branch.currency_symbol|default:"$" }}{{
+        <div class="text-4xl font-bold text-gray-900">{{ currency_symbol }}{{
             document.amount|floatformat:2 }}</div>
     </div>
 </div>
@@ -31,21 +31,21 @@
         <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Received From</div>
         <div class="info-card">
             <div class="font-bold text-gray-900 mb-1">
-                {% if document.customer.is_business %}
+                {% if document.customer.company_name %}
                 {{ document.customer.company_name }}
                 {% else %}
-                {{ document.customer.first_name }} {{ document.customer.last_name }}
+                {{ document.customer.full_name }}
                 {% endif %}
             </div>
             <div class="text-sm text-gray-600">
-                {% if document.customer.address_line1 %}
-                <div>{{ document.customer.address_line1 }}</div>
+                {% if document.customer.service_address %}
+                <div>{{ document.customer.service_address }}</div>
                 {% endif %}
-                {% if document.customer.city %}
+                {% if document.customer.service_city %}
                 <div>
-                    {{ document.customer.city }}
-                    {% if document.customer.state %}, {{ document.customer.state }}{% endif %}
-                    {{ document.customer.zip_code }}
+                    {{ document.customer.service_city }}
+                    {% if document.customer.service_state %}, {{ document.customer.service_state }}{% endif %}
+                    {{ document.customer.service_zip_code|default:"" }}
                 </div>
                 {% endif %}
                 {% if document.customer.phone %}
@@ -68,19 +68,19 @@
             <table class="w-full text-sm">
                 <tr>
                     <td class="text-gray-600 py-1">Invoice Total:</td>
-                    <td class="text-right font-medium">{{ branch.currency_symbol|default:"$" }}{{
+                    <td class="text-right font-medium">{{ currency_symbol }}{{
                         document.invoice.total|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td class="text-gray-600 py-1">Previous Payments:</td>
-                    <td class="text-right font-medium">{{ branch.currency_symbol|default:"$" }}{{
+                    <td class="text-right font-medium">{{ currency_symbol }}{{
                         previous_payments|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td class="text-gray-600 py-1 font-semibold">Balance Due:</td>
                     <td
                         class="text-right font-bold {% if document.invoice.amount_due > 0 %}text-red-600{% else %}text-green-600{% endif %}">
-                        {{ branch.currency_symbol|default:"$" }}{{ document.invoice.amount_due|floatformat:2 }}
+                        {{ currency_symbol }}{{ document.invoice.amount_due|floatformat:2 }}
                     </td>
                 </tr>
             </table>
@@ -130,8 +130,12 @@
 <!-- Footer -->
 <div class="mt-12 text-center">
     <div class="text-gray-900 font-bold text-lg mb-2">Thank You for Your Business!</div>
+    {% if branch %}
+    {% if branch.phone or branch.email %}
     <div class="text-sm text-gray-500">
-        If you have any questions about this receipt, please contact us at {{ branch.phone }} or {{ branch.email }}.
+        If you have any questions about this receipt, please contact us{% if branch.phone %} at {{ branch.phone }}{% endif %}{% if branch.phone and branch.email %} or{% endif %}{% if branch.email %} {{ branch.email }}{% endif %}.
     </div>
+    {% endif %}
+    {% endif %}
 </div>
 {% endblock %}

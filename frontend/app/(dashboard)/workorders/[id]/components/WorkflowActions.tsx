@@ -109,14 +109,8 @@ export default function WorkflowActions({
   // Create Inspection
   const createInspectionMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Creating inspection with data:", data);
       try {
-        // Make the API call directly to see the full response
         const response = await inspectionsApi.create(data);
-        console.log("Inspection creation response:", response);
-        console.log("Response type:", typeof response);
-        console.log("Response keys:", response ? Object.keys(response) : "null");
-        console.log("Response ID:", response?.id);
 
         // Check if response is empty
         if (!response || (typeof response === 'object' && Object.keys(response).length === 0)) {
@@ -126,17 +120,13 @@ export default function WorkflowActions({
 
         return response;
       } catch (error: any) {
-        console.error("Inspection creation error details:", error);
-        console.error("Error response:", error.response);
-        console.error("Error response status:", error.response?.status);
-        console.error("Error response data:", error.response?.data);
-        console.error("Error message:", error.message);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Inspection creation error:", error?.response?.data ?? error);
+        }
         throw error;
       }
     },
     onSuccess: (inspection) => {
-      console.log("Inspection creation success callback, inspection:", inspection);
-
       // Validate inspection response has an ID
       if (!inspection) {
         console.error("Inspection creation response is null or undefined");
@@ -177,8 +167,6 @@ export default function WorkflowActions({
         queryClient.invalidateQueries({ queryKey: ["inspections", "workorder", workOrderId] });
         return;
       }
-
-      console.log("Valid inspection ID:", numericId, "Navigating to inspection page");
 
       // Update work order status to inspection
       workordersApi.updateStatus(workOrderId, "inspection").then(() => {

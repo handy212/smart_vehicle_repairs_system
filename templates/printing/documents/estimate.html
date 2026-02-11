@@ -98,12 +98,12 @@
                 </td>
                 <td class="text-right">
                     {% if item.item_type == 'labor' and item.labor_rate %}
-                    ${{ item.labor_rate|floatformat:2 }}/hr
+                    {{ currency_symbol }}{{ item.labor_rate|floatformat:2 }}/hr
                     {% else %}
-                    ${{ item.unit_price|floatformat:2 }}
+                    {{ currency_symbol }}{{ item.unit_price|floatformat:2 }}
                     {% endif %}
                 </td>
-                <td class="text-right font-medium">${{ item.total|floatformat:2 }}</td>
+                <td class="text-right font-medium">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
             </tr>
             {% endfor %}
             {% else %}

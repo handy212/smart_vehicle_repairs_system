@@ -75,7 +75,7 @@
         <tr>
             <td>
                 <strong>
-                    {% if invoice.customer.company_name %}{{ invoice.customer.company_name }}{% else %}{{ invoice.customer.get_full_name }}{% endif %}
+                    {% if invoice.customer.company_name %}{{ invoice.customer.company_name }}{% else %}{{ invoice.customer.full_name }}{% endif %}
                 </strong><br>
                 {% if invoice.customer.service_address %}{{ invoice.customer.service_address }}<br>{% endif %}
                 {% if invoice.customer.service_city or invoice.customer.service_state %}
@@ -131,12 +131,12 @@
                     </td>
                     <td class="text-right">
                         {% if item.item_type == 'labor' and item.labor_rate %}
-                            ${{ item.labor_rate|floatformat:2 }}/hr
+                            {{ currency_symbol }}{{ item.labor_rate|floatformat:2 }}/hr
                         {% else %}
-                            ${{ item.unit_price|floatformat:2 }}
+                            {{ currency_symbol }}{{ item.unit_price|floatformat:2 }}
                         {% endif %}
                     </td>
-                    <td class="text-right">${{ item.total|floatformat:2 }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             {% elif invoice.work_order %}
@@ -144,8 +144,8 @@
                 <tr>
                     <td>{{ task.description }}{% if task.notes %}<br>{{ task.notes }}{% endif %}</td>
                     <td class="text-center">{{ task.hours|floatformat:1 }} hrs</td>
-                    <td class="text-right">${{ task.labor_rate|floatformat:2 }}</td>
-                    <td class="text-right">${{ task.total_price|floatformat:2 }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ task.labor_rate|floatformat:2 }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ task.total_price|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
                 {% for part in invoice.work_order.parts.all %}
@@ -155,8 +155,8 @@
                         {% if part.part.part_number %}<br>Part #: {{ part.part.part_number }}{% endif %}
                     </td>
                     <td class="text-center">{{ part.quantity }}</td>
-                    <td class="text-right">${{ part.unit_price|floatformat:2 }}</td>
-                    <td class="text-right">${{ part.total_price|floatformat:2 }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ part.unit_price|floatformat:2 }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ part.total_price|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             {% else %}
@@ -171,7 +171,7 @@
     <table>
         <tr>
             <td><strong>Subtotal</strong></td>
-            <td class="text-right"><strong>${{ invoice.subtotal|floatformat:2 }}</strong></td>
+            <td class="text-right"><strong>{{ currency_symbol }}{{ invoice.subtotal|floatformat:2 }}</strong></td>
         </tr>
         {% if invoice.discount_percentage > 0 and invoice.discount_amount > 0 %}
         <tr>
@@ -179,11 +179,11 @@
                 Discount ({{ invoice.discount_percentage }}%)
                 {% if invoice.discount_reason %}<br>{{ invoice.discount_reason }}{% endif %}
             </td>
-            <td class="text-right">-${{ invoice.discount_amount|floatformat:2 }}</td>
+            <td class="text-right">-{{ currency_symbol }}{{ invoice.discount_amount|floatformat:2 }}</td>
         </tr>
         <tr>
             <td>Subtotal after Discount</td>
-            <td class="text-right">${{ invoice.subtotal_after_discount|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ invoice.subtotal_after_discount|floatformat:2 }}</td>
         </tr>
         {% endif %}
         {% if invoice.tax_nhil_amount > 0 or invoice.tax_getfund_amount > 0 or invoice.tax_hrl_amount > 0 or invoice.tax_vat_amount > 0 %}
@@ -193,49 +193,49 @@
         {% if invoice.tax_nhil_amount > 0 %}
         <tr>
             <td>NHIL (2.5%)</td>
-            <td class="text-right">${{ invoice.tax_nhil_amount|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ invoice.tax_nhil_amount|floatformat:2 }}</td>
         </tr>
         {% endif %}
         {% if invoice.tax_getfund_amount > 0 %}
         <tr>
             <td>GETFund (2.5%)</td>
-            <td class="text-right">${{ invoice.tax_getfund_amount|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ invoice.tax_getfund_amount|floatformat:2 }}</td>
         </tr>
         {% endif %}
         {% if invoice.tax_hrl_amount > 0 %}
         <tr>
             <td>COVID-19 HRL (1%)</td>
-            <td class="text-right">${{ invoice.tax_hrl_amount|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ invoice.tax_hrl_amount|floatformat:2 }}</td>
         </tr>
         {% endif %}
         {% if invoice.tax_vat_amount > 0 %}
         <tr>
             <td>VAT (15%)</td>
-            <td class="text-right">${{ invoice.tax_vat_amount|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ invoice.tax_vat_amount|floatformat:2 }}</td>
         </tr>
         {% endif %}
         <tr>
             <td><strong>Total Tax</strong></td>
-            <td class="text-right"><strong>${{ invoice.tax_amount|floatformat:2 }}</strong></td>
+            <td class="text-right"><strong>{{ currency_symbol }}{{ invoice.tax_amount|floatformat:2 }}</strong></td>
         </tr>
         {% elif invoice.tax_amount > 0 %}
         <tr>
             <td>Tax</td>
-            <td class="text-right">${{ invoice.tax_amount|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ invoice.tax_amount|floatformat:2 }}</td>
         </tr>
         {% endif %}
         <tr>
             <td><strong>TOTAL AMOUNT</strong></td>
-            <td class="text-right"><strong>${{ invoice.total|floatformat:2 }}</strong></td>
+            <td class="text-right"><strong>{{ currency_symbol }}{{ invoice.total|floatformat:2 }}</strong></td>
         </tr>
         {% if invoice.amount_paid > 0 %}
         <tr>
             <td>Amount Paid</td>
-            <td class="text-right">${{ invoice.amount_paid|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ invoice.amount_paid|floatformat:2 }}</td>
         </tr>
         <tr>
             <td><strong>BALANCE DUE</strong></td>
-            <td class="text-right"><strong>${{ invoice.amount_due|floatformat:2 }}</strong></td>
+            <td class="text-right"><strong>{{ currency_symbol }}{{ invoice.amount_due|floatformat:2 }}</strong></td>
         </tr>
         {% endif %}
     </table>

@@ -3,17 +3,79 @@ import apiClient from '@/lib/api/client';
 import { useBranchStore } from '@/store/branchStore';
 
 interface PrintOptions {
-    documentType: 'invoice' | 'estimate' | 'work_order' | 'inspection' | 'purchase_order' | 'receipt';
+    documentType: 'invoice' | 'estimate' | 'work_order' | 'inspection' | 'purchase_order' | 'receipt' | 'gate_pass' | 'credit_note';
     documentId: number;
     documentNumber: string;
 }
 
 export function usePrint() {
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isOpeningPrint, setIsOpeningPrint] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const printWindow = () => {
         window.print();
+    };
+
+    /**
+     * Opens the unified print view (Django templates, same layout as PDF) in a new window.
+     * Fetches HTML with auth token and writes to new window - user can print from there.
+     */
+    const openPrintWindow = async ({ documentType, documentId }: Omit<PrintOptions, 'documentNumber'>) => {
+        const endpoints: Record<string, string> = {
+            invoice: `/billing/invoices/${documentId}/print/`,
+            estimate: `/billing/estimates/${documentId}/print/`,
+            work_order: `/workorders/work-orders/${documentId}/print/`,
+            inspection: `/inspections/inspections/${documentId}/print/`,
+            receipt: `/billing/payments/${documentId}/print/`,
+            gate_pass: `/gatepass/gate-passes/${documentId}/print/`,
+            credit_note: `/billing/credit-notes/${documentId}/print/`,
+            purchase_order: `/inventory/purchase-orders/${documentId}/print/`,
+        };
+        const endpoint = endpoints[documentType];
+        if (!endpoint) {
+            console.warn(`openPrintWindow: ${documentType} not supported, falling back to window.print`);
+            window.print();
+            return;
+        }
+
+        setIsOpeningPrint(true);
+        setError(null);
+
+        try {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+            const url = `${baseUrl}${endpoint}`;
+
+            const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+            const branchId = useBranchStore.getState().activeBranchId;
+
+            const response = await fetch(url, {
+                headers: {
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                    ...(branchId && { 'X-Branch-ID': branchId.toString() }),
+                },
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ error: 'Failed to load print view' }));
+                throw new Error(errData.error || 'Failed to load print view');
+            }
+
+            const html = await response.text();
+            const win = window.open('', '_blank');
+            if (win) {
+                win.document.write(html);
+                win.document.close();
+            } else {
+                throw new Error('Pop-up blocked. Please allow pop-ups for this site.');
+            }
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Failed to open print view';
+            setError(msg);
+            throw err;
+        } finally {
+            setIsOpeningPrint(false);
+        }
     };
 
     const downloadPDF = async ({ documentType, documentId, documentNumber }: PrintOptions) => {
@@ -80,5 +142,5 @@ export function usePrint() {
         }
     };
 
-    return { printWindow, downloadPDF, isDownloading, error };
+    return { printWindow, downloadPDF, openPrintWindow, isDownloading, isOpeningPrint, error };
 }

@@ -54,6 +54,14 @@ export const reportingApi = {
     return response.data;
   },
 
+  downloadRevenueSummary: async (params: DateRangeParams): Promise<Blob> => {
+    const response = await apiClient.get('/billing/invoices/revenue_summary_pdf/', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   profitMargin: async (params: Omit<DateRangeParams, 'period'>) => {
     const response = await apiClient.get('/reporting/profit-margin-report/', { params });
     return response.data;

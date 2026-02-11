@@ -12,12 +12,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePrint } from "@/lib/hooks/usePrint";
 
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const invoiceId = parseInt(params.id as string);
   const { formatCurrency } = useCurrency();
+  const { openPrintWindow, isOpeningPrint } = usePrint();
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["portal", "invoice", invoiceId],
@@ -34,9 +36,8 @@ export default function InvoiceDetailPage() {
 
   const payments = (paymentsData || []) as any[];
 
-  const handleDownload = () => {
-    // Open print-friendly view
-    window.open(`/portal/invoices/${invoiceId}/print`, "_blank");
+  const handlePrint = () => {
+    openPrintWindow({ documentType: 'invoice', documentId: invoiceId });
   };
 
   if (isLoading) {
@@ -94,9 +95,9 @@ export default function InvoiceDetailPage() {
               </Button>
             </Link>
           )}
-          <Button variant="secondary" onClick={handleDownload}>
+          <Button variant="secondary" onClick={handlePrint} disabled={isOpeningPrint}>
             <Download className="w-4 h-4 mr-2" />
-            Download PDF
+            {isOpeningPrint ? 'Opening...' : 'Print / PDF'}
           </Button>
         </div>
       </div>

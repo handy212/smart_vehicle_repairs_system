@@ -75,7 +75,7 @@
         <tr>
             <td>
                 <strong>
-                    {% if estimate.customer.company_name %}{{ estimate.customer.company_name }}{% else %}{{ estimate.customer.get_full_name }}{% endif %}
+                    {% if estimate.customer.company_name %}{{ estimate.customer.company_name }}{% else %}{{ estimate.customer.full_name }}{% endif %}
                 </strong><br>
                 {% if estimate.customer.service_address %}{{ estimate.customer.service_address }}<br>{% endif %}
                 {% if estimate.customer.service_city or estimate.customer.service_state %}
@@ -131,12 +131,12 @@
                     </td>
                     <td class="text-right">
                         {% if item.item_type == 'labor' %}
-                            ${{ item.labor_rate|floatformat:2 }}/hr
+                            {{ currency_symbol }}{{ item.labor_rate|floatformat:2 }}/hr
                         {% else %}
-                            ${{ item.unit_price|floatformat:2 }}
+                            {{ currency_symbol }}{{ item.unit_price|floatformat:2 }}
                         {% endif %}
                     </td>
-                    <td class="text-right">${{ item.total|floatformat:2 }}</td>
+                    <td class="text-right">{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
             {% else %}
@@ -151,7 +151,7 @@
     <table>
         <tr>
             <td class="text-right"><strong>Subtotal:</strong></td>
-            <td class="text-right">${{ estimate.subtotal|floatformat:2 }}</td>
+            <td class="text-right">{{ currency_symbol }}{{ estimate.subtotal|floatformat:2 }}</td>
         </tr>
         {% if estimate.discount_percentage > 0 and estimate.discount_amount > 0 %}
         <tr>
@@ -161,44 +161,44 @@
                 <br><small class="text-xs text-gray-500">{{ estimate.discount_reason }}</small>
                 {% endif %}
             </td>
-            <td class="text-sm text-green-600 text-right py-1">-${{ estimate.discount_amount|floatformat:2 }}</td>
+            <td class="text-sm text-green-600 text-right py-1">-{{ currency_symbol }}{{ estimate.discount_amount|floatformat:2 }}</td>
         </tr>
         <tr>
             <td class="text-sm text-gray-700 text-right py-1">Subtotal after Discount:</td>
-            <td class="text-sm text-gray-700 text-right py-1">${{ estimate.subtotal_after_discount|floatformat:2 }}</td>
+            <td class="text-sm text-gray-700 text-right py-1">{{ currency_symbol }}{{ estimate.subtotal_after_discount|floatformat:2 }}</td>
         </tr>
         {% endif %}
         {% if estimate.tax_regime == 'ghana' %}
             {% if estimate.tax_nhil_amount > 0 %}
             <tr>
                 <td class="text-right">NHIL (2.5%):</td>
-                <td class="text-right">${{ estimate.tax_nhil_amount|floatformat:2 }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_nhil_amount|floatformat:2 }}</td>
             </tr>
             {% endif %}
             {% if estimate.tax_getfund_amount > 0 %}
             <tr>
                 <td class="text-right">GETFund (2.5%):</td>
-                <td class="text-right">${{ estimate.tax_getfund_amount|floatformat:2 }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_getfund_amount|floatformat:2 }}</td>
             </tr>
             {% endif %}
 
             {% if estimate.tax_vat_amount > 0 %}
             <tr>
                 <td class="text-right">VAT (15%):</td>
-                <td class="text-right">${{ estimate.tax_vat_amount|floatformat:2 }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_vat_amount|floatformat:2 }}</td>
             </tr>
             {% endif %}
         {% else %}
             {% if estimate.tax_amount > 0 %}
             <tr>
                 <td class="text-right"><strong>Tax:</strong></td>
-                <td class="text-right">${{ estimate.tax_amount|floatformat:2 }}</td>
+                <td class="text-right">{{ currency_symbol }}{{ estimate.tax_amount|floatformat:2 }}</td>
             </tr>
             {% endif %}
         {% endif %}
         <tr class="bold">
             <td class="text-right"><strong>TOTAL:</strong></td>
-            <td class="text-right"><strong>${{ estimate.total|floatformat:2 }}</strong></td>
+            <td class="text-right"><strong>{{ currency_symbol }}{{ estimate.total|floatformat:2 }}</strong></td>
         </tr>
     </table>
 
@@ -213,7 +213,7 @@
     {% endif %}
 
     <p><em>This estimate is valid until {{ estimate.valid_until|date:"F d, Y" }}.</em></p>
-    <p><em>Generated on {{ print_generated_at|date:"F d, Y 'at' h:i A" }}</em></p>
+    <p><em>Generated on {{ print_generated_at|date:"F d, Y \a\t g:i A" }}</em></p>
 
     <script>
         // Auto-print when page loads (optional)

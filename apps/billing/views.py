@@ -252,7 +252,10 @@ class EstimateViewSet(viewsets.ModelViewSet):
                 estimate.save(update_fields=['sent_by', 'sent_at'])
                 notification_triggers.estimate_sent(estimate)
             except Exception as e:
-                print(f"Failed to send estimate notification: {e}")
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Failed to send estimate notification: %s", e, exc_info=True
+                )
 
     @action(detail=True, methods=['post'])
     def send(self, request, pk=None):
@@ -728,6 +731,23 @@ class EstimateViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF, for browser print)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_estimate_print_html
+        
+        estimate = self.get_object()
+        try:
+            html = render_estimate_print_html(estimate, branch=estimate.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            logger.error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     def perform_create(self, serializer):
         """Assign branch when creating estimate"""
         request = self.request
@@ -1105,7 +1125,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 invoice.save(update_fields=['sent_by', 'sent_at'])
                 notification_triggers.invoice_sent(invoice)
             except Exception as e:
-                print(f"Failed to send invoice notification: {e}")
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Failed to send invoice notification: %s", e, exc_info=True
+                )
     
     @action(detail=True, methods=['post'])
     def send(self, request, pk=None):
@@ -1130,7 +1153,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         try:
             notification_triggers.invoice_sent(invoice)
         except Exception as e:
-            print(f"Failed to send invoice notification: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send invoice notification: %s", e, exc_info=True
+            )
         
         serializer = self.get_serializer(invoice)
         return Response({
@@ -1223,55 +1249,6 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(overdue, many=True)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['get'])
-    def pdf(self, request, pk=None):
-        """Generate PDF for invoice"""
-        from django.template.loader import render_to_string
-        from django.http import HttpResponse
-        import traceback
-        
-        invoice = self.get_object()
-        
-        try:
-            from weasyprint import HTML
-            
-            # Prepare context
-            context = {
-                'invoice': invoice,
-                'print_generated_at': timezone.now(),
-                'print_branch': invoice.branch or (invoice.work_order.branch if invoice.work_order else None),
-            }
-            
-            # Render HTML template
-            html_string = render_to_string('billing/invoice_print.html', context, request=request)
-            
-            # Generate PDF
-            pdf = HTML(string=html_string).write_pdf()
-            
-            # Return PDF response
-            response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
-            return response
-            
-        except ImportError as e:
-            logger.error(f"WeasyPrint import error: {str(e)}")
-            return Response(
-                {"error": "PDF generation requires WeasyPrint. Please install it: pip install weasyprint"},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        except AttributeError as e:
-            # Handle WeasyPrint/pycparser compatibility issues
-            logger.error(f"WeasyPrint compatibility error: {str(e)}\n{traceback.format_exc()}")
-            return Response(
-                {"error": "PDF generation is currently unavailable due to a dependency issue. Please use the Print button and save as PDF from your browser."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        except Exception as e:
-            logger.error(f"PDF generation error: {str(e)}\n{traceback.format_exc()}")
-            return Response(
-                {"error": f"Error generating PDF: {str(e)}. Please use the Print button and save as PDF from your browser."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
     
     @action(detail=True, methods=['get'])
     def pdf(self, request, pk=None):
@@ -1289,6 +1266,23 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             logger.error(f"PDF generation error: {e}", exc_info=True)
             return Response(
                 {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF, for browser print)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_invoice_print_html
+        
+        invoice = self.get_object()
+        try:
+            html = render_invoice_print_html(invoice, branch=invoice.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            logger.error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -1369,6 +1363,88 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         })
     
     @action(detail=False, methods=['get'])
+    def aging_report_pdf(self, request):
+        """Generate PDF for aging report"""
+        from apps.core.services.print_service import generate_aging_report_pdf
+        
+        today = timezone.now().date()
+        unpaid_invoices = self.queryset.filter(
+            status__in=['sent', 'viewed', 'overdue', 'partial']
+        ).exclude(status='void').select_related('customer', 'customer__user').order_by('due_date')
+        
+        # Buckets for details
+        details = {
+            'current': {'label': 'Current (0-30 days)', 'color_class': 'text-success', 'invoices': [], 'total': Decimal('0')},
+            '1_30': {'label': '1-30 Days Overdue', 'color_class': 'text-warning', 'invoices': [], 'total': Decimal('0')},
+            '31_60': {'label': '31-60 Days Overdue', 'color_class': 'text-warning', 'invoices': [], 'total': Decimal('0')},
+            '61_90': {'label': '61-90 Days Overdue', 'color_class': 'text-danger', 'invoices': [], 'total': Decimal('0')},
+            'over_90': {'label': '> 90 Days Overdue', 'color_class': 'text-danger font-black', 'invoices': [], 'total': Decimal('0')},
+        }
+        
+        total_outstanding = Decimal('0')
+        
+        for invoice in unpaid_invoices:
+            # Add helper for template
+            invoice.customer_name = (invoice.customer.company_name or invoice.customer.full_name) if invoice.customer else "Unknown"
+            
+            amount = invoice.amount_due
+            total_outstanding += amount
+            
+            if invoice.due_date >= today:
+                details['current']['invoices'].append(invoice)
+                details['current']['total'] += amount
+            else:
+                days_overdue = (today - invoice.due_date).days
+                if days_overdue <= 30:
+                    details['1_30']['invoices'].append(invoice)
+                    details['1_30']['total'] += amount
+                elif days_overdue <= 60:
+                    details['31_60']['invoices'].append(invoice)
+                    details['31_60']['total'] += amount
+                elif days_overdue <= 90:
+                    details['61_90']['invoices'].append(invoice)
+                    details['61_90']['total'] += amount
+                else:
+                    details['over_90']['invoices'].append(invoice)
+                    details['over_90']['total'] += amount
+
+        # Calculate percentages
+        summary = {
+            'total_outstanding': total_outstanding,
+        }
+        
+        for key, bucket in details.items():
+            summary[key] = bucket['total']
+            if total_outstanding > 0:
+                summary[f"{key}_percent"] = (bucket['total'] / total_outstanding) * 100
+            else:
+                summary[f"{key}_percent"] = 0
+            
+            # Map legacy keys for template (days_1_30 etc)
+            if key == '1_30': summary['days_1_30'] = bucket['total']; summary['days_1_30_percent'] = summary[f"{key}_percent"]
+            if key == '31_60': summary['days_31_60'] = bucket['total']; summary['days_31_60_percent'] = summary[f"{key}_percent"]
+            if key == '61_90': summary['days_61_90'] = bucket['total']; summary['days_61_90_percent'] = summary[f"{key}_percent"]
+            if key == 'over_90': summary['days_over_90'] = bucket['total']; summary['days_over_90_percent'] = summary[f"{key}_percent"]
+        
+        # Determine branch for header
+        branch = getattr(request, 'branch', None)
+        if not branch and hasattr(request.user, 'branch'):
+            branch = request.user.branch
+
+        try:
+            return generate_aging_report_pdf({
+                'summary': summary,
+                'details': details,
+                'invoice_count': unpaid_invoices.count(),
+                'branch': branch
+            })
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
     def revenue_summary(self, request):
         """Get revenue summary"""
         # Get date range from query params
@@ -1410,6 +1486,80 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 "status_breakdown": status_counts
             }
         })
+
+    @action(detail=False, methods=['get'])
+    def revenue_summary_pdf(self, request):
+        """Generate PDF for revenue summary"""
+        from apps.core.services.print_service import generate_revenue_summary_pdf
+        
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if not start_date or not end_date:
+            return Response(
+                {"error": "start_date and end_date are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Parse dates for display
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+             return Response(
+                {"error": "Invalid date format (YYYY-MM-DD required)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        invoices = self.queryset.filter(
+            invoice_date__gte=start_date,
+            invoice_date__lte=end_date
+        ).exclude(status='void')
+        
+        # Calculate totals
+        total_invoiced = invoices.aggregate(total=Sum('total'))['total'] or Decimal('0')
+        total_paid = invoices.aggregate(paid=Sum('amount_paid'))['paid'] or Decimal('0')
+        total_outstanding = invoices.aggregate(due=Sum('amount_due'))['due'] or Decimal('0')
+        
+        # Status Breakdown
+        status_breakdown = {}
+        for s in Invoice.STATUS_CHOICES:
+            status_code = s[0]
+            status_label = s[1]
+            count = invoices.filter(status=status_code).count()
+            total = invoices.filter(status=status_code).aggregate(t=Sum('total'))['t'] or Decimal('0')
+            
+            if count > 0:
+                percent = (total / total_invoiced * 100) if total_invoiced > 0 else 0
+                status_breakdown[status_label] = {
+                    'count': count,
+                    'total': total,
+                    'percent': percent
+                }
+
+        # Determine branch for header
+        branch = getattr(request, 'branch', None)
+        if not branch and request.user.is_authenticated and hasattr(request.user, 'branch'):
+            branch = request.user.branch
+
+        try:
+            return generate_revenue_summary_pdf({
+                'start_date': start_dt,
+                'end_date': end_dt,
+                'total_invoiced': total_invoiced,
+                'total_paid': total_paid,
+                'total_outstanding': total_outstanding,
+                'invoice_count': invoices.count(),
+                'status_breakdown': status_breakdown,
+                'branch': branch
+            })
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
     @action(detail=True, methods=['get'])
     def suggested_message(self, request, pk=None):
@@ -1954,6 +2104,24 @@ class PaymentViewSet(viewsets.ModelViewSet):
         
         payment = self.get_object()
         return generate_receipt_pdf(payment)
+    
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_receipt_print_html
+        
+        payment = self.get_object()
+        try:
+            branch = payment.invoice.branch if payment.invoice else None
+            html = render_receipt_print_html(payment, branch=branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            logger.error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class TaxConfigurationView(APIView):
@@ -2538,6 +2706,37 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
         
         return Response({"status": "Credit note issued"})
 
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for credit note"""
+        from apps.core.services.print_service import generate_credit_note_pdf
+        credit_note = self.get_object()
+        try:
+            return generate_credit_note_pdf(credit_note, branch=credit_note.branch)
+        except Exception as e:
+            logger.error(f"Credit Note PDF generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_credit_note_print_html
+        
+        credit_note = self.get_object()
+        try:
+            html = render_credit_note_print_html(credit_note, branch=credit_note.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            logger.error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class BillViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing vendor bills
@@ -2581,3 +2780,17 @@ class BillViewSet(viewsets.ModelViewSet):
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
             
         serializer.save(branch=branch, created_by=request.user)
+
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for vendor bill"""
+        from apps.core.services.print_service import generate_bill_pdf
+        bill = self.get_object()
+        try:
+            return generate_bill_pdf(bill, branch=bill.branch)
+        except Exception as e:
+            logger.error(f"Bill PDF generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

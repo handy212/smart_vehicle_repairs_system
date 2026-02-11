@@ -23,6 +23,13 @@ class DocumentPrinter:
         'inspection': 'printing/documents/inspection.html',
         'purchase_order': 'printing/documents/purchase_order.html',
         'receipt': 'printing/documents/receipt.html',
+        'gate_pass': 'printing/documents/gate_pass.html',
+        'credit_note': 'printing/documents/credit_note.html',
+        'bill': 'printing/documents/bill.html',
+        'transfer_note': 'printing/documents/transfer_note.html',
+        'inventory_count_sheet': 'printing/documents/inventory_count_sheet.html',
+        'aging_report': 'printing/reports/aging_report.html',
+        'revenue_summary': 'printing/reports/revenue_summary.html',
     }
     
     def __init__(self, document_type: str):
@@ -326,6 +333,131 @@ def generate_receipt_pdf(payment, branch=None):
     return printer.generate_pdf(context, filename)
 
 
+def _make_logo_absolute(branding: dict, base_url: str) -> None:
+    """Convert logo_path to absolute URL for HTML display (in-place)."""
+    from django.conf import settings as django_settings
+    if not branding.get('logo_path'):
+        return
+    lp = branding['logo_path']
+    if lp.startswith(('http://', 'https://')):
+        return
+    media_url = getattr(django_settings, 'MEDIA_URL', '/media/')
+    if lp.startswith('/'):
+        path = lp
+    else:
+        path = f"{media_url.rstrip('/')}/{lp.lstrip('/')}"
+    branding['logo_path'] = f"{base_url.rstrip('/')}{path}"
+
+
+def render_invoice_print_html(invoice, branch=None, request=None):
+    """Render invoice as HTML for browser print (same layout as PDF)."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document': invoice,
+        'branch': branch or invoice.branch,
+        'watermark': _get_watermark(invoice.status),
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/invoice.html', context)
+
+
+def render_estimate_print_html(estimate, branch=None, request=None):
+    """Render estimate as HTML for browser print (same layout as PDF)."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document': estimate,
+        'branch': branch or estimate.branch,
+        'watermark': _get_watermark(estimate.status),
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/estimate.html', context)
+
+
+def render_receipt_print_html(payment, branch=None, request=None):
+    """Render payment receipt as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from decimal import Decimal
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    previous_payments = Decimal('0')
+    if payment.invoice:
+        previous_payments = sum(
+            p.amount - getattr(p, 'refund_amount', Decimal('0'))
+            for p in payment.invoice.payments.filter(status='completed').exclude(id=payment.id)
+        )
+    context = {
+        'document': payment,
+        'branch': branch or (payment.invoice.branch if payment.invoice else None),
+        'previous_payments': previous_payments,
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/receipt.html', context)
+
+
+def render_work_order_print_html(work_order, branch=None, request=None):
+    """Render work order as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document': work_order,
+        'branch': branch or work_order.branch,
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/work_order.html', context)
+
+
+def render_inspection_print_html(inspection, branch=None, request=None):
+    """Render inspection as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    from itertools import groupby
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    results = inspection.results.select_related(
+        'inspection_item', 'inspection_item__category'
+    ).order_by('inspection_item__category__order', 'inspection_item__order')
+    grouped_results = [
+        {'category': cat, 'results': list(grp)}
+        for cat, grp in groupby(results, key=lambda r: r.inspection_item.category)
+    ]
+    context = {
+        'document': inspection,
+        'branch': branch or inspection.branch,
+        'grouped_results': grouped_results,
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/inspection.html', context)
+
+
 def _get_watermark(status: str) -> Optional[Dict]:
     """Get watermark config for document status"""
     watermarks = {
@@ -335,3 +467,142 @@ def _get_watermark(status: str) -> Optional[Dict]:
         'paid': {'text': 'PAID', 'color': '#10b981'},
     }
     return watermarks.get(status)
+
+
+def render_gate_pass_print_html(gate_pass, branch=None, request=None):
+    """Render gate pass as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document': gate_pass,
+        'branch': branch or gate_pass.branch,
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/gate_pass.html', context)
+
+
+def render_credit_note_print_html(credit_note, branch=None, request=None):
+    """Render credit note as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document': credit_note,
+        'branch': branch or credit_note.branch,
+        'items': credit_note.line_items.all(),
+        'watermark': _get_watermark(credit_note.status),
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/credit_note.html', context)
+
+
+def render_purchase_order_print_html(purchase_order, branch=None, request=None):
+    """Render purchase order as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = {
+        'document': purchase_order,
+        'branch': branch or purchase_order.branch,
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    }
+    return render_to_string('printing/documents/purchase_order.html', context)
+
+
+def generate_gate_pass_pdf(gate_pass, branch=None):
+    """Generate PDF for gate pass"""
+    printer = DocumentPrinter('gate_pass')
+    context = {
+        'document': gate_pass,
+        'branch': branch or gate_pass.branch,
+    }
+    filename = f"gate_pass_{gate_pass.gate_pass_number}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def generate_credit_note_pdf(credit_note, branch=None):
+    """Generate PDF for credit note"""
+    printer = DocumentPrinter('credit_note')
+    context = {
+        'document': credit_note,
+        'branch': branch or credit_note.branch,
+        'items': credit_note.line_items.all(),
+        'watermark': _get_watermark(credit_note.status),
+    }
+    filename = f"credit_note_{credit_note.credit_note_number}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def generate_bill_pdf(bill, branch=None):
+    """Generate PDF for vendor bill"""
+    printer = DocumentPrinter('bill')
+    context = {
+        'document': bill,
+        'branch': branch or bill.branch,
+        'items': bill.line_items.all(),
+    }
+    filename = f"bill_{bill.bill_number}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def generate_transfer_note_pdf(transfer, branch=None):
+    """Generate PDF for stock transfer note"""
+    printer = DocumentPrinter('transfer_note')
+    context = {
+        'document': transfer,
+        'branch': branch or transfer.source_branch,
+    }
+    filename = f"transfer_{transfer.transfer_number}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def generate_inventory_count_sheet_pdf(session, branch=None):
+    """Generate PDF for inventory count sheet"""
+    printer = DocumentPrinter('inventory_count_sheet')
+    context = {
+        'document': session,
+        'branch': branch or session.branch,
+    }
+    filename = f"count_sheet_{session.session_number}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def generate_aging_report_pdf(data):
+    """Generate PDF for aging report"""
+    from django.utils import timezone
+    printer = DocumentPrinter('aging_report')
+    now = timezone.now()
+    context = {
+        'report_date': data.get('report_date', now.date()),
+        'generated_at': now,
+        **data
+    }
+    filename = f"aging_report_{context['generated_at'].strftime('%Y%m%d')}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def generate_revenue_summary_pdf(data):
+    """Generate PDF for revenue summary"""
+    printer = DocumentPrinter('revenue_summary')
+    context = {
+        'generated_at': __import__('django.utils.timezone', fromlist=['now']).now(),
+        **data
+    }
+    filename = f"revenue_summary_{context['generated_at'].strftime('%Y%m%d')}.pdf"
+    return printer.generate_pdf(context, filename)

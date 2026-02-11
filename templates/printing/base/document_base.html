@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Document{% endblock %} - {% block company_name %} {% endblock %}</title>
+    {% if base_url %}<base href="{{ base_url }}/" />{% endif %}
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -18,24 +19,37 @@
         body {
             font-family: 'Inter', sans-serif;
             font-size: 8pt;
-            /* Reduced from 10pt */
             line-height: 1.25;
-            /* Compact */
             color: #000;
+            background: #e5e7eb;
+        }
+
+        /* A4 sheet view - when shown in browser tab (not when printing) */
+        .a4-sheet {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            padding: 15mm;
             background: #fff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        @media print {
+            body {
+                background: #fff;
+            }
+            .a4-sheet {
+                width: auto;
+                min-height: auto;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
         }
 
         /* Page Configuration */
         @page {
-            size: {
-                % block page_size %
-            }
-
-            A4 {
-                % endblock %
-            }
-
-            ;
+            size: {% block page_size %}A4{% endblock %};
             margin: 5mm;
             /* Zero margins as requested */
 
@@ -64,8 +78,20 @@
             margin-bottom: 1rem;
         }
 
+        .mb-8 {
+            margin-bottom: 1.5rem;
+        }
+
+        .mt-1 {
+            margin-top: 0.15rem;
+        }
+
         .mt-2 {
             margin-top: 0.35rem;
+        }
+
+        .mt-12 {
+            margin-top: 2rem;
         }
 
         .mt-4 {
@@ -79,6 +105,10 @@
         /* Font Sizes (Scaled down) */
         .text-xs {
             font-size: 7pt;
+        }
+
+        .text-10 {
+            font-size: 10px;
         }
 
         .text-sm {
@@ -121,6 +151,14 @@
             font-weight: 500;
         }
 
+        .font-black {
+            font-weight: 900;
+        }
+
+        .font-mono {
+            font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+        }
+
         .text-gray-500 {
             color: #6b7280;
         }
@@ -149,8 +187,16 @@
             color: #16a34a;
         }
 
+        .text-warning {
+            color: #d97706;
+        }
+
         .uppercase {
             text-transform: uppercase;
+        }
+
+        .text-left {
+            text-align: left;
         }
 
         .text-right {
@@ -161,6 +207,30 @@
             text-align: center;
         }
 
+        .text-gray-800 {
+            color: #1f2937;
+        }
+
+        .text-gray-400 {
+            color: #9ca3af;
+        }
+
+        .text-blue-500 {
+            color: #3b82f6;
+        }
+
+        .text-green-500 {
+            color: #22c55e;
+        }
+
+        .text-yellow-500 {
+            color: #eab308;
+        }
+
+        .capitalize {
+            text-transform: capitalize;
+        }
+
         .border-b {
             border-bottom: 1px solid #e5e7eb;
         }
@@ -169,8 +239,89 @@
             border-top: 1px solid #e5e7eb;
         }
 
+        .border-t-2 {
+            border-top: 2px solid #e5e7eb;
+        }
+
         .border-b-2 {
             border-bottom: 2px solid #000;
+        }
+
+        .border-l-4 {
+            border-left: 4px solid;
+        }
+
+        .border-gray-200 {
+            border-color: #e5e7eb;
+        }
+
+        .border-gray-100 {
+            border-color: #f3f4f6;
+        }
+
+        .border-gray-300 {
+            border-color: #d1d5db;
+        }
+
+        .border-blue-500 {
+            border-color: #3b82f6;
+        }
+
+        .border-green-500 {
+            border-color: #22c55e;
+        }
+
+        .border-yellow-500 {
+            border-color: #eab308;
+        }
+
+        .pb-2 {
+            padding-bottom: 0.35rem;
+        }
+
+        .p-4 {
+            padding: 0.75rem;
+        }
+
+        .pl-4 {
+            padding-left: 0.75rem;
+        }
+
+        .pr-4 {
+            padding-right: 0.75rem;
+        }
+
+        .py-4 {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        .rounded {
+            border-radius: 4px;
+        }
+
+        .rounded-full {
+            border-radius: 9999px;
+        }
+
+        .inline-block {
+            display: inline-block;
+        }
+
+        .w-2 {
+            width: 0.5rem;
+        }
+
+        .h-2 {
+            height: 0.5rem;
+        }
+
+        .mr-2 {
+            margin-right: 0.35rem;
+        }
+
+        .w-full {
+            width: 100%;
         }
 
         .bg-gray-50 {
@@ -179,6 +330,34 @@
 
         .bg-gray-100 {
             background-color: #f3f4f6;
+        }
+
+        .bg-blue-50 {
+            background-color: #eff6ff;
+        }
+
+        .bg-green-50 {
+            background-color: #f0fdf4;
+        }
+
+        .bg-yellow-50 {
+            background-color: #fefce8;
+        }
+
+        .bg-blue-500 {
+            background-color: #3b82f6;
+        }
+
+        .bg-green-500 {
+            background-color: #22c55e;
+        }
+
+        .bg-red-500 {
+            background-color: #ef4444;
+        }
+
+        .bg-gray-500 {
+            background-color: #6b7280;
         }
 
         /* Layout Utilities */
@@ -200,6 +379,36 @@
 
         .justify-center {
             justify-content: center;
+        }
+
+        .justify-around {
+            justify-content: space-around;
+        }
+
+        .flex-1 {
+            flex: 1 1 0%;
+        }
+
+        .leading-relaxed {
+            line-height: 1.625;
+        }
+
+        .leading-tight {
+            line-height: 1.25;
+        }
+
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+
+        .min-h-\[60px\] {
+            min-height: 60px;
         }
 
         .space-y-1>*+* {
@@ -331,12 +540,14 @@
         }
 
         /* Components */
+        .table,
         .data-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15px;
         }
 
+        .table th,
         .data-table th {
             background-color: #f3f4f6;
             text-align: left;
@@ -347,6 +558,7 @@
             border: 1px solid #000;
         }
 
+        .table td,
         .data-table td {
             padding: 3px 5px;
             border: 1px solid #000;
@@ -355,6 +567,7 @@
             font-size: 8pt;
         }
 
+        .table .row-notes,
         .data-table .row-notes {
             font-size: 7pt;
             color: #4b5563;
@@ -461,13 +674,7 @@
     {% if watermark %}
     <style>
         .watermark {
-            color: {
-                    {
-                    watermark.color
-                }
-            }
-
-            ;
+            color: {{ watermark.color }};
         }
     </style>
     {% endif %}
@@ -475,7 +682,14 @@
     {% block extra_styles %}{% endblock %}
 </head>
 
-<body>
+<body data-company-name="{% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %}">
+    {% if show_print_controls %}
+    <div class="no-print" style="position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;">
+        <button onclick="window.print()" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">Print</button>
+        <button onclick="window.close()" style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">Close</button>
+    </div>
+    {% endif %}
+    <div class="{% if show_print_controls %}a4-sheet{% endif %}">
     {% if watermark %}
     <div class="watermark">{{ watermark.text }}</div>
     {% endif %}
@@ -486,7 +700,7 @@
         <div class="header-left">
             {% if logo_path %}
             <img src="{{ logo_path }}" class="logo-img" alt="Logo">
-            {% elif branch.logo_url %}
+            {% elif branch and branch.logo_url %}
             <img src="{{ branch.logo_url }}" class="logo-img" alt="Logo">
             {% else %}
             <!-- Fallback Logo Placeholder -->
@@ -495,7 +709,7 @@
 
             <div class="company-details">
                 <div class="text-xl font-bold text-gray-900 mb-1">
-                    {{ company_name|default:branch.name|default:"Smart Vehicle Repairs" }}
+                    {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %}
                 </div>
                 <!-- Company Address / Contact -->
                 <div class="text-xs text-gray-500">
@@ -517,7 +731,7 @@
             <div>Tax ID: <span class="font-semibold text-gray-900">{{ company_tax_id }}</span></div>
             {% endif %}
 
-            <div>{{ branch.name }}</div>
+            {% if branch %}<div>{{ branch.name }}</div>{% endif %}
 
             {% if company_tagline %}
             <div class="mt-2 text-gray-400 italic">{{ company_tagline }}</div>
@@ -549,7 +763,8 @@
 
     <!-- Footer -->
     <div class="border-t mt-4 pt-2 text-center text-gray-500 text-xs" style="padding: 10px 15px;">
-        {{ company_name|default:branch.name|default:"Smart Vehicle Repairs" }} | Generated on {% now "F d, Y" %}
+        {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %} | Generated on {% now "F d, Y" %}
+    </div>
     </div>
 </body>
 

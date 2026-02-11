@@ -10,6 +10,7 @@ import { ArrowLeft, Edit, CheckCircle, XCircle, FileText, User, Car, Calendar, C
 import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePrint } from "@/lib/hooks/usePrint";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useState } from "react";
@@ -41,6 +42,7 @@ export default function GatePassDetailPage() {
   const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const { openPrintWindow, isOpeningPrint } = usePrint();
 
   const { data: gatePass, isLoading, error } = useQuery({
     queryKey: ["gatepass", gatePassId],
@@ -160,9 +162,9 @@ export default function GatePassDetailPage() {
         <div className="flex items-center gap-2">
           {/* Action Buttons for Desktop */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => window.print()} className="hidden sm:inline-flex">
+            <Button variant="outline" size="sm" onClick={() => openPrintWindow({ documentType: 'gate_pass', documentId: gatePass.id })} disabled={isOpeningPrint} className="hidden sm:inline-flex">
               <Printer className="w-4 h-4 mr-2" />
-              Print
+              {isOpeningPrint ? 'Opening...' : 'Print'}
             </Button>
 
             <PermissionGuard permission="change_gatepass">

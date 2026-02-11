@@ -32,6 +32,12 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function InvoicesPage() {
     const [search, setSearch] = useState("");
@@ -50,7 +56,7 @@ export default function InvoicesPage() {
     const { toast } = useToast();
     const router = useRouter();
     const { formatCurrency } = useCurrency();
-    const { downloadPDF } = usePrint();
+    const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
     const { hasPermission } = usePermissions();
 
 
@@ -235,6 +241,36 @@ export default function InvoicesPage() {
         toast({ title: "Success", description: "Invoices exported successfully" });
     };
 
+    const handleDownloadAgingReport = async () => {
+        try {
+            toast({
+                title: "Generating Report",
+                description: "Please wait while we generate the Aging Report...",
+            });
+            const blob = await billingApi.invoices.downloadAgingReport();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Aging_Report_${format(new Date(), "yyyyMMdd")}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast({
+                title: "Report Downloaded",
+                description: "The Aging Report has been downloaded successfully.",
+                variant: "success",
+            });
+        } catch (error) {
+            console.error("Failed to download aging report:", error);
+            toast({
+                title: "Download Failed",
+                description: "Failed to download the report. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
     if (isLoading && !data) {
         return (
             <div className="space-y-6">
@@ -346,10 +382,22 @@ export default function InvoicesPage() {
                                                     setShowActionsMenu(false);
                                                 }}
                                                 disabled={!data?.results || data.results.length === 0}
-                                                className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                                className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                             >
                                                 <Download className="w-4 h-4" />
                                                 Export CSV
+                                            </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard permission="view_reports">
+                                            <button
+                                                onClick={() => {
+                                                    handleDownloadAgingReport();
+                                                    setShowActionsMenu(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
+                                            >
+                                                <FileText className="w-4 h-4" />
+                                                Download Aging Report
                                             </button>
                                         </PermissionGuard>
                                     </div>
@@ -690,21 +738,43 @@ export default function InvoicesPage() {
                                                             </Link>
                                                         </PermissionGuard>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            downloadPDF({
-                                                                documentType: 'invoice',
-                                                                documentId: invoice.id,
-                                                                documentNumber: invoice.invoice_number
-                                                            });
-                                                        }}
-                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-purple-600"
-                                                    >
-                                                        <Printer className="w-3.5 h-3.5" />
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="h-7 w-7 p-0 text-muted-foreground hover:text-purple-600"
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openPrintWindow({ documentType: 'invoice', documentId: invoice.id });
+                                                                }}
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5 mr-2" />
+                                                                Print
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    downloadPDF({
+                                                                        documentType: 'invoice',
+                                                                        documentId: invoice.id,
+                                                                        documentNumber: invoice.invoice_number
+                                                                    });
+                                                                }}
+                                                                disabled={isDownloading}
+                                                            >
+                                                                <Download className="w-3.5 h-3.5 mr-2" />
+                                                                {isDownloading ? 'Downloading...' : 'Download PDF'}
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

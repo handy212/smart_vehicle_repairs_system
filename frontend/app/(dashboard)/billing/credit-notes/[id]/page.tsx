@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePrint } from "@/lib/hooks/usePrint";
 import {
     Table,
     TableBody,
@@ -29,6 +30,7 @@ export default function CreditNoteDetailPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const id = parseInt(params.id as string);
+    const { openPrintWindow, isOpeningPrint } = usePrint();
 
     // Validate ID to prevent NaN API calls
     const isValidId = !isNaN(id) && id > 0;
@@ -142,8 +144,8 @@ export default function CreditNoteDetailPage() {
                             {approveMutation.isPending ? "Approving..." : "Approve & Issue"}
                         </Button>
                     )}
-                    <Button variant="outline" onClick={() => window.print()}>
-                        <Printer className="mr-2 h-4 w-4" /> Print
+                    <Button variant="outline" onClick={() => openPrintWindow({ documentType: 'credit_note', documentId: id })} disabled={isOpeningPrint}>
+                        <Printer className="mr-2 h-4 w-4" /> {isOpeningPrint ? 'Opening...' : 'Print'}
                     </Button>
                 </div>
             </div>

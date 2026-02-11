@@ -278,10 +278,6 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                     }}
                     onLoad={() => {
                       if (!logoToUse) return;
-                      console.log("✅ Logo loaded successfully:", {
-                        path: logoToUse.path,
-                        fullUrl: logoSrc,
-                      });
                       // Remove any fallback icon when logo loads successfully
                       const img = document.querySelector(`img[alt="${branding.siteName}"]`);
                       if (img) {

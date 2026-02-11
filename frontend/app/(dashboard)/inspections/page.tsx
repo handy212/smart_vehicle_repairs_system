@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { usePrint } from "@/lib/hooks/usePrint";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { cn } from "@/lib/utils/cn";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ export default function InspectionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [resultFilter, setResultFilter] = useState<string>("");
   const { hasPermission } = usePermissions();
+  const { openPrintWindow } = usePrint();
   const router = useRouter();
 
   const { data, isLoading } = useQuery({
@@ -281,7 +283,7 @@ export default function InspectionsPage() {
                               {inspection.status === 'completed' && (
                                 <>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openPrintWindow({ documentType: 'inspection', documentId: inspection.id })}>
                                     <Printer className="w-4 h-4 mr-2" />
                                     Print Report
                                   </DropdownMenuItem>

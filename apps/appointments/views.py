@@ -171,8 +171,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         try:
             notification_triggers.appointment_created(appointment)
         except Exception as e:
-            # Log but don't fail the request
-            print(f"Failed to send appointment creation notification: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send appointment creation notification: %s", e, exc_info=True
+            )
             
         # Note: Subscription deductions for roadside services are handled in the roadside assistance module
         # Appointments are for scheduled services, not roadside breakdown assistance
@@ -200,8 +202,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         try:
             notification_triggers.appointment_confirmed(appointment)
         except Exception as e:
-            # Log but don't fail the request
-            print(f"Failed to send appointment confirmation notification: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send appointment confirmation notification: %s", e, exc_info=True
+            )
         
         serializer = AppointmentDetailSerializer(appointment)
         return Response(serializer.data)
@@ -248,7 +252,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         try:
             notification_triggers.vehicle_ready(appointment)
         except Exception as e:
-            print(f"Failed to send vehicle ready notification: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send vehicle ready notification: %s", e, exc_info=True
+            )
         
         serializer = AppointmentDetailSerializer(appointment)
         return Response(serializer.data)
@@ -275,7 +282,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         try:
             notification_triggers.appointment_cancelled(appointment, cancellation_reason)
         except Exception as e:
-            print(f"Failed to send appointment cancellation notification: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send appointment cancellation notification: %s", e, exc_info=True
+            )
         
         serializer = AppointmentDetailSerializer(appointment)
         return Response(serializer.data)

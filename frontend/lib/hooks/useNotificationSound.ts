@@ -156,8 +156,6 @@ export function useNotificationSound({ enabled = true, unreadCount }: UseNotific
 
         // Play sound if unread count increased (new notification arrived)
         if (unreadCount > previousCount && previousCount >= 0) {
-            console.log(`[NotificationSound] Triggering sound! New: ${unreadCount}, Prev: ${previousCount}`);
-
             // Optimization: Fetch the latest notification to determine sound type
             // We use the imported API client directly
             import('@/lib/api/notifications').then(({ notificationsApi }) => {
@@ -166,7 +164,6 @@ export function useNotificationSound({ enabled = true, unreadCount }: UseNotific
                     const type = latest ? latest.notification_type : 'default';
                     // Special check for roadside priority
                     const soundType = (latest?.priority === 'high' && type === 'work_order') ? 'critical' : type;
-                    console.log(`[NotificationSound] Playing sound for type: ${soundType}`);
                     playNotificationSound(soundType);
                 }).catch(err => {
                     console.error("Failed to fetch latest notification for sound:", err);

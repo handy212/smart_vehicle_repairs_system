@@ -27,8 +27,11 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePrint } from "@/lib/hooks/usePrint";
+
 export default function PaymentDetailPage() {
     const { formatCurrency } = useCurrency();
+    const { openPrintWindow, isOpeningPrint } = usePrint();
     const params = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -152,9 +155,9 @@ export default function PaymentDetailPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => window.print()}>
+                    <Button variant="outline" onClick={() => openPrintWindow({ documentType: 'receipt', documentId: id })} disabled={isOpeningPrint}>
                         <Printer className="mr-2 h-4 w-4" />
-                        Print Receipt
+                        {isOpeningPrint ? 'Opening...' : 'Print Receipt'}
                     </Button>
 
                     {payment.status === 'completed' && (

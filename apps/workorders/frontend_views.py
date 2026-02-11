@@ -374,6 +374,8 @@ def recommendations_print_view(request, pk):
     
     # Get branch info
     branch = work_order.branch
+    from apps.accounts.settings_utils import get_company_info
+    company_info = get_company_info()
     
     context = {
         'work_order': work_order,
@@ -383,6 +385,7 @@ def recommendations_print_view(request, pk):
         'diagnosis': diagnosis,
         'print_generated_at': timezone.now(),
         'print_branch': branch,
+        'currency_symbol': company_info.get('currency_symbol', '$'),
     }
     
     # Check if PDF format is requested
@@ -1165,17 +1168,30 @@ def request_approval(request, pk):
             created_by=request.user
         )
         
-        # TODO: Send notification to customer
-        # notification_triggers.send_estimate_for_approval(workorder)
-        
+        # Send notification to customer for approval
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.work_order_requires_approval(workorder)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send approval request notification: %s", e, exc_info=True
+            )
+
         return JsonResponse({
             'success': True,
             'message': f'Estimate #{estimate.estimate_number} submitted for customer approval'
         })
         
     except Exception as e:
+        import logging
         import traceback
-        return JsonResponse({'success': False, 'error': f'{str(e)}\n{traceback.format_exc()}'})
+        logging.getLogger(__name__).error(
+            "Error submitting estimate for approval: %s\n%s", e, traceback.format_exc(), exc_info=True
+        )
+        from django.conf import settings
+        msg = str(e) if settings.DEBUG else 'An error occurred while submitting the estimate.'
+        return JsonResponse({'success': False, 'error': msg})
 
 
 @login_required

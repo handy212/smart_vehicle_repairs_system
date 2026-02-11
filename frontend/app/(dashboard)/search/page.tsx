@@ -71,10 +71,7 @@ export default function SearchPage() {
     queryFn: async () => {
       // If query is '*', use empty string to get all results of that type
       const actualQuery = searchParams.query === '*' ? '' : searchParams.query;
-      console.log("Search page calling API:", { actualQuery, type: searchParams.type });
-      const result = await searchApi.global(actualQuery, searchParams.type);
-      console.log("Search page received:", result);
-      return result;
+      return await searchApi.global(actualQuery, searchParams.type);
     },
     enabled: debouncedQuery.length >= 2 || (debouncedQuery.includes(':') && debouncedQuery.split(':')[0].trim() in typeLabels),
   });

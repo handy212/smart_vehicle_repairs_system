@@ -199,8 +199,6 @@ export default function NewGatePassPage() {
         submitData.branch = typeof workOrderData.branch === 'object' ? workOrderData.branch.id : workOrderData.branch;
       }
     }
-    
-    console.log("Submitting gate pass data:", submitData);
     createMutation.mutate(submitData);
   };
 

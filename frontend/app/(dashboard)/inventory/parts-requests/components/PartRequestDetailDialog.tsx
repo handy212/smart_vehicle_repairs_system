@@ -80,37 +80,19 @@ export function PartRequestDetailDialog({
     });
 
     const orderMutation = useMutation({
-        mutationFn: async (id: number) => {
-            try {
-                console.log('Calling order API for part:', id);
-                const result = await workordersApi.parts.order(id);
-                console.log('Order API success:', result);
-                return result;
-            } catch (err: any) {
-                console.log('Order API error caught in mutationFn:', err);
-                console.log('Error response:', err.response);
-                console.log('Error data:', err.response?.data);
-                throw err; // Re-throw to trigger onError
-            }
-        },
+        mutationFn: async (id: number) => workordersApi.parts.order(id),
         onSuccess: (data) => {
-            console.log('onSuccess called with:', data);
             queryClient.invalidateQueries({ queryKey: ["parts-requests"] });
             onRefresh();
             setShowInventoryForm(null);
             toast({ title: "PO Created", description: `PO #${data.po_number}`, variant: "success" });
         },
         onError: (error: any, partId: number) => {
-            console.log('onError called with partId:', partId);
-            console.log('Error object:', error);
             const errorData = error.response?.data;
-            console.log('Error data:', errorData);
             if (errorData?.needs_inventory_item && errorData?.part_data) {
-                console.log('Showing inventory form for part:', partId);
                 setShowInventoryForm(partId);
                 setInventoryFormData(errorData.part_data);
             } else {
-                console.log('Showing error toast');
                 toast({
                     title: "Order Failed",
                     description: errorData?.error || error.message,

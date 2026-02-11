@@ -1048,8 +1048,10 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
             from apps.notifications_app.triggers import notification_triggers
             notification_triggers.payment_received(payment)
         except Exception as e:
-            # Log but don't fail the payment creation
-            print(f"Failed to send payment received notification: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send payment received notification: %s", e, exc_info=True
+            )
         
         return payment
 

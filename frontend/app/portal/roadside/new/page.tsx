@@ -184,7 +184,6 @@ export default function NewRoadsideRequestPage() {
   };
 
   const onError = (errors: any) => {
-    console.log("Validation errors:", errors);
     const missingFields = Object.keys(errors).map(field => {
       if (field === 'vehicle') return 'Vehicle';
       if (field === 'service_type') return 'Service Type';

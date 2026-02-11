@@ -1116,6 +1116,20 @@ def customer_statistics(request):
             })
     
     top_customers.sort(key=lambda x: x['lifetime_value'], reverse=True)
+
+    # Customer type breakdown
+    by_type_qs = Customer.objects.values('customer_type').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    type_label_map = dict(Customer.CUSTOMER_TYPE_CHOICES)
+    by_type = [
+        {
+            'type': row['customer_type'],
+            'label': type_label_map.get(row['customer_type'], row['customer_type']),
+            'count': row['count'],
+        }
+        for row in by_type_qs
+    ]
     
     return Response({
         'total_customers': total_customers,
@@ -1123,7 +1137,7 @@ def customer_statistics(request):
         'active_customers': active_customers,
         'customers_with_subscriptions': customers_with_subscriptions,
         'subscription_adoption_rate': float(subscription_adoption_rate),
-        'by_type': [],  # TODO: Add customer type breakdown
+        'by_type': by_type,
         'top_customers': [
             {
                 'id': item['customer']['id'],
@@ -1167,6 +1181,21 @@ def vehicle_statistics(request):
             total_vehicles = Vehicle.objects.count()
         except Exception as e:
             total_vehicles = 0
+        
+        # Average vehicle age (in years) based on manufacturing year
+        try:
+            current_year = timezone.now().year
+            avg_age_val = Vehicle.objects.aggregate(
+                avg_age=Avg(
+                    ExpressionWrapper(
+                        current_year - F('year'),
+                        output_field=DecimalField(max_digits=5, decimal_places=2),
+                    )
+                )
+            )['avg_age']
+            average_age = float(avg_age_val) if avg_age_val is not None else None
+        except Exception as e:
+            average_age = None
         
         # Vehicles by service frequency - get top 10
         # Use aggregation to get work order counts efficiently
@@ -1219,17 +1248,18 @@ def vehicle_statistics(request):
         
         return Response({
             'total_vehicles': total_vehicles,
-            'average_age': None,  # TODO: Calculate average vehicle age
+            'average_age': average_age,
             'by_make': by_make,
             'by_year': by_year,
             'most_serviced': most_serviced
         })
     except Exception as e:
+        import logging
         import traceback
-        return Response({
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logging.getLogger(__name__).error("Error in vehicle_analytics: %s\n%s", e, traceback.format_exc(), exc_info=True)
+        from django.conf import settings
+        msg = str(e) if settings.DEBUG else 'An error occurred while generating the report.'
+        return Response({'error': msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -1452,11 +1482,12 @@ def service_due_report(request):
             'vehicles': vehicles_due
         })
     except Exception as e:
+        import logging
         import traceback
-        return Response({
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logging.getLogger(__name__).error("Error in service_due_report: %s\n%s", e, traceback.format_exc(), exc_info=True)
+        from django.conf import settings
+        msg = str(e) if settings.DEBUG else 'An error occurred while generating the report.'
+        return Response({'error': msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

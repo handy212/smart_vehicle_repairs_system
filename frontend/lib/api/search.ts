@@ -70,15 +70,7 @@ export const searchApi = {
       
       // The API returns { results: [...] } directly
       const results = response.data?.results || [];
-      
-      console.log(`Search API response for "${trimmedQuery}":`, {
-        url: response.config.url,
-        baseURL: response.config.baseURL,
-        fullURL: `${response.config.baseURL}${response.config.url}`,
-        resultsCount: results.length,
-        results: results.slice(0, 3), // Log first 3 results
-      });
-      
+
       return {
         results: results.map((r: any) => ({
           type: r.type,

@@ -9,10 +9,8 @@
 {% block document_number %}{{ document.work_order_number }}{% endblock %}
 
 {% block document_meta %}
-<div>Created: {{ document.created_at|date:"M d, Y H:i" }}</div>
-<div>Status: <span
-        class="font-bold uppercase {% if document.status == 'completed' %}text-success{% elif document.status == 'paused' %}text-danger{% endif %}">{{
-        document.get_status_display }}</span></div>
+<div>Created: {{ document.created_at|date:"M d, Y H:i" }}{% if document.created_by %} by {{ document.created_by.get_full_name }}{% endif %}</div>
+<div>Status: <span class="font-bold uppercase {% if document.status == 'completed' %}text-success{% elif document.status == 'paused' %}text-danger{% endif %}">{{ document.get_status_display }}</span></div>
 {% if document.service_coordinator %}
 <div>Coordinator: {{ document.service_coordinator.get_full_name }}</div>
 {% endif %}
@@ -32,6 +30,15 @@
             {% if document.primary_technician %}
             | <span class="font-bold">Lead Tech:</span> {{ document.primary_technician.get_full_name }}
             {% endif %}
+            {% if document.assigned_technicians.exists %}
+            | <span class="font-bold">Team:</span> {% for t in document.assigned_technicians.all %}{{ t.get_full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            {% endif %}
+            {% if document.is_warranty or document.is_recall or document.is_customer_waiting %}
+            | <span class="font-bold">Flags:</span>
+            {% if document.is_warranty %}<span class="text-primary">Warranty</span>{% endif %}
+            {% if document.is_recall %}<span class="text-primary">Recall</span>{% endif %}
+            {% if document.is_customer_waiting %}<span class="text-primary">Customer Waiting</span>{% endif %}
+            {% endif %}
         </div>
         <div class="text-right">
             {% if document.estimated_completion %}
@@ -43,6 +50,23 @@
         </div>
     </div>
 </div>
+
+<!-- Maintenance Type / Service Package -->
+{% if document.maintenance_type != 'general' or document.service_type or document.service_bundle %}
+<div class="mb-4 text-sm">
+    {% if document.maintenance_type == 'routine' %}<span class="font-semibold">Routine Maintenance</span>{% endif %}
+    {% if document.service_type %}— {{ document.service_type.name }}{% endif %}
+    {% if document.service_bundle %}— Bundle: {{ document.service_bundle.name }}{% endif %}
+</div>
+{% endif %}
+
+<!-- Warranty Rework Notice -->
+{% if document.is_warranty_rework and document.related_work_order %}
+<div class="mb-4 p-3 bg-amber-50 border-l-4 border-amber-500 rounded text-sm">
+    <span class="font-bold">Warranty Rework</span> — Related WO: {{ document.related_work_order.work_order_number }}
+    {% if document.warranty_reason %}<br><span class="text-gray-600">{{ document.warranty_reason }}</span>{% endif %}
+</div>
+{% endif %}
 
 <!-- Customer & Vehicle Info -->
 <div class="grid-2-col mb-6">
@@ -137,16 +161,40 @@
         {% if document.estimated_labor_hours %}
         <div class="summary-item">
             <div class="summary-label">Labor ({{ document.estimated_labor_hours }} hrs)</div>
-            <div class="summary-value">${{ document.estimated_labor_cost|floatformat:2|default:"0.00" }}</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.estimated_labor_cost|floatformat:2|default:"0.00" }}</div>
         </div>
         {% endif %}
         <div class="summary-item">
             <div class="summary-label">Parts & Materials</div>
-            <div class="summary-value">${{ document.estimated_parts_cost|floatformat:2|default:"0.00" }}</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.estimated_parts_cost|floatformat:2|default:"0.00" }}</div>
         </div>
         <div class="summary-item total">
             <div class="summary-label">Total Estimate</div>
-            <div class="summary-value">${{ document.estimated_total|floatformat:2|default:"0.00" }}</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.estimated_total|floatformat:2|default:"0.00" }}</div>
+        </div>
+    </div>
+    <div class="clearfix"></div>
+</div>
+{% endif %}
+
+<!-- Actual Costs (when work completed) -->
+{% if document.actual_labor_cost or document.actual_parts_cost or document.actual_total %}
+<div class="mb-6">
+    <div class="financial-summary" style="max-width: 300px;">
+        <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Actual Costs</div>
+        {% if document.actual_labor_hours %}
+        <div class="summary-item">
+            <div class="summary-label">Labor ({{ document.actual_labor_hours }} hrs)</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.actual_labor_cost|floatformat:2|default:"0.00" }}</div>
+        </div>
+        {% endif %}
+        <div class="summary-item">
+            <div class="summary-label">Parts & Materials</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.actual_parts_cost|floatformat:2|default:"0.00" }}</div>
+        </div>
+        <div class="summary-item total">
+            <div class="summary-label">Total Actual</div>
+            <div class="summary-value">{{ currency_symbol }}{{ document.actual_total|floatformat:2|default:"0.00" }}</div>
         </div>
     </div>
     <div class="clearfix"></div>
@@ -214,6 +262,42 @@
         {% if document.approval_notes %}
         <div class="info-item mt-2 pt-2 border-t">
             <div class="text-xs text-gray-700">{{ document.approval_notes }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Quality Check -->
+{% if document.quality_check_required or document.quality_check_completed %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Quality Check</div>
+    <div class="info-card {% if document.quality_check_passed %}bg-green-50{% else %}bg-gray-50{% endif %}">
+        <div class="info-item">
+            <div class="info-label">Status</div>
+            <div class="info-value font-bold {% if document.quality_check_completed %}{% if document.quality_check_passed %}text-success{% else %}text-danger{% endif %}{% else %}text-gray-600{% endif %}">
+                {% if document.quality_check_completed %}
+                    {% if document.quality_check_passed %}✓ Passed{% else %}✗ Not Passed{% endif %}
+                {% else %}
+                    Pending
+                {% endif %}
+            </div>
+        </div>
+        {% if document.quality_check_by %}
+        <div class="info-item">
+            <div class="info-label">Checked By</div>
+            <div class="info-value">{{ document.quality_check_by.get_full_name }}</div>
+        </div>
+        {% endif %}
+        {% if document.quality_check_at %}
+        <div class="info-item">
+            <div class="info-label">Date</div>
+            <div class="info-value">{{ document.quality_check_at|date:"M d, Y H:i" }}</div>
+        </div>
+        {% endif %}
+        {% if document.quality_check_notes %}
+        <div class="info-item mt-2 pt-2 border-t">
+            <div class="text-xs text-gray-700">{{ document.quality_check_notes }}</div>
         </div>
         {% endif %}
     </div>
@@ -289,7 +373,7 @@
                 <td class="text-center">{{ part.quantity|floatformat:0 }}</td>
                 <td class="text-center">
                     <span
-                        class="capitalize {% if part.status == 'installed' %}text-success font-bold{% elif part.status == 'on_order' %}text-primary{% endif %}">
+                        class="capitalize {% if part.status == 'installed' %}text-success font-bold{% elif part.status == 'pending' or part.status == 'po_created' or part.status == 'awaiting_stock' %}text-primary{% endif %}">
                         {{ part.get_status_display }}
                     </span>
                 </td>

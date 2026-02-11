@@ -95,8 +95,8 @@
                     {% endif %}
                 </td>
                 <td class="text-center font-bold">{{ item.quantity }}</td>
-                <td class="text-right">{{ branch.currency_symbol|default:"$" }}{{ item.unit_cost|floatformat:2 }}</td>
-                <td class="text-right font-bold">{{ branch.currency_symbol|default:"$" }}{{ item.total|floatformat:2 }}
+                <td class="text-right">{{ currency_symbol }}{{ item.unit_cost|floatformat:2 }}</td>
+                <td class="text-right font-bold">{{ currency_symbol }}{{ item.total|floatformat:2 }}
                 </td>
             </tr>
             {% endfor %}

@@ -1,4 +1,5 @@
 {% extends 'printing/base/document_base.html' %}
+{% load static %}
 
 {% block title %}Inspection Report {{ document.inspection_number }}{% endblock %}
 
@@ -6,13 +7,103 @@
 
 {% block document_number %}{{ document.inspection_number }}{% endblock %}
 
+{% block extra_styles %}
+<style>
+    .damage-marker-dot {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Severities */
+    .mark-major {
+        width: 18px;
+        height: 18px;
+    }
+
+    .mark-moderate {
+        width: 14px;
+        height: 14px;
+    }
+
+    .mark-minor {
+        width: 10px;
+        height: 10px;
+    }
+
+    /* Types */
+    .mark-scratch {
+        background-color: #6366f1;
+    }
+
+    .mark-dent {
+        background-color: #dc2626;
+    }
+
+    .mark-chip {
+        background-color: #eab308;
+    }
+
+    .mark-crack {
+        background-color: #ea580c;
+    }
+
+    .mark-rust {
+        background-color: #92400e;
+    }
+
+    .mark-other {
+        background-color: #4b5563;
+    }
+
+    /* Font sizes based on parent size */
+    .mark-major span {
+        font-size: 10px;
+    }
+
+    .mark-moderate span {
+        font-size: 8px;
+    }
+
+    .mark-minor span {
+        font-size: 6px;
+    }
+
+    /* Severity Badges (List) */
+    .severity-badge {
+        padding: 1px 4px;
+        border-radius: 4px;
+        font-weight: bold;
+        display: inline-block;
+    }
+
+    .badge-major {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-moderate {
+        background-color: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-minor {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+</style>
+{% endblock %}
+
 {% block document_meta %}
 <div>Date: {{ document.inspection_date|date:"F d, Y" }}</div>
-<div>Result: <span class="font-bold uppercase 
-    {% if document.overall_result == 'fail' %}text-danger
-    {% elif document.overall_result == 'pass_with_advisory' or document.overall_result == 'needs_attention' %}text-warning
-    {% elif document.overall_result == 'pass' %}text-success
-    {% endif %}">
+<div>Result: <span
+        class="font-bold uppercase {% if document.overall_result == 'fail' %}text-danger{% elif document.overall_result == 'pass_with_advisory' or document.overall_result == 'needs_attention' %}text-warning{% elif document.overall_result == 'pass' %}text-success{% endif %}">
         {{ document.get_overall_result_display|default:"IN PROGRESS" }}
     </span></div>
 {% if document.performed_by %}
@@ -162,17 +253,14 @@
         <div class="col-2-3">
             <div
                 style="position: relative; width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #fff;">
-                <img src="file:///home/dev/smart_vehicle_repairs_system/static/images/car_with_markers.png"
+                <img src="{% static 'images/car_with_markers.png' %}"
                     style="width: 100%; display: block;" />
 
                 {% for mark in document.vehicle_damage %}
-                <div
-                    style="position: absolute; left: {{ mark.x }}%; top: {{ mark.y }}%; transform: translate(-50%, -50%); width: {% if mark.severity == 'major' %}18px{% elif mark.severity == 'moderate' %}14px{% else %}10px{% endif %}; height: {% if mark.severity == 'major' %}18px{% elif mark.severity == 'moderate' %}14px{% else %}10px{% endif %}; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); background-color: {% if mark.type == 'scratch' %}#6366f1{% elif mark.type == 'dent' %}#dc2626{% elif mark.type == 'chip' %}#eab308{% elif mark.type == 'crack' %}#ea580c{% elif mark.type == 'rust' %}#92400e{% else %}#4b5563{% endif %}; z-index: 10;">
-                    <span style="display: block; width: 100%; height: 100%; position: relative;">
-                        <span
-                            style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: {% if mark.severity == 'major' %}10px{% elif mark.severity == 'moderate' %}8px{% else %}6px{% endif %};">
-                            {{ forloop.counter }}
-                        </span>
+                <div class="damage-marker-dot mark-{{ mark.type }} mark-{{ mark.severity }}"
+                    style="left: {{ mark.x }}%; top: {{ mark.y }}%;">
+                    <span style="color: white; font-weight: bold;">
+                        {{ forloop.counter }}
                     </span>
                 </div>
                 {% endfor %}
@@ -209,8 +297,7 @@
                         <td class="font-bold border-b py-1">{{ forloop.counter }}</td>
                         <td class="capitalize border-b py-1">{{ mark.type }}</td>
                         <td class="border-b py-1">
-                            <span
-                                style="padding: 1px 4px; border-radius: 4px; font-weight: bold; {% if mark.severity == 'major' %}background-color: #fee2e2; color: #991b1b; {% elif mark.severity == 'moderate' %}background-color: #fef9c3; color: #854d0e; {% else %}background-color: #dcfce7; color: #166534;{% endif %}">
+                            <span class="severity-badge badge-{{ mark.severity }}">
                                 {{ mark.severity|upper }}
                             </span>
                         </td>

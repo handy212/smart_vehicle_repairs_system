@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePrint } from "@/lib/hooks/usePrint";
 
 export default function EstimateDetailPage() {
   const params = useParams();
@@ -19,6 +20,7 @@ export default function EstimateDetailPage() {
   const queryClient = useQueryClient();
   const estimateId = parseInt(params.id as string);
   const { formatCurrency } = useCurrency();
+  const { openPrintWindow, isOpeningPrint } = usePrint();
 
   const { data: estimate, isLoading } = useQuery({
     queryKey: ["portal", "estimate", estimateId],
@@ -64,9 +66,8 @@ export default function EstimateDetailPage() {
     },
   });
 
-  const handleDownload = () => {
-    // Open print-friendly view
-    window.open(`/portal/estimates/${estimateId}/print`, "_blank");
+  const handlePrint = () => {
+    openPrintWindow({ documentType: 'estimate', documentId: estimateId });
   };
 
   if (isLoading) {
@@ -133,9 +134,9 @@ export default function EstimateDetailPage() {
               Decline
             </Button>
           )}
-          <Button variant="secondary" onClick={handleDownload}>
+          <Button variant="secondary" onClick={handlePrint} disabled={isOpeningPrint}>
             <Download className="w-4 h-4 mr-2" />
-            Download PDF
+            {isOpeningPrint ? 'Opening...' : 'Print / PDF'}
           </Button>
         </div>
       </div>

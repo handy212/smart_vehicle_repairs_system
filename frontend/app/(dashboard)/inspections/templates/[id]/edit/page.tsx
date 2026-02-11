@@ -43,18 +43,6 @@ export default function EditTemplatePage() {
   const templateId = templateIdParam ? parseInt(templateIdParam, 10) : NaN;
   const isValidId = !isNaN(templateId) && templateId > 0;
 
-  // Debug logging
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Edit page - Params:", params);
-      console.log("Edit page - ID value:", idValue);
-      console.log("Edit page - Template ID param:", templateIdParam);
-      console.log("Edit page - Parsed template ID:", templateId);
-      console.log("Edit page - Is valid ID:", isValidId);
-      console.log("Edit page - Current URL:", typeof window !== 'undefined' ? window.location.pathname : '');
-    }
-  }, [params, idValue, templateIdParam, templateId, isValidId]);
-
   // Validate templateId before making the query
   const { data: template, isLoading } = useQuery({
     queryKey: ["template", templateId],
@@ -115,10 +103,6 @@ export default function EditTemplatePage() {
       router.push(`/inspections/templates/${updatedTemplate.id}`);
     },
     onError: (error: any) => {
-      console.error("Template update error:", error);
-      console.error("Error response data:", JSON.stringify(error.response?.data, null, 2));
-      console.error("Error response status:", error.response?.status);
-      
       const errorData = error.response?.data;
       let errorMessage = "Failed to update template";
       
@@ -155,8 +139,6 @@ export default function EditTemplatePage() {
       ...data,
       description: data.description?.trim() || undefined,
     };
-    
-    console.log("Updating template data:", cleanedData);
     await updateMutation.mutateAsync(cleanedData);
   };
 

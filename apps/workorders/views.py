@@ -6,7 +6,7 @@ from apps.accounts.permissions import HasPermission, user_has_permission
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from django.db.models import Q, Sum, Count, F
+from django.db.models import Q, Sum, Count, F, Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import timedelta
 
@@ -41,8 +41,17 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     Work Order management with comprehensive workflow actions
     """
     queryset = WorkOrder.objects.all().select_related(
-        'customer', 'customer__user', 'vehicle', 'appointment', 'primary_technician', 'created_by'
-    ).prefetch_related('assigned_technicians', 'tasks', 'parts')
+        'customer', 'customer__user', 'vehicle', 'appointment', 'primary_technician', 'created_by',
+        'branch', 'service_coordinator', 'diagnosis_by', 'quality_check_by', 'related_work_order',
+        'service_type', 'service_bundle'
+    ).prefetch_related(
+        'assigned_technicians',
+        Prefetch('tasks', queryset=ServiceTask.objects.select_related('assigned_to')),
+        Prefetch('notes', queryset=WorkOrderNote.objects.select_related('created_by')),
+        Prefetch('parts', queryset=WorkOrderPart.objects.select_related(
+            'purchase_order_item__purchase_order__supplier', 'inventory_part__preferred_supplier'
+        ))
+    )
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
@@ -408,6 +417,24 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         work_order = self.get_object()
         return generate_work_order_pdf(work_order)
     
+    @action(detail=True, methods=['get'])
+    def print(self, request, pk=None):
+        """Return HTML for print view (same layout as PDF)."""
+        from django.http import HttpResponse
+        from apps.core.services.print_service import render_work_order_print_html
+        
+        work_order = self.get_object()
+        try:
+            html = render_work_order_print_html(work_order, branch=work_order.branch, request=request)
+            return HttpResponse(html, content_type='text/html; charset=utf-8')
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Print HTML generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate print view: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     @action(detail=True, methods=['post'])
     def start_intake(self, request, pk=None):
         """Move work order to intake status, then to assigned status after Service Coordinator is assigned"""
@@ -546,10 +573,15 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
-            # Catch any other unexpected errors and return 500 with error details
+            import logging
             import traceback
+            logging.getLogger(__name__).error(
+                "Error in complete_diagnosis: %s\n%s", e, traceback.format_exc(), exc_info=True
+            )
+            from django.conf import settings
+            msg = f'An error occurred: {str(e)}' if settings.DEBUG else 'An error occurred while completing diagnosis.'
             return Response(
-                {'error': f'An error occurred: {str(e)}', 'detail': traceback.format_exc()},
+                {'error': msg},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
@@ -557,15 +589,18 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
         except Exception as e:
-            # If serializer fails, return basic work order data with error info
-            import traceback
             import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Serializer error for work order {work_order.id}: {e}")
-            logger.error(traceback.format_exc())
+            import traceback
+            logging.getLogger(__name__).error(
+                "Serializer error for work order %s: %s\n%s",
+                work_order.id, e, traceback.format_exc(),
+                exc_info=True
+            )
+            from django.conf import settings
+            msg = f'Error serializing work order: {str(e)}' if settings.DEBUG else 'Error loading work order.'
             return Response(
                 {
-                    'error': f'Error serializing work order: {str(e)}',
+                    'error': msg,
                     'work_order_id': work_order.id,
                     'work_order_number': work_order.work_order_number,
                     'status': work_order.status
@@ -662,7 +697,10 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             try:
                 notification_triggers.work_order_requires_approval(work_order)
             except Exception as e:
-                print(f"Failed to send approval request notification: {e}")
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Failed to send approval request notification: %s", e, exc_info=True
+                )
             
             serializer = self.get_serializer(work_order)
             return Response({
@@ -695,7 +733,10 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             try:
                 notification_triggers.work_order_approved(work_order)
             except Exception as e:
-                print(f"Failed to send work order approved notification: {e}")
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Failed to send work order approved notification: %s", e, exc_info=True
+                )
             
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
@@ -1953,12 +1994,15 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(wo_part)
             return Response(serializer.data)
         except Exception as e:
+            import logging
             import traceback
-            # Log the full error for debugging
-            print(f"Error in allocate: {e}")
-            print(traceback.format_exc())
+            logging.getLogger(__name__).error(
+                "Error in allocate: %s\n%s", e, traceback.format_exc(), exc_info=True
+            )
+            from django.conf import settings
+            msg = f"Allocation failed: {str(e)}" if settings.DEBUG else "Part allocation failed."
             return Response(
-                {'error': f"Allocation failed: {str(e)}"},
+                {'error': msg},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

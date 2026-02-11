@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePrint } from "@/lib/hooks/usePrint";
 
 // Stats Grid Component
 // Stats Grid Component
@@ -77,6 +78,7 @@ const CurrencyValue = ({ value }: { value: any }) => {
 
 export default function PurchaseOrdersPage() {
   const { formatCurrency } = useCurrency();
+  const { openPrintWindow } = usePrint();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
@@ -360,7 +362,7 @@ export default function PurchaseOrdersPage() {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => { /* TODO: Print */ }}>
+                            <DropdownMenuItem onClick={() => openPrintWindow({ documentType: 'purchase_order', documentId: po.id })}>
                               <Printer className="w-4 h-4 mr-2" />
                               Print PO
                             </DropdownMenuItem>

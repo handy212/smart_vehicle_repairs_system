@@ -247,8 +247,6 @@ export default function EditWorkOrderPage() {
         ? workOrder.service_type.id
         : (typeof workOrder.service_type === 'number' ? workOrder.service_type : undefined);
 
-      console.log('Populating form with:', { customerId, vehicleId, serviceTypeId });
-
       // Use setValue for critical fields to ensure they register
       setValue("customer", customerId || 0);
       setValue("vehicle", vehicleId || 0);

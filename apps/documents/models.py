@@ -274,7 +274,10 @@ class Document(models.Model):
             self.thumbnail.save(thumb_name, thumb_file, save=False)
             super().save(update_fields=['thumbnail'])
         except Exception as e:
-            print(f"Failed to create thumbnail: {e}")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to create thumbnail for %s: %s", self.document_number, e, exc_info=True
+            )
     
     @property
     def file_size_display(self):

@@ -137,7 +137,6 @@ function NewFixedAssetContent() {
     });
 
     function onSubmit(values: FormValues) {
-        console.log("Submitting values:", values);
         createMutation.mutate({
             ...values,
             category: parseInt(values.category),
@@ -171,9 +170,7 @@ function NewFixedAssetContent() {
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
-                            console.error("Form Validation Errors:", errors);
-                            console.log("Current Form Values:", form.getValues());
+                        <form onSubmit={form.handleSubmit(onSubmit, () => {
                             toast({
                                 title: "Validation Error",
                                 description: "Please check the form for errors.",

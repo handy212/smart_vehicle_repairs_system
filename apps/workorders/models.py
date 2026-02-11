@@ -1512,6 +1512,39 @@ class WorkOrderPart(models.Model):
         # Use centralized recalculation method
         self.work_order.recalculate_totals()
 
+    @property
+    def supplier(self):
+        """Supplier name for display (from PO or inventory part)"""
+        if self.purchase_order_item and self.purchase_order_item.purchase_order:
+            return getattr(
+                self.purchase_order_item.purchase_order.supplier,
+                'name',
+                None,
+            )
+        if self.inventory_part:
+            pref = getattr(self.inventory_part, 'preferred_supplier', None)
+            if pref:
+                return getattr(pref, 'name', None)
+            # Fallback to first supplier in M2M
+            first = getattr(self.inventory_part, 'suppliers', None)
+            if first:
+                first_sup = first.first()
+                return getattr(first_sup, 'name', None) if first_sup else None
+        return None
+
+    @property
+    def eta(self):
+        """Expected delivery date for display (from PO or ordered_at)"""
+        if self.purchase_order_item and self.purchase_order_item.purchase_order:
+            edd = getattr(
+                self.purchase_order_item.purchase_order,
+                'expected_delivery_date',
+                None,
+            )
+            if edd:
+                return edd  # DateField works with |date template filter
+        return self.ordered_at
+
 
 class TechnicianTimeLog(models.Model):
     """

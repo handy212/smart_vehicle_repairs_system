@@ -44,8 +44,11 @@ import {
 import { getStatusVariant } from "@/lib/utils/workorder-status";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { usePrint } from "@/lib/hooks/usePrint";
+
 export default function WorkOrdersPage() {
   const { formatCurrency } = useCurrency();
+  const { openPrintWindow } = usePrint();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -632,7 +635,7 @@ export default function WorkOrdersPage() {
                               </DropdownMenuItem>
                             </PermissionGuard>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => window.open(`/workorders/${workorder.id}/print`, '_blank')} className="text-xs">
+                            <DropdownMenuItem onClick={() => openPrintWindow({ documentType: 'work_order', documentId: workorder.id })} className="text-xs">
                               <Printer className="mr-2 h-3.5 w-3.5" />
                               Print Job Card
                             </DropdownMenuItem>

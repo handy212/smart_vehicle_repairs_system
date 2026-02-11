@@ -440,6 +440,13 @@ export const billingApi = {
       const response = await apiClient.post(`/billing/invoices/${id}/send_customer_email/`, { subject, message });
       return response.data;
     },
+
+    downloadAgingReport: async (): Promise<Blob> => {
+      const response = await apiClient.get('/billing/invoices/aging_report_pdf/', {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
   },
 
   creditNotes: {
