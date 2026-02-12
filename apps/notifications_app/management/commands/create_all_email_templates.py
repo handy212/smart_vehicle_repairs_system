@@ -62,6 +62,12 @@ Best regards,
 <p>If you need to reschedule or cancel, please contact us as soon as possible.</p>
 <p>Thank you!</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'appointment_confirmation': {
@@ -101,6 +107,12 @@ Best regards,
 <p>Please arrive 10 minutes early for your appointment.</p>
 <p>We look forward to serving you!</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'appointment_cancelled': {
@@ -128,6 +140,12 @@ Best regards,
 <p>Please contact us to reschedule at your convenience.</p>
 <p>We apologize for any inconvenience.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'work_order_created': {
@@ -162,6 +180,12 @@ Best regards,
 <hr>
 <p>We will keep you updated on the progress of your work order.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'work_order_completed': {
@@ -199,6 +223,12 @@ Best regards,
 <p>Your vehicle is ready for pickup. Please contact us to arrange pickup.</p>
 <p>Thank you for your business!</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'work_order_approved': {
@@ -231,6 +261,12 @@ Best regards,
 <hr>
 <p>We will begin work on your vehicle. You will receive updates as we progress.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'vehicle_ready': {
@@ -268,6 +304,12 @@ Best regards,
 <p>Please contact us to schedule a convenient pickup time.</p>
 <p>We look forward to seeing you!</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'inspection_completed': {
@@ -314,6 +356,12 @@ Best regards,
 <p>If you have any questions or concerns, please don't hesitate to contact us.</p>
 <p>Thank you for choosing our service.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'low_stock_alert': {
@@ -381,6 +429,12 @@ Best regards,
 <hr>
 <p>Please schedule an appointment to keep your vehicle in optimal condition.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'parts_arrived': {
@@ -417,6 +471,12 @@ Best regards,
 <hr>
 <p>Work on your vehicle can now proceed. We will keep you updated on progress.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'estimate_sent': {
@@ -453,6 +513,12 @@ Best regards,
 <hr>
 <p>Please review and approve or decline this estimate to proceed.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'estimate_expiring_soon': {
@@ -487,6 +553,12 @@ Best regards,
 <hr>
 <p>Please review and approve or decline this estimate before it expires.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'estimate_expired': {
@@ -521,6 +593,12 @@ Best regards,
 <hr>
 <p>Please contact us to request a new estimate or update this one.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'estimate_approved': {
@@ -634,6 +712,12 @@ Best regards,
 <p>For security reasons, please change your password after your first login.</p>
 <p>If you have any questions, please don't hesitate to contact us.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'password_reset': {
@@ -672,6 +756,12 @@ Best regards,
 <p>For security reasons, please change your password after logging in.</p>
 <p>If you did not request this password reset, please contact us immediately.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'password_reset_link': {
@@ -705,6 +795,90 @@ Best regards,
 <hr>
 <p>If you did not request this password reset, please ignore this email or contact us if you have concerns.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
+</body></html>''',
+            },
+            'purchase_order_approval': {
+                'name': 'Default Purchase Order Approval Email',
+                'subject': 'Approval Required: PO {po_number}',
+                'body': '''Hello,
+
+Purchase Order {po_number} requires your approval.
+
+DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PO Number: {po_number}
+Supplier: {supplier}
+Total: ${total}
+Requested By: {requested_by}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please log in to the portal to review and approve.
+
+Best regards,
+{company_name} System''',
+                'html_body': '''<html><body>
+<p>Hello,</p>
+<p>Purchase Order {po_number} requires your approval.</p>
+<h3>DETAILS:</h3>
+<hr>
+<p><strong>PO Number:</strong> {po_number}</p>
+<p><strong>Supplier:</strong> {supplier}</p>
+<p><strong>Total:</strong> ${total}</p>
+<p><strong>Requested By:</strong> {requested_by}</p>
+<hr>
+<p>Please log in to the portal to review and approve.</p>
+<p>Best regards,<br>{company_name} System</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
+</body></html>''',
+            },
+            'stock_transfer_approval': {
+                'name': 'Default Stock Transfer Approval Email',
+                'subject': 'Approval Required: Transfer {transfer_number}',
+                'body': '''Hello,
+
+Stock Transfer {transfer_number} requires your approval.
+
+DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Transfer Number: {transfer_number}
+From: {source_branch}
+To: {destination_branch}
+Requested By: {requested_by}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please log in to the portal to review and approve.
+
+Best regards,
+{company_name} System''',
+                'html_body': '''<html><body>
+<p>Hello,</p>
+<p>Stock Transfer {transfer_number} requires your approval.</p>
+<h3>DETAILS:</h3>
+<hr>
+<p><strong>Transfer Number:</strong> {transfer_number}</p>
+<p><strong>From:</strong> {source_branch}</p>
+<p><strong>To:</strong> {destination_branch}</p>
+<p><strong>Requested By:</strong> {requested_by}</p>
+<hr>
+<p>Please log in to the portal to review and approve.</p>
+<p>Best regards,<br>{company_name} System</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'gate_pass_created': {
@@ -749,6 +923,12 @@ Best regards,
 <p><strong>Pickup Notes:</strong> {pickup_notes}</p>
 <p>If you have any questions, please contact us.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
             'gate_pass_issued': {
@@ -797,6 +977,12 @@ Best regards,
 <p><strong>Pickup Notes:</strong> {pickup_notes}</p>
 <p>If you have any questions, please contact us.</p>
 <p>Best regards,<br>{company_name} Team</p>
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+    <p><strong>{company_name}</strong><br>
+    {company_address}<br>
+    Phone: {company_phone} | Email: {company_email}<br>
+    <a href="{site_url}" style="color: #666; text-decoration: none;">{site_url}</a></p>
+</div>
 </body></html>''',
             },
         }
@@ -862,6 +1048,12 @@ Best regards,
                         'branch_info': 'Branch information',
                         'login_url': 'Login page URL',
                         'reset_link': 'Password reset link URL',
+                        'po_number': 'Purchase Order number',
+                        'supplier': 'Supplier name',
+                        'transfer_number': 'Stock Transfer number',
+                        'source_branch': 'Source branch name',
+                        'destination_branch': 'Destination branch name',
+                        'requested_by': 'Name of requestor',
                     },
                     'created_by': created_by_user,
                 }

@@ -5,6 +5,7 @@ Supports Twilio and other SMS providers
 import logging
 from typing import List, Optional
 from django.conf import settings
+from apps.accounts.settings_utils import get_sms_settings
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,37 @@ class TwilioSMSService(SMSService):
         
         return f"+{digits}"
 
+class HubtelSMSService(SMSService):
+    """Hubtel SMS service integration for Ghana"""
+    
+    def __init__(self):
+        super().__init__()
+        self.name = "Hubtel"
+        try:
+            from apps.notifications_app.hubtel_sms import send_sms
+            self.send_hubtel = send_sms
+        except ImportError:
+            logger.warning("Hubtel SMS module not found")
+            self.send_hubtel = None
+    
+    def send_sms(
+        self,
+        to: str,
+        message: str,
+        from_number: Optional[str] = None
+    ) -> tuple[bool, str]:
+        """Send SMS via Hubtel"""
+        if not self.send_hubtel:
+            return False, "Hubtel module not available"
+            
+        success, result = self.send_hubtel(to, message, from_number)
+        
+        if success:
+            if isinstance(result, dict):
+                return True, result.get('message_id', 'sent')
+            return True, str(result)
+        else:
+            return False, str(result)
 
 class MockSMSService(SMSService):
     """Mock SMS service for testing/development"""
@@ -168,17 +200,27 @@ def get_sms_service(service_name: str = None) -> SMSService:
     Get SMS service instance
     
     Args:
-        service_name: Name of service ('twilio', 'mock')
+        service_name: Name of service ('twilio', 'hubtel', 'mock')
                      If None, uses default from settings
         
     Returns:
         SMSService instance
     """
     if not service_name:
-        service_name = getattr(settings, 'SMS_SERVICE', 'mock').lower()
+        # Try to get from dynamic settings first
+        sms_settings = get_sms_settings()
+        service_name = sms_settings.get('sms_provider')
+        
+        # Fallback to Django settings if not found
+        if not service_name:
+            service_name = getattr(settings, 'SMS_SERVICE', 'mock')
+            
+    service_name = str(service_name).lower()
     
     if service_name == 'twilio':
         return TwilioSMSService()
+    elif service_name == 'hubtel':
+        return HubtelSMSService()
     else:
         # Default to mock for development
         return MockSMSService()

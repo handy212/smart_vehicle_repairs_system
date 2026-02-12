@@ -1936,9 +1936,9 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         # Send notification to assigned approver
         if po.assigned_approver:
             try:
-                from apps.notifications_app.services import NotificationHelper, NotificationService
-                notification = NotificationHelper.purchase_order_approval_request(po, po.assigned_approver)
-                NotificationService().send_notification(notification)
+                from apps.notifications_app.triggers import NotificationTriggers
+                triggers = NotificationTriggers()
+                triggers.purchase_order_approval_request(po, po.assigned_approver)
             except Exception as e:
                 # specific validation error logging could go here
                 pass
@@ -2464,9 +2464,9 @@ class TransferViewSet(viewsets.ModelViewSet):
             # Send notification to assigned approver if exists
             if transfer.assigned_approver:
                 try:
-                    from apps.notifications_app.services import NotificationHelper, NotificationService
-                    notification = NotificationHelper.stock_transfer_approval_request(transfer, transfer.assigned_approver)
-                    NotificationService().send_notification(notification)
+                    from apps.notifications_app.triggers import NotificationTriggers
+                    triggers = NotificationTriggers()
+                    triggers.stock_transfer_approval_request(transfer, transfer.assigned_approver)
                 except Exception as e:
                     # Log but don't fail
                     logger.warning(f"Failed to send transfer approval notification: {e}")

@@ -7,6 +7,7 @@ from typing import List, Optional, Dict
 from django.conf import settings
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
+from apps.accounts.settings_utils import get_email_settings
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,9 @@ class SendGridEmailService(EmailService):
             return False
         
         try:
-            from_email = from_email or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+            email_settings = get_email_settings()
+            default_from = email_settings.get('email_from_address') or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+            from_email = from_email or default_from
             
             mail = self.Mail(
                 from_email=self.Email(from_email),
@@ -158,7 +161,9 @@ class AWSEmailService(EmailService):
             return False
         
         try:
-            from_email = from_email or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+            email_settings = get_email_settings()
+            default_from = email_settings.get('email_from_address') or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+            from_email = from_email or default_from
             
             # AWS SES doesn't support attachments in simple send_email
             # For attachments, use send_raw_email instead
@@ -215,7 +220,9 @@ class DjangoEmailService(EmailService):
     ) -> bool:
         """Send email using Django's email backend"""
         try:
-            from_email = from_email or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+            email_settings = get_email_settings()
+            default_from = email_settings.get('email_from_address') or getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+            from_email = from_email or default_from
             
             if html_message or attachments:
                 # Use EmailMultiAlternatives for HTML and attachments

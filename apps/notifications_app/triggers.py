@@ -147,13 +147,22 @@ class NotificationTriggers:
         vehicle_display = self._build_vehicle_display(appointment.vehicle)
         technician_name = appointment.assigned_technician.get_full_name() if appointment.assigned_technician else "TBD"
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'customer_name': customer_name,
+            'appointment_number': appointment.appointment_number,
+            'appointment_date': str(appointment.appointment_date),
+            'appointment_time': str(appointment.appointment_time),
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'service_description': appointment.service_description or "General Service",
+            'technician_name': technician_name,
+        })
+        
         title = f'Appointment Confirmed - {appointment.appointment_date}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'appointment_date': str(appointment.appointment_date),
-                'appointment_time': str(appointment.appointment_time),
-                'customer_name': customer_name,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''Your appointment has been confirmed for {appointment.appointment_date} at {appointment.appointment_time}.
 
@@ -163,17 +172,7 @@ Technician: {technician_name}
 
 Please arrive 10 minutes early.'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'appointment_number': appointment.appointment_number,
-                'appointment_date': str(appointment.appointment_date),
-                'appointment_time': str(appointment.appointment_time),
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'service_description': appointment.service_description or "General Service",
-                'technician_name': technician_name,
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=appointment.customer.user,
@@ -183,17 +182,7 @@ Please arrive 10 minutes early.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'appointment_id': appointment.id,
-                'appointment_number': appointment.appointment_number,
-                'appointment_date': str(appointment.appointment_date),
-                'appointment_time': str(appointment.appointment_time),
-                'vehicle': vehicle_display,
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-                'service_description': appointment.service_description or "General Service",
-                'technician_name': technician_name,
-            },
+            data=context,
             related_object_type='appointment',
             related_object_id=appointment.id
         )
@@ -208,33 +197,33 @@ Please arrive 10 minutes early.'''
         customer_name = self._build_customer_name(appointment.customer)
         vehicle_display = self._build_vehicle_display(appointment.vehicle)
         
+        # Build context
+        context = self._get_default_context()
+        reason_text = f"Reason: {reason}" if reason else ""
+        context.update({
+            'customer_name': customer_name,
+            'appointment_number': appointment.appointment_number,
+            'appointment_date': str(appointment.appointment_date),
+            'appointment_time': str(appointment.appointment_time),
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'reason': reason,
+            'reason_text': reason_text,
+        })
+        
         title = f'Appointment Cancelled - {appointment.appointment_date}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'appointment_date': str(appointment.appointment_date),
-                'customer_name': customer_name,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''Your appointment scheduled for {appointment.appointment_date} at {appointment.appointment_time} has been cancelled.
 
-{f"Reason: {reason}" if reason else ""}
+{reason_text}
 
 Vehicle: {vehicle_display}
 
 Please contact us to reschedule.'''
         if template and template.body:
-            reason_text = f"Reason: {reason}" if reason else ""
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'appointment_number': appointment.appointment_number,
-                'appointment_date': str(appointment.appointment_date),
-                'appointment_time': str(appointment.appointment_time),
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'reason': reason,
-                'reason_text': reason_text,
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=appointment.customer.user,
@@ -244,13 +233,7 @@ Please contact us to reschedule.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'appointment_id': appointment.id,
-                'appointment_number': appointment.appointment_number,
-                'reason': reason,
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-            },
+            data=context,
             related_object_type='appointment',
             related_object_id=appointment.id
         )
@@ -266,27 +249,26 @@ Please contact us to reschedule.'''
         vehicle_display = self._build_vehicle_display(appointment.vehicle)
         technician_name = appointment.assigned_technician.get_full_name() if appointment.assigned_technician else "TBD"
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'customer_name': customer_name,
+            'appointment_number': appointment.appointment_number,
+            'appointment_date': str(appointment.appointment_date),
+            'appointment_time': str(appointment.appointment_time),
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'service_description': appointment.service_description or "General Service",
+            'technician_name': technician_name,
+        })
+        
         title = f'Appointment Reminder: {appointment.appointment_date}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'appointment_date': str(appointment.appointment_date),
-                'appointment_time': str(appointment.appointment_time),
-                'customer_name': customer_name,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'Reminder: You have an appointment on {appointment.appointment_date} at {appointment.appointment_time}'
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'appointment_number': appointment.appointment_number,
-                'appointment_date': str(appointment.appointment_date),
-                'appointment_time': str(appointment.appointment_time),
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'service_description': appointment.service_description or "General Service",
-                'technician_name': technician_name,
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=appointment.customer.user,
@@ -296,17 +278,7 @@ Please contact us to reschedule.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'appointment_id': appointment.id,
-                'appointment_number': appointment.appointment_number,
-                'customer_name': customer_name,
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'appointment_date': str(appointment.appointment_date),
-                'appointment_time': str(appointment.appointment_time),
-                'service_description': appointment.service_description or "General Service",
-                'technician_name': technician_name,
-            },
+            data=context,
             related_object_type='appointment',
             related_object_id=appointment.id
         )
@@ -321,11 +293,21 @@ Please contact us to reschedule.'''
         customer_name = self._build_customer_name(appointment.customer)
         vehicle_display = self._build_vehicle_display(appointment.vehicle)
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'customer_name': customer_name,
+            'vehicle_display': vehicle_display,
+            'vehicle': vehicle_display,
+            'work_order_number': appointment.work_order.work_order_number if hasattr(appointment, 'work_order') and appointment.work_order else "N/A",
+            'ready_time': timezone.now().strftime("%Y-%m-%d %H:%M"),
+            'pickup_location': get_company_info().get('company_address', 'Workshop'),
+            'pickup_instructions': 'Please bring your appointment confirmation and payment method.',
+        })
+        
         title = f'Your {vehicle_display} is Ready for Pickup'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'vehicle_display': vehicle_display,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''Good news! Your vehicle is ready for pickup.
 
@@ -334,16 +316,7 @@ Appointment: {appointment.appointment_date}
 
 Please bring your appointment confirmation and payment method.'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-                'vehicle': vehicle_display,
-                'work_order_number': appointment.work_order.work_order_number if hasattr(appointment, 'work_order') and appointment.work_order else "N/A",
-                'ready_time': timezone.now().strftime("%Y-%m-%d %H:%M"),
-                'pickup_location': get_company_info().get('company_address', 'Workshop'),
-                'pickup_instructions': 'Please bring your appointment confirmation and payment method.',
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=appointment.customer.user,
@@ -353,12 +326,7 @@ Please bring your appointment confirmation and payment method.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'appointment_id': appointment.id,
-                'vehicle_id': appointment.vehicle.id if appointment.vehicle else None,
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-            },
+            data=context,
             related_object_type='appointment',
             related_object_id=appointment.id
         )
@@ -375,11 +343,23 @@ Please bring your appointment confirmation and payment method.'''
         customer_name = self._build_customer_name(work_order.customer)
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'customer_name': customer_name,
+            'problem_description': work_order.customer_concerns or "See work order for details",
+            'service_description': work_order.customer_concerns or "General Service",
+            'estimated_completion': work_order.estimated_completion.strftime("%Y-%m-%d %H:%M") if work_order.estimated_completion else "TBD",
+            'status': work_order.get_status_display(),
+        })
+        
         title = f'Work Order Created - {work_order.work_order_number}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'work_order_number': work_order.work_order_number,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''A work order has been created for your vehicle.
 
@@ -391,17 +371,7 @@ Description: {work_order.customer_concerns}
 
 We'll keep you updated on the progress.'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'work_order_number': work_order.work_order_number,
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'problem_description': work_order.customer_concerns or "See work order for details",
-                'service_description': work_order.customer_concerns or "General Service",
-                'estimated_completion': work_order.estimated_completion.strftime("%Y-%m-%d %H:%M") if work_order.estimated_completion else "TBD",
-                'status': work_order.get_status_display(),
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=work_order.customer.user,
@@ -411,14 +381,7 @@ We'll keep you updated on the progress.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'work_order_id': work_order.id,
-                'work_order_number': work_order.work_order_number,
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'customer_name': customer_name,
-                'problem_description': work_order.customer_concerns or "See work order for details",
-            },
+            data=context,
             related_object_type='work_order',
             related_object_id=work_order.id
         )
@@ -475,24 +438,26 @@ You can now start work.'''
         customer_name = self._build_customer_name(work_order.customer)
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'wo_number': work_order.work_order_number,
+            'customer_name': customer_name,
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'completion_date': work_order.completed_at.strftime("%Y-%m-%d %H:%M") if work_order.completed_at else timezone.now().strftime("%Y-%m-%d %H:%M"),
+            'total_amount': str(work_order.actual_total or work_order.estimated_total or 0),
+        })
+        
         title = f'Work Order {work_order.work_order_number} Completed'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'work_order_number': work_order.work_order_number,
-                'vehicle_display': vehicle_display,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'Work order {work_order.work_order_number} has been completed.'
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'work_order_number': work_order.work_order_number,
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'completion_date': work_order.completed_at.strftime("%Y-%m-%d %H:%M") if work_order.completed_at else timezone.now().strftime("%Y-%m-%d %H:%M"),
-                'total_amount': str(work_order.actual_total or work_order.estimated_total or 0),
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=work_order.customer.user,
@@ -502,15 +467,7 @@ You can now start work.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'work_order_id': work_order.id,
-                'work_order_number': work_order.work_order_number,
-                'wo_number': work_order.work_order_number,
-                'customer_name': customer_name,
-                'vehicle': vehicle_display,
-                'vehicle_display': vehicle_display,
-                'total_amount': str(work_order.actual_total or work_order.estimated_total or 0),
-            },
+            data=context,
             related_object_type='work_order',
             related_object_id=work_order.id
         )
@@ -526,6 +483,18 @@ You can now start work.'''
         customer_name = self._build_customer_name(work_order.customer)
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'estimated_total': str(work_order.estimated_total or 0),
+            'customer_name': customer_name,
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'problem_description': work_order.diagnosis_notes or work_order.problem_description or "See work order for details",
+        })
+        
         title = f'Approval Required - {work_order.work_order_number}'
         message = f'''Your approval is required for work order {work_order.work_order_number}.
 
@@ -540,15 +509,7 @@ Please review and approve to proceed with repairs.'''
         if template and template.body:
             # Adapt the template message for approval request
             try:
-                message = self.service._render_template(template.body, {
-                    'customer_name': customer_name,
-                    'work_order_number': work_order.work_order_number,
-                    'vehicle': vehicle_display,
-                    'vehicle_display': vehicle_display,
-                    'problem_description': work_order.diagnosis_notes or work_order.problem_description or "See work order for details",
-                    'estimated_total': str(work_order.estimated_total or "TBD"),
-                    'company_name': self._get_company_name(),
-                })
+                message = self.service._render_template(template.body, context)
             except:
                 pass  # Fall back to default message if template rendering fails
         
@@ -560,14 +521,7 @@ Please review and approve to proceed with repairs.'''
             template=template,  # Use template if available
             title=title,
             message=message,
-            data={
-                'work_order_id': work_order.id,
-                'work_order_number': work_order.work_order_number,
-                'estimated_total': str(work_order.estimated_total or 0),
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-                'problem_description': work_order.diagnosis_notes or work_order.problem_description or "See work order for details",
-            },
+            data=context,
             related_object_type='work_order',
             related_object_id=work_order.id
         )
@@ -670,6 +624,33 @@ Please review and make necessary corrections.''',
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
         total_amount = str(work_order.actual_total or work_order.estimated_total or 0)
         
+        # Prepare context data
+        context = self._get_default_context()
+        
+        # Get invoice from work order if linked
+        invoice = getattr(work_order, 'invoice', None)
+        invoice_number = invoice.invoice_number if invoice else work_order.work_order_number
+        invoice_date = invoice.invoice_date if invoice else work_order.completed_at.date() if hasattr(work_order, 'completed_at') and work_order.completed_at else timezone.now().date()
+        due_date = invoice.due_date if invoice else invoice_date
+        
+        context.update({
+            'work_order_id': work_order.id,
+            'work_order_number': work_order.work_order_number,
+            'customer_name': customer_name,
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'total_amount': total_amount,
+            'total': total_amount,
+            'invoice_number': invoice_number,
+            'invoice_date': str(invoice_date),
+            'due_date': str(due_date),
+            'balance_due': total_amount,
+            'vehicle_info': vehicle_display,
+            'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}' if invoice else f'{self._get_base_url()}/workorders/{work_order.id}',
+            'invoice_pdf_url': f'{self._get_base_url()}/api/billing/invoices/{invoice.id}/pdf/' if invoice else None,
+            'filename': f'Invoice_{invoice_number}.pdf' if invoice else None,
+        })
+        
         title = f'Invoice Ready - {work_order.work_order_number}'
         message = f'''Your invoice is ready for work order {work_order.work_order_number}.
 
@@ -681,32 +662,9 @@ Please review and make payment when ready.'''
         # Try to use invoice template if available
         if template and template.body:
             try:
-                # Get invoice from work order if linked
-                invoice = getattr(work_order, 'invoice', None)
-                invoice_number = invoice.invoice_number if invoice else work_order.work_order_number
-                invoice_date = invoice.invoice_date if invoice else work_order.completed_at.date() if hasattr(work_order, 'completed_at') and work_order.completed_at else timezone.now().date()
-                due_date = invoice.due_date if invoice else invoice_date
-                
-                message = self.service._render_template(template.body, {
-                    'customer_name': customer_name,
-                    'invoice_number': invoice_number,
-                    'work_order_number': work_order.work_order_number,
-                    'invoice_date': str(invoice_date),
-                    'due_date': str(due_date),
-                    'total': total_amount,
-                    'balance_due': total_amount,
-                    'vehicle_info': vehicle_display,
-                    'vehicle_display': vehicle_display,
-                    'work_order_number': work_order.work_order_number,
-                    'company_name': self._get_company_name(),
-                    'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}' if invoice else f'{self._get_base_url()}/workorders/{work_order.id}',
-                })
+                message = self.service._render_template(template.body, context)
                 if template and template.subject:
-                    title = self.service._render_template(template.subject, {
-                        'invoice_number': invoice_number,
-                        'total': total_amount,
-                        'customer_name': customer_name,
-                    })
+                    title = self.service._render_template(template.subject, context)
             except:
                 pass  # Fall back to default message if template rendering fails
         
@@ -735,15 +693,7 @@ Please review and make payment when ready.'''
                 template=self._get_template('invoice_generated', channel),  # Get template for specific channel
                 title=title,
                 message=message,
-                data={
-                    'work_order_id': work_order.id,
-                    'work_order_number': work_order.work_order_number,
-                    'total': total_amount,
-                    'customer_name': customer_name,
-                    'vehicle_display': vehicle_display,
-                    'invoice_pdf_url': f'{self._get_base_url()}/api/billing/invoices/{invoice.id}/pdf/' if hasattr(work_order, 'invoice') and work_order.invoice else None,
-                    'filename': f'Invoice_{invoice_number}.pdf' if hasattr(work_order, 'invoice') and work_order.invoice else None,
-                },
+                data=context,
                 related_object_type='work_order',
                 related_object_id=work_order.id
             )
@@ -932,13 +882,26 @@ Please review the parts required and provide an estimate.
         customer_name = self._build_customer_name(invoice.customer)
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+             'invoice_id': invoice.id,
+             'invoice_number': invoice.invoice_number,
+             'total': str(invoice.total),
+             'due_date': str(invoice.due_date),
+             'customer_name': customer_name,
+             'vehicle_info': vehicle_info,
+             'vehicle_display': vehicle_info,
+             'balance_due': str(invoice.amount_due or invoice.total),
+             'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
+             'invoice_date': str(invoice.invoice_date),
+             'amount_paid': '0.00',  # TODO: Calculate from payments
+             'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}',
+        })
+        
         title = f'Invoice {invoice.invoice_number} - ${invoice.total}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'invoice_number': invoice.invoice_number,
-                'total': str(invoice.total),
-                'customer_name': customer_name,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''Dear {customer_name},
 
@@ -964,20 +927,7 @@ For questions or to arrange payment, please contact us at your earliest convenie
 Thank you for your business!'''
         
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'invoice_number': invoice.invoice_number,
-                'invoice_date': str(invoice.invoice_date),
-                'due_date': str(invoice.due_date),
-                'total': str(invoice.total),
-                'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
-                'vehicle_info': vehicle_info,
-                'vehicle_display': vehicle_info,
-                'balance_due': str(invoice.amount_due or invoice.total),
-                'amount_paid': '0.00',  # TODO: Calculate from payments
-                'company_name': self._get_company_name(),
-                'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}',
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=invoice.customer.user,
@@ -987,17 +937,7 @@ Thank you for your business!'''
             template=template,
             title=title,
             message=message,
-            data={
-                'invoice_id': invoice.id,
-                'invoice_number': invoice.invoice_number,
-                'total': str(invoice.total),
-                'due_date': str(invoice.due_date),
-                'customer_name': customer_name,
-                'vehicle_info': vehicle_info,
-                'vehicle_display': vehicle_info,
-                'balance_due': str(invoice.amount_due or invoice.total),
-                'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
-            },
+            data=context,
             related_object_type='invoice',
             related_object_id=invoice.id
         )
@@ -1012,13 +952,24 @@ Thank you for your business!'''
         customer_name = self._build_customer_name(invoice.customer)
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'invoice_id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'days_until_due': str(days_until_due),
+            'balance_due': str(invoice.balance_due or invoice.total),
+            'due_date': str(invoice.due_date),
+            'customer_name': customer_name,
+            'vehicle_display': vehicle_info,
+            'vehicle_info': vehicle_info,
+            'total': str(invoice.total),
+            'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
+        })
+        
         title = f'Invoice Due in {days_until_due} Days - {invoice.invoice_number}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'invoice_number': invoice.invoice_number,
-                'days_until_due': str(days_until_due),
-                'due_date': str(invoice.due_date),
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''Reminder: Your invoice is due soon.
 
@@ -1028,17 +979,7 @@ Due Date: {invoice.due_date} ({days_until_due} days)
 
 Please remit payment to avoid late fees.'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'invoice_number': invoice.invoice_number,
-                'due_date': str(invoice.due_date),
-                'days_until_due': str(days_until_due),
-                'balance_due': str(invoice.balance_due or invoice.total),
-                'total': str(invoice.total),
-                'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
-                'vehicle_display': vehicle_info,
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=invoice.customer.user,
@@ -1048,15 +989,7 @@ Please remit payment to avoid late fees.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'invoice_id': invoice.id,
-                'invoice_number': invoice.invoice_number,
-                'days_until_due': str(days_until_due),
-                'balance_due': str(invoice.balance_due or invoice.total),
-                'due_date': str(invoice.due_date),
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_info,
-            },
+            data=context,
             related_object_type='invoice',
             related_object_id=invoice.id
         )
@@ -1072,13 +1005,24 @@ Please remit payment to avoid late fees.'''
         vehicle_info = self._build_vehicle_display(invoice.vehicle) if invoice.vehicle else "N/A"
         days_overdue = (timezone.now().date() - invoice.due_date).days
         
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'invoice_id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'days_overdue': str(days_overdue),
+            'balance_due': str(invoice.balance_due or invoice.total),
+            'due_date': str(invoice.due_date),
+            'customer_name': customer_name,
+            'vehicle_display': vehicle_info,
+            'vehicle_info': vehicle_info,
+            'total': str(invoice.total),
+            'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
+        })
+        
         title = f'OVERDUE: Invoice {invoice.invoice_number} - ${invoice.balance_due}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'invoice_number': invoice.invoice_number,
-                'balance_due': str(invoice.balance_due or invoice.total),
-                'days_overdue': str(days_overdue),
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''Your invoice is now overdue.
 
@@ -1088,17 +1032,7 @@ Due Date: {invoice.due_date} ({days_overdue} days overdue)
 
 Late fees may apply. Please contact us to arrange payment.'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'invoice_number': invoice.invoice_number,
-                'due_date': str(invoice.due_date),
-                'days_overdue': str(days_overdue),
-                'balance_due': str(invoice.balance_due or invoice.total),
-                'total': str(invoice.total),
-                'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
-                'vehicle_display': vehicle_info,
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=invoice.customer.user,
@@ -1108,15 +1042,7 @@ Late fees may apply. Please contact us to arrange payment.'''
             template=template,
             title=title,
             message=message,
-            data={
-                'invoice_id': invoice.id,
-                'invoice_number': invoice.invoice_number,
-                'days_overdue': str(days_overdue),
-                'balance_due': str(invoice.balance_due or invoice.total),
-                'due_date': str(invoice.due_date),
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_info,
-            },
+            data=context,
             related_object_type='invoice',
             related_object_id=invoice.id
         )
@@ -1135,13 +1061,25 @@ Late fees may apply. Please contact us to arrange payment.'''
         # Get payment method display name
         payment_method_display = dict(payment.PAYMENT_METHOD_CHOICES).get(payment.payment_method, payment.payment_method) if hasattr(payment, 'PAYMENT_METHOD_CHOICES') else str(payment.payment_method)
         
+        # Build context
+        context = self._get_default_context()
+        payment_date_str = payment.payment_date.strftime("%B %d, %Y") if hasattr(payment.payment_date, 'strftime') else str(payment.payment_date)
+        context.update({
+            'payment_id': payment.id,
+            'invoice_id': payment.invoice.id,
+            'amount': str(payment.amount),
+            'balance_due': str(payment.invoice.balance_due),
+            'balance_remaining': str(payment.invoice.amount_due),
+            'customer_name': customer_name,
+            'payment_number': payment.payment_number if hasattr(payment, 'payment_number') else str(payment.id),
+            'payment_method': payment_method_display,
+            'invoice_number': payment.invoice.invoice_number,
+            'payment_date': payment_date_str,
+        })
+        
         title = f'Payment Received - ${payment.amount}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'payment_number': payment.payment_number if hasattr(payment, 'payment_number') else str(payment.id),
-                'amount': str(payment.amount),
-                'invoice_number': payment.invoice.invoice_number,
-            })
+            title = self.service._render_template(template.subject, context)
         
         message = f'''Dear {customer_name},
 
@@ -1150,7 +1088,7 @@ Thank you for your payment!
 PAYMENT RECEIPT:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Payment Number: {payment.payment_number if hasattr(payment, 'payment_number') else payment.id}
-Payment Date: {payment.payment_date.strftime("%B %d, %Y") if hasattr(payment.payment_date, 'strftime') else payment.payment_date}
+Payment Date: {payment_date_str}
 Payment Method: {payment_method_display}
 Amount: ${payment.amount}
 
@@ -1166,17 +1104,7 @@ Your payment has been successfully processed. This receipt serves as confirmatio
 Thank you for your business!'''
         
         if template and template.body:
-            payment_date_str = payment.payment_date.strftime("%B %d, %Y") if hasattr(payment.payment_date, 'strftime') else str(payment.payment_date)
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'payment_number': payment.payment_number if hasattr(payment, 'payment_number') else str(payment.id),
-                'payment_date': payment_date_str,
-                'payment_method': payment_method_display,
-                'amount': str(payment.amount),
-                'invoice_number': payment.invoice.invoice_number,
-                'balance_remaining': str(payment.invoice.amount_due),
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context)
         
         notification = Notification.objects.create(
             recipient=payment.invoice.customer.user,
@@ -1186,17 +1114,7 @@ Thank you for your business!'''
             priority='normal',
             title=title,
             message=message,
-            data={
-                'payment_id': payment.id,
-                'invoice_id': payment.invoice.id,
-                'amount': str(payment.amount),
-                'balance_due': str(payment.invoice.balance_due),
-                'balance_remaining': str(payment.invoice.amount_due),
-                'customer_name': customer_name,
-                'payment_number': payment.payment_number if hasattr(payment, 'payment_number') else str(payment.id),
-                'payment_method': payment_method_display,
-                'invoice_number': payment.invoice.invoice_number,
-            },
+            data=context,
             related_object_type='payment',
             related_object_id=payment.id
         )
@@ -1206,36 +1124,191 @@ Thank you for your business!'''
     
     def low_stock_alert(self, part, recipient):
         """Alert parts manager about low stock"""
-        notification = NotificationHelper.low_stock_alert(
-            part=part,
-            recipient=recipient
+        template = self._get_template('low_stock_alert', 'in_app')
+        
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'part_id': part.id,
+            'part_number': part.part_number,
+            'part_name': part.name,
+            'quantity': str(part.quantity_in_stock),
+            'reorder_point': str(part.reorder_point),
+            'current_stock': str(part.quantity_in_stock),
+        })
+        
+        title = f'Low Stock Alert: {part.name}'
+        if template and template.push_title:
+             title = self.service._render_template(template.push_title, context)
+             
+        message = f'Part {part.part_number} ({part.name}) is low in stock. Current: {part.quantity_in_stock}, Reorder point: {part.reorder_point}'
+        if template and template.push_body:
+             message = self.service._render_template(template.push_body, context)
+             
+        notification = Notification.objects.create(
+            recipient=recipient,
+            notification_type='inventory',
+            channel='in_app',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='part',
+            related_object_id=part.id
         )
         self.service.send_notification(notification)
     
     def parts_received(self, purchase_order):
         """Notify requester that ordered parts have been received"""
-        if purchase_order.requested_by:
-            notification = Notification.objects.create(
-                recipient=purchase_order.requested_by,
-                notification_type='inventory',
-                channel='in_app',
-                priority='normal',
-                title=f'Parts Received - PO {purchase_order.po_number}',
-                message=f'''Your ordered parts have been received.
+        if not purchase_order.requested_by:
+            return
+            
+        # No specific template for parts_received yet, use generic logic or add type later
+        # Using in_app mostly
+        
+        context = self._get_default_context()
+        context.update({
+            'po_id': purchase_order.id,
+            'po_number': purchase_order.po_number,
+            'supplier': purchase_order.supplier.name,
+            'status': purchase_order.get_status_display(),
+        })
+        
+        notification = Notification.objects.create(
+            recipient=purchase_order.requested_by,
+            notification_type='inventory',
+            channel='in_app',
+            priority='normal',
+            title=f'Parts Received - PO {purchase_order.po_number}',
+            message=f'''Your ordered parts have been received.
 
 PO Number: {purchase_order.po_number}
-Supplier: {purchase_order.supplier}
+Supplier: {purchase_order.supplier.name}
 Status: {purchase_order.get_status_display()}
 
 Parts are now available for use.''',
-                data={
-                    'po_id': purchase_order.id,
-                    'po_number': purchase_order.po_number,
-                },
-                related_object_type='purchase_order',
-                related_object_id=purchase_order.id
-            )
-            self.service.send_notification(notification)
+            data=context,
+            related_object_type='purchase_order',
+            related_object_id=purchase_order.id
+        )
+        self.service.send_notification(notification)
+
+    def purchase_order_approval_request(self, purchase_order, recipient):
+        """Notify manager that purchase order requires approval"""
+        if not recipient:
+            return
+
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'po_id': purchase_order.id,
+            'po_number': purchase_order.po_number,
+            'supplier': purchase_order.supplier.name,
+            'total': str(purchase_order.total) if purchase_order.total else '0.00',
+            'requested_by': purchase_order.created_by.get_full_name() if purchase_order.created_by else 'Unknown',
+        })
+        
+        title = f'Approval Required: PO {purchase_order.po_number}'
+        message = f'''Purchase Order {purchase_order.po_number} from {purchase_order.supplier.name} requires your approval.
+
+Total: ${context['total']}
+Requested By: {context['requested_by']}
+
+Please review and approve.'''
+
+        # Send Email
+        # Check if template exists (maybe custom type or generic)
+        # For now, default to hardcoded but check for 'purchase_order_approval' just in case
+        template = self._get_template('purchase_order_approval', 'email')
+        if template:
+             if template.subject: title = self.service._render_template(template.subject, context)
+             if template.body: message = self.service._render_template(template.body, context)
+
+        notification = Notification.objects.create(
+            recipient=recipient,
+            notification_type='inventory',
+            channel='email',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='purchase_order',
+            related_object_id=purchase_order.id
+        )
+        self.service.send_notification(notification)
+        
+        # In-App
+        in_app_notification = Notification.objects.create(
+            recipient=recipient,
+            notification_type='inventory',
+            channel='in_app',
+            priority='high',
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='purchase_order',
+            related_object_id=purchase_order.id
+        )
+        self.service.send_notification(in_app_notification)
+
+    def stock_transfer_approval_request(self, transfer, recipient):
+        """Notify manager that stock transfer requires approval"""
+        if not recipient:
+            return
+
+        # Build context
+        context = self._get_default_context()
+        context.update({
+            'transfer_id': transfer.id,
+            'transfer_number': transfer.transfer_number,
+            'source_branch': transfer.source_branch.name,
+            'destination_branch': transfer.destination_branch.name,
+            'requested_by': transfer.created_by.get_full_name() if transfer.created_by else 'Unknown',
+        })
+        
+        title = f'Approval Required: Transfer {transfer.transfer_number}'
+        message = f'''Stock Transfer {transfer.transfer_number} requires your approval.
+
+From: {transfer.source_branch.name}
+To: {transfer.destination_branch.name}
+Requested By: {context['requested_by']}
+
+Please review and approve.'''
+
+        template = self._get_template('stock_transfer_approval', 'email')
+        if template:
+             if template.subject: title = self.service._render_template(template.subject, context)
+             if template.body: message = self.service._render_template(template.body, context)
+
+        notification = Notification.objects.create(
+            recipient=recipient,
+            notification_type='inventory',
+            channel='email',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='transfer',
+            related_object_id=transfer.id
+        )
+        self.service.send_notification(notification)
+        
+        # In-App
+        in_app_notification = Notification.objects.create(
+            recipient=recipient,
+            notification_type='inventory',
+            channel='in_app',
+            priority='high',
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='transfer',
+            related_object_id=transfer.id
+        )
+        self.service.send_notification(in_app_notification)
     
     # ==================== INSPECTION NOTIFICATIONS ====================
     
@@ -1255,7 +1328,8 @@ Parts are now available for use.''',
         portal_link = f"{frontend_url}/portal/inspections/{inspection.id}/"
         
         # Prepare context data
-        context_data = {
+        context_data = self._get_default_context()
+        context_data.update({
             'customer_name': customer_name,
             'inspection_number': inspection.inspection_number,
             'vehicle_display': vehicle_display,
@@ -1264,8 +1338,7 @@ Parts are now available for use.''',
             'portal_link': portal_link,
             'overall_result': inspection.get_overall_result_display() if hasattr(inspection, 'get_overall_result_display') and inspection.overall_result else "Pending",
             'overall_result_display': inspection.get_overall_result_display() if hasattr(inspection, 'get_overall_result_display') and inspection.overall_result else "Pending",
-            'company_name': self._get_company_name(),
-        }
+        })
         
         title = f'Inspection Completed - {inspection.inspection_number}'
         if template and template.subject:
@@ -1336,12 +1409,21 @@ Thank you for choosing our service.'''
             if send_email:
                 template = self._get_template('roadside_requested', 'email')
                 
+                # Build context
+                context = self._get_default_context()
+                context.update({
+                    'request_id': roadside_request.id,
+                    'request_number': roadside_request.request_number,
+                    'service_type': roadside_request.service_type,
+                    'service_type_display': roadside_request.get_service_type_display(),
+                    'customer_name': customer_name,
+                    'vehicle_display': vehicle_display,
+                    'breakdown_location': roadside_request.breakdown_location,
+                })
+                
                 title = f'Roadside Assistance Requested - {roadside_request.request_number}'
                 if template and template.subject:
-                    title = self.service._render_template(template.subject, {
-                        'request_number': roadside_request.request_number,
-                        'customer_name': customer_name,
-                    })
+                    title = self.service._render_template(template.subject, context)
                 
                 message = f'''Your roadside assistance request has been received.
 
@@ -1352,14 +1434,7 @@ Location: {roadside_request.breakdown_location}
 
 We'll dispatch a service provider shortly.'''
                 if template and template.body:
-                    message = self.service._render_template(template.body, {
-                        'customer_name': customer_name,
-                        'request_number': roadside_request.request_number,
-                        'service_type': roadside_request.get_service_type_display(),
-                        'vehicle_display': vehicle_display,
-                        'breakdown_location': roadside_request.breakdown_location,
-                        'company_name': self._get_company_name(),
-                    })
+                    message = self.service._render_template(template.body, context)
                 
                 notification = Notification.objects.create(
                     recipient=roadside_request.customer.user,
@@ -1369,13 +1444,7 @@ We'll dispatch a service provider shortly.'''
                     template=template,
                     title=title,
                     message=message,
-                    data={
-                        'request_id': roadside_request.id,
-                        'request_number': roadside_request.request_number,
-                        'service_type': roadside_request.service_type,
-                        'customer_name': customer_name,
-                        'vehicle_display': vehicle_display,
-                    },
+                    data=context,
                     related_object_type='roadside',
                     related_object_id=roadside_request.id
                 )
@@ -1473,11 +1542,23 @@ Requires dispatch assignment.''',
             if send_email:
                 template = self._get_template('roadside_dispatched', 'email')
                 
+                # Build context
+                context = self._get_default_context()
+                context.update({
+                    'request_id': roadside_request.id,
+                    'request_number': roadside_request.request_number,
+                    'technician_id': roadside_request.assigned_technician.id if roadside_request.assigned_technician else None,
+                    'technician_name': technician_name,
+                    'customer_name': customer_name,
+                    'vehicle_display': vehicle_display,
+                    'request_number': roadside_request.request_number,
+                    'service_type': roadside_request.get_service_type_display(),
+                    'breakdown_location': roadside_request.breakdown_location,
+                })
+                
                 title = f'Service Provider Dispatched - {roadside_request.request_number}'
                 if template and template.subject:
-                    title = self.service._render_template(template.subject, {
-                        'request_number': roadside_request.request_number,
-                    })
+                    title = self.service._render_template(template.subject, context)
                 
                 message = f'''A service provider has been dispatched to your location.
 
@@ -1489,15 +1570,7 @@ Location: {roadside_request.breakdown_location}
 
 They should arrive shortly.'''
                 if template and template.body:
-                    message = self.service._render_template(template.body, {
-                        'customer_name': customer_name,
-                        'request_number': roadside_request.request_number,
-                        'technician_name': technician_name,
-                        'service_type': roadside_request.get_service_type_display(),
-                        'vehicle_display': vehicle_display,
-                        'breakdown_location': roadside_request.breakdown_location,
-                        'company_name': self._get_company_name(),
-                    })
+                    message = self.service._render_template(template.body, context)
                 
                 notification = Notification.objects.create(
                     recipient=roadside_request.customer.user,
@@ -1507,12 +1580,7 @@ They should arrive shortly.'''
                     template=template,
                     title=title,
                     message=message,
-                    data={
-                        'request_id': roadside_request.id,
-                        'request_number': roadside_request.request_number,
-                        'technician_id': roadside_request.assigned_technician.id if roadside_request.assigned_technician else None,
-                        'customer_name': customer_name,
-                    },
+                    data=context,
                     related_object_type='roadside',
                     related_object_id=roadside_request.id
                 )

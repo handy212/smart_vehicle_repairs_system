@@ -36,6 +36,8 @@ class NotificationTemplate(models.Model):
         ('user_welcome', 'User Welcome'),
         ('password_reset', 'Password Reset'),
         ('password_reset_link', 'Password Reset Link'),
+        ('purchase_order_approval', 'Purchase Order Approval'),
+        ('stock_transfer_approval', 'Stock Transfer Approval'),
         ('custom', 'Custom'),
     ]
     
