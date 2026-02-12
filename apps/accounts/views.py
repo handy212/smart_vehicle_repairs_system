@@ -71,6 +71,8 @@ class UserViewSet(viewsets.ModelViewSet):
             return [AllowAny()]  # Allow user registration
         elif self.action == 'forgot_password':
             return [AllowAny()]  # Allow public password reset request
+        elif self.action == 'confirm_reset_password':
+            return [AllowAny()]  # Allow public password reset confirmation
         
         # For other actions, require authentication and appropriate permissions
         if self.action == 'list' or self.action == 'retrieve':
@@ -131,6 +133,20 @@ class UserViewSet(viewsets.ModelViewSet):
             
         return Response({
             'detail': 'If an account exists with this email, a password reset link has been sent.'
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def confirm_reset_password(self, request):
+        """
+        Public endpoint to confirm password reset with token.
+        """
+        from .serializers import PasswordResetConfirmSerializer
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
+        return Response({
+            'detail': 'Password has been reset successfully. You can now log in with your new password.'
         }, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get', 'put', 'patch'])
@@ -287,13 +303,19 @@ class UserViewSet(viewsets.ModelViewSet):
         from django.contrib.auth.tokens import default_token_generator
         from django.utils.http import urlsafe_base64_encode
         from django.utils.encoding import force_bytes
+        from django.conf import settings
         
         # Generate reset token
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         
-        # Build reset link
-        reset_link = request.build_absolute_uri(f'/accounts/reset/{uid}/{token}/')
+        # Build reset link pointing to the frontend
+        # Try FRONTEND_URL, then FRONTEND_BASE_URL, then fallback to request host
+        frontend_url = getattr(settings, 'FRONTEND_URL', getattr(settings, 'FRONTEND_BASE_URL', None))
+        if not frontend_url:
+            frontend_url = f"{request.scheme}://{request.get_host()}"
+            
+        reset_link = f"{frontend_url}/login/reset-password/{uid}/{token}/"
         
         triggers = NotificationTriggers()
         triggers.password_reset_link(user, reset_link, request)
@@ -336,6 +358,22 @@ class GoogleAuthView(viewsets.GenericViewSet):
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
+    def resend_otp(self, request):
+        """
+        Resend the verification code via email.
+        """
+        email = request.data.get('email')
+        if not email:
+            return Response({"detail": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from apps.accounts.services import OTPService
+        success = OTPService.generate_otp(email)
+        
+        if success:
+            return Response({"detail": "Verification code resent."}, status=status.HTTP_200_OK)
+        return Response({"detail": "Failed to resend code."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
     def complete_registration(self, request):
         """
         Finalize Google registration with extra info.
@@ -374,39 +412,16 @@ class ManualRegistrationView(viewsets.GenericViewSet):
         
         email = serializer.validated_data['email']
         
-        # Reuse the OTP logic from Google Auth (or move to a service)
-        import random
-        from apps.accounts.models import RegistrationOTP
-        from django.core.mail import send_mail
-        from django.conf import settings
+        from apps.accounts.services import OTPService
+        success = OTPService.generate_otp(email, first_name=serializer.validated_data.get('first_name'))
         
-        # Generate 6-digit code
-        code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-        
-        # Save/Update OTP in DB
-        RegistrationOTP.objects.update_or_create(
-            email=email,
-            defaults={'otp_code': code, 'is_verified': False}
-        )
-        
-        # Send Email
-        try:
-            subject = f"Your Verification Code: {code}"
-            message = f"Hello {serializer.validated_data['first_name']},\n\nYour verification code for Smart Vehicle Repairs is: {code}\n\nPlease enter this code to complete your registration.\n\nThank you!"
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
-            )
-        except Exception as e:
+        if success:
+            return Response({
+                "detail": "Verification code sent to your email.",
+                "email": email
+            }, status=status.HTTP_200_OK)
+        else:
              return Response({"detail": "Failed to send verification code."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-             
-        return Response({
-            "detail": "Verification code sent to your email.",
-            "email": email
-        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
     def verify(self, request):

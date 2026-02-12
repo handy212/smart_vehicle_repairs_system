@@ -49,27 +49,36 @@ class GoogleAuthSerializer(serializers.Serializer):
             }
             
             logger.info(f"Attempting token exchange for client_id: {client_id[:10]}...")
+            
+            # Debug: Log the redirect_uri being sent
+            logger.debug(f"Redirect URI: {data['redirect_uri']}")
+            
             response = py_requests.post(token_endpoint, data=data)
             token_data = response.json()
             
-            if 'error' in token_data:
-                logger.error(f"Google Token Exchange Failed: {token_data}")
-                raise serializers.ValidationError(f"Google Token Exchange Error: {token_data.get('error_description', token_data['error'])}")
+            if response.status_code != 200 or 'error' in token_data:
+                logger.error(f"Google Token Exchange Failed (Status {response.status_code}): {token_data}")
+                error_msg = token_data.get('error_description', token_data.get('error', 'Unknown error'))
+                raise serializers.ValidationError(f"Google Token Exchange Error: {error_msg}")
             
             id_token_val = token_data.get('id_token')
             if not id_token_val:
                 raise serializers.ValidationError("No ID token returned from Google")
             
             # Verify the ID token we just got
+            # Add clock_skew tolerance to handle "Token used too early" errors
             idinfo = id_token.verify_oauth2_token(
                 id_token_val, 
                 google_requests.Request(), 
-                client_id
+                client_id,
+                clock_skew_in_seconds=10
             )
             
             return idinfo
             
         except Exception as e:
+            import traceback
+            logger.error(f"Google Auth Error: {str(e)}\n{traceback.format_exc()}")
             if isinstance(e, serializers.ValidationError):
                 raise e
             raise serializers.ValidationError(f"Authentication failed: {str(e)}")
@@ -86,38 +95,8 @@ class GoogleAuthSerializer(serializers.Serializer):
         if not email or not google_id:
             raise serializers.ValidationError("Email and Google ID are required")
         
-        import random
-        from apps.accounts.models import RegistrationOTP
-        from django.core.mail import send_mail
-        from django.conf import settings
+        from apps.accounts.services import OTPService
         
-        def send_registration_otp(target_email):
-            # Generate 6-digit code
-            code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-            
-            # Save/Update OTP in DB
-            RegistrationOTP.objects.update_or_create(
-                email=target_email,
-                defaults={'otp_code': code, 'is_verified': False}
-            )
-            
-            # Send Email
-            try:
-                subject = f"Your Verification Code: {code}"
-                message = f"Hello,\n\nYour verification code for Smart Vehicle Repairs is: {code}\n\nPlease enter this code to complete your registration.\n\nThank you!"
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [target_email],
-                    fail_silently=False,
-                )
-                return True
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Failed to send registration OTP: {str(e)}")
-                return False
-
         # Check if user already exists
         user = User.objects.filter(email__iexact=email).first()
         
@@ -138,7 +117,7 @@ class GoogleAuthSerializer(serializers.Serializer):
             is_new_social_user = created and not user.has_usable_password()
 
             if is_new_social_user and not user.phone:
-                send_registration_otp(email)
+                OTPService.generate_otp(email, first_name=user.first_name)
                 return {
                     'registration_required': True,
                     'user_data': {
@@ -160,7 +139,7 @@ class GoogleAuthSerializer(serializers.Serializer):
             }
         
         # User does NOT exist - trigger OTP and flag for registration
-        send_registration_otp(email)
+        OTPService.generate_otp(email, first_name=idinfo.get('given_name'))
         return {
             'registration_required': True,
             'user_data': {
@@ -194,15 +173,17 @@ class GoogleRegistrationCompleteSerializer(serializers.Serializer):
     def create(self, validated_data):
         from django.db import transaction
         from apps.customers.models import Customer
-        from apps.accounts.models import RegistrationOTP
+        from apps.accounts.services import OTPService
         
         email = validated_data['email']
         otp_code = validated_data['otp_code']
         
-        # Verify OTP
-        otp_record = RegistrationOTP.objects.filter(email=email, otp_code=otp_code).first()
-        if not otp_record:
-            raise serializers.ValidationError({"otp_code": "Invalid or expired verification code."})
+        # Verify OTP using service
+        is_valid, result = OTPService.verify_otp(email, otp_code)
+        if not is_valid:
+            raise serializers.ValidationError({"otp_code": result})
+        
+        otp_record = result
         
         with transaction.atomic():
             # Mark OTP as verified/used

@@ -177,5 +177,13 @@ class RegistrationOTP(models.Model):
         verbose_name = 'Registration OTP'
         verbose_name_plural = 'Registration OTPs'
 
+    @property
+    def is_expired(self):
+        """OTP expires after 15 minutes."""
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() > self.created_at + timedelta(minutes=15)
+
     def __str__(self):
         return f"OTP for {self.email} - {self.otp_code}"
+

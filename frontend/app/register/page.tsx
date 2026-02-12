@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Car, Eye, EyeOff, MoveLeft, Phone, Building2 } from "lucide-react";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
+import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
 
 const registerSchema = z.object({
     first_name: z.string().min(2, "First name must be at least 2 characters"),
@@ -59,6 +60,9 @@ export default function RegisterPage() {
     const [pendingData, setPendingData] = useState<RegisterFormData | null>(null);
     // OTP input state
     const [otpCode, setOtpCode] = useState("");
+
+    // Google Registration State
+    const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
 
     // reCAPTCHA state
     const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
@@ -294,218 +298,234 @@ export default function RegisterPage() {
                 {/* Right side: Registration Form */}
                 <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
                     <div className="w-full max-w-md space-y-4 lg:space-y-6 animate-in fade-in zoom-in-95 duration-500">
-                        <button
-                            onClick={() => currentStep === 'otp' ? setCurrentStep('form') : router.push("/login")}
-                            className="flex items-center text-xs lg:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-2 group"
-                        >
-                            <MoveLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-2 transition-transform group-hover:-translate-x-1" />
-                            {currentStep === 'otp' ? 'Back to details' : 'Back to login'}
-                        </button>
+                        {regData ? (
+                            <CompleteRegistrationForm
+                                userData={regData.user_data}
+                                onSuccess={(authData) => {
+                                    setUser(authData.user);
+                                    router.push(authData.user.role === "customer" ? "/portal" : "/dashboard");
+                                }}
+                                onCancel={() => setRegData(null)}
+                            />
+                        ) : (
+                            <>
+                                <button
+                                    onClick={() => currentStep === 'otp' ? setCurrentStep('form') : router.push("/login")}
+                                    className="flex items-center text-xs lg:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-2 group"
+                                >
+                                    <MoveLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+                                    {currentStep === 'otp' ? 'Back to details' : 'Back to login'}
+                                </button>
 
-                        <div className="text-center lg:text-left">
-                            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{branding.site_name}</h2>
-                            <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
-                                {currentStep === 'otp'
-                                    ? `We sent a code to ${pendingData?.email}`
-                                    : 'Join thousands of professionals today.'}
-                            </p>
-                        </div>
+                                <div className="text-center lg:text-left">
+                                    <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{branding.site_name}</h2>
+                                    <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
+                                        {currentStep === 'otp'
+                                            ? `We sent a code to ${pendingData?.email}`
+                                            : 'Join thousands of professionals today.'}
+                                    </p>
+                                </div>
 
-                        <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden">
-                            <CardContent className="p-5 lg:p-8">
-                                {error && (
-                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium mb-4 animate-in shake duration-300">
-                                        {error}
-                                    </div>
-                                )}
-
-                                {currentStep === 'form' ? (
-                                    <form onSubmit={handleSubmit(onInitiate)} className="space-y-3 lg:space-y-4">
-                                        <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">First Name</label>
-                                                <Input
-                                                    {...register("first_name")}
-                                                    placeholder="John"
-                                                    className="h-9 lg:h-10 rounded-xl border-border"
-                                                />
-                                                {errors.first_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.first_name.message}</p>}
+                                <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden">
+                                    <CardContent className="p-5 lg:p-8">
+                                        {error && (
+                                            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium mb-4 animate-in shake duration-300">
+                                                {error}
                                             </div>
-                                            <div className="space-y-1">
-                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Last Name</label>
-                                                <Input
-                                                    {...register("last_name")}
-                                                    placeholder="Doe"
-                                                    className="h-9 lg:h-10 rounded-xl border-border"
-                                                />
-                                                {errors.last_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.last_name.message}</p>}
-                                            </div>
-                                        </div>
+                                        )}
 
-                                        <div className="space-y-1">
-                                            <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Email Address</label>
-                                            <Input
-                                                type="email"
-                                                {...register("email")}
-                                                placeholder="john@example.com"
-                                                className="h-9 lg:h-10 rounded-xl border-border"
-                                            />
-                                            {errors.email && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.email.message}</p>}
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Phone</label>
-                                                <div className="relative">
-                                                    <Phone className="absolute left-3 top-2.5 lg:top-3 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
-                                                    <Input
-                                                        {...register("phone")}
-                                                        placeholder="(555) 000-0000"
-                                                        className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
-                                                    />
+                                        {currentStep === 'form' ? (
+                                            <form onSubmit={handleSubmit(onInitiate)} className="space-y-3 lg:space-y-4">
+                                                <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                                                    <div className="space-y-1">
+                                                        <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">First Name</label>
+                                                        <Input
+                                                            {...register("first_name")}
+                                                            placeholder="John"
+                                                            className="h-9 lg:h-10 rounded-xl border-border"
+                                                        />
+                                                        {errors.first_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.first_name.message}</p>}
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Last Name</label>
+                                                        <Input
+                                                            {...register("last_name")}
+                                                            placeholder="Doe"
+                                                            className="h-9 lg:h-10 rounded-xl border-border"
+                                                        />
+                                                        {errors.last_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.last_name.message}</p>}
+                                                    </div>
                                                 </div>
-                                                {errors.phone && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.phone.message}</p>}
-                                            </div>
 
-                                            <div className="space-y-1">
-                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Account Type</label>
-                                                <Select
-                                                    onValueChange={(val) => setValue("customer_type", val as any)}
-                                                    defaultValue="individual"
+                                                <div className="space-y-1">
+                                                    <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Email Address</label>
+                                                    <Input
+                                                        type="email"
+                                                        {...register("email")}
+                                                        placeholder="john@example.com"
+                                                        className="h-9 lg:h-10 rounded-xl border-border"
+                                                    />
+                                                    {errors.email && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.email.message}</p>}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+                                                    <div className="space-y-1">
+                                                        <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Phone</label>
+                                                        <div className="relative">
+                                                            <Phone className="absolute left-3 top-2.5 lg:top-3 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
+                                                            <Input
+                                                                {...register("phone")}
+                                                                placeholder="(555) 000-0000"
+                                                                className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
+                                                            />
+                                                        </div>
+                                                        {errors.phone && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.phone.message}</p>}
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Account Type</label>
+                                                        <Select
+                                                            onValueChange={(val) => setValue("customer_type", val as any)}
+                                                            defaultValue="individual"
+                                                        >
+                                                            <SelectTrigger className="h-9 lg:h-10 rounded-xl border-border">
+                                                                <SelectValue placeholder="Select type" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="individual">Individual</SelectItem>
+                                                                <SelectItem value="business">Business</SelectItem>
+                                                                <SelectItem value="fleet">Fleet Owner</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+
+                                                {(customerType === "business" || customerType === "fleet") && (
+                                                    <div className="space-y-1 animate-in slide-in-from-top-2 fade-in">
+                                                        <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Company Name</label>
+                                                        <div className="relative">
+                                                            <Building2 className="absolute left-3 top-2.5 lg:top-3 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
+                                                            <Input
+                                                                {...register("company_name")}
+                                                                placeholder="Acme Inc."
+                                                                className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
+                                                            />
+                                                        </div>
+                                                        {errors.company_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.company_name.message}</p>}
+                                                    </div>
+                                                )}
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+                                                    <div className="space-y-1">
+                                                        <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Password</label>
+                                                        <div className="relative">
+                                                            <Input
+                                                                type={showPassword ? "text" : "password"}
+                                                                {...register("password")}
+                                                                placeholder="••••••••"
+                                                                className="h-9 lg:h-10 rounded-xl border-border pr-10 lg:pr-12"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowPassword(!showPassword)}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                                                            >
+                                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                            </button>
+                                                        </div>
+                                                        {errors.password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.password.message}</p>}
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Confirm</label>
+                                                        <Input
+                                                            type="password"
+                                                            {...register("confirm_password")}
+                                                            placeholder="••••••••"
+                                                            className="h-9 lg:h-10 rounded-xl border-border"
+                                                        />
+                                                        {errors.confirm_password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.confirm_password.message}</p>}
+                                                    </div>
+                                                </div>
+
+                                                {/* reCAPTCHA */}
+                                                {recaptchaRequired && (
+                                                    <div className="flex justify-center py-1">
+                                                        <ReCAPTCHAComponent
+                                                            siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                                                            onChange={handleRecaptchaChange}
+                                                            theme="light"
+                                                            size="compact"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <Button
+                                                    type="submit"
+                                                    className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg mt-1 transition-all hover:opacity-90 active:scale-95"
+                                                    style={{ backgroundColor: branding.primary_color }}
+                                                    disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
                                                 >
-                                                    <SelectTrigger className="h-9 lg:h-10 rounded-xl border-border">
-                                                        <SelectValue placeholder="Select type" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="individual">Individual</SelectItem>
-                                                        <SelectItem value="business">Business</SelectItem>
-                                                        <SelectItem value="fleet">Fleet Owner</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
+                                                    {isLoading ? "Checking..." : "Continue"}
+                                                </Button>
 
-                                        {(customerType === "business" || customerType === "fleet") && (
-                                            <div className="space-y-1 animate-in slide-in-from-top-2 fade-in">
-                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Company Name</label>
-                                                <div className="relative">
-                                                    <Building2 className="absolute left-3 top-2.5 lg:top-3 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
-                                                    <Input
-                                                        {...register("company_name")}
-                                                        placeholder="Acme Inc."
-                                                        className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
-                                                    />
+                                                <div className="relative my-4 lg:my-6 text-center text-xs lg:text-sm font-medium text-muted-foreground line-through">
+                                                    <span className="bg-card px-4 relative z-10 no-underline">OR</span>
+                                                    <hr className="absolute top-1/2 left-0 w-full border-border" />
                                                 </div>
-                                                {errors.company_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.company_name.message}</p>}
-                                            </div>
-                                        )}
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Password</label>
-                                                <div className="relative">
-                                                    <Input
-                                                        type={showPassword ? "text" : "password"}
-                                                        {...register("password")}
-                                                        placeholder="••••••••"
-                                                        className="h-9 lg:h-10 rounded-xl border-border pr-10 lg:pr-12"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowPassword(!showPassword)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                                    >
-                                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                    </button>
+                                                <GoogleLoginButton
+                                                    onSuccess={(data) => {
+                                                        setUser(data.user);
+                                                        router.push(data.user.role === "customer" ? "/portal" : "/dashboard");
+                                                    }}
+                                                    onRegistrationRequired={(data) => setRegData(data)}
+                                                    onError={(msg) => setError(msg)}
+                                                />
+                                            </form>
+                                        ) : (
+                                            <form onSubmit={onVerify} className="space-y-6">
+                                                <div className="space-y-4">
+                                                    <div className="bg-primary/10 p-4 rounded-xl text-center">
+                                                        <p className="text-sm text-primary mb-2">Enter the 6-digit code sent to your email</p>
+                                                        <Input
+                                                            value={otpCode}
+                                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                            className="text-center text-2xl tracking-[0.5em] font-mono h-14 rounded-xl border-orange-200 focus:border-primary"
+                                                            placeholder="000000"
+                                                            autoFocus
+                                                        />
+                                                    </div>
                                                 </div>
-                                                {errors.password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.password.message}</p>}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Confirm</label>
-                                                <Input
-                                                    type="password"
-                                                    {...register("confirm_password")}
-                                                    placeholder="••••••••"
-                                                    className="h-9 lg:h-10 rounded-xl border-border"
-                                                />
-                                                {errors.confirm_password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.confirm_password.message}</p>}
-                                            </div>
-                                        </div>
 
-                                        {/* reCAPTCHA */}
-                                        {recaptchaRequired && (
-                                            <div className="flex justify-center py-1">
-                                                <ReCAPTCHAComponent
-                                                    siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-                                                    onChange={handleRecaptchaChange}
-                                                    theme="light"
-                                                    size="compact"
-                                                />
-                                            </div>
+                                                <Button
+                                                    type="submit"
+                                                    className="w-full h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90"
+                                                    style={{ backgroundColor: branding.primary_color }}
+                                                    disabled={isLoading || otpCode.length !== 6}
+                                                >
+                                                    {isLoading ? "Verifying..." : "Create Account"}
+                                                </Button>
+
+                                                <p className="text-center text-sm text-muted-foreground">
+                                                    Didn't receive code? <button type="button" onClick={() => handleSubmit(onInitiate)()} className="text-primary font-semibold hover:underline">Resend</button>
+                                                </p>
+                                            </form>
                                         )}
+                                    </CardContent>
+                                </Card>
 
-                                        <Button
-                                            type="submit"
-                                            className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg mt-1 transition-all hover:opacity-90 active:scale-95"
-                                            style={{ backgroundColor: branding.primary_color }}
-                                            disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
-                                        >
-                                            {isLoading ? "Checking..." : "Continue"}
-                                        </Button>
-
-                                        <div className="relative my-4 lg:my-6 text-center text-xs lg:text-sm font-medium text-muted-foreground line-through">
-                                            <span className="bg-card px-4 relative z-10 no-underline">OR</span>
-                                            <hr className="absolute top-1/2 left-0 w-full border-border" />
-                                        </div>
-
-                                        <GoogleLoginButton
-                                            onSuccess={() => router.push("/portal")}
-                                            onRegistrationRequired={() => { }}
-                                            onError={(msg) => setError(msg)}
-                                        />
-                                    </form>
-                                ) : (
-                                    <form onSubmit={onVerify} className="space-y-6">
-                                        <div className="space-y-4">
-                                            <div className="bg-primary/10 p-4 rounded-xl text-center">
-                                                <p className="text-sm text-primary mb-2">Enter the 6-digit code sent to your email</p>
-                                                <Input
-                                                    value={otpCode}
-                                                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                                    className="text-center text-2xl tracking-[0.5em] font-mono h-14 rounded-xl border-orange-200 focus:border-primary"
-                                                    placeholder="000000"
-                                                    autoFocus
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <Button
-                                            type="submit"
-                                            className="w-full h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90"
-                                            style={{ backgroundColor: branding.primary_color }}
-                                            disabled={isLoading || otpCode.length !== 6}
-                                        >
-                                            {isLoading ? "Verifying..." : "Create Account"}
-                                        </Button>
-
-                                        <p className="text-center text-sm text-muted-foreground">
-                                            Didn't receive code? <button type="button" onClick={() => handleSubmit(onInitiate)()} className="text-primary font-semibold hover:underline">Resend</button>
-                                        </p>
-                                    </form>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        <p className="text-center text-sm lg:text-base text-muted-foreground">
-                            Already have an account?{" "}
-                            <button
-                                onClick={() => router.push("/login")}
-                                className="font-bold underline-offset-4 hover:underline"
-                                style={{ color: branding.primary_color }}
-                            >
-                                Sign in instead
-                            </button>
-                        </p>
+                                <p className="text-center text-sm lg:text-base text-muted-foreground">
+                                    Already have an account?{" "}
+                                    <button
+                                        onClick={() => router.push("/login")}
+                                        className="font-bold underline-offset-4 hover:underline"
+                                        style={{ color: branding.primary_color }}
+                                    >
+                                        Sign in instead
+                                    </button>
+                                </p>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

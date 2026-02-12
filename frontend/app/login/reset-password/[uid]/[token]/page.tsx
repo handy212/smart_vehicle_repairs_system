@@ -1,29 +1,30 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Car, MoveLeft, MailCheck } from "lucide-react";
-import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
+import { Car, MoveLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { useBranding } from "@/lib/hooks/useBranding";
 
 const DEFAULT_HERO_IMAGE = "/images/login-hero.png";
 
-export default function ForgotPasswordPage() {
+export default function ResetPasswordPage() {
     const router = useRouter();
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [email, setEmail] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-    const [isMounted, setIsMounted] = useState(false);
+    const params = useParams();
+    const uid = params.uid as string;
+    const token = params.token as string;
 
     const { siteName, primaryColor, loginBackground, logoSrc, getMediaUrl } = useBranding("public");
+
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -31,54 +32,41 @@ export default function ForgotPasswordPage() {
         document.documentElement.classList.remove('dark');
     }, []);
 
-    const { data: integrations } = useQuery<{
-        recaptcha_site_key?: string;
-        recaptcha_enabled?: string;
-    }>({
-        queryKey: ["settings", "integrations", "public"],
-        queryFn: () => adminApi.settings.publicIntegrations(),
-        staleTime: 5 * 60 * 1000,
-        retry: 2,
-    });
-
-    // reCAPTCHA is required when it's enabled AND a site key is available
-    const recaptchaRequired =
-        integrations?.recaptcha_enabled === "true" &&
-        !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
-
     const heroImage = loginBackground
         ? getMediaUrl(loginBackground)
         : DEFAULT_HERO_IMAGE;
 
-    const handleRecaptchaChange = (token: string | null) => {
-        setRecaptchaToken(token);
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            await authApi.forgotPassword(email, recaptchaToken || undefined);
+            await authApi.confirmResetPassword({
+                uid,
+                token,
+                new_password: password,
+                new_password_confirm: confirmPassword
+            });
             setIsSubmitted(true);
-        } catch (err: unknown) {
-            console.error("Forgot Password error:", err);
-
-            // Extract meaningful error message
-            const axiosError = err as { response?: { data?: Record<string, unknown>; status?: number } };
-            const data = axiosError?.response?.data;
-
+        } catch (err: any) {
+            console.error("Reset Password error:", err);
+            const data = err?.response?.data;
             if (data) {
                 const message =
                     (typeof data.detail === "string" && data.detail) ||
-                    (typeof data.recaptcha_token === "string" && data.recaptcha_token) ||
-                    (Array.isArray(data.recaptcha_token) && data.recaptcha_token[0]) ||
-                    (typeof data.email === "string" && data.email) ||
-                    (Array.isArray(data.email) && data.email[0]) ||
-                    null;
-
-                setError(message || "Something went wrong. Please try again.");
+                    (typeof data.new_password === "string" && data.new_password) ||
+                    (Array.isArray(data.new_password) && data.new_password[0]) ||
+                    (typeof data.non_field_errors === "string" && data.non_field_errors) ||
+                    (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
+                    "Invalid or expired reset link.";
+                setError(message);
             } else {
                 setError("Unable to connect. Please check your internet and try again.");
             }
@@ -127,16 +115,16 @@ export default function ForgotPasswordPage() {
 
                     <div className="relative z-10 space-y-4">
                         <h1 className="text-5xl font-extrabold text-white leading-tight">
-                            Recover Your <br />
-                            <span style={{ color: '#bfdbfe' }}>Access</span>
+                            Secure Your <br />
+                            <span style={{ color: '#bfdbfe' }}>Account</span>
                         </h1>
                         <p className="text-xl text-white/90 max-w-md">
-                            Enter your email and we'll send you a link to reset your password.
+                            Create a strong, new password to regain access to your account.
                         </p>
                     </div>
                 </div>
 
-                {/* Right side: Forgot Password Form */}
+                {/* Right side: Reset Password Form */}
                 <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
                     <div className="w-full max-w-sm space-y-6 animate-in fade-in duration-500">
                         <button
@@ -150,9 +138,7 @@ export default function ForgotPasswordPage() {
                         <div className="text-center lg:text-left">
                             <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{siteName}</h2>
                             <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
-                                {!isSubmitted
-                                    ? "No worries! We'll send you reset instructions."
-                                    : `Instructions have been sent to ${email}`}
+                                Reset your password to continue.
                             </p>
                         </div>
 
@@ -160,64 +146,69 @@ export default function ForgotPasswordPage() {
                             {!isSubmitted ? (
                                 <div className="space-y-4 lg:space-y-6">
                                     <div>
-                                        <h2 className="text-xl lg:text-2xl font-bold text-foreground">Forgot Password</h2>
+                                        <h2 className="text-xl lg:text-2xl font-bold text-foreground">Set New Password</h2>
                                         <p className="mt-1 lg:mt-2 text-xs lg:text-sm text-muted-foreground">
-                                            Enter the email address associated with your account.
+                                            Please enter and confirm your new password.
                                         </p>
                                     </div>
 
                                     {error && (
-                                        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
-                                            {error}
+                                        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-start gap-2 animate-in shake duration-300">
+                                            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                            <span>{error}</span>
                                         </div>
                                     )}
 
                                     <form onSubmit={handleSubmit} className="space-y-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Email Address</label>
+                                            <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">New Password</label>
                                             <Input
-                                                type="email"
+                                                type="password"
                                                 required
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                placeholder="john@example.com"
+                                                min={8}
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                placeholder="••••••••"
                                                 className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
                                                 style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
                                                 disabled={isLoading}
                                             />
                                         </div>
 
-                                        {/* reCAPTCHA */}
-                                        {recaptchaRequired && (
-                                            <div className="flex justify-center py-1">
-                                                <ReCAPTCHAComponent
-                                                    siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-                                                    onChange={handleRecaptchaChange}
-                                                    theme="light"
-                                                    size="compact"
-                                                />
-                                            </div>
-                                        )}
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Confirm New Password</label>
+                                            <Input
+                                                type="password"
+                                                required
+                                                min={8}
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                placeholder="••••••••"
+                                                className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
+                                                style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
+                                                disabled={isLoading}
+                                            />
+                                        </div>
 
                                         <Button
                                             type="submit"
                                             className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90 active:scale-95"
                                             style={{ backgroundColor: primaryColor }}
-                                            disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
+                                            disabled={isLoading}
                                         >
-                                            {isLoading ? "Sending..." : "Reset Password"}
+                                            {isLoading ? "Updating..." : "Update Password"}
                                         </Button>
                                     </form>
                                 </div>
                             ) : (
                                 <div className="text-center space-y-6 py-4">
-                                    <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-primary">
-                                        <MailCheck className="w-8 h-8" />
+                                    <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                        <CheckCircle2 className="w-10 h-10" />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-foreground">Check your email</h2>
+                                        <h2 className="text-2xl font-bold text-foreground">Success!</h2>
                                         <p className="mt-2 text-sm text-muted-foreground">
-                                            Instruction have been sent to <strong>{email}</strong>
+                                            Your password has been changed successfully.
                                         </p>
                                     </div>
                                     <Button
@@ -225,18 +216,8 @@ export default function ForgotPasswordPage() {
                                         className="w-full h-11 rounded-xl text-white transition-all hover:opacity-90"
                                         style={{ backgroundColor: primaryColor }}
                                     >
-                                        Return to login
+                                        Log in to your account
                                     </Button>
-                                    <p className="text-sm text-muted-foreground">
-                                        Didn't receive the email?{" "}
-                                        <button
-                                            onClick={() => setIsSubmitted(false)}
-                                            className="font-semibold hover:underline"
-                                            style={{ color: primaryColor }}
-                                        >
-                                            Click to try again
-                                        </button>
-                                    </p>
                                 </div>
                             )}
                         </Card>
