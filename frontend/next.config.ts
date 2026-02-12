@@ -23,6 +23,8 @@ const getApiHost = () => {
 const apiConfig = getApiHost();
 
 const nextConfig: NextConfig = {
+  // Silence Turbopack/webpack config conflict (Next.js 16 defaults to Turbopack)
+  turbopack: {},
   // Ensure Next doesn't infer the workspace root from a different lockfile when deployed
   // alongside the Django project (which may have its own package-lock.json).
   outputFileTracingRoot: path.resolve(__dirname),
@@ -46,14 +48,16 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+    const baseUrl = apiUrl.replace(/\/api\/?$/, "");
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api"}/:path*`,
+        destination: `${apiUrl}/:path*`,
       },
       {
         source: "/media/:path*",
-        destination: `http://localhost:8001/media/:path*`,
+        destination: `${baseUrl}/media/:path*`,
       },
     ];
   },

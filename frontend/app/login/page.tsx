@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,13 +11,13 @@ import { useAuthStore } from "@/store/authStore";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Car, Eye, EyeOff } from "lucide-react";
-import { setSystemThemeMode } from "@/lib/hooks/useTheme";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import Script from "next/script";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -56,12 +56,18 @@ export default function LoginPage() {
 
   const { data: integrations } = useQuery<{
     recaptcha_site_key?: string;
+    recaptcha_enabled?: string;
   }>({
     queryKey: ["settings", "integrations", "public"],
     queryFn: () => adminApi.settings.publicIntegrations(),
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
+
+  // reCAPTCHA is required when it's enabled AND a site key is available
+  const recaptchaRequired =
+    integrations?.recaptcha_enabled === "true" &&
+    !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
   const branding = useMemo(() => {
     if (!brandingSettings) {
@@ -138,9 +144,26 @@ export default function LoginPage() {
       } else {
         router.push("/dashboard");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login error:", err);
-      setError("Invalid email or password");
+
+      // Extract meaningful error message from API response
+      const axiosError = err as { response?: { data?: Record<string, unknown>; status?: number } };
+      const data = axiosError?.response?.data;
+
+      if (data) {
+        // Handle specific field errors (e.g. recaptcha_token, detail)
+        const message =
+          (typeof data.detail === "string" && data.detail) ||
+          (typeof data.recaptcha_token === "string" && data.recaptcha_token) ||
+          (Array.isArray(data.recaptcha_token) && data.recaptcha_token[0]) ||
+          (typeof data.non_field_errors === "object" && Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
+          null;
+
+        setError(message || "Invalid email or password.");
+      } else {
+        setError("Unable to connect. Please check your internet and try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -175,6 +198,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <DynamicPageTitle title="Login" />
+      {/* Google Sign-In SDK — only loaded on login page */}
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+      />
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
         {/* Left side: Hero Image & Branding */}
         <div
@@ -223,17 +251,17 @@ export default function LoginPage() {
         </div>
 
         {/* Right side: Login Form */}
-        <div className="flex items-center justify-center p-8 bg-muted/50">
-          <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
+          <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-center lg:text-left">
-              <h2 className="text-3xl font-bold text-foreground">{branding.site_name}</h2>
-              <p className="mt-2 text-muted-foreground">
+              <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{branding.site_name}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
                 Welcome back! Please enter your details.
               </p>
             </div>
 
             <Card className="border-0 shadow-xl bg-card rounded-2xl overflow-hidden">
-              <CardContent className="p-8">
+              <CardContent className="p-6 lg:p-8">
                 {regData ? (
                   <CompleteRegistrationForm
                     userData={regData.user_data}
@@ -244,27 +272,27 @@ export default function LoginPage() {
                     onCancel={() => setRegData(null)}
                   />
                 ) : (
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 lg:space-y-5">
                     {error && (
-                      <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
+                      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
                         {error}
                       </div>
                     )}
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-foreground ml-1">Email Address</label>
                       <Input
                         type="email"
                         {...register("email")}
                         placeholder="name@company.com"
-                        className="h-12 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
+                        className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
                         style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
                         disabled={isLoading}
                       />
                       {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email.message}</p>}
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <div className="flex justify-between items-center px-1">
                         <label className="text-sm font-semibold text-foreground">Password</label>
                         <button
@@ -281,23 +309,24 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"}
                           {...register("password")}
                           placeholder="••••••••"
-                          className="h-12 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 pr-12 transition-all"
+                          className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 pr-12 transition-all"
                           style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
                           disabled={isLoading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          {showPassword ? <EyeOff className="w-4 h-4 lg:w-5 lg:h-5" /> : <Eye className="w-4 h-4 lg:w-5 lg:h-5" />}
                         </button>
                       </div>
                     </div>
 
                     {/* reCAPTCHA */}
-                    {(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) && (
-                      <div className="flex justify-center py-2">
+                    {recaptchaRequired && (
+                      <div className="flex justify-center py-1">
                         <ReCAPTCHAComponent
                           siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
                           onChange={handleRecaptchaChange}
@@ -310,14 +339,14 @@ export default function LoginPage() {
 
                     <Button
                       type="submit"
-                      className="w-full h-12 rounded-xl text-white font-bold text-lg shadow-lg transition-all hover:opacity-90 active:scale-95"
+                      className="w-full h-10 lg:h-11 rounded-xl text-white font-bold text-base lg:text-lg shadow-lg transition-all hover:opacity-90 active:scale-95"
                       style={{ backgroundColor: branding.primary_color }}
-                      disabled={isLoading}
+                      disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
                     >
                       {isLoading ? "Signing in..." : "Sign in"}
                     </Button>
 
-                    <div className="relative my-8 text-center text-sm font-medium text-muted-foreground line-through">
+                    <div className="relative my-6 lg:my-8 text-center text-sm font-medium text-muted-foreground line-through">
                       <span className="bg-card px-4 relative z-10 no-underline">OR</span>
                       <hr className="absolute top-1/2 left-0 w-full border-border" />
                     </div>
@@ -335,7 +364,7 @@ export default function LoginPage() {
               </CardContent>
             </Card>
 
-            <p className="text-center text-muted-foreground">
+            <p className="text-center text-sm lg:text-base text-muted-foreground">
               Don't have an account?{" "}
               <button
                 type="button"

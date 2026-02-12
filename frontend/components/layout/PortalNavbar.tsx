@@ -1,19 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, LogOut, Settings } from "lucide-react"; // Keep specialized icons for now if missing in Premium
+import { User, LogOut } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils/cn";
 import { authApi } from "@/lib/api/auth";
-import { adminApi, type SystemSetting } from "@/lib/api/admin";
-import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "@/lib/hooks/useTheme";
 import { Badge } from "@/components/ui/badge";
 import { NotificationDropdown } from "./NotificationDropdown";
+import { useBranding } from "@/lib/hooks/useBranding";
 
 interface PortalNavbarProps {
   onMenuToggle?: () => void;
@@ -27,85 +25,15 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
   const router = useRouter();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const { theme, resolvedTheme } = useTheme();
+  const [logoLoadError, setLogoLoadError] = useState(false);
 
-  // Fetch branding settings (site_name, company_tagline, logo)
-  const { data: brandingSettings } = useQuery<SystemSetting[]>({
-    queryKey: ["settings", "branding", "public"],
-    queryFn: () => adminApi.settings.publicBranding(),
-    staleTime: 5 * 60 * 1000,
-  });
+  // Use shared branding hook
+  const branding = useBranding("public");
 
-  // Extract branding values
-  const branding = useMemo(() => {
-    if (!brandingSettings) {
-      return {
-        siteName: "Smart Vehicle Repairs",
-        logoPath: null,
-        logoDarkPath: null,
-        logoUpdatedAt: null,
-        logoDarkUpdatedAt: null,
-      };
-    }
-
-    const getSetting = (key: string): string | null => {
-      const setting = brandingSettings.find((s) => s.key === key);
-      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-    };
-
-    const getSettingUpdatedAt = (key: string): string | null => {
-      const setting = brandingSettings.find((s) => s.key === key);
-      return setting?.updated_at || null;
-    };
-
-    return {
-      siteName: getSetting("site_name") || "Smart Vehicle Repairs",
-      logoPath: getSetting("logo_path"),
-      logoDarkPath: getSetting("logo_dark_path"),
-      logoUpdatedAt: getSettingUpdatedAt("logo_path"),
-      logoDarkUpdatedAt: getSettingUpdatedAt("logo_dark_path"),
-    };
-  }, [brandingSettings]);
-
-  // Determine which logo to use based on theme
-  const logoToUse = useMemo(() => {
-    const isDark = resolvedTheme === "dark" || theme === "dark";
-    if (isDark && branding.logoDarkPath) {
-      return {
-        path: branding.logoDarkPath,
-        cacheKey: branding.logoDarkUpdatedAt ? new Date(branding.logoDarkUpdatedAt).getTime() : Date.now(),
-      };
-    }
-    if (branding.logoPath) {
-      return {
-        path: branding.logoPath,
-        cacheKey: branding.logoUpdatedAt ? new Date(branding.logoUpdatedAt).getTime() : Date.now(),
-      };
-    }
-    return null;
-  }, [branding.logoPath, branding.logoDarkPath, branding.logoUpdatedAt, branding.logoDarkUpdatedAt, resolvedTheme, theme]);
-
-  // Get media base URL from API URL (remove /api suffix)
-  const mediaBaseUrl = useMemo(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-    return apiUrl.replace(/\/api\/?$/, "");
-  }, []);
-
-  const getMediaUrl = useCallback(
-    (path: string, cacheKey?: number) => {
-      if (path.startsWith("http")) {
-        return cacheKey ? `${path}${path.includes("?") ? "&" : "?"}v=${cacheKey}` : path;
-      }
-      const url = `${mediaBaseUrl}/media/${path}`;
-      return cacheKey ? `${url}${url.includes("?") ? "&" : "?"}v=${cacheKey}` : url;
-    },
-    [mediaBaseUrl]
-  );
-
-  const logoSrc = useMemo(
-    () => (logoToUse ? getMediaUrl(logoToUse.path, logoToUse.cacheKey) : null),
-    [logoToUse, getMediaUrl]
-  );
+  // Reset logo error when source changes
+  useEffect(() => {
+    setLogoLoadError(false);
+  }, [branding.logoSrc]);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -129,14 +57,14 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 bg-background/80 border-b border-border/50 border-border/50 shadow-sm backdrop-blur-xl sticky-navbar">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 border-b border-border/50 shadow-sm backdrop-blur-xl sticky-navbar">
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Logo and Menu Toggle */}
           <div className="flex items-center space-x-4">
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted"
+              className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
               aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
               aria-expanded={isSidebarOpen}
             >
@@ -147,7 +75,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
@@ -160,13 +88,13 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             )}
 
             <Link href="/portal" className="flex items-center space-x-2" aria-label="Go to dashboard">
-              {logoSrc ? (
+              {branding.logoSrc && !logoLoadError ? (
                 <div className="h-8 w-8 rounded-lg overflow-hidden bg-card flex items-center justify-center shadow-sm border border-border relative">
                   <img
-                    src={logoSrc}
+                    src={branding.logoSrc}
                     alt={branding.siteName}
-                    key={`${logoToUse?.path ?? "logo"}-${logoToUse?.cacheKey ?? "0"}`}
                     className="h-full w-full object-contain p-1"
+                    onError={() => setLogoLoadError(true)}
                   />
                 </div>
               ) : (
@@ -192,7 +120,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             <div className="relative ml-2" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-muted-foreground hover:bg-muted hover:bg-muted transition-all border border-transparent hover:border-border dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-muted-foreground hover:bg-muted transition-all border border-transparent hover:border-border dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-sm text-white text-xs font-bold tracking-wider ring-2 ring-white dark:ring-gray-900">
                   {user?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
@@ -208,7 +136,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
               {/* User Dropdown Menu */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-64 bg-card rounded-xl shadow-xl border border-border py-2 z-50 transform origin-top-right transition-all animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-5 py-3 border-b border-border mb-1 bg-muted/50 bg-muted/50">
+                  <div className="px-5 py-3 border-b border-border mb-1 bg-muted/50">
                     <p className="text-sm font-semibold text-foreground">Signed in as</p>
                     <p className="text-xs text-muted-foreground truncate mt-0.5 font-medium">{user?.email}</p>
                   </div>

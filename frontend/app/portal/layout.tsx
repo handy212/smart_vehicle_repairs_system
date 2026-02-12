@@ -39,18 +39,26 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     const sidebarCollapsed = localStorage.getItem("portalSidebarCollapsed") === "true";
     setIsSidebarCollapsed(sidebarCollapsed);
 
-    // Check if desktop
+    // Check if desktop (debounced)
     const checkDesktop = () => {
       setIsDesktop(window.innerWidth >= 1024);
-      // On desktop, sidebar should always be open
       if (window.innerWidth >= 1024) {
         setIsSidebarOpen(true);
       }
     };
 
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const debouncedCheckDesktop = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(checkDesktop, 150);
+    };
+
     checkDesktop();
-    window.addEventListener("resize", checkDesktop);
-    return () => window.removeEventListener("resize", checkDesktop);
+    window.addEventListener("resize", debouncedCheckDesktop);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener("resize", debouncedCheckDesktop);
+    };
   }, []);
 
   useEffect(() => {

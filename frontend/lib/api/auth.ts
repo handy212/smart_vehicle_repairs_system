@@ -61,6 +61,14 @@ export const authApi = {
     return response.data;
   },
 
+  forgotPassword: async (email: string, recaptcha_token?: string): Promise<{ detail: string }> => {
+    const response = await apiClient.post("/auth/users/forgot_password/", {
+      email,
+      recaptcha_token
+    });
+    return response.data;
+  },
+
   getCurrentUser: async (): Promise<User> => {
     const response = await apiClient.get("/auth/users/me/");
     return response.data;

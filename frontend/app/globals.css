@@ -194,16 +194,6 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-@layer base {
-  * {
-    border-color: var(--border);
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
 @layer utilities {
   .glass-card {
     background: var(--glass-bg);
@@ -267,30 +257,19 @@ aside::-webkit-scrollbar-track {
 }
 
 aside::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--muted-foreground);
+  opacity: 0.4;
   border-radius: 3px;
 }
 
 aside::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-.dark aside::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
-.dark aside::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  opacity: 0.6;
 }
 
 /* Firefox scrollbar */
 aside {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
-}
-
-.dark aside {
-  scrollbar-color: #4b5563 transparent;
+  scrollbar-color: var(--muted-foreground) transparent;
 }
 
 /* Ensure dark mode class is applied to html element */

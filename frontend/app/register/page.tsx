@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Eye, EyeOff, ArrowLeft, Phone, Building2 } from "lucide-react";
+import { Car, Eye, EyeOff, MoveLeft, Phone, Building2 } from "lucide-react";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
 
 const registerSchema = z.object({
     first_name: z.string().min(2, "First name must be at least 2 characters"),
@@ -59,6 +60,9 @@ export default function RegisterPage() {
     // OTP input state
     const [otpCode, setOtpCode] = useState("");
 
+    // reCAPTCHA state
+    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+
     useEffect(() => {
         setIsMounted(true);
         // Force light mode for auth pages
@@ -71,6 +75,21 @@ export default function RegisterPage() {
         staleTime: 5 * 60 * 1000,
         retry: 2,
     });
+
+    const { data: integrations } = useQuery<{
+        recaptcha_site_key?: string;
+        recaptcha_enabled?: string;
+    }>({
+        queryKey: ["settings", "integrations", "public"],
+        queryFn: () => adminApi.settings.publicIntegrations(),
+        staleTime: 5 * 60 * 1000,
+        retry: 2,
+    });
+
+    // reCAPTCHA is required when it's enabled AND a site key is available
+    const recaptchaRequired =
+        integrations?.recaptcha_enabled === "true" &&
+        !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
     const branding = useMemo(() => {
         if (!brandingSettings) {
@@ -144,6 +163,10 @@ export default function RegisterPage() {
 
     const customerType = watch("customer_type");
 
+    const handleRecaptchaChange = (token: string | null) => {
+        setRecaptchaToken(token);
+    };
+
     const onInitiate = async (data: RegisterFormData) => {
         setIsLoading(true);
         setError(null);
@@ -151,12 +174,31 @@ export default function RegisterPage() {
         try {
             await authApi.register.initiate({
                 ...data,
-                password_confirm: data.confirm_password
+                password_confirm: data.confirm_password,
+                recaptcha_token: recaptchaToken || undefined
             });
             setPendingData(data);
             setCurrentStep('otp');
-        } catch (err: any) {
-            setError(err.response?.data?.email?.[0] || err.response?.data?.detail || "Registration failed. Please try again.");
+        } catch (err: unknown) {
+            console.error("Registration initiation error:", err);
+
+            // Extract meaningful error message
+            const axiosError = err as { response?: { data?: Record<string, unknown> } };
+            const data = axiosError?.response?.data;
+
+            if (data) {
+                const message =
+                    (typeof data.detail === "string" && data.detail) ||
+                    (typeof data.recaptcha_token === "string" && data.recaptcha_token) ||
+                    (Array.isArray(data.recaptcha_token) && data.recaptcha_token[0]) ||
+                    (typeof data.email === "string" && data.email) ||
+                    (Array.isArray(data.email) && data.email[0]) ||
+                    null;
+
+                setError(message || "Registration failed. Please try again.");
+            } else {
+                setError("Unable to connect. Please check your internet and try again.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -183,8 +225,18 @@ export default function RegisterPage() {
             setUser(authData.user);
 
             router.push(authData.user.role === "customer" ? "/portal" : "/dashboard");
-        } catch (err: any) {
-            setError(err.response?.data?.otp_code?.[0] || err.response?.data?.detail || "Verification failed.");
+        } catch (err: unknown) {
+            console.error("Verification error:", err);
+            // Extract meaningful error message
+            const axiosError = err as { response?: { data?: Record<string, unknown> } };
+            const data = axiosError?.response?.data;
+
+            setError(
+                (typeof data?.otp_code === 'string' && data.otp_code) ||
+                (Array.isArray(data?.otp_code) && data.otp_code[0]) ||
+                (typeof data?.detail === 'string' && data.detail) ||
+                "Verification failed."
+            );
         } finally {
             setIsLoading(false);
         }
@@ -240,19 +292,19 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Right side: Registration Form */}
-                <div className="flex items-center justify-center p-8 bg-muted/50">
-                    <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
+                    <div className="w-full max-w-md space-y-4 lg:space-y-6 animate-in fade-in zoom-in-95 duration-500">
                         <button
                             onClick={() => currentStep === 'otp' ? setCurrentStep('form') : router.push("/login")}
-                            className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-4 group"
+                            className="flex items-center text-xs lg:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-2 group"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+                            <MoveLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-2 transition-transform group-hover:-translate-x-1" />
                             {currentStep === 'otp' ? 'Back to details' : 'Back to login'}
                         </button>
 
                         <div className="text-center lg:text-left">
-                            <h2 className="text-3xl font-bold text-foreground">{branding.site_name}</h2>
-                            <p className="mt-2 text-muted-foreground">
+                            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{branding.site_name}</h2>
+                            <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
                                 {currentStep === 'otp'
                                     ? `We sent a code to ${pendingData?.email}`
                                     : 'Join thousands of professionals today.'}
@@ -260,135 +312,148 @@ export default function RegisterPage() {
                         </div>
 
                         <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden">
-                            <CardContent className="p-8">
+                            <CardContent className="p-5 lg:p-8">
                                 {error && (
-                                    <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium mb-4">
+                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium mb-4 animate-in shake duration-300">
                                         {error}
                                     </div>
                                 )}
 
                                 {currentStep === 'form' ? (
-                                    <form onSubmit={handleSubmit(onInitiate)} className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-foreground ml-1">First Name</label>
+                                    <form onSubmit={handleSubmit(onInitiate)} className="space-y-3 lg:space-y-4">
+                                        <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">First Name</label>
                                                 <Input
                                                     {...register("first_name")}
                                                     placeholder="John"
-                                                    className="h-11 rounded-xl border-border"
+                                                    className="h-9 lg:h-10 rounded-xl border-border"
                                                 />
-                                                {errors.first_name && <p className="text-xs text-red-500 ml-1">{errors.first_name.message}</p>}
+                                                {errors.first_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.first_name.message}</p>}
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-foreground ml-1">Last Name</label>
+                                            <div className="space-y-1">
+                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Last Name</label>
                                                 <Input
                                                     {...register("last_name")}
                                                     placeholder="Doe"
-                                                    className="h-11 rounded-xl border-border"
+                                                    className="h-9 lg:h-10 rounded-xl border-border"
                                                 />
-                                                {errors.last_name && <p className="text-xs text-red-500 ml-1">{errors.last_name.message}</p>}
+                                                {errors.last_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.last_name.message}</p>}
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-foreground ml-1">Email Address</label>
+                                        <div className="space-y-1">
+                                            <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Email Address</label>
                                             <Input
                                                 type="email"
                                                 {...register("email")}
                                                 placeholder="john@example.com"
-                                                className="h-11 rounded-xl border-border"
+                                                className="h-9 lg:h-10 rounded-xl border-border"
                                             />
-                                            {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email.message}</p>}
+                                            {errors.email && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.email.message}</p>}
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-foreground ml-1">Phone Number</label>
-                                            <div className="relative">
-                                                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    {...register("phone")}
-                                                    placeholder="+1 (555) 000-0000"
-                                                    className="h-11 rounded-xl border-border pl-10"
-                                                />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Phone</label>
+                                                <div className="relative">
+                                                    <Phone className="absolute left-3 top-2.5 lg:top-3 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
+                                                    <Input
+                                                        {...register("phone")}
+                                                        placeholder="(555) 000-0000"
+                                                        className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
+                                                    />
+                                                </div>
+                                                {errors.phone && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.phone.message}</p>}
                                             </div>
-                                            {errors.phone && <p className="text-xs text-red-500 ml-1">{errors.phone.message}</p>}
-                                        </div>
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-foreground ml-1">Account Type</label>
-                                            <Select
-                                                onValueChange={(val) => setValue("customer_type", val as any)}
-                                                defaultValue="individual"
-                                            >
-                                                <SelectTrigger className="h-11 rounded-xl border-border">
-                                                    <SelectValue placeholder="Select type" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="individual">Individual</SelectItem>
-                                                    <SelectItem value="business">Business</SelectItem>
-                                                    <SelectItem value="fleet">Fleet Owner</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <div className="space-y-1">
+                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Account Type</label>
+                                                <Select
+                                                    onValueChange={(val) => setValue("customer_type", val as any)}
+                                                    defaultValue="individual"
+                                                >
+                                                    <SelectTrigger className="h-9 lg:h-10 rounded-xl border-border">
+                                                        <SelectValue placeholder="Select type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="individual">Individual</SelectItem>
+                                                        <SelectItem value="business">Business</SelectItem>
+                                                        <SelectItem value="fleet">Fleet Owner</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
 
                                         {(customerType === "business" || customerType === "fleet") && (
-                                            <div className="space-y-4 pt-2 animate-in slide-in-from-top-2 fade-in">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-foreground ml-1">Company Name</label>
-                                                    <div className="relative">
-                                                        <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                        <Input
-                                                            {...register("company_name")}
-                                                            placeholder="Acme Inc."
-                                                            className="h-11 rounded-xl border-border pl-10"
-                                                        />
-                                                    </div>
-                                                    {errors.company_name && <p className="text-xs text-red-500 ml-1">{errors.company_name.message}</p>}
+                                            <div className="space-y-1 animate-in slide-in-from-top-2 fade-in">
+                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Company Name</label>
+                                                <div className="relative">
+                                                    <Building2 className="absolute left-3 top-2.5 lg:top-3 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
+                                                    <Input
+                                                        {...register("company_name")}
+                                                        placeholder="Acme Inc."
+                                                        className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
+                                                    />
                                                 </div>
+                                                {errors.company_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.company_name.message}</p>}
                                             </div>
                                         )}
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-foreground ml-1">Password</label>
-                                            <div className="relative">
-                                                <Input
-                                                    type={showPassword ? "text" : "password"}
-                                                    {...register("password")}
-                                                    placeholder="••••••••"
-                                                    className="h-11 rounded-xl border-border pr-12"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                                >
-                                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                                </button>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Password</label>
+                                                <div className="relative">
+                                                    <Input
+                                                        type={showPassword ? "text" : "password"}
+                                                        {...register("password")}
+                                                        placeholder="••••••••"
+                                                        className="h-9 lg:h-10 rounded-xl border-border pr-10 lg:pr-12"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                                                    >
+                                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                                {errors.password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.password.message}</p>}
                                             </div>
-                                            {errors.password && <p className="text-xs text-red-500 ml-1">{errors.password.message}</p>}
+                                            <div className="space-y-1">
+                                                <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Confirm</label>
+                                                <Input
+                                                    type="password"
+                                                    {...register("confirm_password")}
+                                                    placeholder="••••••••"
+                                                    className="h-9 lg:h-10 rounded-xl border-border"
+                                                />
+                                                {errors.confirm_password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.confirm_password.message}</p>}
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-foreground ml-1">Confirm Password</label>
-                                            <Input
-                                                type="password"
-                                                {...register("confirm_password")}
-                                                placeholder="••••••••"
-                                                className="h-11 rounded-xl border-border"
-                                            />
-                                            {errors.confirm_password && <p className="text-xs text-red-500 ml-1">{errors.confirm_password.message}</p>}
-                                        </div>
+                                        {/* reCAPTCHA */}
+                                        {recaptchaRequired && (
+                                            <div className="flex justify-center py-1">
+                                                <ReCAPTCHAComponent
+                                                    siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                                                    onChange={handleRecaptchaChange}
+                                                    theme="light"
+                                                    size="compact"
+                                                />
+                                            </div>
+                                        )}
 
                                         <Button
                                             type="submit"
-                                            className="w-full h-11 rounded-xl text-white font-bold shadow-lg mt-2 transition-all hover:opacity-90"
+                                            className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg mt-1 transition-all hover:opacity-90 active:scale-95"
                                             style={{ backgroundColor: branding.primary_color }}
-                                            disabled={isLoading}
+                                            disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
                                         >
-                                            {isLoading ? "Checking details..." : "Continue"}
+                                            {isLoading ? "Checking..." : "Continue"}
                                         </Button>
 
-                                        <div className="relative my-6 text-center text-sm font-medium text-muted-foreground line-through">
+                                        <div className="relative my-4 lg:my-6 text-center text-xs lg:text-sm font-medium text-muted-foreground line-through">
                                             <span className="bg-card px-4 relative z-10 no-underline">OR</span>
                                             <hr className="absolute top-1/2 left-0 w-full border-border" />
                                         </div>
@@ -431,7 +496,7 @@ export default function RegisterPage() {
                             </CardContent>
                         </Card>
 
-                        <p className="text-center text-muted-foreground">
+                        <p className="text-center text-sm lg:text-base text-muted-foreground">
                             Already have an account?{" "}
                             <button
                                 onClick={() => router.push("/login")}

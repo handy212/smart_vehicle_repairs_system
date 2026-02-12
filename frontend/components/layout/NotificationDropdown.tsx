@@ -41,16 +41,16 @@ export function NotificationDropdown() {
         queryKey: ["notifications", "recent"],
         queryFn: () => notificationsApi.list({}),
         enabled: hasAccessToken,
-        refetchInterval: 3000, // 3s - near-instant notifications
-        refetchIntervalInBackground: true, // Keep fetching even when tab is backgrounded
+        refetchInterval: 30_000, // 30s — balances responsiveness and server load
+        refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
     });
 
     const { data: unreadCountData } = useQuery({
         queryKey: ["notifications", "unread-count"],
         queryFn: () => notificationsApi.unreadCount(),
         enabled: hasAccessToken,
-        refetchInterval: 3000, // 3s - near-instant notifications
-        refetchIntervalInBackground: true, // Keep fetching even when tab is backgrounded
+        refetchInterval: 30_000,
+        refetchIntervalInBackground: false,
     });
 
     const markAsReadMutation = useMutation({
@@ -193,10 +193,11 @@ export function NotificationDropdown() {
                     size="sm"
                     className={cn(
                         "relative p-2.5 rounded-lg transition-all h-auto",
-                        "text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted",
+                        "text-muted-foreground hover:text-foreground hover:bg-muted",
                         "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                         unreadCount > 0 && "text-primary"
                     )}
+                    aria-label="Notifications"
                 >
                     <PremiumIcons.Bell className="w-5 h-5" />
                     {unreadCount > 0 && (

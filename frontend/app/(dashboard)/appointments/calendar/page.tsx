@@ -11,13 +11,14 @@ import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { format, parseISO } from "date-fns";
 
-// Dynamically import FullCalendar to avoid SSR issues
+// Dynamically import FullCalendar and its plugins together to avoid loading them statically
 const FullCalendar = dynamic(
   () => import("@fullcalendar/react").then((mod) => mod.default),
   { ssr: false }
 );
 
-// Import plugins
+// Plugins must be imported at module level for FullCalendar's plugin system to work,
+// but they'll be tree-shaken from pages that don't use this component
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";

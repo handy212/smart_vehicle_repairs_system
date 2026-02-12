@@ -2,6 +2,8 @@
 Serializers for accounts app
 """
 from rest_framework import serializers
+import requests
+from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -464,8 +466,57 @@ class ManualRegistrationInitiateSerializer(serializers.Serializer):
     company_name = serializers.CharField(required=False, allow_blank=True)
     business_type = serializers.CharField(required=False, allow_blank=True)
     tax_id = serializers.CharField(required=False, allow_blank=True)
+    recaptcha_token = serializers.CharField(required=False, allow_blank=True)
     
     def validate(self, attrs):
+        # 1. reCAPTCHA Validation
+        recaptcha_token = attrs.get('recaptcha_token')
+        
+        # Get config from SystemSettings
+        try:
+            from apps.accounts.admin_models import SystemSettings
+            recaptcha_enabled = SystemSettings.get_setting('recaptcha_enabled', 'false').lower() == 'true'
+            recaptcha_secret = SystemSettings.get_setting('recaptcha_secret_key', '')
+        except Exception:
+            recaptcha_enabled = False
+            recaptcha_secret = ''
+            
+        # Fallback to env vars
+        if not recaptcha_secret:
+             recaptcha_secret = getattr(settings, 'RECAPTCHA_SECRET_KEY', '') or ''
+             
+        if recaptcha_enabled:
+            if not recaptcha_token:
+                raise serializers.ValidationError({"recaptcha_token": "reCAPTCHA verification is required."})
+            if not recaptcha_secret:
+                # Configuration error, but don't block user? Or fail safe?
+                # Failing safe means allowing registration if we can't verify.
+                # But here we assume if enabled, secret must exist.
+                pass 
+            else:
+                try:
+                    response = requests.post(
+                        'https://www.google.com/recaptcha/api/siteverify',
+                        data={
+                            'secret': recaptcha_secret,
+                            'response': recaptcha_token,
+                        },
+                        timeout=5,
+                    )
+                    result = response.json()
+                    if not result.get('success', False):
+                        raise serializers.ValidationError({"recaptcha_token": "reCAPTCHA verification failed. Please try again."})
+                except serializers.ValidationError:
+                    raise
+                except Exception as e:
+                    # Log error and decide whether to block or allow
+                    # For security, usually block, but for UX, maybe allow if Google is down?
+                    # Going with block for now as per other views.
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"reCAPTCHA verification error: {str(e)}")
+                    raise serializers.ValidationError({"detail": "Security check failed. Please try again later."})
+
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({"password": "Passwords didn't match."})
         

@@ -11,7 +11,6 @@ import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
-import { motion } from "framer-motion";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { SummaryStatsGrid } from "./components/SummaryStatsGrid";
 import { ShopPulse } from "./components/ShopPulse";
@@ -94,26 +93,13 @@ export default function DashboardPage() {
     staleTime: 15 * 60 * 1000,
   });
 
-  // Fetch basic counts
-  const { data: customersData } = useQuery({
-    queryKey: ["customers", "dashboard"],
-    queryFn: () => customersApi.list({ page: 1 }),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const { data: vehiclesData } = useQuery({
-    queryKey: ["vehicles", "dashboard"],
-    queryFn: () => vehiclesApi.list({ page: 1 }),
-    staleTime: 10 * 60 * 1000,
-  });
-
   const { data: todayAppointments } = useQuery({
     queryKey: ["appointments", "today"],
     queryFn: () => appointmentsApi.today(),
     staleTime: 2 * 60 * 1000,
   });
 
-  const { data: activeWorkOrders, error: activeWorkOrdersError } = useQuery({
+  const { data: activeWorkOrders } = useQuery({
     queryKey: ["workorders", "active"],
     queryFn: () => workordersApi.active(),
     retry: 1,
@@ -121,13 +107,28 @@ export default function DashboardPage() {
     staleTime: 2 * 60 * 1000,
   });
 
-  const isLoading = dashboardLoading || !customersData || !vehiclesData;
+  // Fetch counts only (using select to avoid storing the full paginated result)
+  const { data: customerCount } = useQuery({
+    queryKey: ["customers", "count"],
+    queryFn: () => customersApi.list({ page: 1 }),
+    select: (data) => data?.count || 0,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: vehicleCount } = useQuery({
+    queryKey: ["vehicles", "count"],
+    queryFn: () => vehiclesApi.list({ page: 1 }),
+    select: (data) => data?.count || 0,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const isLoading = dashboardLoading;
 
   // Memoize expensive calculations
   const stats = useMemo(
     () => ({
-      total_customers: customersData?.count || 0,
-      total_vehicles: vehiclesData?.count || 0,
+      total_customers: customerCount || 0,
+      total_vehicles: vehicleCount || 0,
       today_appointments: dashboardData?.today?.appointments || todayAppointments?.length || 0,
       today_revenue: dashboardData?.today?.revenue || 0,
       week_revenue: dashboardData?.week?.revenue || 0,
@@ -142,8 +143,6 @@ export default function DashboardPage() {
       arr: dashboardData?.subscriptions?.arr || 0,
     }),
     [
-      customersData,
-      vehiclesData,
       dashboardData,
       todayAppointments,
       activeWorkOrders,
@@ -211,7 +210,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-4 flex flex-col gap-4">
           <SmartDiagnosisFeed
             isLoading={false}
-            logs={dashboardData?.recent_activity?.work_orders?.slice(0, 5).map((wo: any) => ({
+            logs={dashboardData?.recent_activity?.work_orders?.slice(0, 5).map((wo: { id: number; wo_number: string; diagnosis_notes?: string; status: string; created_at: string }) => ({
               id: wo.id,
               work_order_number: wo.wo_number,
               description: wo.diagnosis_notes

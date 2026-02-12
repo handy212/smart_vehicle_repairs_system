@@ -43,6 +43,15 @@ vi.mock('@/lib/api/search', () => ({
     },
 }));
 
+vi.mock('@/lib/hooks/useBranding', () => ({
+    useBranding: vi.fn(() => ({
+        siteName: 'Smart Vehicle Repairs',
+        logoSrc: null,
+        primaryColor: null,
+        getMediaUrl: vi.fn(),
+    })),
+}));
+
 const createWrapper = () => {
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -89,15 +98,15 @@ describe('Navbar Component', () => {
     it('should show notification bell', async () => {
         render(<Navbar />, { wrapper: createWrapper() });
 
-        const bellButton = await screen.findByTitle('Notifications');
+        const bellButton = await screen.findByLabelText('Notifications');
         expect(bellButton).toBeInTheDocument();
     });
 
-    it('should display search input', async () => {
+    it('should display search button', async () => {
         render(<Navbar />, { wrapper: createWrapper() });
 
-        const searchInputs = screen.getAllByPlaceholderText(/search customers/i);
-        expect(searchInputs.length).toBeGreaterThan(0);
+        const searchButton = screen.getByLabelText(/open search/i);
+        expect(searchButton).toBeInTheDocument();
     });
 
     it('should have mobile menu toggle button', () => {

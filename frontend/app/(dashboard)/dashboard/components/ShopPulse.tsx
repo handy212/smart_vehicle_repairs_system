@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { LazyMotion, domAnimation, m } from "framer-motion";
 import { AdvancedWidget } from "./AdvancedWidget";
 import { PremiumIcons } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
@@ -99,7 +99,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                             href={`/workorders?group=${group.id}`}
                             className="relative flex flex-col items-center group/stage z-10"
                         >
-                            <motion.div
+                            <m.div
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 className={cn(
@@ -118,7 +118,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                                 )}>
                                     {count}
                                 </span>
-                            </motion.div>
+                            </m.div>
 
                             <div className="text-center">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover/stage:text-primary transition-colors">

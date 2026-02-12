@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { LazyMotion, domAnimation, m } from "framer-motion";
 import { AdvancedWidget } from "./AdvancedWidget";
 import { PremiumIcons } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,7 @@ export function ServiceReminders({ vehicles, isLoading }: ServiceRemindersProps)
             ) : (
                 <div className="space-y-3">
                     {reminders.map((vehicle, idx) => (
-                        <motion.div
+                        <m.div
                             key={vehicle.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -90,7 +90,7 @@ export function ServiceReminders({ vehicles, isLoading }: ServiceRemindersProps)
                                     </div>
                                 </div>
                             )}
-                        </motion.div>
+                        </m.div>
                     ))}
 
                     <Link

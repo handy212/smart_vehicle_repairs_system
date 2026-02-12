@@ -4,10 +4,12 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Car, ArrowLeft, MailCheck } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Car, MoveLeft, MailCheck } from "lucide-react";
+import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
 
 const DEFAULT_HERO_IMAGE = "/images/login-hero.png";
 
@@ -15,6 +17,9 @@ export default function ForgotPasswordPage() {
     const router = useRouter();
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [email, setEmail] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -29,6 +34,21 @@ export default function ForgotPasswordPage() {
         staleTime: 5 * 60 * 1000,
         retry: 2,
     });
+
+    const { data: integrations } = useQuery<{
+        recaptcha_site_key?: string;
+        recaptcha_enabled?: string;
+    }>({
+        queryKey: ["settings", "integrations", "public"],
+        queryFn: () => adminApi.settings.publicIntegrations(),
+        staleTime: 5 * 60 * 1000,
+        retry: 2,
+    });
+
+    // reCAPTCHA is required when it's enabled AND a site key is available
+    const recaptchaRequired =
+        integrations?.recaptcha_enabled === "true" &&
+        !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
     const branding = useMemo(() => {
         if (!brandingSettings) {
@@ -78,13 +98,42 @@ export default function ForgotPasswordPage() {
 
     const heroLogo = branding.logo_dark_path || branding.logo_path;
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (email) {
-            setIsSubmitted(true);
-        }
+    const handleRecaptchaChange = (token: string | null) => {
+        setRecaptchaToken(token);
     };
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setIsLoading(true);
+
+        try {
+            await authApi.forgotPassword(email, recaptchaToken || undefined);
+            setIsSubmitted(true);
+        } catch (err: unknown) {
+            console.error("Forgot Password error:", err);
+
+            // Extract meaningful error message
+            const axiosError = err as { response?: { data?: Record<string, unknown>; status?: number } };
+            const data = axiosError?.response?.data;
+
+            if (data) {
+                const message =
+                    (typeof data.detail === "string" && data.detail) ||
+                    (typeof data.recaptcha_token === "string" && data.recaptcha_token) ||
+                    (Array.isArray(data.recaptcha_token) && data.recaptcha_token[0]) ||
+                    (typeof data.email === "string" && data.email) ||
+                    (Array.isArray(data.email) && data.email[0]) ||
+                    null;
+
+                setError(message || "Something went wrong. Please try again.");
+            } else {
+                setError("Unable to connect. Please check your internet and try again.");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -136,54 +185,75 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 {/* Right side: Forgot Password Form */}
-                <div className="flex items-center justify-center p-8 bg-muted/50">
-                    <div className="w-full max-w-sm space-y-8 animate-in fade-in duration-500">
+                <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
+                    <div className="w-full max-w-sm space-y-6 animate-in fade-in duration-500">
                         <button
                             onClick={() => router.push("/login")}
-                            className="flex items-center text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-4 group"
+                            className="flex items-center text-xs lg:text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-2 group"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+                            <MoveLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-2 transition-transform group-hover:-translate-x-1" />
                             Back to login
                         </button>
 
                         <div className="text-center lg:text-left">
-                            <h2 className="text-3xl font-bold text-foreground">{branding.site_name}</h2>
-                            <p className="mt-2 text-muted-foreground">
+                            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{branding.site_name}</h2>
+                            <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
                                 {!isSubmitted
                                     ? "No worries! We'll send you reset instructions."
                                     : `Instructions have been sent to ${email}`}
                             </p>
                         </div>
 
-                        <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden p-8">
+                        <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden p-5 lg:p-8">
                             {!isSubmitted ? (
-                                <div className="space-y-6">
+                                <div className="space-y-4 lg:space-y-6">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-foreground">Forgot Password</h2>
-                                        <p className="mt-2 text-sm text-muted-foreground">
-                                            No worries! We'll send you reset instructions.
+                                        <h2 className="text-xl lg:text-2xl font-bold text-foreground">Forgot Password</h2>
+                                        <p className="mt-1 lg:mt-2 text-xs lg:text-sm text-muted-foreground">
+                                            Enter the email address associated with your account.
                                         </p>
                                     </div>
 
+                                    {error && (
+                                        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
+                                            {error}
+                                        </div>
+                                    )}
+
                                     <form onSubmit={handleSubmit} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-foreground ml-1">Email Address</label>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Email Address</label>
                                             <Input
                                                 type="email"
                                                 required
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
                                                 placeholder="john@example.com"
-                                                className="h-12 rounded-xl border-border"
+                                                className="h-10 lg:h-11 rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all"
+                                                style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
+                                                disabled={isLoading}
                                             />
                                         </div>
 
+                                        {/* reCAPTCHA */}
+                                        {recaptchaRequired && (
+                                            <div className="flex justify-center py-1">
+                                                <ReCAPTCHAComponent
+                                                    siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                                                    onChange={handleRecaptchaChange}
+                                                    theme="light"
+                                                    size="compact"
+                                                />
+                                            </div>
+                                        )}
+
                                         <Button
                                             type="submit"
-                                            className="w-full h-12 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90"
+                                            className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90 active:scale-95"
                                             style={{ backgroundColor: branding.primary_color }}
+                                            disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
                                         >
-                                            Reset Password
+                                            {isLoading ? "Sending..." : "Reset Password"}
                                         </Button>
                                     </form>
                                 </div>

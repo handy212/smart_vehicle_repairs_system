@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { LazyMotion, domAnimation, m } from "framer-motion";
 import { AdvancedWidget } from "./AdvancedWidget";
 import { PremiumIcons } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
@@ -69,7 +69,7 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                         const isDanger = item.stock.current <= item.stock.reorder_point * 0.5;
 
                         return (
-                            <motion.div
+                            <m.div
                                 key={item.part.id}
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -98,7 +98,7 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                                     </div>
                                 </div>
                                 <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <motion.div
+                                    <m.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${Math.min(stockPercentage, 100)}%` }}
                                         transition={{ duration: 1, ease: "easeOut" }}
@@ -108,7 +108,7 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                                         )}
                                     />
                                 </div>
-                            </motion.div>
+                            </m.div>
                         );
                     })}
 

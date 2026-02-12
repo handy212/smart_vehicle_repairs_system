@@ -99,8 +99,8 @@ export default function PortalHomePage() {
               <CardContent className="p-0">
                 {recent_appointments.length > 0 ? (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {recent_appointments.map((apt: any) => (
-                      <div key={apt.id} className="p-4 hover:bg-muted hover:bg-muted/50 transition-colors flex items-center justify-between group">
+                    {recent_appointments.map((apt: { id: number; appointment_date: string; vehicle_info?: string; appointment_time: string; service_type?: string; status: string }) => (
+                      <div key={apt.id} className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between group">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center text-primary font-bold text-xs">
                             {format(new Date(apt.appointment_date), "d")}
@@ -141,11 +141,11 @@ export default function PortalHomePage() {
               <CardContent className="p-0">
                 {recent_invoices.length > 0 ? (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {recent_invoices.map((inv: any) => (
+                    {recent_invoices.map((inv: { id: number; invoice_number: string; total?: string | number; invoice_date: string; status: string }) => (
                       <Link
                         key={inv.id}
                         href={`/portal/invoices/${inv.id}`}
-                        className="block p-4 hover:bg-muted hover:bg-muted/50 transition-colors group"
+                        className="block p-4 hover:bg-muted/50 transition-colors group"
                       >
                         <div className="flex justify-between items-start mb-1">
                           <p className="font-mono text-xs font-medium text-muted-foreground">#{inv.invoice_number}</p>

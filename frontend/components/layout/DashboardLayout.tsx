@@ -11,6 +11,7 @@ import { CommandPalette } from "@/components/ui/CommandPalette";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Suspense } from "react";
 import { QuickActionsFAB } from "./QuickActionsFAB";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,18 +33,26 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const sidebarCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
     setIsSidebarCollapsed(sidebarCollapsed);
 
-    // Check if desktop
+    // Check if desktop (debounced)
     const checkDesktop = () => {
       setIsDesktop(window.innerWidth >= 1024);
-      // On desktop, sidebar should always be open
       if (window.innerWidth >= 1024) {
         setIsSidebarOpen(true);
       }
     };
 
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const debouncedCheckDesktop = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(checkDesktop, 150);
+    };
+
     checkDesktop();
-    window.addEventListener("resize", checkDesktop);
-    return () => window.removeEventListener("resize", checkDesktop);
+    window.addEventListener("resize", debouncedCheckDesktop);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener("resize", debouncedCheckDesktop);
+    };
   }, []);
 
   // Keyboard shortcuts
@@ -163,9 +172,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <ProgressBar />
         </Suspense>
 
-        <div key={pathname} className="animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
-          {children}
-        </div>
+        <ErrorBoundary>
+          <div key={pathname} className="animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+            {children}
+          </div>
+        </ErrorBoundary>
       </main>
 
       {/* Keyboard Shortcuts Dialog */}

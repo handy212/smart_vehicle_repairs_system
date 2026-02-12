@@ -69,6 +69,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """Return appropriate permissions based on action"""
         if self.action == 'create':
             return [AllowAny()]  # Allow user registration
+        elif self.action == 'forgot_password':
+            return [AllowAny()]  # Allow public password reset request
         
         # For other actions, require authentication and appropriate permissions
         if self.action == 'list' or self.action == 'retrieve':
@@ -80,6 +82,56 @@ class UserViewSet(viewsets.ModelViewSet):
         
         # Default to authenticated for custom actions
         return [IsAuthenticated()]
+    
+    @action(detail=False, methods=['post'])
+    def forgot_password(self, request):
+        """
+        Public endpoint to request password reset link via email.
+        Requires email and optional reCAPTCHA token.
+        """
+        email = request.data.get('email')
+        recaptcha_token = request.data.get('recaptcha_token')
+        
+        if not email:
+            return Response({'email': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Verify reCAPTCHA if enabled
+        from apps.accounts.recaptcha_views import _get_recaptcha_config, RecaptchaTokenObtainPairSerializer
+        is_enabled, secret_key = _get_recaptcha_config()
+        
+        if is_enabled and secret_key:
+            if not recaptcha_token:
+                return Response(
+                    {'recaptcha_token': ['reCAPTCHA verification is required.']}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if not RecaptchaTokenObtainPairSerializer._verify_recaptcha(recaptcha_token, secret_key):
+                return Response(
+                    {'recaptcha_token': ['reCAPTCHA verification failed. Please try again.']}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Find user by email
+        try:
+            user = User.objects.get(email=email, is_active=True)
+            
+            # Send reset link (silently fail if email sending fails to avoid leaking user existence)
+            try:
+                self._send_password_reset_link_email(user, request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send password reset link to {email}: {str(e)}")
+                
+        except User.DoesNotExist:
+            # For security, do not reveal that user implies doesn't exist
+            # Just pretend we sent the email
+            pass
+            
+        return Response({
+            'detail': 'If an account exists with this email, a password reset link has been sent.'
+        }, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get', 'put', 'patch'])
     def me(self, request):
