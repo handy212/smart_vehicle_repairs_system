@@ -37,6 +37,7 @@ const navigationGroups = [
       { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass" },
       { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside" },
       { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_technicians" },
+      { name: "HR", href: "/hr", icon: PremiumIcons.Building2, permission: "view_hr" },
     ],
   },
   {

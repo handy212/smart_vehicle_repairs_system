@@ -227,6 +227,30 @@ class Admin(AbstractUserRole):
         'approve_budgets': True,
         'view_transfer_requests': True,
         'manage_transfers': True,
+        
+        # HR Management
+        'view_hr': True,
+        'manage_hr': True,
+        'view_employees': True,
+        'manage_employees': True,
+        'view_departments': True,
+        'manage_departments': True,
+        'view_leave': True,
+        'manage_leave': True,
+        'approve_leave': True,
+        'view_attendance': True,
+        'manage_attendance': True,
+        'view_payroll': True,
+        'manage_payroll': True,
+        'process_payroll': True,
+        'view_recruitment': True,
+        'manage_recruitment': True,
+        'view_performance': True,
+        'manage_performance': True,
+        'view_compliance': True,
+        'manage_compliance': True,
+        'view_training': True,
+        'manage_training': True,
     }
 
 
@@ -395,6 +419,20 @@ class Manager(AbstractUserRole):
         
         # Accounting (Branch Manager View)
         'view_budgets': True,
+        
+        # HR Management (Branch Level)
+        'view_hr': True,
+        'view_employees': True,
+        'manage_employees': True,
+        'view_departments': True,
+        'view_leave': True,
+        'approve_leave': True,
+        'view_attendance': True,
+        'manage_attendance': True,
+        'view_performance': True,
+        'manage_performance': True,
+        'view_compliance': True,
+        'view_training': True,
     }
 
 
@@ -709,4 +747,56 @@ class Customer(AbstractUserRole):
         # Documents (own documents)
         'view_own_documents': True,
         'download_documents': True,
+    }
+
+
+class HRManager(AbstractUserRole):
+    """HR Manager - manages all HR functions across the organization"""
+    available_permissions = {
+        # HR Management (Full Access)
+        'view_hr': True,
+        'manage_hr': True,
+        'view_employees': True,
+        'manage_employees': True,
+        'view_departments': True,
+        'manage_departments': True,
+        'view_leave': True,
+        'manage_leave': True,
+        'approve_leave': True,
+        'view_attendance': True,
+        'manage_attendance': True,
+        'view_payroll': True,
+        'manage_payroll': True,
+        'process_payroll': True,
+        'view_recruitment': True,
+        'manage_recruitment': True,
+        'view_performance': True,
+        'manage_performance': True,
+        'view_compliance': True,
+        'manage_compliance': True,
+        'view_training': True,
+        'manage_training': True,
+
+        # User Management (view-only for staff context)
+        'view_users': True,
+        'view_technicians': True,
+
+        # Branch awareness
+        'view_branches': True,
+        'view_branch_data': True,
+
+        # Dashboard access
+        'view_dashboard': True,
+
+        # Reports (HR-related)
+        'view_reports': True,
+
+        # Documents
+        'view_documents': True,
+        'upload_documents': True,
+        'download_documents': True,
+
+        # Notifications
+        'view_notifications': True,
+        'send_notifications': True,
     }

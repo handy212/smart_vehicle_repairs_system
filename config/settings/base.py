@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'apps.roadside',
     'apps.fixed_assets.apps.FixedAssetsConfig',  
     'apps.technicians',
+    'apps.hr',
     'apps.accounting',
     'apps.portal',
 ]

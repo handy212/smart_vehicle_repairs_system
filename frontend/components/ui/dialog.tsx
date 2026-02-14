@@ -16,16 +16,28 @@ interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
-  if (!open) return null;
+  const [mounted, setMounted] = React.useState(false);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  React.useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!open || !mounted) return null;
+
+  // Use createPortal to render outside the current DOM hierarchy (Stacking Context)
+  // This ensures z-index works relative to the viewport/body, not the parent container
+  const { createPortal } = require("react-dom");
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/50 dark:bg-black/70"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-50">{children}</div>
-    </div>
+      <div className="relative z-[100] animate-in fade-in zoom-in-95 duration-200">{children}</div>
+    </div>,
+    document.body
   );
 };
 

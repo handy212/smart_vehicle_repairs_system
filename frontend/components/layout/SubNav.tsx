@@ -45,6 +45,12 @@ import {
   Repeat,
   Zap,
   Shield,
+  UserPlus,
+  Calendar,
+  Briefcase,
+  GraduationCap,
+  Star,
+  FileCheck,
   LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -276,6 +282,18 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting_settings", icon: Zap },
     { name: "Controls & Compliance", href: "/accounting/controls", permission: "view_accounting_settings", icon: Shield },
   ],
+  hr: [
+    { name: "Dashboard", href: "/hr", permission: "view_hr", icon: LayoutDashboard },
+    { name: "Staff", href: "/hr/staff", permission: "view_employees", icon: Users },
+    { name: "Departments", href: "/hr/departments", permission: "view_departments", icon: Building2 },
+    { name: "Leave", href: "/hr/leave", permission: "view_leave", icon: Calendar },
+    { name: "Attendance", href: "/hr/attendance", permission: "view_attendance", icon: Clock },
+    { name: "Payroll", href: "/hr/payroll", permission: "view_payroll", icon: Banknote },
+    { name: "Recruitment", href: "/hr/recruitment", permission: "view_recruitment", icon: Briefcase },
+    { name: "Performance", href: "/hr/performance", permission: "view_performance", icon: Star },
+    { name: "Training", href: "/hr/training", permission: "view_training", icon: GraduationCap },
+    { name: "Compliance", href: "/hr/compliance", permission: "view_compliance", icon: FileCheck },
+  ],
 };
 
 // Helper function to get sub-nav config based on pathname
@@ -307,6 +325,13 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     return {
       items: subNavConfig.admin,
       title: "Administration",
+    };
+  }
+
+  if (pathname.startsWith("/hr")) {
+    return {
+      items: subNavConfig.hr,
+      title: "HR Management",
     };
   }
 
