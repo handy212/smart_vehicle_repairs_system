@@ -561,6 +561,56 @@ class SalaryComponent(models.Model):
             return (basic_salary * self.percentage) / 100
 
 
+class TaxRule(models.Model):
+    """Progressive tax bracket rules"""
+    name = models.CharField(_('rule name'), max_length=100)
+    min_income = models.DecimalField(_('min income'), max_digits=12, decimal_places=2, default=0)
+    max_income = models.DecimalField(_('max income'), max_digits=12, decimal_places=2, null=True, blank=True)
+    rate = models.DecimalField(_('tax rate (%)'), max_digits=5, decimal_places=2)
+    excess_amount = models.DecimalField(
+        _('excess amount'), max_digits=12, decimal_places=2, default=0,
+        help_text=_('Fixed amount to add to tax calculation'),
+    )
+    
+    class Meta:
+        verbose_name = _('tax rule')
+        verbose_name_plural = _('tax rules')
+        ordering = ['min_income']
+
+    def __str__(self):
+        return f"{self.name} ({self.min_income} - {self.max_income or 'Infinity'})"
+
+
+class EmployeeSalaryComponent(models.Model):
+    """Employee-specific salary components (allowances/deductions)"""
+    employee = models.ForeignKey(
+        EmployeeProfile,
+        on_delete=models.CASCADE,
+        related_name='salary_components',
+        verbose_name=_('employee'),
+    )
+    component = models.ForeignKey(
+        SalaryComponent,
+        on_delete=models.CASCADE,
+        related_name='employee_assignments',
+        verbose_name=_('component'),
+    )
+    amount = models.DecimalField(
+        _('amount'), max_digits=12, decimal_places=2, default=0,
+        help_text=_('Override amount for this employee'),
+    )
+    is_active = models.BooleanField(_('active'), default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _('employee salary component')
+        verbose_name_plural = _('employee salary components')
+        unique_together = ['employee', 'component']
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.component.name}"
+
 class PayrollPeriod(models.Model):
     """A payroll processing period (usually monthly)"""
 
@@ -693,6 +743,10 @@ class PaySlip(models.Model):
         total_deductions = sum(Decimal(str(v)) for v in self.deductions.values())
         self.gross_pay = self.basic_salary + self.overtime_pay + total_allowances
         self.net_pay = self.gross_pay - total_deductions - self.tax_amount
+
+    def save(self, *args, **kwargs):
+        self.calculate_pay()
+        super().save(*args, **kwargs)
 
 
 # =============================================================================

@@ -75,6 +75,9 @@ export interface StaffProfile {
     national_id: string;
     tax_id: string;
     notes: string;
+    profile_picture?: string | null;
+    branch?: number | null;
+    technician_id?: number | null;
     created_at: string;
     updated_at: string;
 }
@@ -92,6 +95,7 @@ export interface StaffListItem {
     employment_type: string;
     employment_status: string;
     start_date: string | null;
+    technician_id?: number | null;
 }
 
 export interface LeaveType {
@@ -168,8 +172,8 @@ export interface AttendanceRecord {
     clock_out: string | null;
     break_start: string | null;
     break_end: string | null;
-    total_hours: number | null;
-    overtime_hours: number;
+    total_hours: number | string | null;
+    overtime_hours: number | string;
     status: "present" | "absent" | "late" | "half_day" | "on_leave";
     status_display: string;
     notes: string;
@@ -230,6 +234,30 @@ export interface SalaryComponent {
     created_at: string;
     updated_at: string;
 }
+
+export interface EmployeeSalaryComponent {
+    id: number;
+    employee: number;
+    employee_name: string;
+    component: number;
+    component_name: string;
+    component_type: string;
+    amount: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TaxRule {
+    id: number;
+    name: string;
+    min_income: string | null;
+    max_income: string | null;
+    rate: string;
+    excess_amount: string;
+}
+
+export type EmployeeProfile = StaffProfile;
 
 export interface JobOpening {
     id: number;
@@ -439,17 +467,25 @@ export const hrApi = {
             apiClient.get<PaginatedResponse<StaffListItem>>(`${BASE}/staff/`, { params }),
         get: (id: number) =>
             apiClient.get<StaffProfile>(`${BASE}/staff/${id}/`),
-        create: (data: Partial<StaffProfile> & {
+        create: (data: FormData | (Partial<StaffProfile> & {
             email: string;
             first_name: string;
             last_name: string;
             password: string;
             phone?: string;
             role?: string;
-        }) =>
-            apiClient.post<StaffProfile>(`${BASE}/staff/`, data),
-        update: (id: number, data: Partial<StaffProfile>) =>
-            apiClient.patch<StaffProfile>(`${BASE}/staff/${id}/`, data),
+        })) => {
+            const isFormData = data instanceof FormData;
+            return apiClient.post<StaffProfile>(`${BASE}/staff/`, data, {
+                headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+            });
+        },
+        update: (id: number, data: FormData | Partial<StaffProfile>) => {
+            const isFormData = data instanceof FormData;
+            return apiClient.patch<StaffProfile>(`${BASE}/staff/${id}/`, data, {
+                headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+            });
+        },
         delete: (id: number) =>
             apiClient.delete(`${BASE}/staff/${id}/`),
         myProfile: () =>
@@ -458,6 +494,10 @@ export const hrApi = {
             apiClient.get(`${BASE}/staff/org_chart/`),
         summary: () =>
             apiClient.get<StaffSummary>(`${BASE}/staff/summary/`),
+        bulkUpdateStatus: (ids: number[], status: string) =>
+            apiClient.post(`${BASE}/staff/bulk_update_status/`, { ids, status }),
+        bulkDelete: (ids: number[]) =>
+            apiClient.post(`${BASE}/staff/bulk_delete/`, { ids }),
     },
 
     // ------- Leave Types -------
@@ -581,6 +621,10 @@ export const hrApi = {
             apiClient.get<PaySlip>(`${BASE}/payslips/${id}/`),
         myPayslips: () =>
             apiClient.get<PaySlip[]>(`${BASE}/payslips/my_payslips/`),
+        downloadPdf: (id: number) =>
+            apiClient.get(`${BASE}/payslips/${id}/download_pdf/`, { responseType: 'blob' }),
+        update: (id: number, data: Partial<PaySlip>) =>
+            apiClient.patch<PaySlip>(`${BASE}/payslips/${id}/`, data),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/payslips/${id}/`),
     },
@@ -596,6 +640,32 @@ export const hrApi = {
             apiClient.patch<SalaryComponent>(`${BASE}/salary-components/${id}/`, data),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/salary-components/${id}/`),
+    },
+
+    employeeSalaryComponents: {
+        list: (params?: { employee?: number; component?: number; status?: string }) =>
+            apiClient.get<PaginatedResponse<EmployeeSalaryComponent>>(`${BASE}/employee-salary-components/`, { params }),
+        get: (id: number) =>
+            apiClient.get<EmployeeSalaryComponent>(`${BASE}/employee-salary-components/${id}/`),
+        create: (data: Partial<EmployeeSalaryComponent>) =>
+            apiClient.post<EmployeeSalaryComponent>(`${BASE}/employee-salary-components/`, data),
+        update: (id: number, data: Partial<EmployeeSalaryComponent>) =>
+            apiClient.patch<EmployeeSalaryComponent>(`${BASE}/employee-salary-components/${id}/`, data),
+        delete: (id: number) =>
+            apiClient.delete(`${BASE}/employee-salary-components/${id}/`),
+    },
+
+    taxRules: {
+        list: (params?: { search?: string }) =>
+            apiClient.get<PaginatedResponse<TaxRule>>(`${BASE}/tax-rules/`, { params }),
+        get: (id: number) =>
+            apiClient.get<TaxRule>(`${BASE}/tax-rules/${id}/`),
+        create: (data: Partial<TaxRule>) =>
+            apiClient.post<TaxRule>(`${BASE}/tax-rules/`, data),
+        update: (id: number, data: Partial<TaxRule>) =>
+            apiClient.patch<TaxRule>(`${BASE}/tax-rules/${id}/`, data),
+        delete: (id: number) =>
+            apiClient.delete(`${BASE}/tax-rules/${id}/`),
     },
 
     // ------- Recruitment -------

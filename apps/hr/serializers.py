@@ -4,11 +4,12 @@ HR Management Serializers
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from apps.accounts.serializers import UserSerializer
+from apps.branches.models import Branch
 from .models import (
     Department, Position, EmployeeProfile,
     LeaveType, LeaveBalance, LeaveRequest,
     AttendancePolicy, Attendance,
-    SalaryComponent, PayrollPeriod, PaySlip,
+    SalaryComponent, EmployeeSalaryComponent, PayrollPeriod, PaySlip, TaxRule,
     JobOpening, Applicant, Interview,
     PerformanceReview, TrainingProgram, EmployeeTraining, ComplianceDocument,
 )
@@ -60,6 +61,7 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
     reporting_to_name = serializers.SerializerMethodField()
     full_name = serializers.CharField(read_only=True)
     is_active_employee = serializers.BooleanField(read_only=True)
+    technician_id = serializers.SerializerMethodField()
 
     # Write-only fields for user creation / update
     email = serializers.EmailField(write_only=True, required=False)
@@ -68,13 +70,24 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
     role = serializers.CharField(write_only=True, required=False)
+    profile_picture = serializers.ImageField(source='user.profile_picture', required=False, allow_null=True)
+    branch = serializers.PrimaryKeyRelatedField(
+        source='user.branch',
+        queryset=Branch.objects.filter(is_active=True),
+        required=False,
+        allow_null=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Queryset is already set in field definition, but could be further refined here if needed
 
     class Meta:
         model = EmployeeProfile
         fields = [
             'id', 'user', 'user_details', 'full_name',
             'department', 'department_name', 'position', 'position_title',
-            'branch_name',
+            'branch_name', 'technician_id',
             'employment_type', 'employment_status', 'is_active_employee',
             'start_date', 'end_date',
             'reporting_to', 'reporting_to_name',
@@ -84,8 +97,9 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             'emergency_contact_relationship',
             'national_id', 'tax_id', 'notes',
             'created_at', 'updated_at',
-            # Write-only
+            # User model fields
             'email', 'first_name', 'last_name', 'password', 'phone', 'role',
+            'profile_picture', 'branch',
         ]
         read_only_fields = ['user', 'created_at', 'updated_at']
 
@@ -98,6 +112,11 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             return obj.reporting_to.full_name
         return None
 
+    def get_technician_id(self, obj):
+        if hasattr(obj.user, 'technician_profile'):
+            return obj.user.technician_profile.id
+        return None
+
     def create(self, validated_data):
         # Extract user fields
         email = validated_data.pop('email')
@@ -106,6 +125,10 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         last_name = validated_data.pop('last_name')
         phone = validated_data.pop('phone', '')
         role = validated_data.pop('role', 'technician')
+
+        # DRF nests source='user.branch' and source='user.profile_picture'
+        # under a 'user' dict in validated_data
+        user_data = validated_data.pop('user', {})
 
         user = User.objects.create_user(
             username=email,
@@ -117,6 +140,12 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             role=role,
         )
 
+        # Apply nested user fields (branch, profile_picture)
+        if user_data:
+            for attr, value in user_data.items():
+                setattr(user, attr, value)
+            user.save()
+
         profile = EmployeeProfile.objects.create(user=user, **validated_data)
         return profile
 
@@ -126,8 +155,15 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             if field in validated_data:
                 user_fields[field] = validated_data.pop(field)
 
-        if user_fields:
+        # Handle profile_picture and branch (source='user.xxx')
+        # These will be in validated_data via the 'user' source key if we don't pop them carefully
+        # Actually with source='user.branch', DRF puts it under 'user' dictionary in validated_data
+        
+        user_data = validated_data.pop('user', {})
+        
+        if user_fields or user_data:
             user = instance.user
+            # Update from flat user_fields
             for attr, value in user_fields.items():
                 if attr == 'password':
                     user.set_password(value)
@@ -136,6 +172,11 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
                     user.username = value
                 else:
                     setattr(user, attr, value)
+            
+            # Update from nested user_data
+            for attr, value in user_data.items():
+                setattr(user, attr, value)
+                
             user.save()
 
         return super().update(instance, validated_data)
@@ -150,18 +191,24 @@ class EmployeeProfileListSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True)
     profile_picture = serializers.ImageField(source='user.profile_picture', read_only=True)
+    technician_id = serializers.SerializerMethodField()
 
     class Meta:
         model = EmployeeProfile
         fields = [
             'id', 'user', 'full_name', 'email', 'phone', 'profile_picture',
-            'department_name', 'position_title', 'branch_name',
+            'department_name', 'position_title', 'branch_name', 'technician_id',
             'employment_type', 'employment_status', 'start_date',
         ]
 
     def get_branch_name(self, obj):
         branch = obj.branch
         return branch.name if branch else None
+
+    def get_technician_id(self, obj):
+        if hasattr(obj.user, 'technician_profile'):
+            return obj.user.technician_profile.id
+        return None
 
 
 # =============================================================================
@@ -219,13 +266,27 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             'reviewed_by', 'reviewed_at', 'status',
             'created_at', 'updated_at',
         ]
+        extra_kwargs = {
+            'days_count': {'required': False},
+        }
 
     def validate(self, data):
-        if data.get('start_date') and data.get('end_date'):
-            if data['start_date'] > data['end_date']:
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+
+        if start_date and end_date:
+            if start_date > end_date:
                 raise serializers.ValidationError(
                     {'end_date': 'End date must be after start date.'}
                 )
+            
+            # Auto-calculate days_count if not provided
+            if 'days_count' not in data:
+                # Simple calculation: inclusive difference
+                # TODO: Exclude weekends/holidays based on policy
+                delta = end_date - start_date
+                data['days_count'] = delta.days + 1
+                
         return data
 
 
@@ -265,6 +326,9 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['total_hours', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'branch': {'required': False},
+        }
 
 
 # =============================================================================
@@ -280,6 +344,31 @@ class SalaryComponentSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+
+class EmployeeSalaryComponentSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True)
+    component_name = serializers.CharField(source='component.name', read_only=True)
+    component_type = serializers.CharField(source='component.component_type', read_only=True)
+
+    class Meta:
+        model = EmployeeSalaryComponent
+        fields = [
+            'id', 'employee', 'employee_name',
+            'component', 'component_name', 'component_type',
+            'amount', 'is_active',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class TaxRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaxRule
+        fields = [
+            'id', 'name', 'min_income', 'max_income',
+            'rate', 'excess_amount',
+        ]
 
 
 class PaySlipSerializer(serializers.ModelSerializer):
@@ -403,6 +492,7 @@ class JobOpeningSerializer(serializers.ModelSerializer):
 class PerformanceReviewSerializer(serializers.ModelSerializer):
     staff = serializers.PrimaryKeyRelatedField(source='employee', queryset=EmployeeProfile.objects.all())
     staff_name = serializers.CharField(source='employee.full_name', read_only=True)
+    staff_comments = serializers.CharField(source='employee_comments', required=False, allow_blank=True)
     reviewer_name = serializers.CharField(
         source='reviewer.get_full_name', read_only=True, default=None,
     )
@@ -414,7 +504,7 @@ class PerformanceReviewSerializer(serializers.ModelSerializer):
             'reviewer', 'reviewer_name',
             'review_period_start', 'review_period_end',
             'overall_rating', 'strengths', 'areas_for_improvement',
-            'goals', 'employee_comments',
+            'goals', 'staff_comments',
             'status', 'submitted_at', 'acknowledged_at',
             'created_at', 'updated_at',
         ]

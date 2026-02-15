@@ -35,6 +35,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+import { TaxRulesDialog } from "./TaxRulesDialog";
+import { Calculator } from "lucide-react";
+
 export default function PayrollPage() {
     return (
         <PermissionGuard permission="view_payroll">
@@ -49,6 +52,7 @@ function PayrollContent() {
     const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
     const [showCreate, setShowCreate] = useState(false);
+    const [showTaxRules, setShowTaxRules] = useState(false);
     const [editingPeriod, setEditingPeriod] = useState<PayrollPeriod | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -112,6 +116,10 @@ function PayrollContent() {
                 ]}
                 actions={
                     <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowTaxRules(true)}>
+                            <Calculator className="h-4 w-4 mr-2" />
+                            Tax Rules
+                        </Button>
                         <Button variant="outline" size="sm" asChild>
                             <Link href="/hr/payroll/components">
                                 <CreditCard className="h-4 w-4 mr-2" />
@@ -329,6 +337,8 @@ function PayrollContent() {
                 id={deletingId}
                 onDeleted={() => { queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] }); setDeletingId(null); }}
             />
+
+            <TaxRulesDialog open={showTaxRules} onOpenChange={setShowTaxRules} />
         </div>
     );
 }

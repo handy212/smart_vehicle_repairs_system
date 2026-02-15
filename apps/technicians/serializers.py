@@ -13,6 +13,7 @@ class TechnicianSerializer(serializers.ModelSerializer):
     skill_ids = serializers.PrimaryKeyRelatedField(
         many=True, write_only=True, queryset=Skill.objects.all(), source='skills'
     )
+    staff_id = serializers.SerializerMethodField()
 
     # Write-only fields for creating/updating a user
     email = serializers.EmailField(write_only=True, required=False, validators=[])
@@ -31,7 +32,7 @@ class TechnicianSerializer(serializers.ModelSerializer):
     class Meta:
         model = Technician
         fields = [
-            'id', 'user', 'user_details', 'bio', 'skills', 'skill_ids',
+            'id', 'user', 'user_details', 'staff_id', 'bio', 'skills', 'skill_ids',
             'years_of_experience', 'current_status', 
             'last_latitude', 'last_longitude', 'last_location_update',
             'created_at', 'updated_at',
@@ -114,6 +115,12 @@ class TechnicianSerializer(serializers.ModelSerializer):
             
         # Update Technician (handled by super for remaining fields)
         return super().update(instance, validated_data)
+
+
+    def get_staff_id(self, obj):
+        if hasattr(obj.user, 'employee_profile'):
+            return obj.user.employee_profile.id
+        return None
 
 
 class TimeOffRequestSerializer(serializers.ModelSerializer):

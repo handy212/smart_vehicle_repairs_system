@@ -51,11 +51,11 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
     """ViewSet for fixed assets with comprehensive filtering and reporting"""
     
     queryset = FixedAsset.objects.select_related(
-        'category', 'branch', 'supplier', 'created_by'
+        'category', 'branch', 'supplier', 'created_by', 'assigned_to__user'
     ).all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'category', 'branch', 'depreciation_method']
+    filterset_fields = ['status', 'category', 'branch', 'depreciation_method', 'assigned_to']
     search_fields = ['asset_number', 'name', 'description', 'serial_number', 'manufacturer']
     ordering_fields = [
         'asset_number', 'name', 'acquisition_date', 'acquisition_cost',

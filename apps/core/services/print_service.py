@@ -30,6 +30,7 @@ class DocumentPrinter:
         'inventory_count_sheet': 'printing/documents/inventory_count_sheet.html',
         'aging_report': 'printing/reports/aging_report.html',
         'revenue_summary': 'printing/reports/revenue_summary.html',
+        'payslip': 'printing/documents/payslip.html',
     }
     
     def __init__(self, document_type: str):
@@ -605,4 +606,17 @@ def generate_revenue_summary_pdf(data):
         **data
     }
     filename = f"revenue_summary_{context['generated_at'].strftime('%Y%m%d')}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def generate_payslip_pdf(payslip):
+    """Generate PDF for payslip"""
+    printer = DocumentPrinter('payslip')
+    context = {
+        'document': payslip,
+        'branch': payslip.employee.user.branch,
+    }
+    # Filename: payslip_NAME_PERIOD.pdf
+    safe_name = "".join(c for c in payslip.employee.full_name if c.isalnum() or c in (' ', '_', '-')).strip().replace(' ', '_')
+    filename = f"payslip_{safe_name}_{payslip.payroll_period.start_date}.pdf"
     return printer.generate_pdf(context, filename)

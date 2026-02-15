@@ -82,6 +82,7 @@ class Technician(models.Model):
     class Meta:
         verbose_name = _('technician')
         verbose_name_plural = _('technicians')
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"Technician: {self.user.get_full_name()}"

@@ -231,6 +231,8 @@ class Admin(AbstractUserRole):
         # HR Management
         'view_hr': True,
         'manage_hr': True,
+        'view_staff': True,
+        'manage_staff': True,
         'view_employees': True,
         'manage_employees': True,
         'view_departments': True,
@@ -422,6 +424,8 @@ class Manager(AbstractUserRole):
         
         # HR Management (Branch Level)
         'view_hr': True,
+        'view_staff': True,
+        'manage_staff': True,
         'view_employees': True,
         'manage_employees': True,
         'view_departments': True,
@@ -756,6 +760,8 @@ class HRManager(AbstractUserRole):
         # HR Management (Full Access)
         'view_hr': True,
         'manage_hr': True,
+        'view_staff': True,
+        'manage_staff': True,
         'view_employees': True,
         'manage_employees': True,
         'view_departments': True,

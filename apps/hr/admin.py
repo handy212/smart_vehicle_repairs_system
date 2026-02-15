@@ -6,7 +6,8 @@ from .models import (
     Department, Position, EmployeeProfile,
     LeaveType, LeaveBalance, LeaveRequest,
     AttendancePolicy, Attendance,
-    SalaryComponent, PayrollPeriod, PaySlip,
+    SalaryComponent, EmployeeSalaryComponent, TaxRule,
+    PayrollPeriod, PaySlip,
     JobOpening, Applicant, Interview,
     PerformanceReview, TrainingProgram, EmployeeTraining, ComplianceDocument,
 )
@@ -86,6 +87,19 @@ class AttendanceAdmin(admin.ModelAdmin):
 class SalaryComponentAdmin(admin.ModelAdmin):
     list_display = ['name', 'component_type', 'calculation_type', 'amount', 'percentage', 'is_active']
     list_filter = ['component_type', 'is_active']
+
+
+@admin.register(EmployeeSalaryComponent)
+class EmployeeSalaryComponentAdmin(admin.ModelAdmin):
+    list_display = ['employee', 'component', 'amount', 'is_active']
+    list_filter = ['is_active', 'component']
+    raw_id_fields = ['employee']
+
+
+@admin.register(TaxRule)
+class TaxRuleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'min_income', 'max_income', 'rate']
+    ordering = ['min_income']
 
 
 @admin.register(PayrollPeriod)

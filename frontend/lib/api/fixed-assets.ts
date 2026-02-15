@@ -31,6 +31,8 @@ export interface FixedAsset {
     branch: number;
     branch_name: string;
     location?: string;
+    assigned_to?: number | null;
+    assigned_to_name?: string | null;
     manufacturer?: string;
     model_number?: string;
     serial_number?: string;
@@ -57,6 +59,7 @@ export const fixedAssetsApi = {
         status?: string;
         category?: number;
         branch?: number;
+        assigned_to?: number;
         search?: string;
     }) => {
         const response = await apiClient.get('/fixed-assets/assets/', { params });

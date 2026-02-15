@@ -249,6 +249,33 @@ class Command(BaseCommand):
                 'run_depreciation': ('fixed_assets', 'Run Depreciation', 'Run asset depreciation'),
                 'view_asset_maintenance': ('fixed_assets', 'View Asset Maintenance', 'View asset maintenance records'),
                 'create_asset_maintenance': ('fixed_assets', 'Create Maintenance', 'Record asset maintenance'),
+
+                # ==================== HR MANAGEMENT ====================
+                'view_hr': ('hr', 'View HR', 'View the HR dashboard'),
+                'manage_hr': ('hr', 'Manage HR', 'Full HR module management'),
+                'view_staff': ('hr', 'View Staff', 'View staff profiles in HR'),
+                'manage_staff': ('hr', 'Manage Staff', 'Create, edit, and delete staff profiles'),
+                'view_employees': ('hr', 'View Employees', 'View employee data'),
+                'manage_employees': ('hr', 'Manage Employees', 'Manage employee records'),
+                'view_departments': ('hr', 'View Departments', 'View department list'),
+                'manage_departments': ('hr', 'Manage Departments', 'Create and edit departments'),
+                'view_leave': ('hr', 'View Leave', 'View leave requests'),
+                'manage_leave': ('hr', 'Manage Leave', 'Manage leave records'),
+                'approve_leave': ('hr', 'Approve Leave', 'Approve or reject leave requests'),
+                'view_attendance': ('hr', 'View Attendance', 'View attendance records'),
+                'manage_attendance': ('hr', 'Manage Attendance', 'Manage attendance records'),
+                'view_payroll': ('hr', 'View Payroll', 'View payroll data'),
+                'manage_payroll': ('hr', 'Manage Payroll', 'Manage payroll records'),
+                'process_payroll': ('hr', 'Process Payroll', 'Run payroll processing'),
+                'view_recruitment': ('hr', 'View Recruitment', 'View recruitment pipeline'),
+                'manage_recruitment': ('hr', 'Manage Recruitment', 'Manage recruitment processes'),
+                'view_performance': ('hr', 'View Performance', 'View performance reviews'),
+                'manage_performance': ('hr', 'Manage Performance', 'Manage performance evaluations'),
+                'view_compliance': ('hr', 'View Compliance', 'View compliance documents'),
+                'manage_compliance': ('hr', 'Manage Compliance', 'Manage compliance documents'),
+                'view_training': ('hr', 'View Training', 'View training programs'),
+                'manage_training': ('hr', 'Manage Training', 'Manage training programs'),
+                'view_dashboard': ('hr', 'View Dashboard', 'View the HR dashboard overview'),
             }
             
             # Create all permissions
@@ -289,6 +316,7 @@ class Command(BaseCommand):
                 (config_roles.Accountant, 'accountant', 45, 'Accountant - handles billing, invoicing, and financial reconciliation'),
                 (config_roles.Technician, 'technician', 40, 'Workshop mechanics/technicians'),
                 (config_roles.Customer, 'customer', 10, 'Customer portal access'),
+                (config_roles.HRManager, 'hr_manager', 80, 'HR Manager - manages all HR functions across the organization'),
             ]
             
             # Create roles and assign permissions

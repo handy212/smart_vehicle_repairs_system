@@ -159,13 +159,21 @@ export default function UsersManagementPage() {
           </div>
         </div>
         <PermissionGuard permission="create_users">
-          <Link href="/admin/users/new">
+          <Link href="/hr/staff/new">
             <Button size="sm" className="h-8 dark:bg-primary dark:hover:bg-primary/90">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
-              Add User
+              Add via HR
             </Button>
           </Link>
         </PermissionGuard>
+      </div>
+
+      {/* HR redirect banner */}
+      <div className="mx-4 mt-2 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 px-3 py-2">
+        <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+        <p className="text-xs text-blue-700 dark:text-blue-300">
+          Staff accounts are now managed through the <Link href="/hr/staff" className="font-semibold underline hover:no-underline">HR module</Link>. Use the HR Staff page to create, edit, and manage staff profiles.
+        </p>
       </div>
 
       {/* Filters */}

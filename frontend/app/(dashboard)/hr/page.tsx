@@ -22,6 +22,7 @@ import {
     CheckCircle2,
     TrendingUp,
     Briefcase,
+    GraduationCap,
 } from "lucide-react";
 
 export default function HRPage() {
@@ -196,6 +197,8 @@ function HRDashboardContent() {
                             { label: "Payroll", href: "/hr/payroll", icon: Banknote, color: "text-purple-600" },
                             { label: "Recruitment", href: "/hr/recruitment", icon: Briefcase, color: "text-cyan-600" },
                             { label: "Departments", href: "/hr/departments", icon: Building2, color: "text-indigo-600" },
+                            { label: "Performance Reviews", href: "/hr/performance", icon: Target, color: "text-rose-600" },
+                            { label: "Training", href: "/hr/training", icon: GraduationCap, color: "text-teal-600" },
                         ].map((action) => (
                             <Link
                                 key={action.href}

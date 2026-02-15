@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Save } from "lucide-react";
+import { CalendarIcon, Loader2, Save, ImagePlus, X, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useToastStore } from "@/store/useToastStore";
 import { hrApi, Department, Position } from "@/lib/api/hr";
+import { branchesApi } from "@/lib/api/branches";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
@@ -35,6 +36,8 @@ const staffSchema = z.object({
     password: z.string().min(8, { message: "Password must be at least 8 characters" }),
     phone: z.string().optional(),
     role: z.string().optional(),
+    branch: z.string().optional(),
+    profile_picture: z.any().optional(),
 
     // Profile fields
     department: z.string().optional(),
@@ -83,15 +86,26 @@ export default function NewStaffPage() {
         queryFn: () => hrApi.positions.list({ is_active: true }).then(res => res.data),
     });
 
+    // Fetch Branches
+    const { data: branchesData } = useQuery({
+        queryKey: ["branches"],
+        queryFn: () => branchesApi.list({ is_active: true }).then(res => {
+            const data = res as any;
+            return Array.isArray(data) ? data : data.results || [];
+        }),
+    });
+
     const form = useForm<StaffFormValues>({
         resolver: zodResolver(staffSchema),
         defaultValues: {
-            role: "technician", // Default role
             email: "",
             first_name: "",
             last_name: "",
             password: "",
             phone: "",
+            role: "technician",
+            branch: "",
+            profile_picture: undefined,
             employment_type: "full_time",
             employment_status: "probation",
             salary_type: "monthly",
@@ -111,12 +125,23 @@ export default function NewStaffPage() {
     async function onSubmit(data: StaffFormValues) {
         setIsSubmitting(true);
         try {
-            await hrApi.staff.create({
-                ...data,
-                department: data.department ? parseInt(data.department) : undefined,
-                position: data.position ? parseInt(data.position) : undefined,
-                start_date: data.start_date ? format(data.start_date, "yyyy-MM-dd") : undefined,
+            const formData = new FormData();
+
+            // Append all fields to FormData
+            Object.keys(data).forEach((key) => {
+                const value = (data as any)[key];
+                if (key === "profile_picture") {
+                    if (value instanceof File) {
+                        formData.append(key, value);
+                    }
+                } else if (key === "start_date" && value) {
+                    formData.append(key, format(value, "yyyy-MM-dd"));
+                } else if (value !== undefined && value !== null) {
+                    formData.append(key, value.toString());
+                }
             });
+
+            await hrApi.staff.create(formData);
 
             addToast({
                 title: "Staff Member Created",
@@ -250,6 +275,63 @@ export default function NewStaffPage() {
                                                 <SelectItem value="service_coordinator">Service Coordinator</SelectItem>
                                             </SelectContent>
                                         </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="profile_picture"
+                                render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                        <FormLabel>Profile Picture</FormLabel>
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-muted flex items-center justify-center bg-accent">
+                                                {field.value instanceof File ? (
+                                                    <img src={URL.createObjectURL(field.value)} alt="Preview" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            const input = document.createElement("input");
+                                                            input.type = "file";
+                                                            input.accept = "image/*";
+                                                            input.onchange = (e) => {
+                                                                const file = (e.target as HTMLInputElement).files?.[0];
+                                                                if (file) {
+                                                                    field.onChange(file);
+                                                                }
+                                                            };
+                                                            input.click();
+                                                        }}
+                                                    >
+                                                        <Upload className="h-4 w-4 mr-2" />
+                                                        Upload
+                                                    </Button>
+                                                    {field.value && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => field.onChange(null)}
+                                                        >
+                                                            <X className="h-4 w-4 mr-2" />
+                                                            Remove
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    JPG, PNG or GIF. Max 2MB.
+                                                </p>
+                                            </div>
+                                        </div>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -395,9 +477,36 @@ export default function NewStaffPage() {
                                                         date > new Date("2100-01-01")
                                                     }
                                                     initialFocus
+                                                    captionLayout="dropdown"
+                                                    fromYear={1960}
+                                                    toYear={new Date().getFullYear() + 10}
                                                 />
                                             </PopoverContent>
                                         </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="branch"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Branch</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select branch" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {branchesData?.map((branch: any) => (
+                                                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                                                        {branch.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}

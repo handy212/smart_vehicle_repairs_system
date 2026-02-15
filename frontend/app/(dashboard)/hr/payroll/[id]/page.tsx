@@ -21,6 +21,9 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 
+import { useState } from "react";
+import { PayslipDetailDialog } from "./PayslipDetailDialog";
+
 export default function PayrollPeriodDetailPage() {
     return (
         <PermissionGuard permission="view_payroll">
@@ -34,6 +37,7 @@ function PayrollPeriodDetail() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const periodId = Number(params.id);
+    const [selectedPayslip, setSelectedPayslip] = useState<PaySlip | null>(null);
 
     const { data: period, isLoading: loadingPeriod } = useQuery({
         queryKey: ["hr", "payroll-period", periodId],
@@ -258,6 +262,9 @@ function PayrollPeriodDetail() {
                                                 {slip.status}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell className="px-4 py-2 text-right">
+                                            <Button variant="ghost" size="sm" onClick={() => setSelectedPayslip(slip)}>View</Button>
+                                        </TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
@@ -277,6 +284,12 @@ function PayrollPeriodDetail() {
                     )}
                 </CardContent>
             </Card>
+
+            <PayslipDetailDialog
+                payslip={selectedPayslip}
+                open={!!selectedPayslip}
+                onOpenChange={(open) => !open && setSelectedPayslip(null)}
+            />
         </div>
     );
 }

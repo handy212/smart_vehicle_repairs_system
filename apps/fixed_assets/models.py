@@ -149,6 +149,14 @@ class FixedAsset(models.Model):
         null=True,
         help_text="Physical location within branch (e.g., Workshop Bay 1, Office Floor 2)"
     )
+    assigned_to = models.ForeignKey(
+        'hr.EmployeeProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_assets',
+        help_text="Staff member this asset is assigned to"
+    )
     
     # Asset Details
     manufacturer = models.CharField(max_length=100, blank=True, null=True)

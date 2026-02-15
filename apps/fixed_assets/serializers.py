@@ -49,6 +49,7 @@ class FixedAssetListSerializer(serializers.ModelSerializer):
     
     category_name = serializers.CharField(source='category.name', read_only=True)
     branch_name = serializers.CharField(source='branch.name', read_only=True)
+    assigned_to_name = serializers.SerializerMethodField()
     depreciation_percent = serializers.SerializerMethodField()
     
     class Meta:
@@ -58,6 +59,7 @@ class FixedAssetListSerializer(serializers.ModelSerializer):
             'acquisition_cost', 'acquisition_date', 'depreciation_method',
             'useful_life_years', 'accumulated_depreciation', 'net_book_value',
             'depreciation_percent', 'status', 'branch', 'branch_name',
+            'assigned_to', 'assigned_to_name',
             'last_depreciation_date', 'created_at'
         ]
     
@@ -65,6 +67,11 @@ class FixedAssetListSerializer(serializers.ModelSerializer):
         if obj.acquisition_cost > 0:
             return float((obj.accumulated_depreciation / obj.acquisition_cost) * 100)
         return 0.0
+
+    def get_assigned_to_name(self, obj):
+        if obj.assigned_to:
+            return obj.assigned_to.user.get_full_name() or obj.assigned_to.user.username
+        return None
 
 
 class FixedAssetDetailSerializer(serializers.ModelSerializer):
@@ -113,7 +120,7 @@ class FixedAssetCreateSerializer(serializers.ModelSerializer):
             'declining_balance_rate', 'total_units',
             'gl_asset_account_code', 'gl_depreciation_expense_account_code',
             'gl_accumulated_depreciation_account_code',
-            'status', 'branch', 'location',
+            'status', 'branch', 'location', 'assigned_to',
             'manufacturer', 'model_number', 'serial_number',
             'purchase_order', 'supplier', 'warranty_expiration', 'notes'
         ]
@@ -145,7 +152,7 @@ class FixedAssetUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = FixedAsset
         fields = [
-            'name', 'description', 'status', 'location',
+            'name', 'description', 'status', 'location', 'assigned_to',
             'manufacturer', 'model_number', 'serial_number',
             'warranty_expiration', 'notes',
             'disposal_date', 'disposal_method', 'disposal_proceeds', 'disposal_notes'

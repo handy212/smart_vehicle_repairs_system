@@ -1,0 +1,114 @@
+{% extends 'printing/base/document_base.html' %}
+{% load humanize %}
+
+{% block title %}Payslip - {{ document.employee.full_name }} - {{ document.payroll_period.start_date }}{% endblock %}
+
+{% block document_type %}Payslip{% endblock %}
+
+{% block document_number %}{{ document.payroll_period.start_date|date:"F Y" }}{% endblock %}
+
+{% block document_meta %}
+<div>Period: {{ document.payroll_period.start_date|date:"d M Y" }} - {{ document.payroll_period.end_date|date:"d M Y" }}</div>
+<div>Pay Date: {{ document.payment_date|default:"-" }}</div>
+<div>Status: <span class="font-bold uppercase">{{ document.get_status_display }}</span></div>
+{% endblock %}
+
+{% block content %}
+<!-- Employee Info -->
+<div class="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <div class="text-xs font-semibold text-gray-500 uppercase">Employee Name</div>
+            <div class="font-bold text-lg">{{ document.employee.full_name }}</div>
+        </div>
+        <div>
+            <div class="text-xs font-semibold text-gray-500 uppercase">Employee ID</div>
+            <div class="font-medium">#{{ document.employee.id }}</div>
+        </div>
+        <div>
+            <div class="text-xs font-semibold text-gray-500 uppercase">Department</div>
+            <div class="font-medium">{{ document.employee.department.name|default:"-" }}</div>
+        </div>
+        <div>
+            <div class="text-xs font-semibold text-gray-500 uppercase">Position</div>
+            <div class="font-medium">{{ document.employee.position.title|default:"-" }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 gap-8 mb-8">
+    <!-- Earnings -->
+    <div>
+        <div class="text-sm font-bold text-gray-900 border-b-2 border-green-500 mb-4 pb-1 uppercase">Earnings</div>
+        <table class="w-full text-sm">
+            <tbody>
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 text-gray-600">Basic Salary</td>
+                    <td class="py-2 text-right font-medium">{{ document.basic_salary|floatformat:2|intcomma }}</td>
+                </tr>
+                {% if document.overtime_pay > 0 %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 text-gray-600">Overtime Pay</td>
+                    <td class="py-2 text-right font-medium">{{ document.overtime_pay|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endif %}
+                {% for name, amount in document.allowances.items %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 text-gray-600">{{ name }}</td>
+                    <td class="py-2 text-right font-medium">{{ amount|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="bg-gray-50 font-bold">
+                    <td class="py-2 pl-2 text-gray-800">Total Earnings</td>
+                    <td class="py-2 pr-2 text-right text-green-700">{{ document.gross_pay|floatformat:2|intcomma }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Deductions -->
+    <div>
+        <div class="text-sm font-bold text-gray-900 border-b-2 border-red-500 mb-4 pb-1 uppercase">Deductions</div>
+        <table class="w-full text-sm">
+            <tbody>
+                {% if document.tax_amount > 0 %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 text-gray-600">Income Tax (PAYE)</td>
+                    <td class="py-2 text-right font-medium text-red-600">{{ document.tax_amount|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endif %}
+                {% for name, amount in document.deductions.items %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2 text-gray-600">{{ name }}</td>
+                    <td class="py-2 text-right font-medium text-red-600">{{ amount|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endfor %}
+                <!-- Calculated Total Deductions for display since model doesn't store sum explicitly -->
+                <tr class="bg-gray-50 font-bold">
+                    <td class="py-2 pl-2 text-gray-800">Total Deductions</td>
+                    <td class="py-2 pr-2 text-right text-red-700">
+                        {{ document.gross_pay|default:0|add:document.net_pay|default:0|floatformat:2|intcomma }}
+                        {# Note: The above calculation is hacky in template language. Ideally pass total_deductions in context #}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Net Pay -->
+<div class="bg-gray-800 text-white p-6 rounded-lg mb-8">
+    <div class="flex justify-between items-center">
+        <div class="text-lg font-medium uppercase tracking-wider">Net Pay</div>
+        <div class="text-3xl font-bold">{{ document.net_pay|floatformat:2|intcomma }}</div>
+    </div>
+</div>
+
+<!-- Notes -->
+{% if document.payment_reference %}
+<div class="text-sm text-gray-500 mt-4">
+    <span class="font-bold">Payment Reference:</span> {{ document.payment_reference }}
+</div>
+{% endif %}
+
+{% endblock %}

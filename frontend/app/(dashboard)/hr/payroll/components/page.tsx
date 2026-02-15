@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { hrApi, SalaryComponent } from "@/lib/api/hr";
+import { hrApi, SalaryComponent, EmployeeSalaryComponent, EmployeeProfile } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, Pencil, Trash2, DollarSign, Percent } from "lucide-react";
+import { Plus, Filter, Pencil, Trash2, DollarSign, Percent, User, Building2 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
@@ -19,12 +19,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check } from "lucide-react";
 
 export default function SalaryComponentsPage() {
     return (
         <PermissionGuard permission="view_payroll">
             <DynamicPageTitle title="Salary Components" />
-            <SalaryComponentsContent />
+            <Tabs defaultValue="components">
+                <div className="space-y-4">
+                    <StaffPageHeader
+                        title="Salary Components"
+                        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "HR", href: "/hr" }, { label: "Payroll", href: "/hr/payroll" }, { label: "Components" }]}
+                        actions={
+                            <TabsList>
+                                <TabsTrigger value="components">Components</TabsTrigger>
+                                <TabsTrigger value="assignments">Employee Assignments</TabsTrigger>
+                            </TabsList>
+                        }
+                    />
+
+                    <TabsContent value="components" className="mt-0">
+                        <SalaryComponentsContent />
+                    </TabsContent>
+
+                    <TabsContent value="assignments" className="mt-0">
+                        <AssignmentsContent />
+                    </TabsContent>
+                </div>
+            </Tabs>
         </PermissionGuard>
     );
 }
@@ -50,22 +74,8 @@ function SalaryComponentsContent() {
 
     return (
         <div className="space-y-4">
-            <StaffPageHeader
-                title="Salary Components"
-                breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "HR", href: "/hr" }, { label: "Payroll", href: "/hr/payroll" }, { label: "Components" }]}
-                actions={<PermissionGuard permission="manage_payroll"><CompDialog open={showCreate} onOpenChange={setShowCreate} onSaved={() => { queryClient.invalidateQueries({ queryKey: ["hr", "salary-components"] }); setShowCreate(false); }} /></PermissionGuard>}
-            />
-
-            {!isLoading && (
-                <div className="grid grid-cols-3 gap-3">
-                    <Card className="shadow-sm border"><CardContent className="p-3 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span><span className="text-lg font-bold">{components.length}</span></CardContent></Card>
-                    <Card className="shadow-sm border"><CardContent className="p-3 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Allowances</span><span className="text-lg font-bold text-green-600">{components.filter(c => c.component_type === "allowance").length}</span></CardContent></Card>
-                    <Card className="shadow-sm border"><CardContent className="p-3 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Deductions</span><span className="text-lg font-bold text-red-600">{components.filter(c => c.component_type === "deduction").length}</span></CardContent></Card>
-                </div>
-            )}
-
-            <Card className="border-none shadow-sm bg-muted/50">
-                <CardContent className="p-3">
+            <div className="flex justify-between items-center bg-card p-4 rounded-lg border shadow-sm">
+                <div className="flex items-center gap-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8"><Filter className="h-4 w-4 mr-2" />{typeFilter ? (typeFilter === "allowance" ? "Allowances" : "Deductions") : "All Types"}</Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
@@ -75,13 +85,16 @@ function SalaryComponentsContent() {
                             <DropdownMenuItem onClick={() => setTypeFilter("deduction")}>Deductions</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                </CardContent>
-            </Card>
+                </div>
+                <PermissionGuard permission="manage_payroll">
+                    <Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-4 w-4 mr-2" />Add Component</Button>
+                </PermissionGuard>
+            </div>
 
-            <Card className="border-t shadow-sm">
+            <Card className="border shadow-sm">
                 <CardHeader className="py-3 px-4 border-b bg-muted/30"><CardTitle className="text-sm font-semibold">All Components ({components.length})</CardTitle></CardHeader>
                 <CardContent className="p-0">
-                    {isLoading ? <div className="p-4 space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-12 rounded-lg bg-muted animate-pulse" />)}</div> : (
+                    {isLoading ? <div className="p-4 space-y-2 text-center text-sm text-muted-foreground">Loading...</div> : (
                         <Table>
                             <TableHeader><TableRow className="bg-muted/50 hover:bg-muted/50">
                                 <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Name</TableHead>
@@ -104,7 +117,7 @@ function SalaryComponentsContent() {
                                         <TableCell className="px-4 py-2 text-right"><PermissionGuard permission="manage_payroll"><div className="flex items-center justify-end gap-1"><Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditItem(comp)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-600 hover:bg-red-50" onClick={() => deleteMut.mutate(comp.id)} disabled={deleteMut.isPending}><Trash2 className="h-3.5 w-3.5" /></Button></div></PermissionGuard></TableCell>
                                     </TableRow>
                                 )) : (
-                                    <TableRow><TableCell colSpan={7} className="h-32 text-center"><div className="flex flex-col items-center text-muted-foreground"><DollarSign className="h-8 w-8 mb-2 opacity-50" /><p className="text-sm">No salary components configured</p></div></TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">No salary components configured</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -112,7 +125,73 @@ function SalaryComponentsContent() {
                 </CardContent>
             </Card>
 
+            <CompDialog open={showCreate} onOpenChange={setShowCreate} onSaved={() => { queryClient.invalidateQueries({ queryKey: ["hr", "salary-components"] }); setShowCreate(false); }} />
             {editItem && <CompDialog open={!!editItem} onOpenChange={(o) => { if (!o) setEditItem(null); }} existing={editItem} onSaved={() => { queryClient.invalidateQueries({ queryKey: ["hr", "salary-components"] }); setEditItem(null); }} />}
+        </div>
+    );
+}
+
+function AssignmentsContent() {
+    const queryClient = useQueryClient();
+    const [showCreate, setShowCreate] = useState(false);
+    const [editItem, setEditItem] = useState<EmployeeSalaryComponent | null>(null);
+
+    const { data, isLoading } = useQuery({
+        queryKey: ["hr", "employee-salary-components"],
+        queryFn: async () => (await hrApi.employeeSalaryComponents.list()).data,
+    });
+
+    const deleteMut = useMutation({
+        mutationFn: (id: number) => hrApi.employeeSalaryComponents.delete(id),
+        onSuccess: () => { toast.success("Assignment removed"); queryClient.invalidateQueries({ queryKey: ["hr", "employee-salary-components"] }); },
+        onError: () => toast.error("Failed to remove assignment"),
+    });
+
+    const assignments = data?.results ?? [];
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center bg-card p-4 rounded-lg border shadow-sm">
+                <div />
+                <PermissionGuard permission="manage_payroll">
+                    <Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-4 w-4 mr-2" />Assign Component</Button>
+                </PermissionGuard>
+            </div>
+
+            <Card className="border shadow-sm">
+                <CardHeader className="py-3 px-4 border-b bg-muted/30"><CardTitle className="text-sm font-semibold">Assignments ({assignments.length})</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                    {isLoading ? <div className="p-4 space-y-2 text-center text-sm text-muted-foreground">Loading...</div> : (
+                        <Table>
+                            <TableHeader><TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Employee</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Component</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Type</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Amount</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                                <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
+                            </TableRow></TableHeader>
+                            <TableBody>
+                                {assignments.length > 0 ? assignments.map(a => (
+                                    <TableRow key={a.id} className="hover:bg-muted/50 border-b">
+                                        <TableCell className="px-4 py-2"><div className="flex items-center gap-2"><div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center"><User className="h-3 w-3 text-blue-600" /></div><span className="text-sm font-medium">{a.employee_name}</span></div></TableCell>
+                                        <TableCell className="px-4 py-2 font-medium">{a.component_name}</TableCell>
+                                        <TableCell className="px-4 py-2"><Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", a.component_type === "allowance" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>{a.component_type}</Badge></TableCell>
+                                        <TableCell className="px-4 py-2 text-sm text-right font-mono">{parseFloat(a.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell className="px-4 py-2"><Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 border shadow-none", a.is_active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600")}>{a.is_active ? "Active" : "Inactive"}</Badge></TableCell>
+                                        <TableCell className="px-4 py-2 text-right"><PermissionGuard permission="manage_payroll"><div className="flex items-center justify-end gap-1"><Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditItem(a)}><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-600 hover:bg-red-50" onClick={() => deleteMut.mutate(a.id)} disabled={deleteMut.isPending}><Trash2 className="h-3.5 w-3.5" /></Button></div></PermissionGuard></TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow><TableCell colSpan={6} className="h-32 text-center text-muted-foreground">No assignments found</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            <AssignmentDialog open={showCreate} onOpenChange={setShowCreate} onSaved={() => { queryClient.invalidateQueries({ queryKey: ["hr", "employee-salary-components"] }); setShowCreate(false); }} />
+            {editItem && <AssignmentDialog open={!!editItem} onOpenChange={(o) => { if (!o) setEditItem(null); }} existing={editItem} onSaved={() => { queryClient.invalidateQueries({ queryKey: ["hr", "employee-salary-components"] }); setEditItem(null); }} />}
         </div>
     );
 }
@@ -133,23 +212,79 @@ function CompDialog({ open, onOpenChange, existing, onSaved }: { open: boolean; 
         onError: () => toast.error("Failed"),
     });
 
-    const content = (
-        <DialogContent>
-            <DialogHeader><DialogTitle>{isEdit ? "Edit" : "Add"} Component</DialogTitle><DialogDescription>Configure a salary allowance or deduction.</DialogDescription></DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2"><Label>Name</Label><Input placeholder="e.g. Housing Allowance" value={name} onChange={e => setName(e.target.value)} /></div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Type</Label><Select value={compType} onValueChange={setCompType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="allowance">Allowance</SelectItem><SelectItem value="deduction">Deduction</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Calculation</Label><Select value={calcType} onValueChange={setCalcType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fixed">Fixed</SelectItem><SelectItem value="percentage">Percentage</SelectItem></SelectContent></Select></div>
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>{isEdit ? "Edit" : "Add"} Component</DialogTitle><DialogDescription>Configure a salary allowance or deduction.</DialogDescription></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2"><Label>Name</Label><Input placeholder="e.g. Housing Allowance" value={name} onChange={e => setName(e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Type</Label><Select value={compType} onValueChange={setCompType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="allowance">Allowance</SelectItem><SelectItem value="deduction">Deduction</SelectItem></SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Calculation</Label><Select value={calcType} onValueChange={setCalcType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fixed">Fixed</SelectItem><SelectItem value="percentage">Percentage</SelectItem></SelectContent></Select></div>
+                    </div>
+                    {calcType === "fixed" ? <div className="space-y-2"><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></div> : <div className="space-y-2"><Label>Percentage (%)</Label><Input type="number" step="0.01" value={pct} onChange={e => setPct(e.target.value)} /></div>}
+                    <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Taxable</Label><p className="text-xs text-muted-foreground">Subject to tax</p></div><Switch checked={taxable} onCheckedChange={setTaxable} /></div>
+                    <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Active</Label><p className="text-xs text-muted-foreground">Include in payroll</p></div><Switch checked={active} onCheckedChange={setActive} /></div>
                 </div>
-                {calcType === "fixed" ? <div className="space-y-2"><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></div> : <div className="space-y-2"><Label>Percentage (%)</Label><Input type="number" step="0.01" value={pct} onChange={e => setPct(e.target.value)} /></div>}
-                <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Taxable</Label><p className="text-xs text-muted-foreground">Subject to tax</p></div><Switch checked={taxable} onCheckedChange={setTaxable} /></div>
-                <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Active</Label><p className="text-xs text-muted-foreground">Include in payroll</p></div><Switch checked={active} onCheckedChange={setActive} /></div>
-            </div>
-            <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ name, component_type: compType as any, calculation_type: calcType as any, amount: calcType === "fixed" ? amount : "0", percentage: calcType === "percentage" ? pct : "0", is_taxable: taxable, is_active: active })} disabled={!name || mut.isPending}>{mut.isPending ? "Saving..." : isEdit ? "Update" : "Create"}</Button></DialogFooter>
-        </DialogContent>
+                <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ name, component_type: compType as any, calculation_type: calcType as any, amount: calcType === "fixed" ? amount : "0", percentage: calcType === "percentage" ? pct : "0", is_taxable: taxable, is_active: active })} disabled={!name || mut.isPending}>{mut.isPending ? "Saving..." : isEdit ? "Update" : "Create"}</Button></DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
+}
 
-    if (isEdit) return <Dialog open={open} onOpenChange={onOpenChange}>{content}</Dialog>;
-    return <Dialog open={open} onOpenChange={onOpenChange}><DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-2" />Add Component</Button></DialogTrigger>{content}</Dialog>;
+function AssignmentDialog({ open, onOpenChange, existing, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; existing?: EmployeeSalaryComponent; onSaved: () => void }) {
+    const isEdit = !!existing;
+    const [empId, setEmpId] = useState<string>(existing?.employee?.toString() || "");
+    const [compId, setCompId] = useState<string>(existing?.component?.toString() || "");
+    const [amount, setAmount] = useState(existing?.amount || "");
+    const [active, setActive] = useState(existing?.is_active ?? true);
+
+    const { data: employees } = useQuery({ queryKey: ["hr", "staff"], queryFn: async () => (await hrApi.staff.list({ employment_status: 'active' })).data.results });
+    const { data: components } = useQuery({ queryKey: ["hr", "salary-components", "active"], queryFn: async () => (await hrApi.salaryComponents.list({ is_active: true })).data.results });
+
+    const mut = useMutation({
+        mutationFn: (d: any) => isEdit ? hrApi.employeeSalaryComponents.update(existing!.id, d) : hrApi.employeeSalaryComponents.create(d),
+        onSuccess: () => { toast.success(isEdit ? "Updated" : "Assigned"); onSaved(); },
+        onError: () => toast.error("Failed"),
+    });
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>{isEdit ? "Edit" : "New"} Assignment</DialogTitle><DialogDescription>Assign a component to an employee with a specific amount.</DialogDescription></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Employee</Label>
+                        <Select value={empId} onValueChange={setEmpId} disabled={isEdit}>
+                            <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                            <SelectContent>
+                                {employees?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.full_name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Component</Label>
+                        <Select value={compId} onValueChange={setCompId} disabled={isEdit}>
+                            <SelectTrigger><SelectValue placeholder="Select component" /></SelectTrigger>
+                            <SelectContent>
+                                {components?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name} ({c.component_type})</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Amount</Label>
+                        <Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
+                        <p className="text-xs text-muted-foreground">Override amount for this employee</p>
+                    </div>
+                    <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Active</Label><p className="text-xs text-muted-foreground">Include in payroll</p></div><Switch checked={active} onCheckedChange={setActive} /></div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={() => mut.mutate({ employee: parseInt(empId), component: parseInt(compId), amount, is_active: active })} disabled={!empId || !compId || !amount || mut.isPending}>
+                        {mut.isPending ? "Saving..." : "Save"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }

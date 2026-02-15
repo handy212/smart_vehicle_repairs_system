@@ -241,10 +241,10 @@ function AttendanceContent() {
                                         <TableCell className="px-4 py-2 text-sm">{rec.date}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm">{rec.clock_in ? new Date(rec.clock_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm">{rec.clock_out ? new Date(rec.clock_out).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</TableCell>
-                                        <TableCell className="px-4 py-2 text-sm font-medium">{rec.total_hours != null ? `${rec.total_hours.toFixed(1)}h` : "—"}</TableCell>
+                                        <TableCell className="px-4 py-2 text-sm font-medium">{rec.total_hours != null ? `${Number(rec.total_hours).toFixed(1)}h` : "—"}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm">
-                                            {rec.overtime_hours > 0 ? (
-                                                <span className="text-amber-600 font-medium">{rec.overtime_hours.toFixed(1)}h</span>
+                                            {Number(rec.overtime_hours) > 0 ? (
+                                                <span className="text-amber-600 font-medium">{Number(rec.overtime_hours).toFixed(1)}h</span>
                                             ) : (
                                                 "—"
                                             )}

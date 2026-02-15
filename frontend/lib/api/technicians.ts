@@ -22,6 +22,7 @@ export interface Technician {
         branch?: number;
         branch_name?: string;
     };
+    staff_id?: number | null;
     bio?: string;
     skills: Skill[];
     years_of_experience: number;

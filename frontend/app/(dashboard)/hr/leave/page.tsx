@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hrApi, LeaveRequest } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, CheckCircle2, XCircle, Clock, Filter, Search } from "lucide-react";
+import { Calendar, CheckCircle2, XCircle, Clock, Filter, Search, Settings } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { useEffect } from "react";
+import Link from "next/link";
 
 export default function LeavePage() {
     return (
@@ -98,11 +99,16 @@ function LeaveContent() {
                     { label: "Leave Management" },
                 ]}
                 actions={
-                    <PermissionGuard permission="manage_leave">
-                        <Button size="sm" onClick={() => setShowApply(true)}>
-                            <Plus className="h-4 w-4 mr-2" />Apply Leave
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href="/hr/leave/leave-types"><Settings className="h-4 w-4 mr-2" />Leave Types</Link>
                         </Button>
-                    </PermissionGuard>
+                        <PermissionGuard permission="manage_leave">
+                            <Button size="sm" onClick={() => setShowApply(true)}>
+                                <Plus className="h-4 w-4 mr-2" />Apply Leave
+                            </Button>
+                        </PermissionGuard>
+                    </div>
                 }
             />
 

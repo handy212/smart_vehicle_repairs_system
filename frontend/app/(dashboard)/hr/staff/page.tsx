@@ -1,12 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hrApi, StaffListItem } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-    Plus, Search, Filter, Grid, List as ListIcon, Users,
+    Plus, Search, Filter, Grid, List as ListIcon, Users, Trash2, RefreshCw, Loader2,
 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
@@ -26,6 +26,12 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export default function StaffPage() {
     return (
@@ -38,9 +44,12 @@ export default function StaffPage() {
 
 function StaffContent() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [viewMode, setViewMode] = useState<"grid" | "list">("list");
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const { data, isLoading } = useQuery({
         queryKey: ["hr", "staff", searchQuery, statusFilter],
@@ -51,6 +60,28 @@ function StaffContent() {
             });
             return res.data;
         },
+    });
+
+    const bulkStatusMut = useMutation({
+        mutationFn: ({ ids, status }: { ids: number[]; status: string }) =>
+            hrApi.staff.bulkUpdateStatus(ids, status),
+        onSuccess: (_, vars) => {
+            queryClient.invalidateQueries({ queryKey: ["hr", "staff"] });
+            toast.success(`Updated ${vars.ids.length} staff member(s) to "${vars.status}"`);
+            setSelectedIds(new Set());
+        },
+        onError: () => toast.error("Failed to update staff status"),
+    });
+
+    const bulkDeleteMut = useMutation({
+        mutationFn: (ids: number[]) => hrApi.staff.bulkDelete(ids),
+        onSuccess: (_, ids) => {
+            queryClient.invalidateQueries({ queryKey: ["hr", "staff"] });
+            toast.success(`Deleted ${ids.length} staff member(s)`);
+            setSelectedIds(new Set());
+            setShowDeleteConfirm(false);
+        },
+        onError: () => toast.error("Failed to delete staff members"),
     });
 
     const getStatusColor = (status: string) => {
@@ -67,6 +98,24 @@ function StaffContent() {
     const staff = data?.results ?? [];
     const activeCount = staff.filter(e => e.employment_status === "active").length;
     const probationCount = staff.filter(e => e.employment_status === "probation").length;
+
+    const isAllSelected = staff.length > 0 && selectedIds.size === staff.length;
+    const isSomeSelected = selectedIds.size > 0 && selectedIds.size < staff.length;
+
+    const toggleSelectAll = () => {
+        if (isAllSelected) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(staff.map(e => e.id)));
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        const next = new Set(selectedIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedIds(next);
+    };
 
     return (
         <div className="space-y-4">
@@ -162,6 +211,41 @@ function StaffContent() {
                 </CardContent>
             </Card>
 
+            {/* Bulk Action Bar */}
+            {selectedIds.size > 0 && (
+                <Card className="border-primary/30 bg-primary/5 shadow-sm">
+                    <CardContent className="p-3 flex items-center gap-3">
+                        <span className="text-sm font-medium text-foreground">
+                            {selectedIds.size} selected
+                        </span>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-7" disabled={bulkStatusMut.isPending}>
+                                    {bulkStatusMut.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+                                    Change Status
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuLabel>Set Status</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {["active", "probation", "suspended", "terminated", "resigned"].map(s => (
+                                    <DropdownMenuItem key={s} className="capitalize" onClick={() => bulkStatusMut.mutate({ ids: Array.from(selectedIds), status: s })}>
+                                        {s}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button variant="destructive" size="sm" className="h-7" onClick={() => setShowDeleteConfirm(true)}>
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            Delete Selected
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 ml-auto" onClick={() => setSelectedIds(new Set())}>
+                            Clear Selection
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Content */}
             {isLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -174,26 +258,43 @@ function StaffContent() {
                     {staff.length > 0 ? staff.map((emp) => (
                         <Card
                             key={emp.id}
-                            className="shadow-none border hover:shadow-md transition-shadow cursor-pointer"
+                            className={cn(
+                                "shadow-none border hover:shadow-md transition-shadow cursor-pointer",
+                                selectedIds.has(emp.id) && "ring-2 ring-primary border-primary/50"
+                            )}
                             onClick={() => router.push(`/hr/staff/${emp.id}`)}
                         >
                             <CardContent className="p-3">
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex gap-3 items-center">
-                                        <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-900 shadow-sm">
-                                            <AvatarImage src={emp.profile_picture ?? undefined} />
-                                            <AvatarFallback className="text-xs">
-                                                {emp.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                                            </AvatarFallback>
-                                        </Avatar>
+                                        <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox
+                                                checked={selectedIds.has(emp.id)}
+                                                onCheckedChange={() => toggleSelect(emp.id)}
+                                                className="absolute -left-1 -top-1 z-10"
+                                            />
+                                            <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-900 shadow-sm ml-4">
+                                                <AvatarImage src={emp.profile_picture ?? undefined} />
+                                                <AvatarFallback className="text-xs">
+                                                    {emp.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="text-sm font-semibold text-foreground truncate">{emp.full_name}</h3>
                                             <p className="text-xs text-muted-foreground truncate">{emp.position_title || "No Position"}</p>
                                         </div>
                                     </div>
-                                    <Badge variant="outline" className={cn("capitalize text-[10px] px-2 py-0.5 border shadow-none", getStatusColor(emp.employment_status))}>
-                                        {emp.employment_status}
-                                    </Badge>
+                                    <div className="flex gap-1.5 flex-wrap justify-end">
+                                        {emp.technician_id && (
+                                            <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
+                                                Technician
+                                            </Badge>
+                                        )}
+                                        <Badge variant="outline" className={cn("capitalize text-[10px] px-2 py-0.5 border shadow-none", getStatusColor(emp.employment_status))}>
+                                            {emp.employment_status}
+                                        </Badge>
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 pt-2 border-t">
                                     <div>
@@ -236,8 +337,15 @@ function StaffContent() {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                    <TableHead className="px-3 h-10 w-10">
+                                        <Checkbox
+                                            checked={isAllSelected}
+                                            onCheckedChange={toggleSelectAll}
+                                        />
+                                    </TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Staff Member</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Department</TableHead>
+                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Position</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Type</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
@@ -248,9 +356,18 @@ function StaffContent() {
                                 {staff.length > 0 ? staff.map((emp) => (
                                     <TableRow
                                         key={emp.id}
-                                        className="group hover:bg-muted/50 transition-colors border-b border-border cursor-pointer"
+                                        className={cn(
+                                            "group hover:bg-muted/50 transition-colors border-b border-border cursor-pointer",
+                                            selectedIds.has(emp.id) && "bg-primary/5"
+                                        )}
                                         onClick={() => router.push(`/hr/staff/${emp.id}`)}
                                     >
+                                        <TableCell className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox
+                                                checked={selectedIds.has(emp.id)}
+                                                onCheckedChange={() => toggleSelect(emp.id)}
+                                            />
+                                        </TableCell>
                                         <TableCell className="px-3 py-1.5">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-8 w-8">
@@ -266,12 +383,20 @@ function StaffContent() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-sm">{emp.department_name || "—"}</TableCell>
+                                        <TableCell className="px-4 py-2 text-sm">{emp.branch_name || "—"}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm">{emp.position_title || "—"}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm capitalize">{emp.employment_type?.replace("_", " ")}</TableCell>
                                         <TableCell className="px-4 py-2">
-                                            <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", getStatusColor(emp.employment_status))}>
-                                                {emp.employment_status}
-                                            </Badge>
+                                            <div className="flex gap-2">
+                                                {emp.technician_id && (
+                                                    <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
+                                                        Tech
+                                                    </Badge>
+                                                )}
+                                                <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", getStatusColor(emp.employment_status))}>
+                                                    {emp.employment_status}
+                                                </Badge>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-right">
                                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); router.push(`/hr/staff/${emp.id}`); }}>
@@ -281,7 +406,7 @@ function StaffContent() {
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-32 text-center">
+                                        <TableCell colSpan={7} className="h-32 text-center">
                                             <div className="flex flex-col items-center justify-center text-muted-foreground">
                                                 <Users className="h-8 w-8 mb-2 opacity-50" />
                                                 <p className="text-sm">No staff found</p>
@@ -294,6 +419,29 @@ function StaffContent() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Bulk Delete Confirmation */}
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {selectedIds.size} staff member(s)?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the selected staff members and their user accounts. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => bulkDeleteMut.mutate(Array.from(selectedIds))}
+                            disabled={bulkDeleteMut.isPending}
+                        >
+                            {bulkDeleteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Delete {selectedIds.size} Staff
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

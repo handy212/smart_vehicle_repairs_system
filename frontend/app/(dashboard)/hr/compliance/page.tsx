@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hrApi, ComplianceDocument } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, AlertTriangle, FileText, Upload, Calendar, Search, Filter, Download } from "lucide-react";
+import { Shield, AlertTriangle, FileText, Upload, Calendar, Search, Filter, Download, Pencil, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
@@ -13,6 +13,8 @@ import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +37,8 @@ function ComplianceContent() {
     const queryClient = useQueryClient();
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [searchTerm, setSearchTerm] = useState("");
+    const [editingDoc, setEditingDoc] = useState<ComplianceDocument | null>(null);
+    const [deletingDoc, setDeletingDoc] = useState<ComplianceDocument | null>(null);
 
     const { data: documentsData, isLoading } = useQuery({
         queryKey: ["hr", "compliance-documents", filterStatus, searchTerm],
@@ -118,7 +122,7 @@ function ComplianceContent() {
                                 <TableHead>Staff</TableHead>
                                 <TableHead>Expiry Date</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -139,11 +143,21 @@ function ComplianceContent() {
                                         <TableCell>{doc.expiry_date || "N/A"}</TableCell>
                                         <TableCell><Badge variant="outline" className={cn("capitalize shadow-none", getStatusColor(doc.status))}>{doc.status.replace("_", " ")}</Badge></TableCell>
                                         <TableCell className="text-right">
-                                            {doc.document_file && (
-                                                <Button variant="ghost" size="sm" asChild>
-                                                    <a href={doc.document_file} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4" /></a>
-                                                </Button>
-                                            )}
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    {doc.document_file && (
+                                                        <DropdownMenuItem asChild>
+                                                            <a href={doc.document_file} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4 mr-2" />Download</a>
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem onClick={() => setEditingDoc(doc)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem className="text-red-600" onClick={() => setDeletingDoc(doc)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -156,6 +170,26 @@ function ComplianceContent() {
             </Card>
 
             <UploadDocumentDialog open={showUpload} onOpenChange={setShowUpload} onUploaded={() => { queryClient.invalidateQueries({ queryKey: ["hr", "compliance-documents"] }); setShowUpload(false); }} />
+
+            <EditDocumentDialog
+                doc={editingDoc}
+                open={!!editingDoc}
+                onOpenChange={() => setEditingDoc(null)}
+                onSaved={() => { queryClient.invalidateQueries({ queryKey: ["hr", "compliance-documents"] }); setEditingDoc(null); }}
+            />
+
+            <AlertDialog open={!!deletingDoc} onOpenChange={() => setDeletingDoc(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete &ldquo;{deletingDoc?.name}&rdquo;?</AlertDialogTitle>
+                        <AlertDialogDescription>This will permanently remove this compliance document. This action cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <DeleteDocButton docId={deletingDoc?.id} onDeleted={() => { queryClient.invalidateQueries({ queryKey: ["hr", "compliance-documents"] }); setDeletingDoc(null); }} />
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
@@ -236,5 +270,98 @@ function UploadDocumentDialog({ open, onOpenChange, onUploaded }: { open: boolea
                 <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={handleSubmit} disabled={!empId || !type || !name || !file || mut.isPending}>{mut.isPending ? "Uploading..." : "Upload"}</Button></DialogFooter>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function EditDocumentDialog({ doc, open, onOpenChange, onSaved }: { doc: ComplianceDocument | null; open: boolean; onOpenChange: () => void; onSaved: () => void }) {
+    const [name, setName] = useState("");
+    const [type, setType] = useState("");
+    const [number, setNumber] = useState("");
+    const [expiry, setExpiry] = useState("");
+    const [status, setStatus] = useState("");
+
+    // Initialize form when doc changes
+    if (open && doc && name === "" && doc.name !== name) {
+        setName(doc.name);
+        setType(doc.document_type);
+        setNumber(doc.document_number || "");
+        setExpiry(doc.expiry_date || "");
+        setStatus(doc.status || "");
+    }
+
+    const resetForm = () => { setName(""); setType(""); setNumber(""); setExpiry(""); setStatus(""); };
+
+    const mut = useMutation({
+        mutationFn: (data: Partial<ComplianceDocument>) => hrApi.complianceDocuments.update(doc!.id, data),
+        onSuccess: () => { toast.success("Document updated"); resetForm(); onSaved(); },
+        onError: () => toast.error("Failed to update document"),
+    });
+
+    const handleClose = () => { resetForm(); onOpenChange(); };
+
+    return (
+        <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>Edit Document</DialogTitle><DialogDescription>Update the compliance document details.</DialogDescription></DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Document Type</Label>
+                            <Select value={type} onValueChange={setType}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="license">License</SelectItem>
+                                    <SelectItem value="certification">Certification</SelectItem>
+                                    <SelectItem value="contract">Contract</SelectItem>
+                                    <SelectItem value="nda">NDA</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2"><Label>Document Number</Label><Input value={number} onChange={e => setNumber(e.target.value)} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Expiry Date</Label><Input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} /></div>
+                        <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select value={status} onValueChange={setStatus}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="valid">Valid</SelectItem>
+                                    <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
+                                    <SelectItem value="expired">Expired</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={handleClose}>Cancel</Button>
+                    <Button onClick={() => mut.mutate({ name, document_type: type, document_number: number, expiry_date: expiry || undefined, status: status as ComplianceDocument['status'] })} disabled={!name || !type || mut.isPending}>
+                        {mut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Save Changes
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function DeleteDocButton({ docId, onDeleted }: { docId?: number; onDeleted: () => void }) {
+    const mut = useMutation({
+        mutationFn: () => hrApi.complianceDocuments.delete(docId!),
+        onSuccess: () => { toast.success("Document deleted"); onDeleted(); },
+        onError: () => toast.error("Failed to delete document"),
+    });
+
+    return (
+        <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => { if (docId != null) mut.mutate(); }}
+            disabled={docId == null || mut.isPending}
+        >
+            {mut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Delete
+        </AlertDialogAction>
     );
 }

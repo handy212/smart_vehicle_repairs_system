@@ -1,11 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hrApi } from "@/lib/api/hr";
+import { techniciansApi } from "@/lib/api/technicians";
+import { fixedAssetsApi } from "@/lib/api/fixed-assets";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Mail, Phone, MapPin, Building2, Briefcase, DollarSign, FileText, User, ArrowLeft, Loader2 } from "lucide-react";
+import { CalendarIcon, Mail, Phone, MapPin, Building2, Briefcase, DollarSign, FileText, User, ArrowLeft, Loader2, Download, GraduationCap, ShieldCheck, ExternalLink, Package } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,16 +16,46 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useToastStore } from "@/store/useToastStore";
 
 export default function StaffDetailPage() {
     const params = useParams();
     const router = useRouter();
     const id = parseInt(params.id as string);
+    const { addToast } = useToastStore();
+    const [isDeleting, setIsDeleting] = useState(false);
+    const queryClient = useQueryClient();
 
     const { data: staff, isLoading, error } = useQuery({
         queryKey: ["hr", "staff", id],
         queryFn: () => hrApi.staff.get(id).then(res => res.data),
         enabled: !!id,
+    });
+
+    const { data: technician } = useQuery({
+        queryKey: ["technicians", staff?.technician_id],
+        queryFn: () => techniciansApi.get(staff!.technician_id!),
+        enabled: !!staff?.technician_id,
+    });
+
+    const { data: complianceDocs } = useQuery({
+        queryKey: ["hr", "compliance-documents", id],
+        queryFn: () => hrApi.complianceDocuments.list({ staff: id }).then(res => res.data),
+        enabled: !!staff,
+    });
+
+    const { data: trainingRecords } = useQuery({
+        queryKey: ["hr", "staff-training", id],
+        queryFn: () => hrApi.staffTraining.list({ staff: id }).then(res => res.data),
+        enabled: !!staff,
+    });
+
+    const { data: assignedAssets } = useQuery({
+        queryKey: ["fixed-assets", "assigned", id],
+        queryFn: () => fixedAssetsApi.list({ assigned_to: id }),
+        enabled: !!staff,
     });
 
     if (isLoading) {
@@ -65,6 +97,33 @@ export default function StaffDetailPage() {
         }
     };
 
+
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to delete this staff member? This will also delete their user account and cannot be undone.")) {
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            await hrApi.staff.delete(id);
+            queryClient.invalidateQueries({ queryKey: ["hr", "staff"] });
+            addToast({
+                title: "Staff Member Deleted",
+                message: "The staff member and their account have been successfully removed.",
+                type: "success",
+            });
+            router.push("/hr/staff");
+        } catch (err: any) {
+            addToast({
+                title: "Error",
+                message: err.response?.data?.detail || "Failed to delete staff member.",
+                type: "error",
+            });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <div className="space-y-6 pb-10">
             <DynamicPageTitle title={staff.full_name} />
@@ -78,9 +137,23 @@ export default function StaffDetailPage() {
                     { label: staff.full_name },
                 ]}
                 actions={
-                    <Button variant="outline" asChild>
-                        <Link href={`/hr/staff/${id}/edit`}>Edit Profile</Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href={`/hr/staff/${id}/edit`}>Edit Profile</Link>
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Trash2 className="mr-2 h-4 w-4" />
+                            )}
+                            Delete Staff
+                        </Button>
+                    </div>
                 }
             />
 
@@ -153,6 +226,7 @@ export default function StaffDetailPage() {
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList className="w-full justify-start overflow-x-auto">
                             <TabsTrigger value="details">Details</TabsTrigger>
+                            {staff.technician_id && <TabsTrigger value="technical">Technical Profile</TabsTrigger>}
                             <TabsTrigger value="documents">Documents</TabsTrigger>
                             <TabsTrigger value="training">Training</TabsTrigger>
                             <TabsTrigger value="assets">Assets</TabsTrigger>
@@ -243,30 +317,201 @@ export default function StaffDetailPage() {
 
                         <TabsContent value="documents" className="mt-6">
                             <Card>
-                                <CardContent className="pt-6 text-center text-muted-foreground">
-                                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>No documents uploaded for this staff member.</p>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <ShieldCheck className="h-4 w-4" />
+                                        Compliance Documents
+                                    </CardTitle>
+                                    <CardDescription>Licenses, certifications, and compliance records</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {(complianceDocs?.results?.length ?? 0) > 0 ? (
+                                        <div className="space-y-3">
+                                            {complianceDocs!.results.map((doc) => (
+                                                <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-medium text-sm truncate">{doc.name}</p>
+                                                            <Badge
+                                                                variant={doc.is_expired ? "danger" : doc.is_expiring_soon ? "warning" : "success"}
+                                                                className="text-[10px] px-1.5 py-0"
+                                                            >
+                                                                {doc.is_expired ? "Expired" : doc.is_expiring_soon ? "Expiring Soon" : "Valid"}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                                            <span className="capitalize">{doc.document_type.replace(/_/g, " ")}</span>
+                                                            {doc.document_number && <span>#{doc.document_number}</span>}
+                                                            {doc.expiry_date && (
+                                                                <span>Expires: {format(new Date(doc.expiry_date), "PP")}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {doc.document_file && (
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                                                            <a href={doc.document_file} target="_blank" rel="noopener noreferrer">
+                                                                <Download className="h-3.5 w-3.5" />
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                            <p>No compliance documents uploaded for this staff member.</p>
+                                            <Button variant="outline" size="sm" className="mt-3" asChild>
+                                                <Link href="/hr/compliance">Go to Compliance</Link>
+                                            </Button>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </TabsContent>
 
                         <TabsContent value="training" className="mt-6">
                             <Card>
-                                <CardContent className="pt-6 text-center text-muted-foreground">
-                                    <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>No training records found.</p>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <GraduationCap className="h-4 w-4" />
+                                        Training Records
+                                    </CardTitle>
+                                    <CardDescription>Program enrollment and completion history</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {(trainingRecords?.results?.length ?? 0) > 0 ? (
+                                        <div className="space-y-3">
+                                            {trainingRecords!.results.map((record) => {
+                                                const statusColors: Record<string, string> = {
+                                                    completed: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
+                                                    in_progress: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
+                                                    enrolled: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+                                                    failed: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
+                                                    withdrawn: "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
+                                                };
+                                                return (
+                                                    <div key={record.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-sm truncate">{record.training_name}</p>
+                                                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                                                <span>Enrolled: {format(new Date(record.enrolled_date), "PP")}</span>
+                                                                {record.completion_date && (
+                                                                    <span>Completed: {format(new Date(record.completion_date), "PP")}</span>
+                                                                )}
+                                                                {record.score !== null && (
+                                                                    <span className="font-medium">Score: {record.score}%</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`text-[10px] px-2 py-0.5 border shadow-none capitalize ${statusColors[record.status] || ""}`}
+                                                        >
+                                                            {record.status.replace(/_/g, " ")}
+                                                        </Badge>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <GraduationCap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                            <p>No training records found for this staff member.</p>
+                                            <Button variant="outline" size="sm" className="mt-3" asChild>
+                                                <Link href="/hr/training">Go to Training</Link>
+                                            </Button>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </TabsContent>
 
                         <TabsContent value="assets" className="mt-6">
                             <Card>
-                                <CardContent className="pt-6 text-center text-muted-foreground">
-                                    <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>No assets assigned.</p>
+                                <CardHeader>
+                                    <CardTitle className="text-lg font-semibold">Assigned Assets</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {(assignedAssets?.results ?? assignedAssets ?? []).length > 0 ? (
+                                        <div className="space-y-3">
+                                            {(assignedAssets?.results ?? assignedAssets ?? []).map((asset: any) => (
+                                                <div key={asset.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                            <Package className="h-4 w-4 text-primary" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-sm">{asset.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{asset.asset_number} · {asset.category_name}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-right">
+                                                            <p className="text-xs text-muted-foreground">Net Book Value</p>
+                                                            <p className="text-sm font-medium">GH₵ {Number(asset.net_book_value).toLocaleString()}</p>
+                                                        </div>
+                                                        <Badge variant={asset.status === 'active' ? 'success' : 'secondary'} className="capitalize text-[10px]">
+                                                            {asset.status}
+                                                        </Badge>
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                                                            <Link href={`/fixed-assets/${asset.id}`}><ExternalLink className="h-3.5 w-3.5" /></Link>
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                            <p className="text-sm">No assets assigned to this staff member.</p>
+                                            <p className="text-xs mt-1">Assign assets from the <Link href="/fixed-assets" className="text-primary hover:underline">Fixed Assets</Link> module.</p>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </TabsContent>
+
+                        {staff.technician_id && (
+                            <TabsContent value="technical" className="space-y-6 mt-6">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardTitle className="text-lg font-semibold">Operational Status</CardTitle>
+                                        <Badge variant="outline" className="capitalize px-3 py-1">
+                                            {technician?.current_status || "Unknown"}
+                                        </Badge>
+                                    </CardHeader>
+                                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <h4 className="text-sm font-medium text-muted-foreground mb-1">Skills</h4>
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {technician?.skills.map((skill: any) => (
+                                                        <Badge key={skill.id} variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-medium">
+                                                            {skill.name}
+                                                        </Badge>
+                                                    )) || <span className="text-muted-foreground italic text-sm">No skills listed</span>}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-medium text-muted-foreground mb-1">Experience</h4>
+                                                <p className="text-lg font-bold text-foreground">{technician?.years_of_experience || 0} Years</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col justify-center items-center p-6 border-2 border-dashed rounded-xl bg-orange-50/50 dark:bg-orange-950/20">
+                                            <Briefcase className="h-10 w-10 text-orange-500 mb-3 opacity-70" />
+                                            <h3 className="text-sm font-semibold mb-1 text-center">Operational Dashboard</h3>
+                                            <p className="text-xs text-muted-foreground text-center mb-4 max-w-[180px]">View shifts, performance metrics, and job history.</p>
+                                            <Button size="sm" asChild className="w-full">
+                                                <Link href={`/technicians/${technician?.id}`}>
+                                                    Go to Technician View
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        )}
                     </Tabs>
                 </div>
             </div>

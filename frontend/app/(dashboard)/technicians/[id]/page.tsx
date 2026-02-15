@@ -19,7 +19,8 @@ import {
     Clock,
     Map as MapIcon,
     Loader2,
-    Edit
+    Edit,
+    User
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -111,6 +112,14 @@ function TechnicianProfileContent() {
                     <Badge variant="outline" className={cn("capitalize text-xs px-2 py-0.5", getStatusColor(technician.current_status))}>
                         {technician.current_status}
                     </Badge>
+                    {technician.staff_id && (
+                        <Button size="sm" variant="outline" asChild>
+                            <Link href={`/hr/staff/${technician.staff_id}`}>
+                                <User className="h-4 w-4 mr-2" />
+                                HR Profile
+                            </Link>
+                        </Button>
+                    )}
                     <Button size="sm" variant="outline" asChild>
                         <Link href={`/technicians/${id}/edit`}>
                             <Edit className="h-4 w-4 mr-2" />

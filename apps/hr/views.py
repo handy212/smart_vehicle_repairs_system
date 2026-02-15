@@ -15,19 +15,20 @@ from .models import (
     Department, Position, EmployeeProfile,
     LeaveType, LeaveBalance, LeaveRequest,
     AttendancePolicy, Attendance,
-    SalaryComponent, PayrollPeriod, PaySlip,
+    SalaryComponent, EmployeeSalaryComponent, PayrollPeriod, PaySlip,
     JobOpening, Applicant, Interview,
     PerformanceReview, TrainingProgram, EmployeeTraining, ComplianceDocument,
+    TaxRule,
 )
 from .serializers import (
     DepartmentSerializer, PositionSerializer,
     EmployeeProfileSerializer, EmployeeProfileListSerializer,
     LeaveTypeSerializer, LeaveBalanceSerializer, LeaveRequestSerializer,
     AttendancePolicySerializer, AttendanceSerializer,
-    SalaryComponentSerializer, PayrollPeriodSerializer, PaySlipSerializer,
+    SalaryComponentSerializer, EmployeeSalaryComponentSerializer, PayrollPeriodSerializer, PaySlipSerializer,
     JobOpeningSerializer, ApplicantSerializer, InterviewSerializer,
     PerformanceReviewSerializer, TrainingProgramSerializer,
-    EmployeeTrainingSerializer, ComplianceDocumentSerializer,
+    EmployeeTrainingSerializer, ComplianceDocumentSerializer, TaxRuleSerializer,
 )
 
 
@@ -154,7 +155,7 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = EmployeeProfile.objects.select_related(
             'user', 'department', 'position', 'reporting_to',
-        )
+        ).prefetch_related('user__technician_profile')
         return filter_queryset_for_user_branches(
             qs, self.request.user, branch_field='user__branch',
         )
@@ -211,13 +212,51 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
         ).order_by('-count')
 
         return Response({
-            'total_employees': total,
+            'total_staff': total,
             'active': active,
             'probation': probation,
             'terminated': qs.filter(employment_status='terminated').count(),
             'resigned': qs.filter(employment_status='resigned').count(),
             'by_department': list(by_dept),
         })
+
+    @action(detail=False, methods=['post'])
+    def bulk_update_status(self, request):
+        """Bulk update employment status for multiple staff members"""
+        ids = request.data.get('ids', [])
+        new_status = request.data.get('status', '')
+        valid_statuses = ['active', 'probation', 'suspended', 'terminated', 'resigned']
+        if not ids:
+            return Response({'detail': 'No staff IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        if new_status not in valid_statuses:
+            return Response({'detail': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}, status=status.HTTP_400_BAD_REQUEST)
+        qs = self.get_queryset().filter(id__in=ids)
+        updated = qs.update(employment_status=new_status)
+        return Response({'detail': f'Updated {updated} staff member(s) to {new_status}.', 'updated': updated})
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        """Bulk delete multiple staff members and their user accounts"""
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'detail': 'No staff IDs provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        qs = self.get_queryset().filter(id__in=ids).select_related('user')
+        count = qs.count()
+        for profile in qs:
+            user = profile.user
+            profile.delete()
+            if user:
+                user.delete()
+        return Response({'detail': f'Deleted {count} staff member(s).', 'deleted': count})
+
+    def perform_destroy(self, instance):
+        """
+        Custom delete to ensure the associated User is also deleted.
+        """
+        user = instance.user
+        instance.delete()
+        if user:
+            user.delete()
 
 
 # =============================================================================
@@ -294,7 +333,8 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             profile = EmployeeProfile.objects.get(user=self.request.user)
             serializer.save(employee=profile)
         except EmployeeProfile.DoesNotExist:
-            raise serializers.ValidationError(
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
                 {'employee': 'Employee profile not found.'}
             )
 
@@ -438,6 +478,16 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         branch = resolve_branch_for_user(self.request)
+        if not branch:
+            # Fallback: try to use the branch of the staff member being recorded
+            staff_id = self.request.data.get('staff') or self.request.data.get('employee')
+            if staff_id:
+                try:
+                    employee = EmployeeProfile.objects.select_related('user__branch').get(id=staff_id)
+                    branch = employee.user.branch
+                except EmployeeProfile.DoesNotExist:
+                    pass
+
         if branch:
             serializer.save(branch=branch)
         else:
@@ -457,6 +507,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
         today = timezone.now().date()
         branch = request.user.branch
+
+        if not branch:
+            # Check managed branches (for managers/admins)
+            if hasattr(request.user, 'managed_branches') and request.user.managed_branches.exists():
+                branch = request.user.managed_branches.first()
 
         if not branch:
             return Response(
@@ -597,6 +652,23 @@ class SalaryComponentViewSet(viewsets.ModelViewSet):
     search_fields = ['name']
 
 
+class EmployeeSalaryComponentViewSet(viewsets.ModelViewSet):
+    queryset = EmployeeSalaryComponent.objects.all().select_related('employee', 'component')
+    serializer_class = EmployeeSalaryComponentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['employee', 'component', 'is_active']
+    search_fields = ['employee__user__first_name', 'employee__user__last_name', 'component__name']
+
+
+class TaxRuleViewSet(viewsets.ModelViewSet):
+    queryset = TaxRule.objects.all().order_by('min_income')
+    serializer_class = TaxRuleSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
+
+
 class PayrollPeriodViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollPeriodSerializer
     permission_classes = [IsAuthenticated]
@@ -633,34 +705,8 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
             employment_status__in=['active', 'probation'],
         )
 
-        components = SalaryComponent.objects.filter(is_active=True)
-        payslips_created = 0
-
-        for emp in employees:
-            # Skip if payslip already exists
-            if PaySlip.objects.filter(payroll_period=period, employee=emp).exists():
-                continue
-
-            allowances = {}
-            deductions = {}
-
-            for comp in components:
-                value = comp.calculate(emp.base_salary)
-                if comp.component_type == 'allowance':
-                    allowances[comp.name] = str(value)
-                else:
-                    deductions[comp.name] = str(value)
-
-            payslip = PaySlip.objects.create(
-                payroll_period=period,
-                employee=emp,
-                basic_salary=emp.base_salary,
-                allowances=allowances,
-                deductions=deductions,
-            )
-            payslip.calculate_pay()
-            payslip.save()
-            payslips_created += 1
+        from .services import PayrollService
+        payslips_created = PayrollService.process_period(period, employees)
 
         period.status = 'processing'
         period.save()
@@ -745,6 +791,17 @@ class PaySlipViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(payslips, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        """Download payslip as PDF"""
+        payslip = self.get_object()
+        # Ensure user can only download their own payslip unless they have manage_payroll permission
+        if not request.user.has_perm('hr.manage_payroll') and payslip.employee.user != request.user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        from apps.core.services.print_service import generate_payslip_pdf
+        return generate_payslip_pdf(payslip)
 
 
 # =============================================================================
@@ -926,7 +983,7 @@ class TrainingProgramViewSet(viewsets.ModelViewSet):
     def enroll(self, request, pk=None):
         """Enroll an employee in a training program"""
         program = self.get_object()
-        employee_id = request.data.get('employee_id')
+        employee_id = request.data.get('employee_id') or request.data.get('staff_id')
         try:
             employee = EmployeeProfile.objects.get(id=employee_id)
         except EmployeeProfile.DoesNotExist:
