@@ -569,6 +569,8 @@ class ServiceTaskCreateSerializer(serializers.ModelSerializer):
 class WorkOrderPartSerializer(serializers.ModelSerializer):
     """Work order part with full details"""
     installed_by_name = serializers.SerializerMethodField()
+    requested_by_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrderPart
@@ -630,19 +632,41 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
             return f"{obj.installed_by.first_name} {obj.installed_by.last_name}"
         return None
 
+    def get_requested_by_name(self, obj):
+        if obj.requested_by:
+            return f"{obj.requested_by.first_name} {obj.requested_by.last_name}"
+        return None
+
+    def get_approved_by_name(self, obj):
+        if obj.approved_by:
+            return f"{obj.approved_by.first_name} {obj.approved_by.last_name}"
+        return None
+
 
 class WorkOrderPartCreateSerializer(serializers.ModelSerializer):
     """Create work order part"""
+    requisition_number = serializers.CharField(read_only=True)
+    requested_by = serializers.PrimaryKeyRelatedField(read_only=True)
     
     class Meta:
         model = WorkOrderPart
         fields = [
+            'id',
             'work_order', 'task',
             'part_number', 'part_name', 'description',
             'quantity', 'unit_cost', 'markup_percentage',
-            'status', 'warranty_months', 'warranty_notes'
+            'status', 'warranty_months', 'warranty_notes',
+            'requisition_number', 'requested_by'
         ]
     
+    def create(self, validated_data):
+        # Set requested_by to current user
+        request = self.context.get('request')
+        if request and request.user:
+            validated_data['requested_by'] = request.user
+            
+        return super().create(validated_data)
+
     def validate_quantity(self, value):
         if value <= 0:
             raise serializers.ValidationError("Quantity must be greater than zero.")

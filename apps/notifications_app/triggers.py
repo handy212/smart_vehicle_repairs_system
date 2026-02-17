@@ -866,6 +866,86 @@ Please review the parts required and provide an estimate.
         )
         self.service.send_notification(push_notification)
     
+    def part_requisition_created(self, part):
+        """Notify Parts Managers when a part is requested via requisition"""
+        from apps.accounts.models import User
+        
+        work_order = part.work_order
+        
+        # Find parts managers in the same branch
+        recipients = User.objects.filter(
+            branch=work_order.branch, 
+            role__in=['parts_manager', 'manager', 'service_coordinator'], 
+            is_active=True
+        )
+        
+        if not recipients.exists():
+             return
+
+        customer_name = self._build_customer_name(work_order.customer)
+        vehicle_display = self._build_vehicle_display(work_order.vehicle)
+        requested_by_name = part.requested_by.get_full_name() if part.requested_by else "Technician"
+
+        for recipient in recipients:
+            if recipient == part.requested_by:
+                continue # Don't notify self
+                
+            notification = Notification.objects.create(
+                recipient=recipient,
+                notification_type='work_order',
+                channel='in_app',
+                priority='high',
+                title=f'Part Requisition - {part.requisition_number}',
+                message=f'''New part requisition from {requested_by_name}.
+    
+    Part: {part.part_name} ({part.quantity})
+    WO: {work_order.work_order_number}
+    Vehicle: {vehicle_display}
+    
+    Please review and approve.''',
+                data={
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                    'part_id': part.id,
+                    'requisition_number': part.requisition_number
+                },
+                related_object_type='work_order_part',
+                related_object_id=part.id
+            )
+            self.service.send_notification(notification)
+
+    def part_requisition_approved(self, part):
+        """Notify requester when part requisition is approved"""
+        if not part.requested_by:
+            return
+            
+        work_order = part.work_order
+        vehicle_display = self._build_vehicle_display(work_order.vehicle)
+        approved_by_name = part.approved_by.get_full_name() if part.approved_by else "Manager"
+        
+        notification = Notification.objects.create(
+            recipient=part.requested_by,
+            notification_type='work_order',
+            channel='in_app',
+            priority='normal',
+            title=f'Requisition Approved - {part.requisition_number}',
+            message=f'''Your requisition for {part.part_name} has been approved by {approved_by_name}.
+    
+    WO: {work_order.work_order_number}
+    Quantity: {part.quantity}
+    
+    You may now proceed.''',
+            data={
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'part_id': part.id,
+                'requisition_number': part.requisition_number
+            },
+            related_object_type='work_order_part',
+            related_object_id=part.id
+        )
+        self.service.send_notification(notification)
+
     # ==================== INVOICE NOTIFICATIONS ====================
     
     def invoice_generated(self, invoice):

@@ -51,7 +51,7 @@ class AccrualService:
             
             candidates['revenue'].append({
                 'source': wo,
-                'amount': Decimal('100.00'), # Placeholder - Needs proper calculation logic
+                'amount': wo.actual_total or wo.estimated_total or Decimal('0.00'),
                 'date': wo.updated_at.date(),
                 'description': f"Accrued Revenue for WO #{wo.work_order_number}"
             })

@@ -1,7 +1,7 @@
 """
 Views for branches app
 """
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -14,7 +14,8 @@ from .models import Branch
 from .serializers import (
     BranchSerializer, 
     BranchListSerializer, 
-    BranchCreateUpdateSerializer
+    BranchCreateUpdateSerializer,
+    PublicBranchSerializer
 )
 from apps.accounts.models import User
 from apps.accounts.permissions import HasPermission, HasAnyPermission
@@ -31,7 +32,9 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve', 'staff', 'managers', 'stats']:
+        if self.action == 'list':
+            return [permissions.AllowAny()]
+        if self.action in ['retrieve', 'staff', 'managers', 'stats']:
             return [IsAuthenticated(), HasPermission('view_branches')]
         elif self.action == 'create':
             return [IsAuthenticated(), HasPermission('manage_branches')]
@@ -43,6 +46,8 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'list':
+            if self.request.user.is_anonymous:
+                return PublicBranchSerializer
             return BranchListSerializer
         elif self.action in ['create', 'update', 'partial_update']:
             return BranchCreateUpdateSerializer
@@ -56,7 +61,9 @@ class BranchViewSet(viewsets.ModelViewSet):
         - Other staff: only their assigned branch
         """
         user = self.request.user
-        
+        if user.is_anonymous:
+            return Branch.objects.filter(is_active=True)
+            
         if user.role == 'admin':
             return Branch.objects.all()
         elif user.role == 'manager':

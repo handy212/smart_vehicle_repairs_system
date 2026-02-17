@@ -884,6 +884,8 @@ class WorkOrder(models.Model):
                         try:
                             part_name = part_data.get('part_name', '').strip()
                             part_number = part_data.get('part_number', '').strip()
+                            quantity = part_data.get('quantity', 1)
+                            unit_cost = part_data.get('unit_cost', 0)
                             
                             if not part_name:
                                 continue
@@ -892,13 +894,25 @@ class WorkOrder(models.Model):
                             existing_part = None
                             if part_number:
                                 existing_part = self.parts.filter(
-                                    part_number=part_number
+                                    part_number=part_number,
+                                    task__isnull=True  # Prefer unlinked parts
                                 ).first()
+                                
+                                if not existing_part:
+                                     existing_part = self.parts.filter(
+                                        part_number=part_number
+                                    ).first()
                             
                             if not existing_part:
                                 existing_part = self.parts.filter(
-                                    part_name=part_name
+                                    part_name=part_name,
+                                    task__isnull=True
                                 ).first()
+                                
+                                if not existing_part:
+                                     existing_part = self.parts.filter(
+                                        part_name=part_name
+                                    ).first()
                             
                             if existing_part:
                                 # Link existing part to task if not already linked
@@ -907,10 +921,37 @@ class WorkOrder(models.Model):
                                     existing_part.save()
                                     parts_linked += 1
                                 elif existing_part.task != task:
-                                    # Part is linked to different task - create a note but don't change
-                                    import logging
-                                    logger = logging.getLogger(__name__)
-                                    logger.info(f"Part {part_name} already linked to task {existing_part.task.id}, skipping link to task {task.id}")
+                                    # Part is linked to different task - create a NEW part instead
+                                    # This handles cases where same part is needed for multiple tasks
+                                    from apps.workorders.models import WorkOrderPart
+                                    WorkOrderPart.objects.create(
+                                        work_order=self,
+                                        task=task,
+                                        part_name=part_name,
+                                        part_number=part_number,
+                                        quantity=quantity,
+                                        unit_cost=unit_cost,
+                                        status='draft', # Start as draft for review
+                                        requested_by=user, # Set requester to user converting task
+                                        description=f"Auto-created from recommendation: {rec.description}"
+                                    )
+                                    parts_linked += 1
+                            else:
+                                # Create NEW part if no existing part found
+                                from apps.workorders.models import WorkOrderPart
+                                WorkOrderPart.objects.create(
+                                    work_order=self,
+                                    task=task,
+                                    part_name=part_name,
+                                    part_number=part_number,
+                                    quantity=quantity,
+                                    unit_cost=unit_cost,
+                                    status='draft', # Start as draft for review
+                                    requested_by=user, # Set requester to user converting task
+                                    description=f"Auto-created from recommendation: {rec.description}"
+                                )
+                                parts_linked += 1
+                                
                         except Exception as e:
                             # Log error but continue with other parts
                             import logging
@@ -1470,6 +1511,26 @@ class WorkOrderPart(models.Model):
     warranty_months = models.PositiveIntegerField(default=0, help_text="Warranty period in months")
     warranty_notes = models.TextField(blank=True)
     
+    # Requisition Details
+    requisition_number = models.CharField(max_length=20, unique=True, null=True, blank=True, editable=False)
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='requested_parts',
+        help_text="User who requested this part"
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_parts',
+        help_text="User who approved the requisition"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
     # Tracking
     ordered_at = models.DateTimeField(null=True, blank=True)
     received_at = models.DateTimeField(null=True, blank=True)
@@ -1490,9 +1551,33 @@ class WorkOrderPart(models.Model):
         ordering = ['work_order', 'created_at']
     
     def __str__(self):
-        return f"{self.part_number} - {self.part_name} (x{self.quantity})"
+        return f"{self.requisition_number or 'Draft'} - {self.part_number} - {self.part_name} (x{self.quantity})"
     
     def save(self, *args, **kwargs):
+        # Generate Requisition Number
+        if not self.requisition_number:
+            # Format: REQ-YYYY-XXXXX (e.g. REQ-2024-00001)
+            # Use timestamp to ensure uniqueness and order
+            from django.utils import timezone
+            now = timezone.now()
+            year = now.year
+            
+            # Get last requisition number for this year to increment
+            last_req = WorkOrderPart.objects.filter(
+                requisition_number__startswith=f"REQ-{year}-"
+            ).order_by('requisition_number').last()
+            
+            if last_req and last_req.requisition_number:
+                try:
+                    last_seq = int(last_req.requisition_number.split('-')[-1])
+                    new_seq = last_seq + 1
+                except ValueError:
+                    new_seq = 1
+            else:
+                new_seq = 1
+                
+            self.requisition_number = f"REQ-{year}-{new_seq:05d}"
+
         # Calculate total cost
         self.total_cost = self.quantity * self.unit_cost
         

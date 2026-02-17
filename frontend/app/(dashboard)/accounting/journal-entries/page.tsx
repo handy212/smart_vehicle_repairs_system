@@ -62,7 +62,7 @@ export default function JournalEntriesPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {entries?.results?.map((entry: any) => (
+                                {entries?.map((entry: any) => (
                                     <TableRow
                                         key={entry.id}
                                         className="cursor-pointer hover:bg-muted "
@@ -82,7 +82,7 @@ export default function JournalEntriesPage() {
                                         <TableCell>{entry.transactions?.length || 0} lines</TableCell>
                                     </TableRow>
                                 ))}
-                                {(!entries?.results || entries.results.length === 0) && (
+                                {(!entries || entries.length === 0) && (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                                             No journal entries found. Create your first entry to get started.

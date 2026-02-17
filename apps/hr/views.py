@@ -757,8 +757,25 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
             payment_reference=payment_reference,
         )
 
+        # Post journal entry to accounting GL
+        try:
+            from apps.accounting.services import AccountingService
+            je = AccountingService.post_payroll(period)
+            if je:
+                journal_entry_id = je.id
+            else:
+                journal_entry_id = None
+        except Exception as e:
+            # Log the error but don't block payroll
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to post payroll journal entry for period {period.id}: {e}", exc_info=True)
+            journal_entry_id = None
+
         serializer = self.get_serializer(period)
-        return Response(serializer.data)
+        data = serializer.data
+        data['journal_entry_id'] = journal_entry_id
+        return Response(data)
 
 
 class PaySlipViewSet(viewsets.ModelViewSet):

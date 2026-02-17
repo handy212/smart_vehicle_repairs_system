@@ -87,6 +87,8 @@ INSTALLED_APPS = [
     'apps.hr',
     'apps.accounting',
     'apps.portal',
+    'apps.quickbooks_online',
+    'apps.feedback',
 ]
 
 MIDDLEWARE = [

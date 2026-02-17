@@ -739,10 +739,46 @@ class PaySlip(models.Model):
 
     def calculate_pay(self):
         """Calculate gross and net pay based on components"""
-        total_allowances = sum(Decimal(str(v)) for v in self.allowances.values())
-        total_deductions = sum(Decimal(str(v)) for v in self.deductions.values())
-        self.gross_pay = self.basic_salary + self.overtime_pay + total_allowances
-        self.net_pay = self.gross_pay - total_deductions - self.tax_amount
+        total_allowances = Decimal('0')
+        allowances_data = self.allowances if isinstance(self.allowances, dict) else (self.allowances or [])
+        # If it's a list (e.g. from JSON array), it might be [{'name': 'Housing', 'amount': 200}] or just values
+        # But based on error 'list' object has no attribute 'values', it's definitely a list.
+        # Let's normalize iteration:
+        if isinstance(allowances_data, dict):
+            iterator = allowances_data.values()
+        elif isinstance(allowances_data, list):
+            iterator = allowances_data
+        else:
+            iterator = []
+
+        for v in iterator:
+            # Handle if v is a dict (e.g. inside a list of records) or a scalar
+            val = v.get('amount') if isinstance(v, dict) else v
+            if val is not None and str(val).strip():
+                try:
+                    total_allowances += Decimal(str(val))
+                except (ValueError, TypeError, InvalidOperation):
+                    pass
+
+        total_deductions = Decimal('0')
+        deductions_data = self.deductions if isinstance(self.deductions, dict) else (self.deductions or [])
+        if isinstance(deductions_data, dict):
+            iterator = deductions_data.values()
+        elif isinstance(deductions_data, list):
+            iterator = deductions_data
+        else:
+            iterator = []
+
+        for v in iterator:
+            val = v.get('amount') if isinstance(v, dict) else v
+            if val is not None and str(val).strip():
+                try:
+                    total_deductions += Decimal(str(val))
+                except (ValueError, TypeError, InvalidOperation):
+                    pass
+
+        self.gross_pay = (self.basic_salary or Decimal('0')) + (self.overtime_pay or Decimal('0')) + total_allowances
+        self.net_pay = self.gross_pay - total_deductions - (self.tax_amount or Decimal('0'))
 
     def save(self, *args, **kwargs):
         self.calculate_pay()

@@ -146,9 +146,9 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         if settings_count == 0:
             initialize_category_settings('branding')
         
-        # Only return active, non-secret branding settings
+        # Only return active, non-secret branding and company settings
         settings = SystemSettings.objects.filter(
-            category='branding',
+            category__in=['branding', 'company'],
             is_active=True,
             is_secret=False  # Never expose secret settings publicly
         ).order_by('key')

@@ -13,7 +13,7 @@ from datetime import datetime
 from .services import ReportingService, DashboardService, ExportService
 from .models import JournalEntry, Account, AccountingControl, AuditLog
 from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
-from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
+
 from django.http import HttpResponse
 from apps.accounts.permissions import HasPermission
 from apps.branches.utils import resolve_branch
@@ -437,31 +437,35 @@ class AuditLogView(ListAPIView):
     queryset = AuditLog.objects.all()
     filterset_fields = ['action', 'resource_type', 'user']
 
-class TaxReportView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        
-        if start_date:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        if end_date:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-            
-        report = ReportingService.get_tax_report(start_date, end_date)
-        return Response(report)
+
 
 class JournalEntryListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = JournalEntrySerializer
-    queryset = JournalEntry.objects.filter(posted=True).order_by('-date', '-created_at')
-    pagination_class = None
+    queryset = JournalEntry.objects.all().order_by('-date', '-created_at')
+    # pagination_class = StandardResultsSetPagination # Assuming default pagination is set in settings
 
     def get_queryset(self):
         qs = super().get_queryset()
-        # Optional: filters limit to last 20
-        return qs[:20]
+        posted = self.request.query_params.get('posted')
+        if posted is not None:
+             qs = qs.filter(posted=posted.lower() == 'true')
+        
+        # Filter by date range if needed
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            qs = qs.filter(date__gte=start_date)
+        if end_date:
+            qs = qs.filter(date__lte=end_date)
+
+        return qs
+
+class JournalEntryDetailView(RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = JournalEntrySerializer
+    queryset = JournalEntry.objects.all()
+
 
 class JournalEntryCreateView(CreateAPIView):
     permission_classes = [IsAuthenticated]

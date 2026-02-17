@@ -127,6 +127,11 @@ export const accountingApi = {
         return response.data;
     },
 
+    getJournalEntry: async (id: string | number): Promise<any> => {
+        const response = await apiClient.get(`/accounting/journal-entries/${id}/`);
+        return response.data;
+    },
+
     // Bank Reconciliation
     getBankStatements: async (accountId?: string): Promise<any[]> => {
         const params = accountId ? { bank_account: accountId } : {};

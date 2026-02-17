@@ -1878,6 +1878,39 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
             'received_requests': received_requests
         })
 
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve a part requisition"""
+        part = self.get_object()
+        
+        # Check permissions
+        if request.user.role not in ['manager', 'admin', 'service_coordinator', 'workshop_manager']:
+             return Response(
+                 {'error': 'You do not have permission to approve requisitions.'},
+                 status=status.HTTP_403_FORBIDDEN
+             )
+        
+        if part.approved_by:
+             return Response(
+                 {'error': 'This requisition is already approved.'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+             
+        part.approved_by = request.user
+        part.approved_at = timezone.now()
+        part.save()
+        
+        # Trigger notification
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.part_requisition_approved(part)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send part approval notification: {e}")
+        
+        serializer = self.get_serializer(part)
+        return Response(serializer.data)
+
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
@@ -2298,6 +2331,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
             if po_item:
                 po_item.quantity += wo_part.quantity
                 po_item.save()
+
             else:
                 po_item = PurchaseOrderItem.objects.create(
                     purchase_order=po,
@@ -2317,6 +2351,17 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
             'po_numbers': list(results['po_numbers']),
             'errors': results['errors']
         })
+
+    def perform_create(self, serializer):
+        part = serializer.save()
+        
+        # Trigger notification
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.part_requisition_created(part)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send part requisition notification: {e}")
     @action(detail=True, methods=['post'])
     def mark_installed(self, request, pk=None):
         """Mark part as installed"""

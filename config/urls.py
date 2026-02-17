@@ -47,6 +47,7 @@ urlpatterns = [
 
     # Accounting API
     path('api/accounting/', include('apps.accounting.urls')),
+    path('quickbooks/', include('apps.quickbooks_online.urls')),
     
     # Authentication - Convenient shortcuts
     path('login/', RedirectView.as_view(pattern_name='login', permanent=False)),
@@ -100,6 +101,7 @@ urlpatterns = [
     path('api/technicians/', include(('apps.technicians.urls', 'api_technicians'))),  # Technician Management
     path('api/hr/', include(('apps.hr.urls', 'api_hr'))),  # HR Management
     path('api/portal/', include(('apps.portal.urls', 'api_portal'))),  # Customer API Portal
+    path('api/feedback/', include(('apps.feedback.urls', 'api_feedback'))),  # Feedback API
     
     # Frontend app routes (namespaced)
     path('branches/', include('apps.branches.frontend_urls', namespace='branches')),

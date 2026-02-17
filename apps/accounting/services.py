@@ -23,6 +23,37 @@ class AccountingService:
         return account
 
     @classmethod
+    def create_journal_entry(cls, user, date, description, lines, posted=True, reference='', branch=None, content_object=None):
+        """
+        Helper method to create a Journal Entry with lines.
+        lines: list of dicts with keys: 'account_id', 'type' ('debit'/'credit'), 'amount', 'description'
+        """
+        with transaction.atomic():
+            je = JournalEntry.objects.create(
+                date=date,
+                description=description,
+                reference=reference,
+                posted=posted,
+                created_by=user,
+                branch=branch,
+                content_object=content_object
+            )
+
+            for line in lines:
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account_id=line['account_id'],
+                    amount=line['amount'],
+                    transaction_type=line['type'],
+                    description=line.get('description', '')
+                )
+            
+            if not je.validate_balanced():
+                 raise ValidationError(f"Journal Entry '{description}' is not balanced.")
+            
+            return je
+
+    @classmethod
     def post_invoice(cls, invoice):
         """
         Creates a Journal Entry for a finalized Invoice.
@@ -90,30 +121,6 @@ class AccountingService:
             if not je.validate_balanced():
                 # Should rollback due to atomic block if we raise error, but let's be explicit
                 raise ValidationError(f"Journal Entry for Invoice {invoice.invoice_number} is not balanced.")
-            
-            return je
-
-            # Debit AP (Total Amount)
-            Transaction.objects.create(
-                journal_entry=je,
-                account=ap_account,
-                amount=bill_payment.amount,
-                transaction_type='debit',
-                description=f'Payment for Bill {bill_payment.bill.bill_number}'
-            )
-
-            # Credit Cash (Total Amount)
-            Transaction.objects.create(
-                journal_entry=je,
-                account=cash_account,
-                amount=bill_payment.amount,
-                transaction_type='credit',
-                description=f'Payment Sent ({bill_payment.payment_method})'
-            )
-
-            # Validate
-            if not je.validate_balanced():
-                raise ValidationError(f"Journal Entry for Bill Payment {bill_payment.payment_number} is not balanced.")
             
             return je
 
@@ -836,34 +843,146 @@ class AccountingService:
         transfer.journal_entry = je
         transfer.save()
 
+    # ========================================================================
+    # HR PAYROLL INTEGRATION
+    # ========================================================================
+
+    @classmethod
+    def post_payroll(cls, payroll_period):
+        """
+        Creates a Journal Entry when a payroll period is marked as paid.
+        Aggregates all payslips into one balanced JE:
+
+        DR  6000  Salary Expense           (sum of basic_salary)
+        DR  6010  Overtime Expense          (sum of overtime_pay)
+        DR  6020  Allowances Expense        (sum of all allowance values)
+            CR  2300  PAYE Tax Payable      (sum of tax_amount)
+            CR  2310  Payroll Deductions    (sum of all deduction values)
+            CR  1000  Cash/Bank             (sum of net_pay)
+        """
+        from apps.hr.models import PayrollPeriod
+        from django.contrib.contenttypes.models import ContentType
+
+        if payroll_period.status != 'paid':
+            return None
+
+        # Prevent duplicate posting
+        pp_type = ContentType.objects.get_for_model(payroll_period)
+        if JournalEntry.objects.filter(content_type=pp_type, object_id=payroll_period.id).exists():
+            return None
+
+        payslips = payroll_period.payslips.all()
+        if not payslips.exists():
+            return None
+
+        # Helper to safely sum values from dict or list JSON fields
+        def _sum_json_values(data):
+            total = Decimal('0')
+            if isinstance(data, dict):
+                items = data.values()
+            elif isinstance(data, list):
+                items = data
+            else:
+                return total
+            for v in items:
+                val = v.get('amount') if isinstance(v, dict) else v
+                if val is not None:
+                    try:
+                        total += Decimal(str(val))
+                    except (ValueError, TypeError):
+                        pass
+            return total
+
+        # Aggregate totals across all payslips
+        total_basic = Decimal('0')
+        total_overtime = Decimal('0')
+        total_allowances = Decimal('0')
+        total_tax = Decimal('0')
+        total_deductions = Decimal('0')
+        total_net = Decimal('0')
+
+        for slip in payslips:
+            total_basic += slip.basic_salary or Decimal('0')
+            total_overtime += slip.overtime_pay or Decimal('0')
+            total_allowances += _sum_json_values(slip.allowances)
+            total_tax += slip.tax_amount or Decimal('0')
+            total_deductions += _sum_json_values(slip.deductions)
+            total_net += slip.net_pay or Decimal('0')
+
+        with transaction.atomic():
+            # 1. Get or create GL accounts
+            salary_expense = cls.get_or_create_account('6000', 'Salary Expense', 'expense', 'debit')
+            overtime_expense = cls.get_or_create_account('6010', 'Overtime Expense', 'expense', 'debit')
+            allowances_expense = cls.get_or_create_account('6020', 'Allowances Expense', 'expense', 'debit')
+            tax_payable = cls.get_or_create_account('2300', 'PAYE Tax Payable', 'liability', 'credit')
+            deductions_payable = cls.get_or_create_account('2310', 'Payroll Deductions Payable', 'liability', 'credit')
+            cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
+
+            # 2. Create Journal Entry header
+            je = JournalEntry.objects.create(
+                date=payroll_period.end_date,
+                description=f"Payroll: {payroll_period.name}",
+                reference=f"PAY-{payroll_period.id}",
+                posted=True,
+                created_by=payroll_period.approved_by or payroll_period.created_by,
+                branch=payroll_period.branch,
+                content_object=payroll_period,
+            )
+
+            # 3. Debit lines (expenses)
+            if total_basic > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=salary_expense,
+                    amount=total_basic, transaction_type='debit',
+                    description='Basic salaries',
+                )
+            if total_overtime > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=overtime_expense,
+                    amount=total_overtime, transaction_type='debit',
+                    description='Overtime pay',
+                )
+            if total_allowances > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=allowances_expense,
+                    amount=total_allowances, transaction_type='debit',
+                    description='Allowances (Housing, Transport, etc.)',
+                )
+
+            # 4. Credit lines (liabilities + cash)
+            if total_tax > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=tax_payable,
+                    amount=total_tax, transaction_type='credit',
+                    description='PAYE income tax withheld',
+                )
+            if total_deductions > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=deductions_payable,
+                    amount=total_deductions, transaction_type='credit',
+                    description='Payroll deductions (SSNIT, Provident Fund, etc.)',
+                )
+            if total_net > 0:
+                Transaction.objects.create(
+                    journal_entry=je, account=cash_account,
+                    amount=total_net, transaction_type='credit',
+                    description='Net pay disbursed to employees',
+                )
+
+            # 5. Validate balance
+            if not je.validate_balanced():
+                raise ValidationError(
+                    f"Payroll Journal Entry for '{payroll_period.name}' is not balanced. "
+                    f"Debits: {total_basic + total_overtime + total_allowances}, "
+                    f"Credits: {total_tax + total_deductions + total_net}"
+                )
+
+            return je
+
 
 class ReportingService:
     @staticmethod
-    def get_account_balance(account, date=None, start_date=None, end_date=None):
-        """
-        Calculate account balance.
-        If date is provided, calculates cumulative balance up to that date (Balance Sheet).
-        If start_date/end_date provided, calculates net movement in range (P&L).
-        """
-        qs = Transaction.objects.filter(journal_entry__posted=True, account=account)
-        
-        if date:
-            qs = qs.filter(journal_entry__date__lte=date)
-        elif start_date and end_date:
-            qs = qs.filter(journal_entry__date__range=[start_date, end_date])
-            
-        aggregates = qs.aggregate(
-            debits=Sum('amount', filter=Q(transaction_type='debit')),
-            credits=Sum('amount', filter=Q(transaction_type='credit'))
-        )
-        
-        debits = aggregates['debits'] or Decimal('0.00')
-        credits = aggregates['credits'] or Decimal('0.00')
-        
-        if account.balance_type == 'debit':
-            return debits - credits
-        else:
-            return credits - debits
+
 
     @classmethod
     def get_balance_sheet(cls, date=None, branch_id=None):
@@ -928,39 +1047,7 @@ class ReportingService:
             'is_balanced': total_assets == (total_liabilities + total_equity)
         }
 
-    @classmethod
-    def get_profit_loss(cls, start_date, end_date, branch_id=None):
-        income = []
-        expenses = []
-        
-        total_income = Decimal('0.00')
-        total_expenses = Decimal('0.00')
-        
-        # 1. Income
-        for account in Account.objects.filter(account_type='income', is_active=True):
-            bal = cls.get_account_balance(account, start_date=start_date, end_date=end_date, branch_id=branch_id)
-            if bal != 0:
-                income.append({'code': account.code, 'name': account.name, 'balance': bal})
-                total_income += bal
-                
-        # 2. Expenses
-        for account in Account.objects.filter(account_type='expense', is_active=True):
-            bal = cls.get_account_balance(account, start_date=start_date, end_date=end_date, branch_id=branch_id)
-            if bal != 0:
-                expenses.append({'code': account.code, 'name': account.name, 'balance': bal})
-                total_expenses += bal
-                
-        return {
-            'period': {'start': start_date, 'end': end_date},
-            'branch_id': branch_id,
-            'income': income,
-            'expenses': expenses,
-            'totals': {
-                'income': total_income,
-                'expenses': total_expenses,
-                'net_income': total_income - total_expenses
-            }
-        }
+
 
     @classmethod
     def get_trial_balance(cls, date=None, branch_id=None):
@@ -1039,7 +1126,12 @@ class ReportingService:
             start_date = end_date.replace(month=1, day=1)
             
         # 1. Identify Cash Accounts
-        cash_accounts = Account.objects.filter(account_type__in=['bank', 'cash'])
+        # Filter by code range or description as 'bank'/'cash' types don't exist in model choices
+        # Assuming typical chart of accounts: 1000-1099 is Cash/Bank
+        cash_accounts = Account.objects.filter(
+            models.Q(code__startswith='10') | models.Q(name__icontains='bank') | models.Q(name__icontains='cash'),
+            account_type='asset'
+        )
         cash_account_ids = cash_accounts.values_list('id', flat=True)
         
         # 2. Initialize Report Structure
@@ -1196,6 +1288,8 @@ class ReportingService:
         Generates AP (Accounts Payable) or AR (Accounts Receivable) Aging Report.
         Buckets: Current, 1-30, 31-60, 61-90, 90+
         """
+        from apps.billing.models import Invoice, Bill
+
         if not date:
             date = timezone.now().date()
             
@@ -1469,7 +1563,13 @@ class ReportingService:
         debits = aggregates['debits'] or Decimal('0')
         credits = aggregates['credits'] or Decimal('0')
         
-        # Determine balance based on account type
+        # Determine balance based on balance_type if available (preferred), else account_type
+        if account.balance_type == 'debit':
+            return debits - credits
+        elif account.balance_type == 'credit':
+            return credits - debits
+        
+        # Fallback if balance_type is not reliable
         if account.account_type in ['asset', 'expense']:
             return debits - credits
         elif account.account_type in ['liability', 'equity', 'income']:
@@ -1481,82 +1581,7 @@ class ReportingService:
     # ========================================================================
     
     @staticmethod
-    def get_budget_vs_actual(budget_id, start_date=None, end_date=None):
-        """
-        Compare budgeted amounts to actual spend.
-        Returns variance analysis for each budget line.
-        """
-        from apps.accounting.models import Budget, BudgetLine
-        from decimal import Decimal
-        
-        try:
-            budget = Budget.objects.prefetch_related('lines__account').get(id=budget_id)
-        except Budget.DoesNotExist:
-            return {'error': 'Budget not found'}
-        
-        # Use budget dates if not provided
-        if not start_date:
-            start_date = budget.start_date
-        if not end_date:
-            end_date = budget.end_date
-        
-        results = []
-        for line in budget.lines.all():
-            # Get actual spend for this account in the period
-            actual = ReportingService.get_account_balance(
-                line.account,
-                start_date=start_date,
-                end_date=end_date,
-                branch_id=budget.branch_id if budget.branch else None
-            )
-            
-            variance = abs(actual) - line.amount
-            variance_pct = (variance / line.amount * 100) if line.amount != 0 else Decimal('0')
-            
-            # Determine status
-            if line.account.account_type in ['expense']:
-                # For expenses: negative variance is good (under budget)
-                status = 'under' if variance < 0 else 'over' if variance > 0 else 'on_target'
-            else:
-                # For income: positive variance is good (over budget)
-                status = 'over' if variance > 0 else 'under' if variance < 0 else 'on_target'
-            
-            results.append({
-                'account_code': line.account.code,
-                'account_name': line.account.name,
-                'account_type': line.account.account_type,
-                'period': line.period,
-                'budget': float(line.amount),
-                'actual': float(abs(actual)),
-                'variance': float(variance),
-                'variance_percent': float(variance_pct.quantize(Decimal('0.01'))),
-                'status': status
-            })
-        
-        total_budget = sum(l['budget'] for l in results)
-        total_actual = sum(l['actual'] for l in results)
-        total_variance = sum(l['variance'] for l in results)
-        
-        return {
-            'budget': {
-                'id': budget.id,
-                'name': budget.name,
-                'fiscal_year': budget.fiscal_year,
-                'status': budget.status,
-                'branch_name': budget.branch.name if budget.branch else 'All Branches'
-            },
-            'period': {
-                'start': start_date,
-                'end': end_date
-            },
-            'lines': results,
-            'summary': {
-                'total_budget': total_budget,
-                'total_actual': total_actual,
-                'total_variance': total_variance,
-                'variance_percent': float((total_variance / total_budget * 100) if total_budget != 0 else Decimal('0'))
-            }
-        }
+
 
 
     @staticmethod
@@ -1655,7 +1680,11 @@ class DashboardService:
         pl = ReportingService.get_profit_loss(start_date, end_date)
         
         # Cash on Hand (Bank + Cash accounts)
-        cash_accounts = Account.objects.filter(account_type__in=['bank', 'cash'], is_active=True)
+        cash_accounts = Account.objects.filter(
+            models.Q(code__startswith='10') | models.Q(name__icontains='bank') | models.Q(name__icontains='cash'),
+            account_type='asset',
+            is_active=True
+        )
         cash_balance = sum(
             ReportingService.get_account_balance(acc, date=end_date)
             for acc in cash_accounts

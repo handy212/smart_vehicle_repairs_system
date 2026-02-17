@@ -2,7 +2,7 @@
 import {
     ClipboardList, Package, CreditCard, Users, Car, Calendar,
     BarChart3, Settings, Truck, Wrench, Search, LayoutDashboard, FileCheck,
-    Bell, Ticket, FileBarChart, MessageSquare, ShieldAlert
+    Bell, Ticket, FileBarChart, MessageSquare, ShieldAlert, UserCog
 } from "lucide-react";
 
 export type HelpTopic = {
@@ -682,5 +682,146 @@ export const helpContent: Record<string, HelpModule> = {
                 ],
             }
         ]
-    }
+    },
+    hr: {
+        id: "hr",
+        title: "Human Resources (HR)",
+        description: "Complete staff management: employees, leave, attendance, payroll, recruitment, performance, training, and compliance.",
+        icon: UserCog,
+        topics: [
+            {
+                title: "Staff Management",
+                steps: [
+                    "Navigate to **HR → Staff** to view all employees.",
+                    "Click **'Add Employee'** to create a new staff member — fill in personal details, role, branch, and salary.",
+                    "The system automatically creates an Employee Profile and user login credentials.",
+                    "Assign employees to a **Department** and **Position** for organisational structure.",
+                    "Set a **Reporting To** manager to establish the org chart hierarchy.",
+                    "Update employment status (Active, Probation, Suspended, Terminated) as needed.",
+                    "Each profile stores banking details, emergency contacts, and government IDs.",
+                ],
+                actionLink: "/hr/staff",
+                actionLabel: "Manage Staff"
+            },
+            {
+                title: "Departments & Positions",
+                steps: [
+                    "Go to **HR → Departments** to create and manage organisational units.",
+                    "Each department belongs to a **Branch** and can have a **Department Head**.",
+                    "Create **Positions** under each department (e.g., Senior Mechanic under Workshop).",
+                    "Set salary ranges (min/max) on positions for budgeting and recruitment.",
+                    "The staff count per department updates automatically.",
+                ],
+                actionLink: "/hr/departments",
+                actionLabel: "Manage Departments"
+            },
+            {
+                title: "Leave Management",
+                steps: [
+                    "**Leave Types**: Go to **HR → Leave → Leave Types** to configure leave categories (Annual, Sick, Maternity, etc.).",
+                    "Set days allowed per year, whether it's paid, and if carry-forward is permitted.",
+                    "**Requesting Leave**: Employees go to **HR → Leave** and click **'New Request'**.",
+                    "Select leave type, date range, and provide a reason. Days are auto-calculated.",
+                    "**Approving Leave**: Managers see pending requests and can **Approve** or **Reject** with notes.",
+                    "**Leave Balances**: Track each employee's used, remaining, and carried-forward days per year.",
+                ],
+                actionLink: "/hr/leave",
+                actionLabel: "Manage Leave"
+            },
+            {
+                title: "Attendance & Time Tracking",
+                steps: [
+                    "Navigate to **HR → Attendance** to view daily attendance records.",
+                    "Employees can **Clock In / Clock Out** from the attendance page.",
+                    "The system calculates **Total Hours**, **Overtime**, and marks status (Present, Late, Absent, Half Day).",
+                    "**Attendance Policy**: Configure work start/end times, late threshold (in minutes), and overtime multiplier.",
+                    "Use **'Today Summary'** to get a quick overview of who's present, absent, and late.",
+                    "View **'My Attendance'** for a personal attendance history.",
+                ],
+                actionLink: "/hr/attendance",
+                actionLabel: "View Attendance"
+            },
+            {
+                title: "Payroll Processing",
+                steps: [
+                    "**Step 1 — Salary Components**: Go to **HR → Payroll → Components** to define allowances (Housing, Transport) and deductions (SSNIT, Provident Fund).",
+                    "Assign components to individual employees with specific amounts.",
+                    "**Step 2 — Tax Rules**: Click the **Calculator icon** on the Payroll page to configure progressive PAYE income tax brackets.",
+                    "**Step 3 — Create Period**: Click **'New Payroll Period'**, set start/end dates for the month.",
+                    "**Step 4 — Process**: Click **'Process'** on the period. The system auto-generates payslips by calculating: Base Salary + Allowances + Overtime − Deductions − Tax = Net Pay.",
+                    "**Step 5 — Review**: Click into the period to review individual payslips, view breakdowns, and edit if needed.",
+                    "**Step 6 — Approve & Pay**: Click **'Approve'**, then **'Mark as Paid'** with a payment reference.",
+                    "Employees can view their own payslips at **HR → Payroll → My Payslips**.",
+                ],
+                actionLink: "/hr/payroll",
+                actionLabel: "Manage Payroll"
+            },
+            {
+                title: "Recruitment & Hiring",
+                steps: [
+                    "Go to **HR → Recruitment** to manage open positions and candidates.",
+                    "Click **'New Job Opening'** — set title, department, position, salary range, and closing date.",
+                    "**Publish** the opening to make it visible.",
+                    "Add **Applicants** with their contact info, resume, and source (Website, Referral, LinkedIn).",
+                    "Move applicants through stages: **Screening → Interview → Offer → Hired** or **Rejected**.",
+                    "Schedule **Interviews** with date, interviewer, type (In-Person / Video), and location.",
+                    "After interview, add **Feedback** and **Rating** to the interview record.",
+                    "Click **'Hire'** on a successful applicant to convert them into a staff member.",
+                ],
+                actionLink: "/hr/recruitment",
+                actionLabel: "View Recruitment"
+            },
+            {
+                title: "Performance Reviews",
+                steps: [
+                    "Navigate to **HR → Performance** to manage employee evaluations.",
+                    "Click **'New Review'** — select the employee, review period, and assign a reviewer.",
+                    "Fill in: **Overall Rating** (1–5), **Strengths**, **Areas for Improvement**, and **Goals**.",
+                    "Click **'Submit'** to finalise the review.",
+                    "The employee can view the review and add **Staff Comments**.",
+                    "Click **'Acknowledge'** once the employee has read and accepted the review.",
+                    "Use reviews to track growth over time and identify training needs.",
+                ],
+                actionLink: "/hr/performance",
+                actionLabel: "Manage Reviews"
+            },
+            {
+                title: "Training Programs",
+                steps: [
+                    "Go to **HR → Training** to manage staff development programs.",
+                    "Click **'New Program'** — set name, description, trainer, dates, and max participants.",
+                    "Mark programs as **Mandatory** to flag required training for specific departments.",
+                    "**Enrol** employees into programs from the program detail page.",
+                    "Track enrolment status: **Enrolled → In Progress → Completed**.",
+                    "Record **Scores** and upload **Certificates** upon completion.",
+                ],
+                actionLink: "/hr/training",
+                actionLabel: "Manage Training"
+            },
+            {
+                title: "Compliance Documents",
+                steps: [
+                    "Navigate to **HR → Compliance** to track employee documents and certifications.",
+                    "Add documents with type (ID Card, Driver's License, Certification, Health Certificate).",
+                    "Enter **Issue Date** and **Expiry Date** — the system auto-calculates days until expiry.",
+                    "Documents expiring within 30 days are flagged as **'Expiring Soon'**.",
+                    "Expired documents are highlighted in red for immediate attention.",
+                    "Upload document files for digital record-keeping.",
+                ],
+                actionLink: "/hr/compliance",
+                actionLabel: "View Compliance"
+            },
+            {
+                title: "Recommended Workflow",
+                steps: [
+                    "**1. Setup**: Create Departments → Positions → Attendance Policy → Leave Types → Salary Components → Tax Rules.",
+                    "**2. Onboard**: Add employees with full profiles, assign to departments and positions.",
+                    "**3. Daily**: Employees clock in/out. Managers approve leave requests.",
+                    "**4. Monthly**: Create Payroll Period → Process → Review Payslips → Approve → Mark Paid.",
+                    "**5. Quarterly**: Conduct Performance Reviews. Enrol staff in Training Programs.",
+                    "**6. Ongoing**: Monitor Compliance Documents for expiry. Post Job Openings as needed.",
+                ],
+            },
+        ]
+    },
 };

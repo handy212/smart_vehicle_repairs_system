@@ -17,6 +17,15 @@ export interface WorkOrderPart {
   installed_at?: string;
   installed_by?: number | { id: number; first_name: string; last_name: string };
   installed_by_name?: string;
+
+  // Requisition Details
+  requisition_number?: string;
+  requested_by?: number;
+  requested_by_name?: string;
+  approved_by?: number;
+  approved_by_name?: string;
+  approved_at?: string;
+
   created_at: string;
 }
 
@@ -57,6 +66,11 @@ export const workOrderPartsApi = {
 
   markInstalled: async (id: number): Promise<WorkOrderPart> => {
     const response = await apiClient.post(`/workorders/parts/${id}/mark_installed/`);
+    return response.data;
+  },
+
+  approve: async (id: number): Promise<WorkOrderPart> => {
+    const response = await apiClient.post(`/workorders/parts/${id}/approve/`);
     return response.data;
   },
 };

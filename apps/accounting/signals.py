@@ -14,6 +14,19 @@ def post_invoice_to_ledger(sender, instance, created, **kwargs):
         AccountingService.post_cogs(instance)
 
 from apps.billing.models import Bill
+from apps.hr.models import PayrollPeriod
+
+@receiver(post_save, sender=PayrollPeriod)
+def post_payroll_to_ledger(sender, instance, created, **kwargs):
+    """
+    Automated posting when Payroll is marked as Paid
+    """
+    if instance.status == 'paid':
+        # Check if already posted? post_payroll service might handle it, but let's check here too or rely on service idempotency
+        # The service checks `if not payroll_period.journal_entry` usually.
+        # Let's trust the service or check if JE exists.
+        AccountingService.post_payroll(instance)
+
 
 @receiver(post_save, sender=Bill)
 def post_bill_to_ledger(sender, instance, created, **kwargs):

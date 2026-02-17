@@ -51,6 +51,7 @@ import {
   GraduationCap,
   Star,
   FileCheck,
+  MessageSquare,
   LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -264,6 +265,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Email Templates", href: "/admin/settings/email-templates", permission: "view_email_templates", icon: Mail },
     { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_log", icon: History },
     { name: "Import History", href: "/admin/import-history", permission: "view_import_history", icon: Inbox },
+    { name: "Feedback", href: "/admin/feedback", permission: "view_settings", icon: MessageSquare },
   ],
   accounting: [
     { name: "Overview", href: "/accounting", permission: "view_accounting_dashboard", icon: BarChart3 },

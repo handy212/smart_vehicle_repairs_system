@@ -373,6 +373,7 @@ export const adminApi = {
     publicIntegrations: async (): Promise<{
       google_analytics_id?: string;
       facebook_pixel_id?: string;
+      recaptcha_enabled?: string;
       recaptcha_site_key?: string;
       firebase_api_key?: string;
       firebase_project_id?: string;

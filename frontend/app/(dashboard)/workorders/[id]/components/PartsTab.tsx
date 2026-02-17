@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, CheckCircle2, Package } from "lucide-react";
+import { Plus, CheckCircle2, Package, ThumbsUp } from "lucide-react";
 import AddPartDialog from "./AddPartDialog";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -18,8 +18,8 @@ interface PartsTabProps {
 }
 
 export default function WorkOrderPartsTab({
-    workOrderId, parts, onRefresh }: PartsTabProps) {
-    const { formatCurrency } = useCurrency();
+  workOrderId, parts, onRefresh }: PartsTabProps) {
+  const { formatCurrency } = useCurrency();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   const getStatusVariant = (status: string) => {
@@ -37,6 +37,13 @@ export default function WorkOrderPartsTab({
 
   const markInstalledMutation = useMutation({
     mutationFn: (partId: number) => workOrderPartsApi.markInstalled(partId),
+    onSuccess: () => {
+      onRefresh();
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (partId: number) => workOrderPartsApi.approve(partId),
     onSuccess: () => {
       onRefresh();
     },
@@ -75,7 +82,7 @@ export default function WorkOrderPartsTab({
               <p className="text-sm text-muted-foreground mb-4">
                 Add parts and materials as they are used in the repair work.
               </p>
-              <Button onClick={() => setShowAddDialog(true)}variant="secondary">
+              <Button onClick={() => setShowAddDialog(true)} variant="secondary">
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Part
               </Button>
@@ -84,9 +91,10 @@ export default function WorkOrderPartsTab({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Part Number</TableHead>
-                  <TableHead>Part Name</TableHead>
-                  <TableHead>Quantity</TableHead>
+                  <TableHead>Req. #</TableHead>
+                  <TableHead>Part Details</TableHead>
+                  <TableHead>Requested By</TableHead>
+                  <TableHead>Qty</TableHead>
                   <TableHead>Unit Cost</TableHead>
                   <TableHead>Total Cost</TableHead>
                   <TableHead>Status</TableHead>
@@ -96,13 +104,21 @@ export default function WorkOrderPartsTab({
               <TableBody>
                 {parts.map((part) => (
                   <TableRow key={part.id}>
-                    <TableCell className="font-mono text-sm">{part.part_number}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {part.requisition_number || "-"}
+                    </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{part.part_name}</p>
+                        <div className="font-medium">{part.part_name}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{part.part_number}</div>
                         {part.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{part.description}</p>
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">{part.description}</div>
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {part.requested_by_name || "Unknown"}
                       </div>
                     </TableCell>
                     <TableCell>{part.quantity}</TableCell>
@@ -117,15 +133,29 @@ export default function WorkOrderPartsTab({
                     </TableCell>
                     <TableCell>
                       {part.status !== "installed" && (
-                        <Button
-                          size="sm"
-                         variant="secondary"
-                          onClick={() => markInstalledMutation.mutate(part.id)}
-                          disabled={markInstalledMutation.isPending}
-                        >
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Mark Installed
-                        </Button>
+                        <>
+                          {!part.approved_by && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mr-2 border-green-500 text-green-600 hover:bg-green-50"
+                              onClick={() => approveMutation.mutate(part.id)}
+                              disabled={approveMutation.isPending}
+                            >
+                              <ThumbsUp className="w-3 h-3 mr-1" />
+                              Approve
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => markInstalledMutation.mutate(part.id)}
+                            disabled={markInstalledMutation.isPending}
+                          >
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Mark Installed
+                          </Button>
+                        </>
                       )}
                     </TableCell>
                   </TableRow>
