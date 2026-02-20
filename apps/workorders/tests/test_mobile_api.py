@@ -134,9 +134,10 @@ class MobileAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNotNone(response.data['clock_out'])
         
-        # 4. Check Active Log again (should be 404)
+        # 4. Check Active Log again (should return 200 with None)
         response = self.client.get('/api/workorders/time-logs/active/')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data)
 
     def test_work_order_mobile_actions(self, mock_filter):
         """Test work order actions used in mobile app"""

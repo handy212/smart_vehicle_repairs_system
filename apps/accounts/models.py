@@ -9,6 +9,10 @@ from django.utils.translation import gettext_lazy as _
 class CustomUserManager(UserManager):
     """Custom manager for User model."""
     
+    def get_by_natural_key(self, username):
+        """Allow case-insensitive login when using email as username."""
+        return self.get(**{self.model.USERNAME_FIELD + '__iexact': username})
+    
     def create_superuser(self, username=None, email=None, password=None, **extra_fields):
         """Create and save a superuser with the given email and password."""
         extra_fields.setdefault('is_staff', True)

@@ -215,6 +215,7 @@ fi
 
 # Run migrations
 echo -e "${YELLOW}Running database migrations...${NC}"
+python scripts/patch_django52_libs.py
 python manage.py migrate
 
 echo -e "${GREEN}✓ Database ready${NC}"

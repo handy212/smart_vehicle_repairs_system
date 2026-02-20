@@ -52,6 +52,13 @@ LOGGING = {
             'class': 'logging.StreamHandler',
         },
     },
+    'loggers': {
+        'apps.quickbooks_online': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
     'root': {
         'handlers': ['console'],
         'level': 'WARNING',

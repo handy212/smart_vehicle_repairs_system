@@ -29,7 +29,7 @@ cryptography==46.0.2
 cssselect2==0.8.0
 cycler==0.12.1
 diff-match-patch==20241021
-Django==4.2.25
+Django==5.2.11
 django-allauth==65.11.2
 # django-ledger>=0.8.2.3  # Removed for accounting module archival
 django-anymail==13.1

@@ -405,7 +405,7 @@ class Estimate(models.Model):
             return 0
         delta = self.valid_until - timezone.now().date()
         return delta.days
-    
+
     @property
     def can_be_approved(self):
         """Check if estimate can be approved"""
@@ -421,6 +421,103 @@ class Estimate(models.Model):
     def subtotal_after_discount(self):
         """Calculate subtotal after discount"""
         return self.subtotal - self.discount_amount
+
+    def duplicate(self, created_by=None):
+        """Duplicate an existing estimate and its line items"""
+        new_estimate = Estimate.objects.get(pk=self.pk)
+        new_estimate.pk = None
+        new_estimate.id = None
+        new_estimate.estimate_number = "" # Will be auto-generated on save
+        new_estimate.status = 'draft'
+        new_estimate.created_at = None 
+        new_estimate.updated_at = None
+        if created_by:
+            new_estimate.created_by = created_by
+        new_estimate.save()
+        
+        # Duplicate line items
+        for item in self.line_items.all():
+            item.pk = None
+            item.id = None
+            item.estimate = new_estimate
+            item.save()
+            
+        new_estimate.calculate_totals()
+        return new_estimate
+
+    def convert_to_work_order(self):
+        """Convert estimate to a Work Order"""
+        from apps.workorders.models import WorkOrder
+        
+        # Create work order
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            description=f"Work Order from Estimate {self.estimate_number}\n\n{self.description}",
+            status='intake_pending',
+            priority='medium',
+            created_by=self.created_by,
+            estimated_total=self.total,
+            estimated_labor_cost=self.labor_subtotal,
+            estimated_parts_cost=self.parts_subtotal,
+            estimated_labor_hours=sum(item.labor_hours or 0 for item in self.line_items.all() if item.item_type == 'labor')
+        )
+        
+        # Link estimate to work order
+        self.work_order = work_order
+        self.status = 'converted'
+        self.save()
+        
+        # Sync parts
+        self.sync_parts_to_work_order()
+        
+        return work_order
+
+    def convert_to_invoice(self):
+        """Convert estimate to an Invoice"""
+        from apps.billing.models import Invoice, InvoiceLineItem
+        
+        # Create invoice
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            work_order=self.work_order,
+            estimate=self,
+            invoice_date=timezone.now().date(),
+            due_date=timezone.now().date() + timedelta(days=15),
+            status='draft',
+            description=f"Generated from Estimate {self.estimate_number}",
+            created_by=self.created_by,
+            subtotal=self.subtotal,
+            discount_percentage=self.discount_percentage,
+            discount_amount=self.discount_amount,
+            taxable_subtotal=self.taxable_subtotal,
+            tax_amount=self.tax_amount,
+            total=self.total,
+            amount_due=self.total
+        )
+        
+        # Copy line items
+        for item in self.line_items.all():
+            InvoiceLineItem.objects.create(
+                invoice=invoice,
+                item_type=item.item_type,
+                description=item.description,
+                notes=item.notes,
+                part=item.part,
+                part_number=item.part_number,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                total=item.total,
+                is_taxable=item.is_taxable
+            )
+        
+        self.status = 'converted'
+        self.save()
+        
+        return invoice
 
 
 class EstimateLineItem(models.Model):
@@ -1509,6 +1606,14 @@ class Bill(models.Model):
     amount_due = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
     # Integration
+    purchase_order = models.ForeignKey(
+        'inventory.PurchaseOrder',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bills',
+        help_text="Link to Purchase Order for inventory tracking"
+    )
     # ledger_bill = models.OneToOneField(
     #     'django_ledger.BillModel',
     #     on_delete=models.SET_NULL,

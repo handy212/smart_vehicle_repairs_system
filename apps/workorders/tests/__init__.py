@@ -1,2 +1,0 @@
-# Workorders tests package
-

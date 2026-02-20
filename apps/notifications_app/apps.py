@@ -8,10 +8,7 @@ class NotificationsAppConfig(AppConfig):
     
     def ready(self):
         """
-        Initialize Firebase when Django starts
+        Register signals when app is ready.
+        Firebase is initialized lazily when first used.
         """
-        from .firebase import initialize_firebase
-        initialize_firebase()
-        
-        # Register signals
-        import apps.notifications_app.signals
+        import apps.notifications_app.signals  # noqa

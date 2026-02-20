@@ -4,12 +4,39 @@ from django.db.models import Max
 from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from apps.accounts.models import User
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.appointments.models import Appointment
 
+
+
+
+
+class WorkflowConfiguration(models.Model):
+    """
+    Configuration for automatically generated tasks during work order state transitions.
+    """
+    status = models.CharField(
+        max_length=50, 
+        unique=True,
+        help_text="The work order status that triggers this task"
+    )
+    task_type = models.CharField(
+        max_length=20, 
+        default='other',
+        help_text="The type of task to create"
+    )
+    description = models.CharField(max_length=255, help_text="Default description for the created task")
+    sequence_order = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['sequence_order']
+
+    def __str__(self):
+        return f"Workflow for {self.status}: {self.description}"
 
 class WorkOrder(models.Model):
     """
@@ -324,7 +351,8 @@ class WorkOrder(models.Model):
             pass
         elif is_new and self.status != 'draft':
             # New work order starting with a non-draft status - create workflow task
-            self._handle_workflow_tasks('draft', self.status, None)
+            from .services import handle_workflow_tasks
+            handle_workflow_tasks(self, 'draft', self.status, None)
     
     @property
     def is_overdue(self):
@@ -574,7 +602,8 @@ class WorkOrder(models.Model):
                 self.convert_recommendations_to_tasks(user=user)
         
         # Handle workflow task creation and completion
-        self._handle_workflow_tasks(old_status, new_status, user)
+        from .services import handle_workflow_tasks
+        handle_workflow_tasks(self, old_status, new_status, user)
         
         # Log transition
         if user:
@@ -588,24 +617,6 @@ class WorkOrder(models.Model):
         # Send notifications
         if notify:
             self._send_status_notification(new_status, old_status)
-        
-        # Post accounting entries when work order is completed
-        # if new_status == 'completed':
-        #     try:
-        #         from apps.billing.accounting_service import AccountingService
-        #         # Post parts cost (COGS)
-        #         AccountingService.post_parts_cost(self)
-        #         # Post labor cost (COGS)
-        #         AccountingService.post_labor_cost(self)
-        #     except Exception as e:
-        #         # Log error but don't fail the transition
-        #         import logging
-        #         logger = logging.getLogger(__name__)
-        #         logger.error(
-        #             f"Failed to post accounting entries for WO {self.work_order_number}: {e}",
-        #             exc_info=True
-        #         )
-        
         return True
     
     def _send_status_notification(self, new_status, old_status):
@@ -790,8 +801,15 @@ class WorkOrder(models.Model):
         
         unavailable_parts = self.check_parts_availability()
         critical_parts = [p for p in unavailable_parts if p['part'].task is not None]
+        
         if critical_parts:
-            errors.append(f"{len(critical_parts)} required part(s) not available")
+            # Only block if ALL tasks are blocked by missing parts
+            # This enables parallel workflows for tasks that DO have parts
+            all_task_ids = set(self.tasks.filter(is_workflow_task=False).values_list('id', flat=True))
+            blocked_task_ids = set(p['part'].task_id for p in critical_parts if p['part'].task_id)
+            
+            if all_task_ids and blocked_task_ids.issuperset(all_task_ids):
+                errors.append(f"Cannot start work: All {len(all_task_ids)} tasks are blocked by {len(critical_parts)} missing parts")
         
         return len(errors) == 0, errors
     
@@ -880,12 +898,23 @@ class WorkOrder(models.Model):
                 
                 # Link parts from recommendation to task
                 if rec.parts_needed and isinstance(rec.parts_needed, list):
+                    WorkOrderPart = self._meta.apps.get_model('workorders', 'WorkOrderPart')
                     for part_data in rec.parts_needed:
                         try:
+                            if not isinstance(part_data, dict):
+                                continue
+                                
                             part_name = part_data.get('part_name', '').strip()
                             part_number = part_data.get('part_number', '').strip()
-                            quantity = part_data.get('quantity', 1)
-                            unit_cost = part_data.get('unit_cost', 0)
+                            try:
+                                quantity = Decimal(str(part_data.get('quantity', 1)))
+                            except (ValueError, TypeError, InvalidOperation):
+                                quantity = Decimal('1')
+                                
+                            try:
+                                unit_cost = Decimal(str(part_data.get('unit_cost', 0)))
+                            except (ValueError, TypeError, InvalidOperation):
+                                unit_cost = Decimal('0')
                             
                             if not part_name:
                                 continue
@@ -918,13 +947,17 @@ class WorkOrder(models.Model):
                                 # Link existing part to task if not already linked
                                 if not existing_part.task:
                                     existing_part.task = task
+                                    # If it's a "blank" part (draft/pending), update its specs from recommendation
+                                    if existing_part.status in ['draft', 'pending']:
+                                        existing_part.quantity = quantity
+                                        existing_part.unit_cost = unit_cost
+                                        if not existing_part.requested_by:
+                                            existing_part.requested_by = user
                                     existing_part.save()
                                     parts_linked += 1
                                 elif existing_part.task != task:
                                     # Part is linked to different task - create a NEW part instead
-                                    # This handles cases where same part is needed for multiple tasks
-                                    from apps.workorders.models import WorkOrderPart
-                                    WorkOrderPart.objects.create(
+                                    new_part = WorkOrderPart.objects.create(
                                         work_order=self,
                                         task=task,
                                         part_name=part_name,
@@ -936,10 +969,16 @@ class WorkOrder(models.Model):
                                         description=f"Auto-created from recommendation: {rec.description}"
                                     )
                                     parts_linked += 1
+                                    
+                                    # Trigger notification for auto-created part
+                                    try:
+                                        from apps.notifications_app.triggers import notification_triggers
+                                        notification_triggers.part_requisition_created(new_part)
+                                    except Exception:
+                                        pass
                             else:
                                 # Create NEW part if no existing part found
-                                from apps.workorders.models import WorkOrderPart
-                                WorkOrderPart.objects.create(
+                                new_part = WorkOrderPart.objects.create(
                                     work_order=self,
                                     task=task,
                                     part_name=part_name,
@@ -951,6 +990,13 @@ class WorkOrder(models.Model):
                                     description=f"Auto-created from recommendation: {rec.description}"
                                 )
                                 parts_linked += 1
+                                
+                                # Trigger notification for auto-created part
+                                try:
+                                    from apps.notifications_app.triggers import notification_triggers
+                                    notification_triggers.part_requisition_created(new_part)
+                                except Exception:
+                                    pass
                                 
                         except Exception as e:
                             # Log error but continue with other parts
@@ -1001,222 +1047,7 @@ class WorkOrder(models.Model):
         pending_parts = self.parts.filter(status__in=['pending', 'ordered'])
         return pending_parts.count() == 0
     
-    def _get_workflow_task_config(self, status):
-        """
-        Get configuration for workflow task based on status.
-        Returns dict with task_type, description, and sequence_order, or None if no task needed.
-        """
-        WORKFLOW_TASK_CONFIG = {
-            'inspection': {
-                'task_type': 'inspection',
-                'description': 'Initial Inspection',
-                'sequence_order': 1,
-            },
-            'intake': {
-                'task_type': 'inspection',
-                'description': 'Customer Intake',
-                'sequence_order': 2,
-            },
-            'assigned': {
-                'task_type': 'coordination',
-                'description': 'Service Coordinator Assigned - Ready for Diagnosis',
-                'sequence_order': 3,
-            },
-            'diagnosis': {
-                'task_type': 'diagnostic',
-                'description': 'Perform Diagnosis',
-                'sequence_order': 4,
-            },
-            'awaiting_approval': {
-                'task_type': 'other',
-                'description': 'Await Customer Approval',
-                'sequence_order': 5,
-            },
-            'approved': {
-                'task_type': 'other',
-                'description': 'Customer Approval Received',
-                'sequence_order': 6,
-            },
-            'in_progress': {
-                'task_type': 'repair',
-                'description': 'Repair Work',
-                'sequence_order': 7,
-            },
-            'quality_check': {
-                'task_type': 'inspection',
-                'description': 'Perform Quality Check',
-                'sequence_order': 8,
-            },
-            'completed': {
-                'task_type': 'other',
-                'description': 'Finalize Work Order',
-                'sequence_order': 9,
-            },
-            'invoiced': {
-                'task_type': 'other',
-                'description': 'Generate Invoice',
-                'sequence_order': 10,
-            },
-            'closed': {
-                'task_type': 'other',
-                'description': 'Close Work Order',
-                'sequence_order': 11,
-            },
-        }
-        return WORKFLOW_TASK_CONFIG.get(status)
     
-    def _handle_workflow_tasks(self, old_status, new_status, user=None):
-        """
-        Automatically create and complete workflow tasks based on status transitions.
-        """
-        try:
-            from django.utils import timezone
-            from django.db import DatabaseError
-            
-            # Check if workflow task fields exist in the database
-            # If migration hasn't been run, fields won't exist and queries will fail
-            try:
-                # Test if the fields exist by checking the model's meta
-                from django.db import connection
-                fields = [f.name for f in self.tasks.model._meta.get_fields()]
-                workflow_fields_exist = 'is_workflow_task' in fields and 'workflow_phase' in fields
-            except (AttributeError, FieldDoesNotExist, Exception):
-                # Fields don't exist yet - migration not run, or error checking
-                workflow_fields_exist = False
-            
-            if not workflow_fields_exist:
-                # Migration hasn't been run yet - skip workflow task creation
-                return
-            
-            # Complete the task for the old status if it exists
-            # BUT: Don't complete if transitioning to/from paused - just pause/resume the task
-            if old_status:
-                # Special handling for paused status - don't complete tasks when pausing/resuming
-                if new_status == 'paused' or old_status == 'paused':
-                    # When pausing: just pause the workflow task, don't complete it
-                    if new_status == 'paused' and old_status in ['in_progress']:
-                        try:
-                            old_task = self.tasks.filter(
-                                workflow_phase=old_status,
-                                is_workflow_task=True
-                            ).first()
-                            
-                            if old_task and old_task.status == 'in_progress':
-                                # Pause the task instead of completing it
-                                ServiceTask.objects.filter(pk=old_task.pk).update(
-                                    status='pending',  # Set back to pending when paused
-                                )
-                        except (DatabaseError, AttributeError) as e:
-                            import logging
-                            logger = logging.getLogger(__name__)
-                            logger.warning(f"Failed to pause workflow task for phase {old_status}: {e}")
-                    # When resuming: reactivate the existing workflow task
-                    elif old_status == 'paused' and new_status == 'in_progress':
-                        try:
-                            # Find existing workflow task for in_progress
-                            existing_task = self.tasks.filter(
-                                workflow_phase='in_progress',
-                                is_workflow_task=True
-                            ).first()
-                            
-                            if existing_task:
-                                # Reactivate the task
-                                ServiceTask.objects.filter(pk=existing_task.pk).update(
-                                    status='in_progress',
-                                    started_at=timezone.now()
-                                )
-                                # Don't create a new task - we'll return early
-                                return
-                        except (DatabaseError, AttributeError) as e:
-                            import logging
-                            logger = logging.getLogger(__name__)
-                            logger.warning(f"Failed to resume workflow task: {e}")
-                else:
-                    # Normal transition - complete the old task
-                    try:
-                        old_task = self.tasks.filter(
-                            workflow_phase=old_status,
-                            is_workflow_task=True
-                        ).first()
-                        
-                        if old_task and old_task.status != 'completed':
-                            old_task.status = 'completed'
-                            old_task.completed_at = timezone.now()
-                            # Bypass save() recursion by using update()
-                            ServiceTask.objects.filter(pk=old_task.pk).update(
-                                status='completed',
-                                completed_at=timezone.now()
-                            )
-                            # Update totals after completion
-                            self.recalculate_totals()
-                    except (DatabaseError, AttributeError) as e:
-                        # Log error but don't fail the status transition
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Failed to complete workflow task for phase {old_status}: {e}")
-            
-            # Create task for new status if config exists and task doesn't already exist
-            # Skip creating workflow task for paused status (no config exists anyway)
-            if new_status == 'paused':
-                return  # Don't create a workflow task for paused status
-            
-            task_config = self._get_workflow_task_config(new_status)
-            if task_config:
-                try:
-                    existing_task = self.tasks.filter(
-                        workflow_phase=new_status,
-                        is_workflow_task=True
-                    ).first()
-                    
-                    # If resuming from paused, we already reactivated the task above, so skip creating new one
-                    if old_status == 'paused' and new_status == 'in_progress' and existing_task:
-                        return
-                    
-                    if not existing_task:
-                        # Get max sequence order for non-workflow tasks to place workflow tasks appropriately
-                        max_manual_seq = self.tasks.filter(is_workflow_task=False).aggregate(
-                            max_seq=Max('sequence_order')
-                        )['max_seq'] or 0
-                        
-                        # Auto-start workflow tasks for certain phases
-                        auto_start_phases = ['inspection', 'intake', 'assigned', 'diagnosis', 'in_progress', 'quality_check']
-                        initial_status = 'in_progress' if new_status in auto_start_phases else 'pending'
-                        
-                        # Assign task based on phase
-                        # For "assigned" phase, assign to Service Coordinator
-                        # For other phases, assign to primary technician or keep unassigned
-                        assigned_user = None
-                        if new_status == 'assigned' and self.service_coordinator:
-                            assigned_user = self.service_coordinator
-                        elif self.primary_technician:
-                            assigned_user = self.primary_technician
-                        
-                        workflow_task = ServiceTask.objects.create(
-                            work_order=self,
-                            workflow_phase=new_status,
-                            is_workflow_task=True,
-                            task_type=task_config['task_type'],
-                            description=task_config['description'],
-                            sequence_order=task_config['sequence_order'] + max_manual_seq,
-                            status=initial_status,
-                            assigned_to=assigned_user,
-                        )
-                        
-                        # Set started_at if auto-started
-                        if initial_status == 'in_progress':
-                            ServiceTask.objects.filter(pk=workflow_task.pk).update(
-                                started_at=timezone.now()
-                            )
-                except (DatabaseError, AttributeError) as e:
-                    # Log error but don't fail the status transition
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Failed to create workflow task for phase {new_status}: {e}")
-        except Exception as e:
-            # Catch any other errors and log them without failing the transition
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error in _handle_workflow_tasks: {e}", exc_info=True)
 
 
 class ServiceTask(models.Model):

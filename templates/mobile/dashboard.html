@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mobile Dashboard</title>
+</head>
+
+<body>
+    <h1>Mobile Dashboard</h1>
+    <div id="branch-name">{{ branch_active_branch.name }}</div>
+    <div id="activity">
+        {% for activity in recent_activity %}
+        <div class="activity-item">{{ activity.title }}</div>
+        {% endfor %}
+    </div>
+</body>
+
+</html>

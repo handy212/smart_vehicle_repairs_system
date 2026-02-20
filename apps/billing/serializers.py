@@ -464,9 +464,6 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
     
     estimate_number = serializers.CharField(source='estimate.estimate_number', read_only=True)
     
-    # ledger_invoice = serializers.UUIDField(source='ledger_invoice.uuid', read_only=True, allow_null=True)
-    # ledger_invoice_url = serializers.SerializerMethodField()
-    
     # Include payment history and line items
     payments = serializers.SerializerMethodField()
     line_items = InvoiceLineItemSerializer(many=True, read_only=True)
@@ -491,7 +488,6 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             'vehicle', 'vehicle_display', 'vehicle_vin',
             'work_order', 'work_order_number', 'work_order_status',
             'estimate', 'estimate_number',
-            # 'ledger_invoice', 'ledger_invoice_url',
             'status', 'invoice_date', 'due_date',
             'description', 'notes', 'customer_notes', 'terms',
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
@@ -568,32 +564,6 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
                     parts.append(city_state_zip)
         
         return ", ".join(filter(None, parts))
-    
-    # def get_ledger_invoice_url(self, obj):
-    #     """Get URL to view invoice in Django Ledger"""
-    #     if obj.ledger_invoice and obj.branch and hasattr(obj.branch, 'ledger_entity') and obj.branch.ledger_entity:
-    #         entity_slug = obj.branch.ledger_entity.slug
-    #         # Get request from context
-    #         request = self.context.get('request')
-    #         if request:
-    #             # Build absolute URI from request
-    #             # Django request.build_absolute_uri gives us the full URL including protocol and domain
-    #             base_url = request.build_absolute_uri('/').rstrip('/')
-    #             # If the request came through /api, replace it, otherwise use as-is
-    #             if '/api' in base_url:
-    #                 base_url = base_url.replace('/api', '')
-    #             # Ensure we have the correct port (8000 for backend)
-    #             # If request came from frontend (port 3000), we need to change it
-    #             if ':3000' in base_url:
-    #                 base_url = base_url.replace(':3000', ':8000')
-    #             return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
-    #         else:
-    #             # Fallback: use environment variable or default to localhost:8000
-    #             import os
-    #             api_url = os.environ.get('NEXT_PUBLIC_API_URL', 'http://localhost:8000/api')
-    #             base_url = api_url.replace('/api', '').rstrip('/')
-    #             return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
-    #     return None
     
     def get_payments(self, obj):
         from apps.billing.serializers import PaymentSerializer
@@ -1309,7 +1279,6 @@ class BillSerializer(serializers.ModelSerializer):
     vendor_name = serializers.CharField(source='vendor.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     line_items = BillLineItemSerializer(many=True, read_only=True)
-    ledger_bill_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Bill
@@ -1319,7 +1288,7 @@ class BillSerializer(serializers.ModelSerializer):
             'terms', 'notes', 'status', 'currency',
             'subtotal', 'tax_amount', 'total', 
             'amount_paid', 'amount_due',
-            'line_items', 'ledger_bill_url',
+            'line_items',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]

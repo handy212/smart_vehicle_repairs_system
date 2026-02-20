@@ -92,7 +92,7 @@ class PurchaseOrderFlowTest(TestCase):
         self.assertEqual(po.assigned_approver, self.approver)
         
         # VERIFY NOTIFICATION
-        notifications = Notification.objects.filter(recipient=self.approver)
+        notifications = Notification.objects.filter(recipient=self.approver, channel='in_app')
         self.assertEqual(notifications.count(), 1)
         notification = notifications.first()
         self.assertEqual(notification.notification_type, 'inventory')

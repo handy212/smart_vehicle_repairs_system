@@ -27,13 +27,29 @@ class AccrualServiceTests(TestCase):
             actual_labor_cost=Decimal('50.00'),
             actual_parts_cost=Decimal('50.00'),
             estimated_total=Decimal('100.00'), # Fallback
-            actual_total=Decimal('100.00')
+            actual_total=Decimal('100.00'),
+            odometer_in=0
         )
 
+        from apps.workorders.models import WorkOrderPart
+        WorkOrderPart.objects.create(
+            work_order=self.wo,
+            part_name="Oil Filter",
+            quantity=Decimal('1.00'),
+            unit_cost=Decimal('100.00'),
+            selling_price=Decimal('100.00'),
+            status='installed'
+        )
+        # Recalculate to ensure WO has the total
+        self.wo.recalculate_totals()
+        
     def test_create_accrual(self):
         # 1. Get Candidates
         candidates = AccrualService.get_accrual_candidates(cutoff_date=timezone.now().date())
         self.assertTrue(len(candidates['revenue']) > 0)
+        
+        candidate = candidates['revenue'][0]
+        self.assertEqual(candidate['amount'], Decimal('100.00')) # Should match WO total
         
         candidate = candidates['revenue'][0]
         self.assertEqual(candidate['amount'], Decimal('100.00')) # Should match WO total

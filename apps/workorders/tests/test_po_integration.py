@@ -246,7 +246,7 @@ class POIntegrationTests(TestCase):
         
         # Try to submit
         # Note: We need to use the inventory API submission endpoint
-        url = reverse('api_inventory:purchaseorder-submit', args=[empty_po.id])
+        url = reverse('api_inventory:purchaseorder-submit-for-approval', args=[empty_po.id])
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

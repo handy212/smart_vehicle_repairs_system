@@ -17,8 +17,11 @@ from apps.accounting.models import Account, JournalEntry, Transaction
 from apps.accounting.services import ReportingService
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from django.core.management import call_command
+
 class BranchEnforcementTests(TestCase):
     def setUp(self):
+        call_command('init_permissions', verbosity=0)
         self.client = APIClient()
         
         self.superuser = User.objects.create_superuser(
@@ -179,7 +182,7 @@ class BranchEnforcementTests(TestCase):
         
         # Test User A
         self.client.force_authenticate(user=self.user_a)
-        response = self.client.get('/api/documents/')
+        response = self.client.get('/api/documents/documents/')
         self.assertEqual(response.status_code, 200)
         # Handle both paginated and non-paginated responses
         if isinstance(response.data, dict) and 'results' in response.data:
@@ -195,7 +198,7 @@ class BranchEnforcementTests(TestCase):
         
         # Test User B
         self.client.force_authenticate(user=self.user_b)
-        response = self.client.get('/api/documents/')
+        response = self.client.get('/api/documents/documents/')
         self.assertEqual(response.status_code, 200)
         # Handle both paginated and non-paginated responses
         if isinstance(response.data, dict) and 'results' in response.data:
@@ -265,8 +268,17 @@ class BranchEnforcementTests(TestCase):
             odometer_in=12000
         )
         
-        # Test User A - use force_mobile to avoid redirect
-        self.client.force_authenticate(user=self.user_a)
+        # Test User A - use force_login for regular Django view
+        self.client.force_login(self.user_a)
         response = self.client.get('/mobile/dashboard/', {'force_mobile': '1'})
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Branch A")
+        self.assertNotContains(response, "Branch B")
+        
+        # Test User B
+        self.client.force_login(self.user_b)
+        response = self.client.get('/mobile/dashboard/', {'force_mobile': '1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Branch B")
+        self.assertNotContains(response, "Branch A")
 

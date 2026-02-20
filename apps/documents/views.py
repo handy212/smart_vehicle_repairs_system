@@ -104,6 +104,9 @@ class DocumentCategoryViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class DocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for Document with file upload and management"""
     
@@ -144,7 +147,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'is_superuser') and not user.is_superuser:
             branches = get_user_accessible_branches(user)
             
-            # 1. Documents directly linked to my branches via transactional entities
+            # Logic: Show documents linked to accessible branches
+            # OR documents not linked to any transactional entity
             branch_linked = (
                 Q(work_order__branch__in=branches) |
                 Q(appointment__branch__in=branches) |
@@ -152,7 +156,6 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 Q(estimate__branch__in=branches)
             )
             
-            # 2. Documents linked to ANY transactional entity
             has_transactional_entity = (
                 Q(work_order__isnull=False) |
                 Q(appointment__isnull=False) |
@@ -160,7 +163,6 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 Q(estimate__isnull=False)
             )
             
-            # Filter: (Linked to MY branch) OR (NOT Linked to ANY transactional entity)
             queryset = queryset.filter(branch_linked | ~has_transactional_entity).distinct()
 
         return queryset

@@ -82,6 +82,11 @@ class AccrualService:
         return candidates
 
     @staticmethod
+    def get_accrual_candidates(cutoff_date=None):
+        """Alias for identify_accruals for test compatibility"""
+        return AccrualService.identify_accruals(cutoff_date)
+
+    @staticmethod
     @transaction.atomic
     def create_accrual(user, account_id, amount, date, description, accrual_type, reversal_date=None):
         """
@@ -114,9 +119,9 @@ class AccrualService:
             cr_account = AccountingService.get_or_create_account('2050', 'Accrued Liabilities', 'liability', 'credit')
         else:
             # Revenue Accrual:
-            # DR Accrued Income (1150)
+            # DR Accrued Income (1250)
             # CR Income Account (Actual Revenue)
-            dr_account = AccountingService.get_or_create_account('1150', 'Accrued Income', 'asset', 'debit')
+            dr_account = AccountingService.get_or_create_account('1250', 'Accrued Revenue', 'asset', 'debit')
             cr_account = account
 
         lines = [
@@ -149,13 +154,11 @@ class AccrualService:
 
     @staticmethod
     @transaction.atomic
-    def reverse_accrual(accrual_id, user):
+    def reverse_accrual(user, accrual):
         """
         Reverse a previously created accrual.
         Usually run at start of next period.
         """
-        accrual = Accrual.objects.get(id=accrual_id)
-        
         if accrual.status != 'active':
             return # Already reversed
             
@@ -190,5 +193,5 @@ class AccrualService:
         accrual.status = 'reversed'
         accrual.save()
         
-        return accrual
+        return je
 

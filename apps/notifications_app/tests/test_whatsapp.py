@@ -108,6 +108,7 @@ class TestNotificationServiceWhatsApp(SimpleTestCase):
         pref.phone_number = '1234567890'
         recipient.notification_preferences = pref
         notification.recipient = recipient
+        notification.template = None
         
         # Test
         result = self.service._send_whatsapp(notification)

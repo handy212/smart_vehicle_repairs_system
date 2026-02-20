@@ -466,7 +466,7 @@ class Accrual(models.Model):
     account = models.ForeignKey(Account, on_delete=models.PROTECT, help_text="The expense or revenue account to accrue")
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     accrual_date = models.DateField(help_text="Date to recognize the expense/revenue")
-    reversal_date = models.DateField(help_text="Date to reverse the accrual (usually first day of next period)")
+    reversal_date = models.DateField(null=True, blank=True, help_text="Date to reverse the accrual (usually first day of next period)")
     description = models.TextField()
     
     # GL Integration
@@ -477,6 +477,14 @@ class Accrual(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    
+    @property
+    def is_reversed(self):
+        return self.status == 'reversed'
+        
+    @property
+    def journal_entry(self):
+        return self.accrual_je
 
     def __str__(self):
         return f"{self.get_accrual_type_display()} - {self.description} - {self.amount}"
