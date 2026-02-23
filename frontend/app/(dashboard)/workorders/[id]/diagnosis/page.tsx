@@ -1176,7 +1176,7 @@ function RecommendationsTab({
         <CardContent className="pt-4">
           {recommendations.length > 0 ? (
             <div className="space-y-6">
-            // Unapproved Recommendations
+              {/* Unapproved Recommendations */}
               {unapprovedRecommendations.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-border pb-2">
@@ -1191,7 +1191,7 @@ function RecommendationsTab({
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {unapprovedRecommendations.map((rec: any) => (
                       <div
                         key={rec.id}
@@ -1223,7 +1223,7 @@ function RecommendationsTab({
 
                             <p className="text-sm text-card-foreground line-clamp-2 leading-relaxed">{rec.description}</p>
 
-                          // Parts and Labor Details
+                            {/* Parts and Labor Details */}
                             {(() => {
                               // Check for linked line items from Estimate tab
                               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1325,12 +1325,12 @@ function RecommendationsTab({
                 </div>
               )}
 
-            // Approved but not converted
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              {/* Approved but not converted */}
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length > 0 && (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     Approved - Ready to Convert ({approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1361,7 +1361,7 @@ function RecommendationsTab({
 
                           <p className="text-sm text-foreground line-clamp-2">{rec.description}</p>
 
-                    // Parts and Labor Details
+                          {/* Parts and Labor Details */}
                           {(rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) ||
                             (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0) ? (
                             <div className="text-xs bg-card/50 rounded p-2 text-muted-foreground space-y-1 border border-green-100/50">
@@ -1403,14 +1403,14 @@ function RecommendationsTab({
                 </div>
               )}
 
-            // Converted to Tasks
+              {/* Converted to Tasks */}
               {convertedRecommendations.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
                     Converted to Tasks ({convertedRecommendations.length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {convertedRecommendations.map((rec: any) => (
                       <div key={rec.id} className="p-4 bg-muted border border-border bg-muted border-border rounded-lg space-y-3 opacity-75">
                         <div className="flex items-start justify-between mb-2">
@@ -1458,7 +1458,7 @@ function RecommendationsTab({
         </CardContent>
       </Card>
 
-    // Add/Edit Recommendation Dialog
+      {/* Add/Edit Recommendation Dialog */}
       <RecommendationDialog
         open={showAddDialog}
         onOpenChange={(open) => {
@@ -1478,7 +1478,7 @@ function RecommendationsTab({
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
 
-    // AI Suggestion Dialog
+      {/* AI Suggestion Dialog */}
       <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -1653,10 +1653,10 @@ function PhotosTab({
                         <Camera className="w-8 h-8 opacity-20" />
                       </div>
                     )}
-                  // Overlay Gradient
+                    {/* Overlay Gradient */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
-                  // Actions
+                    {/* Actions */}
                     <div className="absolute top-2 right-2 transition-opacity flex gap-1">
                       <TooltipProvider>
                         <Tooltip>
@@ -1684,7 +1684,7 @@ function PhotosTab({
                       </TooltipProvider>
                     </div>
 
-                  // Badge
+                    {/* Badge */}
                     {photo.photo_type && (
                       <div className="absolute top-2 left-2">
                         <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-card/90 dark:bg-black/90 backdrop-blur-sm shadow-sm capitalize">

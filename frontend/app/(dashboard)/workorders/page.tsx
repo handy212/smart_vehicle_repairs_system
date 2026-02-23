@@ -60,7 +60,7 @@ export default function WorkOrdersPage() {
   const [page, setPage] = useState(1);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("in_progress");
-  // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
@@ -597,13 +597,13 @@ export default function WorkOrdersPage() {
                       <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{workorder.customer_name || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5">
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
                           {workorder.status?.replace("_", " ") || workorder.status || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
                           {workorder.priority || "-"}
                         </Badge>

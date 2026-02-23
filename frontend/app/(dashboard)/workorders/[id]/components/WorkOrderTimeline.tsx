@@ -5,10 +5,10 @@ import { format } from "date-fns";
 import { Clock } from "lucide-react";
 
 interface TimelineProps {
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-workOrder: any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-notes: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    workOrder: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    notes: any[];
 }
 
 export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
@@ -184,44 +184,44 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                 {notes
                                     .sort(
                                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                            (a: any, b: any) =>
-                                new Date(b.created_at).getTime() -
-                                new Date(a.created_at).getTime()
-                                )
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        (a: any, b: any) =>
+                                            new Date(b.created_at).getTime() -
+                                            new Date(a.created_at).getTime()
+                                    )
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     .map((note: any) => (
-                                <div key={note.id} className="relative flex items-start">
-                                    <div
-                                        className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${note.note_type === "customer"
-                                            ? "bg-orange-400"
-                                            : note.is_important
-                                                ? "bg-red-500"
-                                                : "bg-gray-400"
-                                            }`}
-                                    ></div>
-                                    <div className="flex-1 pt-0.5">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <p className="text-sm font-semibold text-foreground">
-                                                {note.note_type === "customer"
-                                                    ? "Customer Note"
+                                        <div key={note.id} className="relative flex items-start">
+                                            <div
+                                                className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${note.note_type === "customer"
+                                                    ? "bg-orange-400"
                                                     : note.is_important
-                                                        ? "Important Note"
-                                                        : "Internal Note"}
-                                            </p>
+                                                        ? "bg-red-500"
+                                                        : "bg-gray-400"
+                                                    }`}
+                                            ></div>
+                                            <div className="flex-1 pt-0.5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-sm font-semibold text-foreground">
+                                                        {note.note_type === "customer"
+                                                            ? "Customer Note"
+                                                            : note.is_important
+                                                                ? "Important Note"
+                                                                : "Internal Note"}
+                                                    </p>
+                                                </div>
+                                                <p className="text-sm text-card-foreground mt-1 whitespace-pre-wrap">
+                                                    {note.note}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {format(
+                                                        new Date(note.created_at),
+                                                        "MMM dd, yyyy 'at' h:mm a"
+                                                    )}
+                                                    {note.created_by_name &&
+                                                        ` • ${note.created_by_name}`}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-card-foreground mt-1 whitespace-pre-wrap">
-                                            {note.note}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {format(
-                                                new Date(note.created_at),
-                                                "MMM dd, yyyy 'at' h:mm a"
-                                            )}
-                                            {note.created_by_name &&
-                                                ` • ${note.created_by_name}`}
-                                        </p>
-                                    </div>
-                                </div>
                                     ))}
                             </>
                         )}

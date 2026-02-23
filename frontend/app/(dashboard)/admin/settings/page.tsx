@@ -693,8 +693,7 @@ export default function SystemSettingsPage() {
                                           })()}
                                         </span>
                                       </div>
-                                    ) : (
-                                      /* Theme Mode - Dropdown */
+                                    ) : /* Theme Mode - Dropdown */
                                       setting.key === 'theme_mode' ? (
                                         <Select
                                           value={getRowValue(setting) || 'light'}

@@ -1088,7 +1088,7 @@ export default function WorkflowActions({
   // Render dialogs (always needed, whether inline or not)
   const renderDialogs = () => (
     <>
-    // Complete Diagnosis Dialog
+      {/* Complete Diagnosis Dialog */}
       <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1105,7 +1105,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Request Approval Dialog
+      {/* Request Approval Dialog */}
       <Dialog open={showRequestApprovalDialog} onOpenChange={setShowRequestApprovalDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1121,7 +1121,7 @@ export default function WorkflowActions({
                 This requires diagnosis notes and an estimated total greater than $0. The work order will move to "Awaiting Approval" status and notify the customer.
               </p>
             </div>
-          // Show prerequisites status
+            {/* Show prerequisites status */}
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Diagnosis Notes:</span>
@@ -1158,7 +1158,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Additional Work Found Dialog
+      {/* Additional Work Found Dialog */}
       <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1178,7 +1178,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Approve Dialog
+      {/* Approve Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1195,7 +1195,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Quality Check Dialog
+      {/* Quality Check Dialog */}
       <Dialog open={showQualityCheckDialog} onOpenChange={setShowQualityCheckDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1213,7 +1213,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Complete Dialog
+      {/* Complete Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1230,7 +1230,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Mark Invoiced Dialog
+      {/* Mark Invoiced Dialog */}
       <Dialog open={showMarkInvoicedDialog} onOpenChange={setShowMarkInvoicedDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1248,7 +1248,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Close Work Order Dialog
+      {/* Close Work Order Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1266,7 +1266,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Pause Dialog
+      {/* Pause Dialog */}
       <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1283,7 +1283,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Create Inspection Dialog
+      {/* Create Inspection Dialog */}
       <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1298,7 +1298,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Assign Service Coordinator Dialog
+      {/* Assign Service Coordinator Dialog */}
       <Dialog open={showAssignServiceCoordinatorDialog} onOpenChange={setShowAssignServiceCoordinatorDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
@@ -1313,7 +1313,7 @@ export default function WorkflowActions({
         </DialogContent>
       </Dialog>
 
-    // Start Diagnosis Dialog
+      {/* Start Diagnosis Dialog */}
       <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
         <DialogContent className="bg-muted border-border">
           <DialogHeader>

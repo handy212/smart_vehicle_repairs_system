@@ -146,7 +146,7 @@ export function TestsTab({
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {tests.map((test: any) => (
                                 <div
                                     key={test.id}
@@ -440,7 +440,7 @@ function TestDialog({
                                             Recommended Templates
                                         </div>
                                         <div className="max-h-48 overflow-y-auto">
-                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                             {templateResults.map((template: any) => (
                                                 <button
                                                     key={template.id}

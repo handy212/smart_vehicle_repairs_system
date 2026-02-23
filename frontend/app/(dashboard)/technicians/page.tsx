@@ -90,13 +90,6 @@ function TechniciansContent() {
                 }
             />
 
-            {/* HR redirect banner */}
-            <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 px-3 py-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400 flex-shrink-0"><rect width="16" height="20" x="4" y="2" rx="2" ry="2" /><path d="M9 22v-4h6v4" /><path d="M8 6h.01" /><path d="M16 6h.01" /><path d="M12 6h.01" /><path d="M12 10h.01" /><path d="M12 14h.01" /><path d="M16 10h.01" /><path d="M16 14h.01" /><path d="M8 10h.01" /><path d="M8 14h.01" /></svg>
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Technician profiles are now managed through the <Link href="/hr/staff" className="font-semibold underline hover:no-underline">HR module</Link>. Use the HR Staff page to create and manage staff.
-                </p>
-            </div>
 
             {/* Stats Overview */}
             {!isLoading && data?.results && (
@@ -231,7 +224,7 @@ function TechniciansContent() {
                                             </div>
 
                                             <div className="space-y-2">
-                                                // Skills
+                                                {/* Skills */}
                                                 {tech.skills.length > 0 && (
                                                     <div className="flex flex-wrap gap-1">
                                                         {tech.skills.slice(0, 3).map((skill) => (
@@ -247,7 +240,7 @@ function TechniciansContent() {
                                                     </div>
                                                 )}
 
-                                                // Stats
+                                                {/* Stats */}
                                                 <div className="grid grid-cols-2 gap-3 pt-2 border-t">
                                                     <div>
                                                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Experience</p>
