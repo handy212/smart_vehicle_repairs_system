@@ -62,6 +62,7 @@ export const appointmentsApi = {
 
   create: async (data: Partial<Appointment>): Promise<Appointment> => {
     // Back-compat: UI uses `notes`, API expects `customer_concerns`.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload: any = { ...data };
     if (payload.notes && (payload.customer_concerns === undefined || payload.customer_concerns === null || payload.customer_concerns === "")) {
       payload.customer_concerns = payload.notes;
@@ -92,58 +93,61 @@ export const appointmentsApi = {
   calendar: async (params?: {
     start_date?: string;
     end_date?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }): Promise<any[]> => {
-    const response = await apiClient.get("/appointments/appointments/calendar/", { params });
-    return response.data;
-  },
+  const response = await apiClient.get("/appointments/appointments/calendar/", { params });
+  return response.data;
+},
 
-  confirm: async (id: number, confirmationMethod?: string): Promise<Appointment> => {
-    const response = await apiClient.post(`/appointments/appointments/${id}/confirm/`, {
-      confirmation_method: confirmationMethod || "phone",
-    });
-    return response.data;
-  },
+confirm: async (id: number, confirmationMethod?: string): Promise<Appointment> => {
+  const response = await apiClient.post(`/appointments/appointments/${id}/confirm/`, {
+    confirmation_method: confirmationMethod || "phone",
+  });
+  return response.data;
+},
 
   checkIn: async (id: number): Promise<Appointment> => {
     const response = await apiClient.post(`/appointments/appointments/${id}/check_in/`);
     return response.data;
   },
 
-  complete: async (id: number): Promise<Appointment> => {
-    const response = await apiClient.post(`/appointments/appointments/${id}/complete/`);
-    return response.data;
-  },
+    complete: async (id: number): Promise<Appointment> => {
+      const response = await apiClient.post(`/appointments/appointments/${id}/complete/`);
+      return response.data;
+    },
 
-  cancel: async (id: number, reason?: string): Promise<Appointment> => {
-    const response = await apiClient.post(`/appointments/appointments/${id}/cancel/`, {
-      reason: reason || "",
-    });
-    return response.data;
-  },
+      cancel: async (id: number, reason?: string): Promise<Appointment> => {
+        const response = await apiClient.post(`/appointments/appointments/${id}/cancel/`, {
+          reason: reason || "",
+        });
+        return response.data;
+      },
 
-  reschedule: async (id: number, appointmentDate: string, appointmentTime: string): Promise<Appointment> => {
-    const response = await apiClient.post(`/appointments/appointments/${id}/reschedule/`, {
-      appointment_date: appointmentDate,
-      appointment_time: appointmentTime,
-    });
-    return response.data;
-  },
+        reschedule: async (id: number, appointmentDate: string, appointmentTime: string): Promise<Appointment> => {
+          const response = await apiClient.post(`/appointments/appointments/${id}/reschedule/`, {
+            appointment_date: appointmentDate,
+            appointment_time: appointmentTime,
+          });
+          return response.data;
+        },
 
-  getSuggestedMessage: async (id: number, channel: "sms" | "email"): Promise<{ subject: string; message: string }> => {
-    const response = await apiClient.get(`/appointments/appointments/${id}/suggested_message/`, {
-      params: { channel },
-    });
-    return response.data;
-  },
+          getSuggestedMessage: async (id: number, channel: "sms" | "email"): Promise<{ subject: string; message: string }> => {
+            const response = await apiClient.get(`/appointments/appointments/${id}/suggested_message/`, {
+              params: { channel },
+            });
+            return response.data;
+          },
 
-  sendSms: async (id: number, message: string): Promise<any> => {
-    const response = await apiClient.post(`/appointments/appointments/${id}/send_customer_sms/`, { message });
-    return response.data;
-  },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+sendSms: async (id: number, message: string): Promise<any> => {
+  const response = await apiClient.post(`/appointments/appointments/${id}/send_customer_sms/`, { message });
+  return response.data;
+},
 
-  sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
-    const response = await apiClient.post(`/appointments/appointments/${id}/send_customer_email/`, { subject, message });
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
+  const response = await apiClient.post(`/appointments/appointments/${id}/send_customer_email/`, { subject, message });
+  return response.data;
+},
 };
 

@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import { AdvancedWidget } from "./AdvancedWidget";
 import { PremiumIcons } from "@/components/ui/icons";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 

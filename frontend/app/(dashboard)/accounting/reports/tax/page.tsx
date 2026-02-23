@@ -76,7 +76,7 @@ export default function TaxReportPage() {
                 </div>
             ) : report ? (
                 <div className="space-y-6">
-                    {/* Summary Cards */}
+                    // Summary Cards
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card>
                             <CardContent className="pt-6">
@@ -136,7 +136,7 @@ export default function TaxReportPage() {
                         </Card>
                     </div>
 
-                    {/* Tax Breakdown */}
+                    // Tax Breakdown
                     <Card>
                         <CardHeader>
                             <CardTitle>Tax Collected Breakdown</CardTitle>

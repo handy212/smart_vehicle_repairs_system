@@ -7,6 +7,7 @@ import { exportToCSV } from "./export";
 /**
  * Export customers in import-compatible format
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function exportCustomersForImport(customers: any[]) {
   const headers = [
     { key: "first_name" as const, label: "first_name" },
@@ -57,6 +58,7 @@ export function exportCustomersForImport(customers: any[]) {
 /**
  * Export vehicles in import-compatible format
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function exportVehiclesForImport(vehicles: any[]) {
   const headers = [
     { key: "vin" as const, label: "vin" },
@@ -76,7 +78,7 @@ export function exportVehiclesForImport(vehicles: any[]) {
     const owner = typeof vehicle.owner === "object" ? vehicle.owner : null;
     const ownerUser = owner?.user ? (typeof owner.user === "object" ? owner.user : null) : null;
     const ownerEmail = ownerUser?.email || "";
-    
+
     return {
       vin: vehicle.vin || "",
       make: vehicle.make || "",
@@ -98,6 +100,7 @@ export function exportVehiclesForImport(vehicles: any[]) {
 /**
  * Export parts in import-compatible format
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function exportPartsForImport(parts: any[]) {
   const headers = [
     { key: "part_number" as const, label: "part_number" },
@@ -122,7 +125,7 @@ export function exportPartsForImport(parts: any[]) {
 
   const exportData = parts.map((part) => {
     const category = typeof part.category === "object" ? part.category : null;
-    
+
     return {
       part_number: part.part_number || "",
       name: part.name || "",

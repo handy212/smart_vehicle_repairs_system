@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     Truck, MapPin, Phone, Navigation,
     CheckCircle, Clock, ExternalLink,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     AlertCircle, Wrench, PlayCircle
 } from "lucide-react";
 import { format } from "date-fns";
@@ -51,68 +52,69 @@ export default function TechnicianRoadsideDashboard() {
                 variant: "success"
             });
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
-            toast({
-                title: "Update Failed",
-                description: error.response?.data?.error || "Failed to update status",
-                variant: "destructive"
-            });
-        }
+        toast({
+            title: "Update Failed",
+            description: error.response?.data?.error || "Failed to update status",
+            variant: "destructive"
+        });
+    }
     });
 
-    if (isLoading) {
-        return <div className="p-8 text-center">Loading assigned requests...</div>;
-    }
+if (isLoading) {
+    return <div className="p-8 text-center">Loading assigned requests...</div>;
+}
 
-    const activeRequests = myRequests?.results || [];
+const activeRequests = myRequests?.results || [];
 
-    return (
-        <div className="space-y-6 pb-20">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-xl font-bold text-foreground tracking-tight">Technician Portal</h1>
-                    <p className="text-sm text-muted-foreground">Your assigned roadside assistance calls</p>
-                </div>
-                <Badge variant="info" className="text-[10px] px-2 py-0.5 font-medium border shadow-none uppercase tracking-wider">
-                    Live Updates
-                </Badge>
+return (
+    <div className="space-y-6 pb-20">
+        <div className="flex items-center justify-between">
+            <div>
+                <h1 className="text-xl font-bold text-foreground tracking-tight">Technician Portal</h1>
+                <p className="text-sm text-muted-foreground">Your assigned roadside assistance calls</p>
             </div>
-
-            {activeRequests.length === 0 ? (
-                <Card className="border-dashed border-2 bg-muted/50">
-                    <CardContent className="py-12 flex flex-col items-center justify-center text-center">
-                        <Truck className="h-12 w-12 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-bold text-card-foreground">No Active Assignments</h3>
-                        <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-                            You don't have any active roadside requests assigned to you at the moment.
-                        </p>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid grid-cols-1 gap-4">
-                    {activeRequests.map((request) => (
-                        <TechnicianRequestCard
-                            key={request.id}
-                            request={request}
-                            onUpdate={(action) => statusUpdateMutation.mutate({ requestId: request.id, action })}
-                            isUpdating={statusUpdateMutation.isPending}
-                        />
-                    ))}
-                </div>
-            )}
-
-            <div className="bg-primary rounded-2xl p-6 text-white overflow-hidden relative">
-                <div className="relative z-10">
-                    <h3 className="text-lg font-black mb-1">Safety First!</h3>
-                    <p className="text-white/80 text-sm mb-4">Always wear your high-visibility vest and set up warning triangles immediately upon arrival.</p>
-                    <Button variant="outline" size="sm" className="h-9 bg-card/10 border-white/20 text-white hover:bg-card/20">
-                        Safety Checklist
-                    </Button>
-                </div>
-                <Truck className="absolute -right-8 -bottom-8 h-40 w-40 opacity-10 rotate-12" />
-            </div>
+            <Badge variant="info" className="text-[10px] px-2 py-0.5 font-medium border shadow-none uppercase tracking-wider">
+                Live Updates
+            </Badge>
         </div>
-    );
+
+        {activeRequests.length === 0 ? (
+            <Card className="border-dashed border-2 bg-muted/50">
+                <CardContent className="py-12 flex flex-col items-center justify-center text-center">
+                    <Truck className="h-12 w-12 text-gray-300 mb-4" />
+                    <h3 className="text-lg font-bold text-card-foreground">No Active Assignments</h3>
+                    <p className="text-sm text-muted-foreground mt-2 max-w-xs">
+                        You don't have any active roadside requests assigned to you at the moment.
+                    </p>
+                </CardContent>
+            </Card>
+        ) : (
+            <div className="grid grid-cols-1 gap-4">
+                {activeRequests.map((request) => (
+                    <TechnicianRequestCard
+                        key={request.id}
+                        request={request}
+                        onUpdate={(action) => statusUpdateMutation.mutate({ requestId: request.id, action })}
+                        isUpdating={statusUpdateMutation.isPending}
+                    />
+                ))}
+            </div>
+        )}
+
+        <div className="bg-primary rounded-2xl p-6 text-white overflow-hidden relative">
+            <div className="relative z-10">
+                <h3 className="text-lg font-black mb-1">Safety First!</h3>
+                <p className="text-white/80 text-sm mb-4">Always wear your high-visibility vest and set up warning triangles immediately upon arrival.</p>
+                <Button variant="outline" size="sm" className="h-9 bg-card/10 border-white/20 text-white hover:bg-card/20">
+                    Safety Checklist
+                </Button>
+            </div>
+            <Truck className="absolute -right-8 -bottom-8 h-40 w-40 opacity-10 rotate-12" />
+        </div>
+    </div>
+);
 }
 
 function TechnicianRequestCard({ request, onUpdate, isUpdating }: {

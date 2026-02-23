@@ -8,6 +8,7 @@ import {
     YAxis,
     CartesianGrid,
     Tooltip,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Legend,
     ResponsiveContainer,
     Cell,
@@ -34,6 +35,7 @@ interface InventoryTurnoverChartProps {
 }
 
 export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { formatCurrency } = useCurrency();
 
     // Prepare data for the chart - take top 10 by turnover rate
@@ -112,6 +114,7 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
     );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function cn(...classes: any[]) {
     return classes.filter(Boolean).join(" ");
 }

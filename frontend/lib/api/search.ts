@@ -7,7 +7,8 @@ export interface SearchResult {
   subtitle?: string;
   url: string;
   status?: string;
-  metadata?: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+metadata ?: Record<string, any>;
 }
 
 export interface SearchResponse {
@@ -56,9 +57,9 @@ export const searchApi = {
         query: query.trim(),
       };
     }
-    
+
     const trimmedQuery = query.trim();
-    
+
     try {
       // The endpoint is at /mobile/api/search/ (not under /api/)
       const response = await searchClient.get("/mobile/api/search/", {
@@ -67,36 +68,38 @@ export const searchApi = {
           type: type || "all",
         },
       });
-      
+
       // The API returns { results: [...] } directly
       const results = response.data?.results || [];
 
       return {
-        results: results.map((r: any) => ({
-          type: r.type,
-          id: r.id,
-          title: r.title,
-          subtitle: r.subtitle,
-          url: r.url?.startsWith('/') ? r.url : `/${r.url || ''}`,
-          status: r.status,
-          metadata: r.metadata,
-        })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      results: results.map((r: any) => ({
+        type: r.type,
+        id: r.id,
+        title: r.title,
+        subtitle: r.subtitle,
+        url: r.url?.startsWith('/') ? r.url : `/${r.url || ''}`,
+        status: r.status,
+        metadata: r.metadata,
+      })),
         total: results.length,
-        query: trimmedQuery,
+          query: trimmedQuery,
       };
-    } catch (error: any) {
-      console.error("Search API error:", {
-        query: trimmedQuery,
-        type: type || "all",
-        baseURL: searchClient.defaults.baseURL,
-        error: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url,
-        fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'unknown',
-      });
-      throw error;
-    }
-  },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch(error: any) {
+    console.error("Search API error:", {
+      query: trimmedQuery,
+      type: type || "all",
+      baseURL: searchClient.defaults.baseURL,
+      error: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url,
+      fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'unknown',
+    });
+    throw error;
+  }
+},
 };
 

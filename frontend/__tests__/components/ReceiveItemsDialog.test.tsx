@@ -1,4 +1,5 @@
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ReceiveItemsDialog from '@/app/(dashboard)/inventory/purchase-orders/components/ReceiveItemsDialog';
@@ -45,48 +46,39 @@ const queryClient = new QueryClient({
 const mockPurchaseOrder: PurchaseOrder = {
     id: 1,
     po_number: 'PO001',
-    supplier: { id: 1, name: 'Test Supplier', email: 'test@example.com', phone: '1234567890', address: '123 St', is_active: true },
+    supplier: { id: 1, supplier_code: 'SUP-01', name: 'Test Supplier', email: 'test@example.com', phone: '1234567890', is_active: true },
     status: 'confirmed',
     order_date: '2023-01-01',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
-    total_items: 2,
-    total_quantity: 20,
-    received_quantity: 0,
-    subtotal: 100,
-    tax_amount: 10,
-    shipping_cost: 5,
-    total: 115,
+    subtotal: '100',
+    tax_amount: '10',
+    shipping_cost: '5',
+    total: '115',
     items: [
         {
             id: 101,
             purchase_order: 1,
-            part: { id: 50, name: 'Part A', part_number: 'PA-01', category: 1, quantity_in_stock: 0, reorder_point: 5, minimum_stock: 2, cost_price: '10.00', selling_price: '20.00', is_active: true },
+            part: { id: 50, name: 'Part A', part_number: 'PA-01', category: 1, quantity_in_stock: 0, reorder_point: 5, minimum_stock: 2, cost_price: '10.00', selling_price: '20.00', is_active: true, unit: 'pcs' },
             part_name: 'Part A',
             part_number: 'PA-01',
             quantity: 10,
             quantity_received: 0,
             remaining_quantity: 10,
-            unit_cost: 10,
-            total: 100,
-            is_fully_received: false,
-            created_at: '2023-01-01T00:00:00Z',
-            updated_at: '2023-01-01T00:00:00Z'
+            unit_cost: '10',
+            total: '100'
         },
         {
             id: 102,
             purchase_order: 1,
-            part: { id: 51, name: 'Part B', part_number: 'PB-02', category: 1, quantity_in_stock: 0, reorder_point: 5, minimum_stock: 2, cost_price: '5.00', selling_price: '10.00', is_active: true },
+            part: { id: 51, name: 'Part B', part_number: 'PB-02', category: 1, quantity_in_stock: 0, reorder_point: 5, minimum_stock: 2, cost_price: '5.00', selling_price: '10.00', is_active: true, unit: 'pcs' },
             part_name: 'Part B',
             part_number: 'PB-02',
             quantity: 10,
             quantity_received: 10,
             remaining_quantity: 0,
-            unit_cost: 5,
-            total: 50,
-            is_fully_received: true,
-            created_at: '2023-01-01T00:00:00Z',
-            updated_at: '2023-01-01T00:00:00Z'
+            unit_cost: '5',
+            total: '50'
         }
     ]
 };

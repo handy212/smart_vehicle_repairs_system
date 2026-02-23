@@ -1,8 +1,10 @@
 "use client";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";

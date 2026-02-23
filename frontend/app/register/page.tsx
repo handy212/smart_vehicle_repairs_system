@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
+import { setTokens } from "@/lib/utils/token";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,7 @@ export default function RegisterPage() {
     const [otpCode, setOtpCode] = useState("");
 
     // Google Registration State
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
 
     // reCAPTCHA state
@@ -222,10 +224,7 @@ export default function RegisterPage() {
             });
 
             // Login user
-            if (typeof window !== "undefined") {
-                localStorage.setItem("access_token", authData.access);
-                localStorage.setItem("refresh_token", authData.refresh);
-            }
+            setTokens(authData.access, authData.refresh);
             setUser(authData.user);
 
             router.push(authData.user.role === "customer" ? "/portal" : "/dashboard");

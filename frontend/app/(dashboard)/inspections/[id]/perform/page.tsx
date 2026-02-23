@@ -5,18 +5,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inspectionsApi, InspectionResult } from "@/lib/api/inspections";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Input } from "@/components/ui/input";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ArrowLeft, CheckCircle, Save, AlertCircle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { VehicleDamageMarker, DamageMark } from "@/components/inspections/VehicleDamageMarker";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { InspectionItemCard } from "@/components/inspections/InspectionItemCard";
 import { InspectionItemRow } from "@/components/inspections/InspectionItemRow";
 import { Progress } from "@/components/ui/progress";
@@ -129,599 +134,609 @@ export default function PerformInspectionPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to save results",
-        variant: "destructive",
-      });
-    },
+    toast({
+      title: "Error",
+      description: error.response?.data?.error || "Failed to save results",
+      variant: "destructive",
+    });
+  },
   });
 
-  const completeMutation = useMutation({
-    mutationFn: (data?: { technician_signature?: string }) =>
-      inspectionsApi.complete(inspectionId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
-      queryClient.invalidateQueries({ queryKey: ["inspections"] });
-      toast({
-        title: "Completed",
-        description: "Inspection completed",
-        variant: "success",
-      });
-      router.push(`/inspections/${inspectionId}`);
-    },
+const completeMutation = useMutation({
+  mutationFn: (data?: { technician_signature?: string }) =>
+    inspectionsApi.complete(inspectionId, data),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+    queryClient.invalidateQueries({ queryKey: ["inspections"] });
+    toast({
+      title: "Completed",
+      description: "Inspection completed",
+      variant: "success",
+    });
+    router.push(`/inspections/${inspectionId}`);
+  },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to complete inspection",
-        variant: "destructive",
-      });
-    },
+  toast({
+    title: "Error",
+    description: error.response?.data?.error || "Failed to complete inspection",
+    variant: "destructive",
+  });
+},
   });
 
-  /* --------------------- Helpers ------------------------------- */
-  const updateResult = (itemId: number, field: string, value: any) => {
-    setResults((p) => ({
-      ...p,
-      [itemId]: { ...p[itemId], inspection_item: itemId, [field]: value },
-    }));
-  };
+/* --------------------- Helpers ------------------------------- */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const updateResult = (itemId: number, field: string, value: any) => {
+  setResults((p) => ({
+    ...p,
+    [itemId]: { ...p[itemId], inspection_item: itemId, [field]: value },
+  }));
+};
 
-  const getFilledResults = () =>
-    Object.values(results).filter(
-      (r) =>
-        r.inspection_item &&
-        (r.result ||
-          r.measurement_value !== undefined ||
-          r.percentage_value !== undefined ||
-          r.rating_value !== undefined ||
-          r.condition ||
-          r.text_note ||
-          r.notes ||
-          r.needs_immediate_attention === true)
-    );
+const getFilledResults = () =>
+  Object.values(results).filter(
+    (r) =>
+      r.inspection_item &&
+      (r.result ||
+        r.measurement_value !== undefined ||
+        r.percentage_value !== undefined ||
+        r.rating_value !== undefined ||
+        r.condition ||
+        r.text_note ||
+        r.notes ||
+        r.needs_immediate_attention === true)
+  );
 
-  const saveDamageMutation = useMutation({
-    mutationFn: async (damage: DamageMark[]) => {
-      const result = await inspectionsApi.update(inspectionId, { vehicle_damage: damage });
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
-    },
+const saveDamageMutation = useMutation({
+  mutationFn: async (damage: DamageMark[]) => {
+    const result = await inspectionsApi.update(inspectionId, { vehicle_damage: damage });
+    return result;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+  },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || error.response?.data?.vehicle_damage?.[0] || error.message || "Failed to save vehicle damage",
-        variant: "destructive",
-      });
-    },
+  toast({
+    title: "Error",
+    description: error.response?.data?.error || error.response?.data?.vehicle_damage?.[0] || error.message || "Failed to save vehicle damage",
+    variant: "destructive",
+  });
+},
   });
 
-  const addPhotoMutation = useMutation({
-    mutationFn: async ({ itemId, file, resultId }: { itemId: number, file: File, resultId?: number }) => {
-      let targetResultId = resultId;
+const addPhotoMutation = useMutation({
+  mutationFn: async ({ itemId, file, resultId }: { itemId: number, file: File, resultId?: number }) => {
+    let targetResultId = resultId;
 
-      if (!targetResultId) {
-        // Create result first
-        const response = await inspectionsApi.saveResults(inspectionId, [{
-          inspection_item: itemId,
+    if (!targetResultId) {
+      // Create result first
+      const response = await inspectionsApi.saveResults(inspectionId, [{
+        inspection_item: itemId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           result: (results[itemId]?.result as any) || 'not_checked'
         }]);
 
-        targetResultId = response.results?.find((r: any) => r.inspection_item === itemId)?.id;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+targetResultId = response.results?.find((r: any) => r.inspection_item === itemId)?.id;
       }
 
-      if (!targetResultId) throw new Error("Could not prepare result for photo upload");
+if (!targetResultId) throw new Error("Could not prepare result for photo upload");
 
-      const formData = new FormData();
-      formData.append("image", file);
-      return inspectionsApi.results.addPhoto(targetResultId, formData);
+const formData = new FormData();
+formData.append("image", file);
+return inspectionsApi.results.addPhoto(targetResultId, formData);
     },
-    onSuccess: async (data, variables) => {
-      // Update local results state with the new photo
-      setResults((prev) => {
-        const itemId = variables.itemId;
-        const currentResult = prev[itemId] || {};
-        const currentPhotos = currentResult.photos || [];
-        return {
-          ...prev,
-          [itemId]: {
-            ...currentResult,
-            photos: [...currentPhotos, data],
-          },
-        };
-      });
-      queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
-      toast({ title: "Photo added", variant: "success" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
-    }
+onSuccess: async (data, variables) => {
+  // Update local results state with the new photo
+  setResults((prev) => {
+    const itemId = variables.itemId;
+    const currentResult = prev[itemId] || {};
+    const currentPhotos = currentResult.photos || [];
+    return {
+      ...prev,
+      [itemId]: {
+        ...currentResult,
+        photos: [...currentPhotos, data],
+      },
+    };
+  });
+  queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+  toast({ title: "Photo added", variant: "success" });
+},
+  onError: () => {
+    toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+  }
   });
 
-  const deletePhotoMutation = useMutation({
-    mutationFn: (photoId: number) => {
-      return inspectionsApi.photos.delete(photoId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
-      toast({ title: "Photo removed" });
+const deletePhotoMutation = useMutation({
+  mutationFn: (photoId: number) => {
+    return inspectionsApi.photos.delete(photoId);
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+    toast({ title: "Photo removed" });
+  }
+});
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const hasDamageChanged = () => {
+  const currentDamage = inspection?.vehicle_damage || [];
+  if (currentDamage.length !== vehicleDamage.length) return true;
+
+  // Create maps for easier comparison
+  const currentMap = new Map((currentDamage as DamageMark[]).map(m => [m.id, m]));
+  const newMap = new Map(vehicleDamage.map(m => [m.id, m]));
+
+  // Check if any marks were added, removed, or changed
+  if (currentMap.size !== newMap.size) return true;
+
+  for (const [id, mark] of newMap) {
+    const currentMark = currentMap.get(id);
+    if (!currentMark) return true; // New mark added
+    // Compare mark properties
+    if (
+      currentMark.type !== mark.type ||
+      currentMark.severity !== mark.severity ||
+      currentMark.x !== mark.x ||
+      currentMark.y !== mark.y ||
+      (currentMark.description || '') !== (mark.description || '')
+    ) {
+      return true;
     }
-  });
+  }
 
-  const hasDamageChanged = () => {
-    const currentDamage = inspection?.vehicle_damage || [];
-    if (currentDamage.length !== vehicleDamage.length) return true;
+  return false;
+};
 
-    // Create maps for easier comparison
-    const currentMap = new Map((currentDamage as DamageMark[]).map(m => [m.id, m]));
-    const newMap = new Map(vehicleDamage.map(m => [m.id, m]));
+const save = async () => {
+  const payload = getFilledResults();
+  let hasChanges = false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const promises: Promise<any>[] = [];
 
-    // Check if any marks were added, removed, or changed
-    if (currentMap.size !== newMap.size) return true;
+  // Save inspection results if any
+  if (payload.length > 0) {
+    promises.push(saveMutation.mutateAsync(payload));
+    hasChanges = true;
+  }
 
-    for (const [id, mark] of newMap) {
-      const currentMark = currentMap.get(id);
-      if (!currentMark) return true; // New mark added
-      // Compare mark properties
-      if (
-        currentMark.type !== mark.type ||
-        currentMark.severity !== mark.severity ||
-        currentMark.x !== mark.x ||
-        currentMark.y !== mark.y ||
-        (currentMark.description || '') !== (mark.description || '')
-      ) {
-        return true;
-      }
-    }
-
-    return false;
-  };
-
-  const save = async () => {
-    const payload = getFilledResults();
-    let hasChanges = false;
-    const promises: Promise<any>[] = [];
-
-    // Save inspection results if any
-    if (payload.length > 0) {
-      promises.push(saveMutation.mutateAsync(payload));
+  // Always save vehicle damage if there are any marks
+  // This ensures vehicle damage saves regardless of change detection
+  if (vehicleDamage.length > 0) {
+    promises.push(saveDamageMutation.mutateAsync(vehicleDamage));
+    hasChanges = true;
+  } else {
+    // Also save if we're clearing damage (had damage before but now empty)
+    const hadDamageBefore = (inspection?.vehicle_damage || []).length > 0;
+    if (hadDamageBefore) {
+      promises.push(saveDamageMutation.mutateAsync([]));
       hasChanges = true;
     }
+  }
 
-    // Always save vehicle damage if there are any marks
-    // This ensures vehicle damage saves regardless of change detection
-    if (vehicleDamage.length > 0) {
-      promises.push(saveDamageMutation.mutateAsync(vehicleDamage));
-      hasChanges = true;
-    } else {
-      // Also save if we're clearing damage (had damage before but now empty)
-      const hadDamageBefore = (inspection?.vehicle_damage || []).length > 0;
-      if (hadDamageBefore) {
-        promises.push(saveDamageMutation.mutateAsync([]));
-        hasChanges = true;
-      }
-    }
-
-    if (!hasChanges) {
-      toast({
-        title: "No Changes",
-        description: "No results or damage to save",
-        variant: "default",
-      });
-      return;
-    }
-
-    // Execute all saves
-    try {
-      await Promise.all(promises);
-      toast({
-        title: "Saved",
-        description: "All changes saved successfully",
-        variant: "success",
-      });
-    } catch (error: any) {
-      console.error("Save error:", error);
-      toast({
-        title: "Error",
-        description: error?.response?.data?.error || error?.message || "Failed to save changes",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const validateCriticalItems = () => {
-    const allItems = categories.flatMap((cat) => cat.items || []);
-    const criticalItems = allItems.filter((item) => item.is_critical);
-    const filledResults = getFilledResults();
-    const filledItemIds = new Set(filledResults.map((r) => r.inspection_item));
-
-    const uncheckedCriticalItems = criticalItems.filter(
-      (item) => !filledItemIds.has(item.id)
-    );
-
-    return uncheckedCriticalItems;
-  };
-
-  const saveAndComplete = async () => {
-    const payload = getFilledResults();
-    if (!payload.length) {
-      return toast({
-        title: "No results",
-        description: "Enter at least one result",
-        variant: "destructive",
-      });
-    }
-
-    // Validate critical items
-    const uncheckedCritical = validateCriticalItems();
-    if (uncheckedCritical.length > 0) {
-      toast({
-        title: "Critical Items Not Checked",
-        description: `Please check all critical items: ${uncheckedCritical.map((i) => i.name).join(", ")}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Save vehicle damage before completing
-    saveDamageMutation.mutate(vehicleDamage);
-
-    // Check if signature is required
-    if (templateData?.requires_technician_signature) {
-      setShowCompleteDialog(true);
-      return;
-    }
-
-    await saveMutation.mutateAsync(payload);
-    completeMutation.mutate({});
-  };
-
-  const handleCompleteWithSignature = async () => {
-    if (templateData?.requires_technician_signature && !technicianSignature) {
-      toast({
-        title: "Signature Required",
-        description: "Please provide your signature to complete the inspection",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Save vehicle damage before completing
-    await saveDamageMutation.mutateAsync(vehicleDamage);
-
-    const payload = getFilledResults();
-    await saveMutation.mutateAsync(payload);
-    completeMutation.mutate({
-      technician_signature: technicianSignature || undefined,
+  if (!hasChanges) {
+    toast({
+      title: "No Changes",
+      description: "No results or damage to save",
+      variant: "default",
     });
-    setShowCompleteDialog(false);
-    setTechnicianSignature(null);
-  };
+    return;
+  }
 
-  /* --------------------- UI Render ----------------------------- */
-  if (!inspection)
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+  // Execute all saves
+  try {
+    await Promise.all(promises);
+    toast({
+      title: "Saved",
+      description: "All changes saved successfully",
+      variant: "success",
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    console.error("Save error:", error);
+    toast({
+      title: "Error",
+      description: error?.response?.data?.error || error?.message || "Failed to save changes",
+      variant: "destructive",
+    });
+  }
+};
 
-  const uncheckedCriticalItems = validateCriticalItems();
-  const hasUncheckedCritical = uncheckedCriticalItems.length > 0;
+const validateCriticalItems = () => {
+  const allItems = categories.flatMap((cat) => cat.items || []);
+  const criticalItems = allItems.filter((item) => item.is_critical);
+  const filledResults = getFilledResults();
+  const filledItemIds = new Set(filledResults.map((r) => r.inspection_item));
 
+  const uncheckedCriticalItems = criticalItems.filter(
+    (item) => !filledItemIds.has(item.id)
+  );
+
+  return uncheckedCriticalItems;
+};
+
+const saveAndComplete = async () => {
+  const payload = getFilledResults();
+  if (!payload.length) {
+    return toast({
+      title: "No results",
+      description: "Enter at least one result",
+      variant: "destructive",
+    });
+  }
+
+  // Validate critical items
+  const uncheckedCritical = validateCriticalItems();
+  if (uncheckedCritical.length > 0) {
+    toast({
+      title: "Critical Items Not Checked",
+      description: `Please check all critical items: ${uncheckedCritical.map((i) => i.name).join(", ")}`,
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // Save vehicle damage before completing
+  saveDamageMutation.mutate(vehicleDamage);
+
+  // Check if signature is required
+  if (templateData?.requires_technician_signature) {
+    setShowCompleteDialog(true);
+    return;
+  }
+
+  await saveMutation.mutateAsync(payload);
+  completeMutation.mutate({});
+};
+
+const handleCompleteWithSignature = async () => {
+  if (templateData?.requires_technician_signature && !technicianSignature) {
+    toast({
+      title: "Signature Required",
+      description: "Please provide your signature to complete the inspection",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // Save vehicle damage before completing
+  await saveDamageMutation.mutateAsync(vehicleDamage);
+
+  const payload = getFilledResults();
+  await saveMutation.mutateAsync(payload);
+  completeMutation.mutate({
+    technician_signature: technicianSignature || undefined,
+  });
+  setShowCompleteDialog(false);
+  setTechnicianSignature(null);
+};
+
+/* --------------------- UI Render ----------------------------- */
+if (!inspection)
   return (
-    <div className="pb-32">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
+
+const uncheckedCriticalItems = validateCriticalItems();
+const hasUncheckedCritical = uncheckedCriticalItems.length > 0;
+
+return (
+  <div className="pb-32">
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div>
+        <div className="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+          <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+          <span className="text-muted-foreground">/</span>
+          <Link href="/inspections" className="hover:text-primary transition-colors">Inspections</Link>
+          <span className="text-muted-foreground">/</span>
+          <Link href={`/inspections/${inspectionId}`} className="hover:text-primary transition-colors">#{inspection.inspection_number}</Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="text-foreground">Perform</span>
+        </div>
+        <h1 className="text-2xl font-black text-foreground tracking-tight">
+          Perform Inspection
+        </h1>
+      </div>
+    </div>
+
+    {/* Summary Card - Compact */}
+    <div className="mb-6 bg-card border rounded-lg p-4 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <div className="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
-            <span className="text-muted-foreground">/</span>
-            <Link href="/inspections" className="hover:text-primary transition-colors">Inspections</Link>
-            <span className="text-muted-foreground">/</span>
-            <Link href={`/inspections/${inspectionId}`} className="hover:text-primary transition-colors">#{inspection.inspection_number}</Link>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-foreground">Perform</span>
-          </div>
-          <h1 className="text-2xl font-black text-foreground tracking-tight">
-            Perform Inspection
-          </h1>
-        </div>
-      </div>
-
-      {/* Summary Card - Compact */}
-      <div className="mb-6 bg-card border rounded-lg p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Vehicle</span>
-            <span className="text-sm font-semibold text-foreground truncate block">{inspection.vehicle_info || "N/A"}</span>
-            <div className="flex items-center gap-2 mt-1.5">
-              <Badge variant="outline" className="text-[10px] h-4 px-1.5">
-                {typeof inspection.vehicle === 'object' ? inspection.vehicle.license_plate : 'N/A'}
-              </Badge>
-            </div>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Template</span>
-            <span className="text-sm font-semibold text-foreground truncate block">{templateData?.name}</span>
-            <span className="text-[10px] text-muted-foreground mt-1.5 block">{categories.length} Categories • {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)} Items</span>
-          </div>
-          <div className="md:col-span-2">
-            <div className="flex justify-between items-end mb-2">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Overall Progress</span>
-                <span className="text-2xl font-bold text-primary">{inspection.completion_percentage}%</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Checks Done</span>
-                <span className="text-sm font-semibold text-foreground">{getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}</span>
-              </div>
-            </div>
-            <Progress value={inspection.completion_percentage} className="h-1.5 bg-muted" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Vehicle</span>
+          <span className="text-sm font-semibold text-foreground truncate block">{inspection.vehicle_info || "N/A"}</span>
+          <div className="flex items-center gap-2 mt-1.5">
+            <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+              {typeof inspection.vehicle === 'object' ? inspection.vehicle.license_plate : 'N/A'}
+            </Badge>
           </div>
         </div>
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Template</span>
+          <span className="text-sm font-semibold text-foreground truncate block">{templateData?.name}</span>
+          <span className="text-[10px] text-muted-foreground mt-1.5 block">{categories.length} Categories • {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)} Items</span>
+        </div>
+        <div className="md:col-span-2">
+          <div className="flex justify-between items-end mb-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Overall Progress</span>
+              <span className="text-2xl font-bold text-primary">{inspection.completion_percentage}%</span>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Checks Done</span>
+              <span className="text-sm font-semibold text-foreground">{getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}</span>
+            </div>
+          </div>
+          <Progress value={inspection.completion_percentage} className="h-1.5 bg-muted" />
+        </div>
       </div>
+    </div>
 
-      {/* Categories & Vehicle Damage - Subnav Style */}
-      <div className="flex gap-6">
-        {/* Sidebar Navigation */}
-        <div className="w-64 flex-shrink-0">
-          <div className="sticky top-4 bg-card border rounded-lg p-2 shadow-sm">
-            <div className="space-y-1">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveTab(String(cat.id))}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    activeTab === String(cat.id)
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <span>{cat.name}</span>
-                  <Badge variant="secondary" className="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
-                    {cat.item_count}
-                  </Badge>
-                </button>
-              ))}
+    {/* Categories & Vehicle Damage - Subnav Style */}
+    <div className="flex gap-6">
+      {/* Sidebar Navigation */}
+      <div className="w-64 flex-shrink-0">
+        <div className="sticky top-4 bg-card border rounded-lg p-2 shadow-sm">
+          <div className="space-y-1">
+            {categories.map((cat) => (
               <button
-                onClick={() => setActiveTab("vehicle-damage")}
+                key={cat.id}
+                onClick={() => setActiveTab(String(cat.id))}
                 className={cn(
                   "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  activeTab === "vehicle-damage"
+                  activeTab === String(cat.id)
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted"
                 )}
               >
-                <span>Vehicle Damage</span>
+                <span>{cat.name}</span>
                 <Badge variant="secondary" className="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
-                  {vehicleDamage.length}
+                  {cat.item_count}
                 </Badge>
               </button>
-            </div>
+            ))}
+            <button
+              onClick={() => setActiveTab("vehicle-damage")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                activeTab === "vehicle-damage"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <span>Vehicle Damage</span>
+              <Badge variant="secondary" className="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
+                {vehicleDamage.length}
+              </Badge>
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Content Area */}
-        <div className="flex-1 min-w-0">
-          {/* Vehicle Damage */}
-          {activeTab === "vehicle-damage" && (
-            <Card className="border-border shadow-sm overflow-hidden">
-              <CardContent className="p-0">
-                <VehicleDamageMarker
-                  damage={vehicleDamage}
-                  onChange={setVehicleDamage}
-                  disabled={inspection.status === "completed"}
+      {/* Content Area */}
+      <div className="flex-1 min-w-0">
+        {/* Vehicle Damage */}
+        {activeTab === "vehicle-damage" && (
+          <Card className="border-border shadow-sm overflow-hidden">
+            <CardContent className="p-0">
+              <VehicleDamageMarker
+                damage={vehicleDamage}
+                onChange={setVehicleDamage}
+                disabled={inspection.status === "completed"}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Category Content */}
+        {categories.map((cat) => (
+          activeTab === String(cat.id) && (
+            <div key={cat.id} className="space-y-1 bg-card rounded-lg border overflow-hidden">
+              {(cat.items || []).map((item, index) => (
+                <InspectionItemRow
+                  key={item.id}
+                  item={item}
+                  result={results[item.id] || {}}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onUpdate={(field: string, value: any) => updateResult(item.id, field, value)}
+                  onAddPhoto={(itemId: number, file: File, resultId?: number) => {
+                    addPhotoMutation.mutate({ itemId, file, resultId });
+                  }}
+                  onDeletePhoto={(photoId: number) => deletePhotoMutation.mutate(photoId)}
+                  showNotes={showNotes[item.id] || false}
+                  onToggleNotes={() => setShowNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  isCriticalRemaining={item.is_critical && !results[item.id]?.result}
+                  isLast={index === (cat.items || []).length - 1}
                 />
-              </CardContent>
-            </Card>
+              ))}
+            </div>
+          )
+        ))}
+      </div>
+    </div>
+
+    {/* Sticky Footer */}
+    <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-30 bg-background/80 backdrop-blur-md border-t p-4 shadow-2xl transition-all duration-300">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="hidden sm:flex items-center gap-4">
+          {hasUncheckedCritical ? (
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5 animate-pulse" />
+              <span className="text-[11px] font-black uppercase tracking-tighter italic">
+                Critical items pending: {uncheckedCriticalItems.length}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-success">
+              <CheckCircle className="w-5 h-5" />
+              <span className="text-[11px] font-black uppercase tracking-tighter">All critical checks completed</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={save}
+            className="flex-1 sm:flex-none h-12 px-8 text-xs font-black uppercase tracking-widest border-2 hover:bg-muted transition-all active:scale-95"
+            disabled={saveMutation.isPending || saveDamageMutation.isPending}
+          >
+            {saveMutation.isPending || saveDamageMutation.isPending ? (
+              <div className="w-4 h-4 border-2 border-border border-t-gray-600 rounded-full animate-spin mr-2" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Save Progress
+          </Button>
+          <Button
+            size="lg"
+            onClick={saveAndComplete}
+            className={cn(
+              "flex-1 sm:flex-none h-12 px-10 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95",
+              hasUncheckedCritical ? "bg-muted text-muted-foreground" : ""
+            )}
+            disabled={completeMutation.isPending}
+          >
+            {completeMutation.isPending ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+            ) : (
+              <CheckCircle className="w-4 h-4 mr-2" />
+            )}
+            Finalize & Complete
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    {/* Completion Dialog with Signature */}
+    <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+      <DialogContent className="max-w-lg p-0 sm:max-w-lg">
+        <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-primary" />
+              <DialogTitle className="text-lg font-semibold">Complete Inspection</DialogTitle>
+            </div>
+            <button
+              onClick={() => {
+                setShowCompleteDialog(false);
+                setTechnicianSignature(null);
+              }}
+              className="text-muted-foreground hover:text-foreground transition-colors rounded-sm p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <DialogDescription className="text-sm mt-2">
+            Finalize this inspection report. Once completed, it will be ready for review.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-4">
+          {/* Inspection Summary - Compact */}
+          <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-md">
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Progress</p>
+              <p className="text-base font-semibold">{inspection.completion_percentage}%</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Items Checked</p>
+              <p className="text-base font-semibold">
+                {getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}
+              </p>
+            </div>
+          </div>
+
+          {/* Signature Section */}
+          {templateData?.requires_technician_signature && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">
+                  Technician Signature
+                  <span className="text-destructive ml-1">*</span>
+                </Label>
+                {technicianSignature && (
+                  <Badge variant="outline" className="text-xs">
+                    Signed
+                  </Badge>
+                )}
+              </div>
+              <div className="border-2 border-dashed rounded-md overflow-hidden bg-muted/50">
+                <SignaturePad
+                  value={technicianSignature || undefined}
+                  onChange={setTechnicianSignature}
+                  label=""
+                  required
+                />
+              </div>
+              {!technicianSignature && (
+                <p className="text-xs text-muted-foreground">
+                  Please provide your signature to complete the inspection
+                </p>
+              )}
+            </div>
           )}
 
-          {/* Category Content */}
-          {categories.map((cat) => (
-            activeTab === String(cat.id) && (
-              <div key={cat.id} className="space-y-1 bg-card rounded-lg border overflow-hidden">
-                {(cat.items || []).map((item, index) => (
-                  <InspectionItemRow
-                    key={item.id}
-                    item={item}
-                    result={results[item.id] || {}}
-                    onUpdate={(field: string, value: any) => updateResult(item.id, field, value)}
-                    onAddPhoto={(itemId: number, file: File, resultId?: number) => {
-                      addPhotoMutation.mutate({ itemId, file, resultId });
-                    }}
-                    onDeletePhoto={(photoId: number) => deletePhotoMutation.mutate(photoId)}
-                    showNotes={showNotes[item.id] || false}
-                    onToggleNotes={() => setShowNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-                    isCriticalRemaining={item.is_critical && !results[item.id]?.result}
-                    isLast={index === (cat.items || []).length - 1}
-                  />
-                ))}
-              </div>
-            )
-          ))}
-        </div>
-      </div>
-
-      {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-30 bg-background/80 backdrop-blur-md border-t p-4 shadow-2xl transition-all duration-300">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="hidden sm:flex items-center gap-4">
-            {hasUncheckedCritical ? (
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="w-5 h-5 animate-pulse" />
-                <span className="text-[11px] font-black uppercase tracking-tighter italic">
-                  Critical items pending: {uncheckedCriticalItems.length}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-success">
-                <CheckCircle className="w-5 h-5" />
-                <span className="text-[11px] font-black uppercase tracking-tighter">All critical checks completed</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={save}
-              className="flex-1 sm:flex-none h-12 px-8 text-xs font-black uppercase tracking-widest border-2 hover:bg-muted transition-all active:scale-95"
-              disabled={saveMutation.isPending || saveDamageMutation.isPending}
-            >
-              {saveMutation.isPending || saveDamageMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-border border-t-gray-600 rounded-full animate-spin mr-2" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              Save Progress
-            </Button>
-            <Button
-              size="lg"
-              onClick={saveAndComplete}
-              className={cn(
-                "flex-1 sm:flex-none h-12 px-10 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95",
-                hasUncheckedCritical ? "bg-muted text-muted-foreground" : ""
-              )}
-              disabled={completeMutation.isPending}
-            >
-              {completeMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-              ) : (
-                <CheckCircle className="w-4 h-4 mr-2" />
-              )}
-              Finalize & Complete
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Completion Dialog with Signature */}
-      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="max-w-lg p-0 sm:max-w-lg">
-          <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-primary" />
-                <DialogTitle className="text-lg font-semibold">Complete Inspection</DialogTitle>
-              </div>
-              <button
-                onClick={() => {
-                  setShowCompleteDialog(false);
-                  setTechnicianSignature(null);
-                }}
-                className="text-muted-foreground hover:text-foreground transition-colors rounded-sm p-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <DialogDescription className="text-sm mt-2">
-              Finalize this inspection report. Once completed, it will be ready for review.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-4">
-            {/* Inspection Summary - Compact */}
-            <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-md">
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Progress</p>
-                <p className="text-base font-semibold">{inspection.completion_percentage}%</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Items Checked</p>
-                <p className="text-base font-semibold">
-                  {getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}
+          {/* Warning for unchecked critical items */}
+          {hasUncheckedCritical && (
+            <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-destructive mb-0.5">
+                  Critical Items Pending
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {uncheckedCriticalItems.length} critical item{uncheckedCriticalItems.length !== 1 ? 's' : ''} still need to be checked.
                 </p>
               </div>
             </div>
+          )}
 
-            {/* Signature Section */}
-            {templateData?.requires_technician_signature && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">
-                    Technician Signature
-                    <span className="text-destructive ml-1">*</span>
-                  </Label>
-                  {technicianSignature && (
-                    <Badge variant="outline" className="text-xs">
-                      Signed
-                    </Badge>
-                  )}
-                </div>
-                <div className="border-2 border-dashed rounded-md overflow-hidden bg-muted/50">
-                  <SignaturePad
-                    value={technicianSignature || undefined}
-                    onChange={setTechnicianSignature}
-                    label=""
-                    required
-                  />
-                </div>
-                {!technicianSignature && (
-                  <p className="text-xs text-muted-foreground">
-                    Please provide your signature to complete the inspection
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Warning for unchecked critical items */}
-            {hasUncheckedCritical && (
-              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-destructive mb-0.5">
-                    Critical Items Pending
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {uncheckedCriticalItems.length} critical item{uncheckedCriticalItems.length !== 1 ? 's' : ''} still need to be checked.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <DialogFooter className="gap-2 sm:gap-3 pt-4 border-t">
-              <Button
-                variant="outline"
-                className="flex-1 sm:flex-none"
-                onClick={() => {
-                  setShowCompleteDialog(false);
-                  setTechnicianSignature(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 sm:flex-none"
-                onClick={handleCompleteWithSignature}
-                disabled={
-                  (templateData?.requires_technician_signature && !technicianSignature) ||
-                  hasUncheckedCritical ||
-                  completeMutation.isPending
-                }
-              >
-                {completeMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                    Finalizing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    {templateData?.requires_technician_signature ? "Sign & Complete" : "Complete"}
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+          {/* Action Buttons */}
+          <DialogFooter className="gap-2 sm:gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              onClick={() => {
+                setShowCompleteDialog(false);
+                setTechnicianSignature(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 sm:flex-none"
+              onClick={handleCompleteWithSignature}
+              disabled={
+                (templateData?.requires_technician_signature && !technicianSignature) ||
+                hasUncheckedCritical ||
+                completeMutation.isPending
+              }
+            >
+              {completeMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  Finalizing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {templateData?.requires_technician_signature ? "Sign & Complete" : "Complete"}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  </div>
+);
 }

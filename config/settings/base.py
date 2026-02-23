@@ -213,6 +213,16 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
+    # Default rate limiting — protects against brute-force in all environments.
+    # Production settings may override with different values.
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '5000/hour',
+    },
 }
 
 # CORS Headers (allow branch switch header by default)
@@ -332,6 +342,9 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Comprehensive Vehicle Repair Management System',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    # Require staff authentication to view API docs.
+    # This prevents information disclosure of all endpoints/parameters.
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAdminUser'],
 }
 
 # CarAPI Configuration

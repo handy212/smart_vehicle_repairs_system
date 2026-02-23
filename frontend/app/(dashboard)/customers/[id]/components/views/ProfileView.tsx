@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

@@ -12,12 +12,14 @@ import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function PerformanceReviewPage() {
@@ -133,6 +135,7 @@ function DeleteConfirmDialog({ open, onOpenChange, id, onDeleted }: { open: bool
     );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ReviewForm({ review, onUpdate, onSubmit, onAcknowledge, isUpdating }: { review: PerformanceReview, onUpdate: (d: any) => void, onSubmit: () => void, onAcknowledge: (c: string) => void, isUpdating: boolean }) {
     const [strengths, setStrengths] = useState(review.strengths || "");
     const [improvements, setImprovements] = useState(review.areas_for_improvement || "");

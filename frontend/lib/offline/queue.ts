@@ -11,10 +11,11 @@ export interface QueuedRequest {
   action: 'create' | 'update' | 'delete';
   endpoint: string;
   method: string;
-  payload: any;
-  timestamp: number;
-  retries: number;
-  lastError?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+payload: any;
+timestamp: number;
+retries: number;
+lastError ?: string;
 }
 
 /**
@@ -24,6 +25,7 @@ export async function queueRequest(
   action: 'create' | 'update' | 'delete',
   endpoint: string,
   method: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any
 ): Promise<number> {
   return syncQueueDB.add(action, endpoint, method, payload);
@@ -50,6 +52,7 @@ export async function processQueuedRequest(
         response = await apiClient.patch(request.endpoint, request.payload);
         break;
       case 'DELETE':
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         response = await apiClient.delete(request.endpoint);
         break;
       default:
@@ -59,6 +62,7 @@ export async function processQueuedRequest(
     // Request succeeded, remove from queue
     await syncQueueDB.delete(request.id);
     return true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     // Increment retries
     const errorMessage =

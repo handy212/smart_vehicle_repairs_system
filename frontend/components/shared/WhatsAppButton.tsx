@@ -46,6 +46,7 @@ export function WhatsAppButton({
             });
 
             // 2. Resolve Phone Number
+            // eslint-disable-next-line prefer-const
             let targetPhone = phoneNumber || data.phone_number;
 
             if (!targetPhone) {
@@ -71,6 +72,7 @@ export function WhatsAppButton({
             const url = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
             window.open(url, '_blank');
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error("WhatsApp Error:", error);
 

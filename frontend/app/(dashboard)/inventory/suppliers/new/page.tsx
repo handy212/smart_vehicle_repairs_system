@@ -66,343 +66,345 @@ export default function NewSupplierPage() {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       router.push("/inventory/suppliers");
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      console.error("Error creating supplier:", error);
-      if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
-        
-        // Handle field-level errors
-        Object.keys(errorData).forEach((field) => {
-          const fieldError = Array.isArray(errorData[field]) 
-            ? errorData[field][0] 
-            : errorData[field];
-          setError(field as keyof SupplierFormData, { 
-            type: "server", 
-            message: fieldError 
-          });
+    console.error("Error creating supplier:", error);
+    if (error instanceof AxiosError && error.response?.data) {
+      const errorData = error.response.data;
+
+      // Handle field-level errors
+      Object.keys(errorData).forEach((field) => {
+        const fieldError = Array.isArray(errorData[field])
+          ? errorData[field][0]
+          : errorData[field];
+        setError(field as keyof SupplierFormData, {
+          type: "server",
+          message: fieldError
         });
-        
-        // Handle non-field errors
-        if (errorData.detail || errorData.non_field_errors) {
-          setServerError(
-            errorData.detail || 
-            (Array.isArray(errorData.non_field_errors) 
-              ? errorData.non_field_errors[0] 
-              : errorData.non_field_errors) ||
-            "Failed to create supplier"
-          );
-        }
-      } else {
-        setServerError("Failed to create supplier. Please try again.");
+      });
+
+      // Handle non-field errors
+      if (errorData.detail || errorData.non_field_errors) {
+        setServerError(
+          errorData.detail ||
+          (Array.isArray(errorData.non_field_errors)
+            ? errorData.non_field_errors[0]
+            : errorData.non_field_errors) ||
+          "Failed to create supplier"
+        );
       }
-    },
+    } else {
+      setServerError("Failed to create supplier. Please try again.");
+    }
+  },
   });
 
-  const onSubmit = async (data: SupplierFormData) => {
-    setServerError(null);
-    try {
-      await createMutation.mutateAsync(data);
-    } catch (error) {
-      // Error handling is done in onError
-    }
-  };
+const onSubmit = async (data: SupplierFormData) => {
+  setServerError(null);
+  try {
+    await createMutation.mutateAsync(data);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    // Error handling is done in onError
+  }
+};
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/inventory/suppliers">
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">New Supplier</h1>
-          <p className="text-sm text-muted-foreground mt-1">Add a new parts supplier</p>
-        </div>
+return (
+  <div className="space-y-6">
+    <div className="flex items-center space-x-4">
+      <Link href="/inventory/suppliers">
+        <Button variant="secondary">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+      </Link>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">New Supplier</h1>
+        <p className="text-sm text-muted-foreground mt-1">Add a new parts supplier</p>
+      </div>
+    </div>
+
+    {serverError && (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
+        <AlertCircle className="w-5 h-5 mr-2" />
+        {serverError}
+      </div>
+    )}
+
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Supplier Name *
+              </label>
+              <Input
+                {...register("name")}
+                placeholder="Supplier name"
+              />
+              {errors.name && (
+                <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Supplier Code *
+              </label>
+              <Input
+                {...register("supplier_code")}
+                placeholder="SUP-001"
+              />
+              {errors.supplier_code && (
+                <p className="text-red-500 text-xs mt-1">{errors.supplier_code.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Supplier Type *
+              </label>
+              <select
+                {...register("supplier_type")}
+                className="w-full rounded-md border border-border px-3 py-2 text-sm"
+              >
+                <option value="manufacturer">Manufacturer</option>
+                <option value="distributor">Distributor</option>
+                <option value="wholesaler">Wholesaler</option>
+                <option value="retailer">Retailer</option>
+                <option value="other">Other</option>
+              </select>
+              {errors.supplier_type && (
+                <p className="text-red-500 text-xs mt-1">{errors.supplier_type.message}</p>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  {...register("is_active")}
+                  className="rounded border-border text-primary focus:ring-primary"
+                />
+                <label className="ml-2 text-sm text-foreground">Active</label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  {...register("is_preferred")}
+                  className="rounded border-border text-primary focus:ring-primary"
+                />
+                <label className="ml-2 text-sm text-foreground">Preferred</label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Contact Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Contact Person
+              </label>
+              <Input
+                {...register("contact_person")}
+                placeholder="John Doe"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Email
+              </label>
+              <Input
+                type="email"
+                {...register("email")}
+                placeholder="supplier@example.com"
+              />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Phone
+              </label>
+              <Input
+                {...register("phone")}
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Fax
+              </label>
+              <Input
+                {...register("fax")}
+                placeholder="+1 (555) 123-4568"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Website
+              </label>
+              <Input
+                type="url"
+                {...register("website")}
+                placeholder="https://www.example.com"
+              />
+              {errors.website && (
+                <p className="text-red-500 text-xs mt-1">{errors.website.message}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Address */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Address</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Address Line 1
+              </label>
+              <Input
+                {...register("address_line1")}
+                placeholder="123 Main St"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Address Line 2
+              </label>
+              <Input
+                {...register("address_line2")}
+                placeholder="Suite 100"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  City
+                </label>
+                <Input
+                  {...register("city")}
+                  placeholder="City"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  State
+                </label>
+                <Input
+                  {...register("state")}
+                  placeholder="State"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Postal Code
+                </label>
+                <Input
+                  {...register("postal_code")}
+                  placeholder="12345"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Country
+                </label>
+                <Input
+                  {...register("country")}
+                  placeholder="USA"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Business Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Business Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Tax ID / EIN
+              </label>
+              <Input
+                {...register("tax_id")}
+                placeholder="12-3456789"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Payment Terms
+              </label>
+              <Input
+                {...register("payment_terms")}
+                placeholder="Net 30, COD, etc."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Credit Limit
+              </label>
+              <Input
+                type="number"
+                step="0.01"
+                {...register("credit_limit")}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Notes
+              </label>
+              <Textarea
+                {...register("notes")}
+                placeholder="Additional notes..."
+                rows={4}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {serverError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
-          <AlertCircle className="w-5 h-5 mr-2" />
-          {serverError}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Supplier Name *
-                </label>
-                <Input
-                  {...register("name")}
-                  placeholder="Supplier name"
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Supplier Code *
-                </label>
-                <Input
-                  {...register("supplier_code")}
-                  placeholder="SUP-001"
-                />
-                {errors.supplier_code && (
-                  <p className="text-red-500 text-xs mt-1">{errors.supplier_code.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Supplier Type *
-                </label>
-                <select
-                  {...register("supplier_type")}
-                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
-                >
-                  <option value="manufacturer">Manufacturer</option>
-                  <option value="distributor">Distributor</option>
-                  <option value="wholesaler">Wholesaler</option>
-                  <option value="retailer">Retailer</option>
-                  <option value="other">Other</option>
-                </select>
-                {errors.supplier_type && (
-                  <p className="text-red-500 text-xs mt-1">{errors.supplier_type.message}</p>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    {...register("is_active")}
-                    className="rounded border-border text-primary focus:ring-primary"
-                  />
-                  <label className="ml-2 text-sm text-foreground">Active</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    {...register("is_preferred")}
-                    className="rounded border-border text-primary focus:ring-primary"
-                  />
-                  <label className="ml-2 text-sm text-foreground">Preferred</label>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Contact Person
-                </label>
-                <Input
-                  {...register("contact_person")}
-                  placeholder="John Doe"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Email
-                </label>
-                <Input
-                  type="email"
-                  {...register("email")}
-                  placeholder="supplier@example.com"
-                />
-                {errors.email && (
-                  <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Phone
-                </label>
-                <Input
-                  {...register("phone")}
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Fax
-                </label>
-                <Input
-                  {...register("fax")}
-                  placeholder="+1 (555) 123-4568"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Website
-                </label>
-                <Input
-                  type="url"
-                  {...register("website")}
-                  placeholder="https://www.example.com"
-                />
-                {errors.website && (
-                  <p className="text-red-500 text-xs mt-1">{errors.website.message}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Address */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Address</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Address Line 1
-                </label>
-                <Input
-                  {...register("address_line1")}
-                  placeholder="123 Main St"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Address Line 2
-                </label>
-                <Input
-                  {...register("address_line2")}
-                  placeholder="Suite 100"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    City
-                  </label>
-                  <Input
-                    {...register("city")}
-                    placeholder="City"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    State
-                  </label>
-                  <Input
-                    {...register("state")}
-                    placeholder="State"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Postal Code
-                  </label>
-                  <Input
-                    {...register("postal_code")}
-                    placeholder="12345"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">
-                    Country
-                  </label>
-                  <Input
-                    {...register("country")}
-                    placeholder="USA"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Business Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Business Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Tax ID / EIN
-                </label>
-                <Input
-                  {...register("tax_id")}
-                  placeholder="12-3456789"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Payment Terms
-                </label>
-                <Input
-                  {...register("payment_terms")}
-                  placeholder="Net 30, COD, etc."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Credit Limit
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  {...register("credit_limit")}
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Notes
-                </label>
-                <Textarea
-                  {...register("notes")}
-                  placeholder="Additional notes..."
-                  rows={4}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex justify-end space-x-4 mt-6">
-          <Link href="/inventory/suppliers">
-            <Button type="button"variant="secondary">
-              Cancel
-            </Button>
-          </Link>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Supplier"}
+      <div className="flex justify-end space-x-4 mt-6">
+        <Link href="/inventory/suppliers">
+          <Button type="button" variant="secondary">
+            Cancel
           </Button>
-        </div>
-      </form>
-    </div>
-  );
+        </Link>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Creating..." : "Create Supplier"}
+        </Button>
+      </div>
+    </form>
+  </div>
+);
 }
 

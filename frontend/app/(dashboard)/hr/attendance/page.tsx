@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hrApi, AttendanceRecord } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Clock, Filter, LogIn, LogOut, Search, Users } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
@@ -317,26 +318,81 @@ function ManualAttendanceDialog({ open, onOpenChange, onCreated }: { open: boole
     const { data: staff } = useQuery({ queryKey: ["hr", "staff-list"], queryFn: async () => (await hrApi.staff.list()).data });
 
     const mut = useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => hrApi.attendance.create(data),
         onSuccess: () => { toast.success("Attendance record created"); onCreated(); },
         onError: () => toast.error("Failed to create record"),
     });
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Manual Attendance Entry</DialogTitle></DialogHeader>
+return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader><DialogTitle>Manual Attendance Entry</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label>Staff</Label>
+                    <Select value={staffId} onValueChange={setStaffId}>
+                        <SelectTrigger><SelectValue placeholder="Select Staff" /></SelectTrigger>
+                        <SelectContent>
+                            {staff?.results?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.full_name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2"><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>Clock In</Label><Input type="time" value={clockIn} onChange={e => setClockIn(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Clock Out</Label><Input type="time" value={clockOut} onChange={e => setClockOut(e.target.value)} /></div>
+                </div>
+                <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={status} onValueChange={setStatus}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="present">Present</SelectItem>
+                            <SelectItem value="late">Late</SelectItem>
+                            <SelectItem value="half_day">Half Day</SelectItem>
+                            <SelectItem value="absent">Absent</SelectItem>
+                            <SelectItem value="on_leave">On Leave</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onClick={() => mut.mutate({ staff: Number(staffId), date, clock_in: `${date}T${clockIn}:00`, clock_out: `${date}T${clockOut}:00`, status })} disabled={!staffId || !date || mut.isPending}>Save</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
+}
+
+function EditAttendanceDialog({ record, open, onOpenChange, onUpdated }: { record: AttendanceRecord | null, open: boolean, onOpenChange: (o: boolean) => void, onUpdated: () => void }) {
+    const [clockIn, setClockIn] = useState("");
+    const [clockOut, setClockOut] = useState("");
+    const [status, setStatus] = useState("");
+
+    useEffect(() => {
+        if (record) {
+            setClockIn(record.clock_in ? new Date(record.clock_in).toTimeString().slice(0, 5) : "");
+            setClockOut(record.clock_out ? new Date(record.clock_out).toTimeString().slice(0, 5) : "");
+            setStatus(record.status);
+        }
+    }, [record]);
+
+    const mut = useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mutationFn: (data: any) => hrApi.attendance.update(record!.id, data),
+        onSuccess: () => { toast.success("Attendance updated"); onUpdated(); },
+        onError: () => toast.error("Failed to update record"),
+    });
+
+return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader><DialogTitle>Edit Attendance</DialogTitle></DialogHeader>
+            {record && (
                 <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label>Staff</Label>
-                        <Select value={staffId} onValueChange={setStaffId}>
-                            <SelectTrigger><SelectValue placeholder="Select Staff" /></SelectTrigger>
-                            <SelectContent>
-                                {staff?.results?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.full_name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2"><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+                    <div className="text-sm font-medium">{record.staff_name} - {record.date}</div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2"><Label>Clock In</Label><Input type="time" value={clockIn} onChange={e => setClockIn(e.target.value)} /></div>
                         <div className="space-y-2"><Label>Clock Out</Label><Input type="time" value={clockOut} onChange={e => setClockOut(e.target.value)} /></div>
@@ -355,71 +411,18 @@ function ManualAttendanceDialog({ open, onOpenChange, onCreated }: { open: boole
                         </Select>
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={() => mut.mutate({ staff: Number(staffId), date, clock_in: `${date}T${clockIn}:00`, clock_out: `${date}T${clockOut}:00`, status })} disabled={!staffId || !date || mut.isPending}>Save</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function EditAttendanceDialog({ record, open, onOpenChange, onUpdated }: { record: AttendanceRecord | null, open: boolean, onOpenChange: (o: boolean) => void, onUpdated: () => void }) {
-    const [clockIn, setClockIn] = useState("");
-    const [clockOut, setClockOut] = useState("");
-    const [status, setStatus] = useState("");
-
-    useEffect(() => {
-        if (record) {
-            setClockIn(record.clock_in ? new Date(record.clock_in).toTimeString().slice(0, 5) : "");
-            setClockOut(record.clock_out ? new Date(record.clock_out).toTimeString().slice(0, 5) : "");
-            setStatus(record.status);
-        }
-    }, [record]);
-
-    const mut = useMutation({
-        mutationFn: (data: any) => hrApi.attendance.update(record!.id, data),
-        onSuccess: () => { toast.success("Attendance updated"); onUpdated(); },
-        onError: () => toast.error("Failed to update record"),
-    });
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Edit Attendance</DialogTitle></DialogHeader>
-                {record && (
-                    <div className="space-y-4 py-4">
-                        <div className="text-sm font-medium">{record.staff_name} - {record.date}</div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2"><Label>Clock In</Label><Input type="time" value={clockIn} onChange={e => setClockIn(e.target.value)} /></div>
-                            <div className="space-y-2"><Label>Clock Out</Label><Input type="time" value={clockOut} onChange={e => setClockOut(e.target.value)} /></div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Status</Label>
-                            <Select value={status} onValueChange={setStatus}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="present">Present</SelectItem>
-                                    <SelectItem value="late">Late</SelectItem>
-                                    <SelectItem value="half_day">Half Day</SelectItem>
-                                    <SelectItem value="absent">Absent</SelectItem>
-                                    <SelectItem value="on_leave">On Leave</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                )}
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={() => mut.mutate({
-                        clock_in: clockIn ? `${record?.date}T${clockIn}:00` : null,
-                        clock_out: clockOut ? `${record?.date}T${clockOut}:00` : null,
-                        status
-                    })} disabled={mut.isPending}>Save Changes</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+            )}
+            <DialogFooter>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onClick={() => mut.mutate({
+                    clock_in: clockIn ? `${record?.date}T${clockIn}:00` : null,
+                    clock_out: clockOut ? `${record?.date}T${clockOut}:00` : null,
+                    status
+                })} disabled={mut.isPending}>Save Changes</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
 }
 
 function DeleteConfirmDialog({ open, onOpenChange, id, onDeleted }: { open: boolean, onOpenChange: (o: boolean) => void, id: number | null, onDeleted: () => void }) {

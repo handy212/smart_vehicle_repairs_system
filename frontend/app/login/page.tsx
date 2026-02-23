@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
+import { setTokens } from "@/lib/utils/token";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ export default function LoginPage() {
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   // Partial registration state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -128,11 +130,8 @@ export default function LoginPage() {
     try {
       const authData = await authApi.login(data);
 
-      // Store tokens
-      if (typeof window !== "undefined") {
-        localStorage.setItem("access_token", authData.access);
-        localStorage.setItem("refresh_token", authData.refresh);
-      }
+      // Store tokens (localStorage + cookie for middleware)
+      setTokens(authData.access, authData.refresh);
 
       // Update global state
       const user = await authApi.getCurrentUser();

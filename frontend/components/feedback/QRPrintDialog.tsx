@@ -11,6 +11,7 @@ import {
     DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Printer, X, Download } from 'lucide-react';
 import { Branch } from '@/lib/api/branches';
 import { useQuery } from '@tanstack/react-query';

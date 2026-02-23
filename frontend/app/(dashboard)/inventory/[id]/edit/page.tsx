@@ -56,6 +56,7 @@ export default function EditPartPage() {
     setServerError(null);
     try {
       // Exclude quantity_in_stock - stock is managed via StockItem per branch
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
       const { quantity_in_stock, ...dataWithoutStock } = data as any;
 
       if (imageFile) {
@@ -80,6 +81,7 @@ export default function EditPartPage() {
         };
         await updateMutation.mutateAsync(apiData);
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // Handled within mutation
     }
@@ -125,60 +127,61 @@ export default function EditPartPage() {
     reorder_quantity: part.reorder_quantity || 20,
     minimum_stock: part.minimum_stock || 5,
     maximum_stock: part.maximum_stock || undefined,
-    unit: (part.unit as any) || "piece",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  unit: (part.unit as any) || "piece",
     cost_price: part.cost_price ? parseFloat(part.cost_price) : undefined,
-    selling_price: part.selling_price ? parseFloat(part.selling_price) : undefined,
-    markup_percentage: part.markup_percentage ? parseFloat(part.markup_percentage) : 0,
-    list_price: part.list_price ? parseFloat(part.list_price) : undefined,
-    bin_location: part.bin_location || "",
-    shelf: part.shelf || "",
-    weight: part.weight ? parseFloat(part.weight) : undefined,
-    dimensions: part.dimensions || "",
-    compatible_makes: part.compatible_makes || "",
-    compatible_models: part.compatible_models || "",
-    compatible_years: part.compatible_years || "",
-    warranty_months: part.warranty_months || undefined,
-    warranty_notes: part.warranty_notes || "",
-    is_active: part.is_active ?? true,
-    is_taxable: part.is_taxable ?? true,
-    is_core: part.is_core ?? false,
-    core_charge: part.core_charge ? parseFloat(part.core_charge) : 0,
-    image: part.image,
+      selling_price: part.selling_price ? parseFloat(part.selling_price) : undefined,
+        markup_percentage: part.markup_percentage ? parseFloat(part.markup_percentage) : 0,
+          list_price: part.list_price ? parseFloat(part.list_price) : undefined,
+            bin_location: part.bin_location || "",
+              shelf: part.shelf || "",
+                weight: part.weight ? parseFloat(part.weight) : undefined,
+                  dimensions: part.dimensions || "",
+                    compatible_makes: part.compatible_makes || "",
+                      compatible_models: part.compatible_models || "",
+                        compatible_years: part.compatible_years || "",
+                          warranty_months: part.warranty_months || undefined,
+                            warranty_notes: part.warranty_notes || "",
+                              is_active: part.is_active ?? true,
+                                is_taxable: part.is_taxable ?? true,
+                                  is_core: part.is_core ?? false,
+                                    core_charge: part.core_charge ? parseFloat(part.core_charge) : 0,
+                                      image: part.image,
   };
 
-  return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href={`/inventory/${partId}`}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Edit Part</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Update part information
-            </p>
-          </div>
+return (
+  <div className="space-y-6 pb-12">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <Link href={`/inventory/${partId}`}>
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Edit Part</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Update part information
+          </p>
         </div>
       </div>
-
-      {serverError && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
-        </div>
-      )}
-
-      <PartForm
-        initialData={initialData}
-        onSubmit={onSubmit}
-        isSubmitting={updateMutation.isPending}
-        mode="edit"
-        onCancel={() => router.push(`/inventory/${partId}`)}
-      />
     </div>
-  );
+
+    {serverError && (
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
+      </div>
+    )}
+
+    <PartForm
+      initialData={initialData}
+      onSubmit={onSubmit}
+      isSubmitting={updateMutation.isPending}
+      mode="edit"
+      onCancel={() => router.push(`/inventory/${partId}`)}
+    />
+  </div>
+);
 }

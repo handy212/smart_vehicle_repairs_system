@@ -5,7 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, user_has_permission
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
@@ -84,6 +84,29 @@ class UserViewSet(viewsets.ModelViewSet):
         
         # Default to authenticated for custom actions
         return [IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        """
+        Override create to add reCAPTCHA verification for public registration.
+        Prevents automated account creation / abuse.
+        """
+        from apps.accounts.recaptcha_views import _get_recaptcha_config, RecaptchaTokenObtainPairSerializer
+
+        is_enabled, secret_key = _get_recaptcha_config()
+        if is_enabled and secret_key:
+            recaptcha_token = request.data.get('recaptcha_token')
+            if not recaptcha_token:
+                return Response(
+                    {'recaptcha_token': ['reCAPTCHA verification is required.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if not RecaptchaTokenObtainPairSerializer._verify_recaptcha(recaptcha_token, secret_key):
+                return Response(
+                    {'recaptcha_token': ['reCAPTCHA verification failed. Please try again.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        return super().create(request, *args, **kwargs)
     
     @action(detail=False, methods=['post'])
     def forgot_password(self, request):
@@ -180,10 +203,10 @@ class UserViewSet(viewsets.ModelViewSet):
         
         return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, HasPermission('view_users')])
     def staff_list(self, request):
         """Get list of all staff members"""
-        staff = User.objects.filter(role__in=['admin', 'manager', 'service_coordinator', 'receptionist', 'technician', 'parts_manager', 'accountant'])
+        staff = User.objects.filter(role__in=['admin', 'manager', 'service_coordinator', 'receptionist', 'technician', 'parts_manager', 'accountant', 'hr_manager'])
         serializer = StaffUserSerializer(staff, many=True)
         return Response(serializer.data)
     
@@ -222,8 +245,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         user = self.get_object()
         
-        # Check permissions
-        if not request.user.has_perm('accounts.edit_users') and not request.user.is_superuser:
+        # Check permissions using project's permission system
+        if not user_has_permission(request.user, 'edit_users') and not request.user.is_superuser:
              return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
         
         new_password = request.data.get('new_password')
@@ -291,11 +314,16 @@ class UserViewSet(viewsets.ModelViewSet):
             )
     
     def _send_password_reset_email(self, user, new_password, request):
-        """Send email with new password to user using notification trigger"""
-        from apps.notifications_app.triggers import NotificationTriggers
-        
-        triggers = NotificationTriggers()
-        triggers.password_reset(user, new_password, request)
+        """
+        Send password reset notification to user.
+        SECURITY: Instead of sending the plaintext password, we send a
+        reset link so the password never travels over email.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Password reset for {user.email} — sending reset link instead of plaintext password.")
+        # Use the secure link-based flow instead
+        self._send_password_reset_link_email(user, request)
     
     def _send_password_reset_link_email(self, user, request):
         """Send password reset link to user using notification trigger"""

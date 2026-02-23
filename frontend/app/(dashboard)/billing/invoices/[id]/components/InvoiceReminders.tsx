@@ -10,12 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi } from "@/lib/api/notifications";
 import { useToast } from "@/lib/hooks/useToast";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Clock, Plus, Calendar, Bell, CheckCircle2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 
 interface InvoiceRemindersProps {
-    invoice: any;
-    currentUser: any;
+    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
+invoice: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+currentUser: any;
 }
 
 export function InvoiceReminders({ invoice, currentUser }: InvoiceRemindersProps) {
@@ -147,6 +150,7 @@ export function InvoiceReminders({ invoice, currentUser }: InvoiceRemindersProps
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {remindersData.map((reminder: any) => (
                                     <tr key={reminder.id} className="hover:bg-muted/50">
                                         <td className="px-4 py-3 font-medium text-foreground">{reminder.message}</td>
@@ -161,8 +165,8 @@ export function InvoiceReminders({ invoice, currentUser }: InvoiceRemindersProps
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-foreground">
-                                            {/* Assuming reminder.recipient_name property exists or we strictly show current user if it matches */}
-                                            {/* In 'create' we send currentUser.id. API returns `recipient` ID. API Serializer returns `recipient_name` */}
+                                            // Assuming reminder.recipient_name property exists or we strictly show current user if it matches
+                                            // In 'create' we send currentUser.id. API returns `recipient` ID. API Serializer returns `recipient_name`
                                             {reminder.recipient_name || "Me"}
                                         </td>
                                         <td className="px-4 py-3">

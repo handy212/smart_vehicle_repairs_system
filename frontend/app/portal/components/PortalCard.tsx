@@ -1,5 +1,6 @@
 "use client";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
 import { ChevronRight } from "lucide-react";

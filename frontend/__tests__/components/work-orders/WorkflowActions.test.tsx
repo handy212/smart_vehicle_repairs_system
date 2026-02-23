@@ -68,6 +68,7 @@ describe('WorkflowActions Component', () => {
         vi.clearAllMocks();
     });
 
+    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
     const renderComponent = (props: any) => {
         return render(
             <QueryClientProvider client={queryClient}>
@@ -152,153 +153,156 @@ describe('WorkflowActions Component', () => {
                 id: 1,
                 status: 'in_progress',
                 work_order_number: 'WO-001',
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
             } as any);
 
-            vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
-                can_start: true,
-                errors: [],
-                unavailable_parts: [],
-            });
-
-            const workOrder = {
-                id: 1,
-                status: 'approved',
-                work_order_number: 'WO-001',
-                approved_by_customer: true,
-            };
-
-            renderComponent({ workOrderId: 1, status: 'approved', workOrder });
-
-            await waitFor(() => {
-                const button = screen.getByText(/Start Repairs/i);
-                expect(button).toBeInTheDocument();
-            });
-
-            const startButton = screen.getByText(/Start Repairs/i);
-            await user.click(startButton);
-
-            await waitFor(() => {
-                expect(mockStartWork).toHaveBeenCalledWith(1);
-            }, { timeout: 3000 });
+        vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
+            can_start: true,
+            errors: [],
+            unavailable_parts: [],
         });
+
+        const workOrder = {
+            id: 1,
+            status: 'approved',
+            work_order_number: 'WO-001',
+            approved_by_customer: true,
+        };
+
+        renderComponent({ workOrderId: 1, status: 'approved', workOrder });
+
+        await waitFor(() => {
+            const button = screen.getByText(/Start Repairs/i);
+            expect(button).toBeInTheDocument();
+        });
+
+        const startButton = screen.getByText(/Start Repairs/i);
+        await user.click(startButton);
+
+        await waitFor(() => {
+            expect(mockStartWork).toHaveBeenCalledWith(1);
+        }, { timeout: 3000 });
+    });
+});
+
+describe('In Progress Status Actions', () => {
+    it('should render Request Quality Check button for in_progress status', async () => {
+        const workOrder = {
+            id: 1,
+            status: 'in_progress',
+            work_order_number: 'WO-001',
+        };
+
+        renderComponent({ workOrderId: 1, status: 'in_progress', workOrder });
+
+        await waitFor(() => {
+            const button = screen.queryByText(/Request Quality Check/i);
+            expect(button).toBeInTheDocument();
+        }, { timeout: 3000 });
     });
 
-    describe('In Progress Status Actions', () => {
-        it('should render Request Quality Check button for in_progress status', async () => {
-            const workOrder = {
-                id: 1,
-                status: 'in_progress',
-                work_order_number: 'WO-001',
-            };
-
-            renderComponent({ workOrderId: 1, status: 'in_progress', workOrder });
-
-            await waitFor(() => {
-                const button = screen.queryByText(/Request Quality Check/i);
-                expect(button).toBeInTheDocument();
-            }, { timeout: 3000 });
-        });
-
-        it('should call requestQualityCheck when Quality Check is requested', async () => {
-            const user = userEvent.setup();
-            const mockRequestQC = vi.mocked(workordersApi.requestQualityCheck);
-            mockRequestQC.mockResolvedValue({
-                id: 1,
-                status: 'quality_check',
-                work_order_number: 'WO-001',
+    it('should call requestQualityCheck when Quality Check is requested', async () => {
+        const user = userEvent.setup();
+        const mockRequestQC = vi.mocked(workordersApi.requestQualityCheck);
+        mockRequestQC.mockResolvedValue({
+            id: 1,
+            status: 'quality_check',
+            work_order_number: 'WO-001',
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
             } as any);
 
+    const workOrder = {
+        id: 1,
+        status: 'in_progress',
+        work_order_number: 'WO-001',
+    };
+
+    renderComponent({ workOrderId: 1, status: 'in_progress', workOrder });
+
+    const qcButton = await waitFor(() => {
+        const button = screen.getByText(/Request Quality Check/i);
+        expect(button).toBeInTheDocument();
+        return button;
+    }, { timeout: 3000 });
+
+    await user.click(qcButton);
+
+    await waitFor(() => {
+        expect(mockRequestQC).toHaveBeenCalledWith(1);
+    });
+});
+    });
+
+describe('Component Integration', () => {
+    it('should render without crashing for different statuses', () => {
+        const statuses = ['draft', 'assigned', 'diagnosis', 'awaiting_approval', 'approved', 'in_progress', 'quality_check', 'completed'];
+
+        statuses.forEach(status => {
             const workOrder = {
                 id: 1,
-                status: 'in_progress',
+                status,
                 work_order_number: 'WO-001',
+                service_coordinator: status !== 'draft' ? 1 : undefined,
+                approved_by_customer: status === 'approved',
             };
 
-            renderComponent({ workOrderId: 1, status: 'in_progress', workOrder });
+            if (status === 'approved') {
+                vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
+                    can_start: true,
+                    errors: [],
+                    unavailable_parts: [],
+                });
+            }
 
-            const qcButton = await waitFor(() => {
-                const button = screen.getByText(/Request Quality Check/i);
-                expect(button).toBeInTheDocument();
-                return button;
-            }, { timeout: 3000 });
-
-            await user.click(qcButton);
-
-            await waitFor(() => {
-                expect(mockRequestQC).toHaveBeenCalledWith(1);
-            });
+            const { unmount } = renderComponent({ workOrderId: 1, status, workOrder });
+            expect(screen.getByTestId || screen.getByRole || (() => true)).toBeTruthy();
+            unmount();
         });
     });
+});
 
-    describe('Component Integration', () => {
-        it('should render without crashing for different statuses', () => {
-            const statuses = ['draft', 'assigned', 'diagnosis', 'awaiting_approval', 'approved', 'in_progress', 'quality_check', 'completed'];
-
-            statuses.forEach(status => {
-                const workOrder = {
-                    id: 1,
-                    status,
-                    work_order_number: 'WO-001',
-                    service_coordinator: status !== 'draft' ? 1 : undefined,
-                    approved_by_customer: status === 'approved',
-                };
-
-                if (status === 'approved') {
-                    vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
-                        can_start: true,
-                        errors: [],
-                        unavailable_parts: [],
-                    });
-                }
-
-                const { unmount } = renderComponent({ workOrderId: 1, status, workOrder });
-                expect(screen.getByTestId || screen.getByRole || (() => true)).toBeTruthy();
-                unmount();
-            });
-        });
-    });
-
-    describe('Callback Props', () => {
-        it('should call onStartRepairs after starting work', async () => {
-            const user = userEvent.setup();
-            const onStartRepairs = vi.fn();
-            const mockStartWork = vi.mocked(workordersApi.startWork);
-            mockStartWork.mockResolvedValue({
-                id: 1,
-                status: 'in_progress',
-                work_order_number: 'WO-001',
+describe('Callback Props', () => {
+    it('should call onStartRepairs after starting work', async () => {
+        const user = userEvent.setup();
+        const onStartRepairs = vi.fn();
+        const mockStartWork = vi.mocked(workordersApi.startWork);
+        mockStartWork.mockResolvedValue({
+            id: 1,
+            status: 'in_progress',
+            work_order_number: 'WO-001',
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
             } as any);
 
-            vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
-                can_start: true,
-                errors: [],
-                unavailable_parts: [],
-            });
+    vi.mocked(workordersApi.checkReadiness).mockResolvedValue({
+        can_start: true,
+        errors: [],
+        unavailable_parts: [],
+    });
 
-            const workOrder = {
-                id: 1,
-                status: 'approved',
-                work_order_number: 'WO-001',
-                approved_by_customer: true,
-            };
+    const workOrder = {
+        id: 1,
+        status: 'approved',
+        work_order_number: 'WO-001',
+        approved_by_customer: true,
+    };
 
-            renderComponent({
-                workOrderId: 1,
-                status: 'approved',
-                workOrder,
-                onStartRepairs,
-            });
+    renderComponent({
+        workOrderId: 1,
+        status: 'approved',
+        workOrder,
+        onStartRepairs,
+    });
 
-            await waitFor(() => {
-                expect(screen.getByText(/Start Repairs/i)).toBeInTheDocument();
-            });
+    await waitFor(() => {
+        expect(screen.getByText(/Start Repairs/i)).toBeInTheDocument();
+    });
 
-            const startButton = screen.getByText(/Start Repairs/i);
-            await user.click(startButton);
+    const startButton = screen.getByText(/Start Repairs/i);
+    await user.click(startButton);
 
-            await waitFor(() => {
-                expect(onStartRepairs).toHaveBeenCalled();
-            }, { timeout: 3000 });
-        });
+    await waitFor(() => {
+        expect(onStartRepairs).toHaveBeenCalled();
+    }, { timeout: 3000 });
+});
     });
 });

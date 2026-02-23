@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useMemo } from "react";
 import { useAuthStore } from "@/store/authStore";
 

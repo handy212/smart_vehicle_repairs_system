@@ -39,6 +39,7 @@ class User(AbstractUser):
         ('technician', 'Technician'),
         ('parts_manager', 'Parts Manager'),
         ('accountant', 'Accountant'),
+        ('hr_manager', 'HR Manager'),
         ('customer', 'Customer'),
     )
     
@@ -108,7 +109,7 @@ class User(AbstractUser):
     @property
     def is_staff_member(self):
         """Check if user is a staff member (not a customer)"""
-        return self.role in ['admin', 'manager', 'receptionist', 'technician', 'parts_manager']
+        return self.role in ['admin', 'manager', 'service_coordinator', 'receptionist', 'technician', 'parts_manager', 'accountant', 'hr_manager']
     
     @property
     def is_technician(self):

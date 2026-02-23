@@ -24,13 +24,14 @@ import { useRef, useState } from "react";
 interface InspectionItemRowProps {
     item: InspectionItem;
     result: Partial<InspectionResult>;
-    onUpdate: (field: string, value: any) => void;
-    onAddPhoto?: (itemId: number, file: File, resultId?: number) => void;
-    onDeletePhoto?: (photoId: number) => void;
-    showNotes: boolean;
-    onToggleNotes: () => void;
-    isCriticalRemaining: boolean;
-    isLast?: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+onUpdate: (field: string, value: any) => void;
+onAddPhoto ?: (itemId: number, file: File, resultId?: number) => void;
+onDeletePhoto ?: (photoId: number) => void;
+showNotes: boolean;
+onToggleNotes: () => void;
+isCriticalRemaining: boolean;
+isLast ?: boolean;
 }
 
 export function InspectionItemRow({
@@ -62,12 +63,12 @@ export function InspectionItemRow({
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const hasResult = result.result || 
-                     (result.measurement_value !== undefined && result.measurement_value !== null) || 
-                     (result.percentage_value !== undefined && result.percentage_value !== null) || 
-                     result.rating_value !== undefined || 
-                     result.condition || 
-                     result.text_note;
+    const hasResult = result.result ||
+        (result.measurement_value !== undefined && result.measurement_value !== null) ||
+        (result.percentage_value !== undefined && result.percentage_value !== null) ||
+        result.rating_value !== undefined ||
+        result.condition ||
+        result.text_note;
 
     return (
         <div className={cn(
@@ -245,7 +246,7 @@ export function InspectionItemRow({
             {/* Expanded Content */}
             {isExpanded && (
                 <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border bg-muted/50 bg-background/50">
-                    {/* Text Input */}
+                    // Text Input
                     {item.item_type === "text" && (
                         <div className="pt-2">
                             <Textarea
@@ -257,7 +258,7 @@ export function InspectionItemRow({
                         </div>
                     )}
 
-                    {/* Notes */}
+                    // Notes
                     {(showNotes || result.notes) && (
                         <div>
                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">
@@ -272,7 +273,7 @@ export function InspectionItemRow({
                         </div>
                     )}
 
-                    {/* Photos */}
+                    // Photos
                     {result.photos && result.photos.length > 0 && (
                         <div>
                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 block">
@@ -300,7 +301,7 @@ export function InspectionItemRow({
                         </div>
                     )}
 
-                    {/* Needs Attention */}
+                    // Needs Attention
                     <div className="pt-2 border-t border-border">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input

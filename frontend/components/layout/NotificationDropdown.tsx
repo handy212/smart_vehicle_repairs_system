@@ -249,6 +249,7 @@ export function NotificationDropdown() {
                                         "px-3 py-3 cursor-pointer focus:bg-muted dark:focus:bg-gray-800 outline-none",
                                         isUnread && "bg-primary/5 dark:bg-orange-950/20"
                                     )}
+                                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                     onClick={(e) => {
                                         // Handle read status
                                         handleRead(notification);

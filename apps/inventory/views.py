@@ -127,6 +127,20 @@ class SupplierViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'supplier_code', 'created_at']
     ordering = ['name']
 
+    def get_queryset(self):
+        """Filter suppliers by user's accessible branches if branch field exists"""
+        queryset = super().get_queryset()
+        # Only filter if Supplier model has a branch field
+        if hasattr(Supplier, 'branch'):
+            queryset = filter_queryset_for_user_branches(
+                queryset,
+                self.request.user,
+                request=self.request,
+                use_active_branch=True,
+                include_unassigned=True  # Include suppliers not assigned to any branch
+            )
+        return queryset
+
     def get_serializer_class(self):
         if self.action == 'create':
             return SupplierCreateSerializer

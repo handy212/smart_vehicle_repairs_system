@@ -15,6 +15,7 @@ import {
     Camera,
     MessageSquare,
     Trash2,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,12 +25,13 @@ import { useRef } from "react";
 interface InspectionItemCardProps {
     item: InspectionItem;
     result: Partial<InspectionResult>;
-    onUpdate: (field: string, value: any) => void;
-    onAddPhoto?: (itemId: number, file: File, resultId?: number) => void;
-    onDeletePhoto?: (photoId: number) => void;
-    showNotes: boolean;
-    onToggleNotes: () => void;
-    isCriticalRemaining: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+onUpdate: (field: string, value: any) => void;
+onAddPhoto ?: (itemId: number, file: File, resultId?: number) => void;
+onDeletePhoto ?: (photoId: number) => void;
+showNotes: boolean;
+onToggleNotes: () => void;
+isCriticalRemaining: boolean;
 }
 
 export function InspectionItemCard({

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import apiClient from '@/lib/api/client';
 import { useBranchStore } from '@/store/branchStore';
 

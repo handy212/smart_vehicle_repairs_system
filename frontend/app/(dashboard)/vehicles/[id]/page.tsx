@@ -129,6 +129,7 @@ export default function VehicleDetailPage() {
       setTransferNotes("");
       setTransferDate(new Date().toISOString().split("T")[0]);
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -255,6 +256,7 @@ export default function VehicleDetailPage() {
               <h1 className="text-2xl font-bold text-foreground">
                 {vehicle.make} {vehicle.model} {vehicle.year}
               </h1>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Badge variant={getStatusVariant(vehicle.status) as any} className="capitalize">
                 {vehicle.status?.replace("_", " ") || vehicle.status}
               </Badge>
@@ -315,7 +317,7 @@ export default function VehicleDetailPage() {
                     const currentOwnerId = typeof vehicle?.owner === "object" ? vehicle.owner.id : vehicle?.owner;
                     const currentOwner = customersData?.results?.find((c) => c.id === currentOwnerId);
                     if (currentOwner) {
-                      return currentOwner.full_name || 
+                      return currentOwner.full_name ||
                         (currentOwner.user ? `${currentOwner.user.first_name} ${currentOwner.user.last_name}`.trim() : '') ||
                         currentOwner.company_name ||
                         `Customer #${currentOwner.customer_number}`;
@@ -340,7 +342,7 @@ export default function VehicleDetailPage() {
                       return c.id !== currentOwnerId;
                     })
                     .map((customer) => {
-                      const displayName = customer.full_name || 
+                      const displayName = customer.full_name ||
                         (customer.user ? `${customer.user.first_name} ${customer.user.last_name}`.trim() : '') ||
                         customer.company_name ||
                         `Customer #${customer.customer_number}`;

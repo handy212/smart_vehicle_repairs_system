@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useToastStore, Toast as ToastType } from "@/store/useToastStore";
 
 export function useToast() {

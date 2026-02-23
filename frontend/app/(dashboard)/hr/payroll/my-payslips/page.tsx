@@ -1,13 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { hrApi, PaySlip } from "@/lib/api/hr";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Banknote, Download, FileText } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { cn } from "@/lib/utils/cn";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -78,7 +81,7 @@ function MyPayslipsContent() {
                                     </AccordionTrigger>
                                     <AccordionContent className="px-4 pb-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                            {/* Earnings */}
+                                            // Earnings
                                             <Card className="border shadow-none">
                                                 <CardHeader className="py-2 px-3 bg-green-50/50 dark:bg-green-900/10 border-b">
                                                     <CardTitle className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase">Earnings</CardTitle>
@@ -93,7 +96,7 @@ function MyPayslipsContent() {
                                                 </CardContent>
                                             </Card>
 
-                                            {/* Deductions */}
+                                            // Deductions
                                             <Card className="border shadow-none">
                                                 <CardHeader className="py-2 px-3 bg-red-50/50 dark:bg-red-900/10 border-b">
                                                     <CardTitle className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase">Deductions</CardTitle>

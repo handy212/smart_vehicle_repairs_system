@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "./button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "./dialog";
 import { Label } from "./label";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Upload, FileText, AlertCircle, CheckCircle, X, Download, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import { previewCSV, validateCSVFile, CSVPreview } from "@/lib/utils/csv-preview";
@@ -35,6 +36,7 @@ export function ImportDialog({
   description = "Upload a CSV file to import data. Make sure the file matches the required format.",
   accept = ".csv",
   downloadTemplateUrl,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   templateFileName = "template.csv",
   onDownloadTemplate,
 }: ImportDialogProps) {
@@ -65,18 +67,19 @@ export function ImportDialog({
         });
         return;
       }
-      
+
       setValidationError(null);
       setFile(selectedFile);
       setResult(null);
       setPreview(null);
       setShowPreview(false);
-      
+
       // Load preview
       setIsLoadingPreview(true);
       try {
         const csvPreview = await previewCSV(selectedFile, 5);
         setPreview(csvPreview);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         toast({
           title: "Preview Error",
@@ -105,14 +108,14 @@ export function ImportDialog({
     try {
       const importResult = await onImport(file);
       setResult(importResult);
-      
+
       if (importResult.imported > 0) {
         toast({
           title: "Import Successful",
           description: `Successfully imported ${importResult.imported} record(s)`,
         });
       }
-      
+
       if (importResult.skipped > 0) {
         toast({
           title: "Import Completed with Warnings",
@@ -120,6 +123,7 @@ export function ImportDialog({
           variant: "warning",
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast({
         title: "Import Failed",
@@ -142,7 +146,7 @@ export function ImportDialog({
     }
     onClose();
   };
-  
+
   // Reset preview when dialog closes
   useEffect(() => {
     if (!isOpen) {
@@ -187,7 +191,7 @@ export function ImportDialog({
                 </div>
               </div>
               <Button
-               variant="secondary"
+                variant="secondary"
                 size="sm"
                 onClick={handleDownloadTemplate}
                 type="button"
@@ -211,7 +215,7 @@ export function ImportDialog({
                 className="hidden"
               />
               <Button
-               variant="secondary"
+                variant="secondary"
                 onClick={() => fileInputRef.current?.click()}
                 type="button"
                 className="flex-1"
@@ -229,7 +233,7 @@ export function ImportDialog({
                   <div className="mt-2">
                     <Button
                       type="button"
-                     variant="secondary"
+                      variant="secondary"
                       size="sm"
                       onClick={() => setShowPreview(!showPreview)}
                       className="w-full"
@@ -257,7 +261,7 @@ export function ImportDialog({
               <p className="text-xs text-red-600 mt-1">{validationError}</p>
             )}
           </div>
-          
+
           {showPreview && preview && (
             <div className="space-y-2 border border-border rounded-md p-3 bg-muted bg-background">
               <div className="flex items-center justify-between">

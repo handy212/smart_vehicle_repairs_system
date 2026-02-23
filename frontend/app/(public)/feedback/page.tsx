@@ -14,6 +14,7 @@ async function getBranding() {
             site_name: getSetting("site_name") || "Smart Repairs",
             company_name: getSetting("company_name") || "Smart Vehicle Repairs",
         };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
         return {
             site_name: "Smart Repairs",

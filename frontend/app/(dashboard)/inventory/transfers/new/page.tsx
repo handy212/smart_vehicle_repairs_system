@@ -94,130 +94,132 @@ export default function NewTransferPage() {
                     part_id: i.partId!,
                     quantity: i.quantity
                 }))
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any);
 
-            toast({ title: "Success", description: "Transfer created successfully" });
-            router.push(`/inventory/transfers/${transfer.id}`);
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to create transfer", variant: "destructive" });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+        toast({ title: "Success", description: "Transfer created successfully" });
+        router.push(`/inventory/transfers/${transfer.id}`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+        toast({ title: "Error", description: error.message || "Failed to create transfer", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">New Stock Transfer</h1>
-                <Link href="/inventory/transfers">
-                    <Button variant="ghost">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to Transfers
-                    </Button>
-                </Link>
-            </div>
+return (
+    <div className="space-y-6">
+        <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">New Stock Transfer</h1>
+            <Link href="/inventory/transfers">
+                <Button variant="ghost">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Transfers
+                </Button>
+            </Link>
+        </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Transfer Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Source Branch</Label>
-                                <Combobox
-                                    options={branchOptions}
-                                    value={sourceBranchId ? [sourceBranchId] : []}
-                                    onChange={(val) => setSourceBranchId(val[0] || "")}
-                                    placeholder="Select Source Branch"
-                                    multiple={false}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Destination Branch</Label>
-                                <Combobox
-                                    options={branchOptions}
-                                    value={destBranchId ? [destBranchId] : []}
-                                    onChange={(val) => setDestBranchId(val[0] || "")}
-                                    placeholder="Select Destination Branch"
-                                    multiple={false}
-                                />
-                            </div>
-                        </div>
-
+        <Card>
+            <CardHeader>
+                <CardTitle>Transfer Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Notes</Label>
-                            <Textarea
-                                placeholder="Optional notes about this transfer..."
-                                value={notes}
-                                onChange={e => setNotes(e.target.value)}
+                            <Label>Source Branch</Label>
+                            <Combobox
+                                options={branchOptions}
+                                value={sourceBranchId ? [sourceBranchId] : []}
+                                onChange={(val) => setSourceBranchId(val[0] || "")}
+                                placeholder="Select Source Branch"
+                                multiple={false}
                             />
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-medium">Items</h3>
-                                <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Add Part
-                                </Button>
-                            </div>
-
-                            {items.length === 0 && (
-                                <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded border border-dashed">
-                                    No items added. Click "Add Part" to begin.
-                                </p>
-                            )}
-
-                            {items.map((item, index) => (
-                                <div key={index} className="flex gap-4 items-end bg-muted p-3 rounded-md border">
-                                    <div className="flex-1 space-y-2">
-                                        <Label className="text-xs">Part</Label>
-                                        <PartSelector
-                                            selectedPartId={item.partId || undefined}
-                                            onSelect={(part) => handleItemPartChange(index, part.id)}
-                                            branchId={sourceBranchId ? parseInt(sourceBranchId) : undefined}
-                                        />
-                                    </div>
-                                    <div className="w-32 space-y-2">
-                                        <Label className="text-xs">Quantity</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            value={item.quantity}
-                                            onChange={e => handleItemQuantityChange(index, parseInt(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        onClick={() => handleRemoveItem(index)}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            ))}
+                        <div className="space-y-2">
+                            <Label>Destination Branch</Label>
+                            <Combobox
+                                options={branchOptions}
+                                value={destBranchId ? [destBranchId] : []}
+                                onChange={(val) => setDestBranchId(val[0] || "")}
+                                placeholder="Select Destination Branch"
+                                multiple={false}
+                            />
                         </div>
+                    </div>
 
-                        <div className="flex justify-end pt-4">
-                            <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Submitting...
-                                    </>
-                                ) : (
-                                    "Create Transfer"
-                                )}
+                    <div className="space-y-2">
+                        <Label>Notes</Label>
+                        <Textarea
+                            placeholder="Optional notes about this transfer..."
+                            value={notes}
+                            onChange={e => setNotes(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-medium">Items</h3>
+                            <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Part
                             </Button>
                         </div>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
-    );
+
+                        {items.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded border border-dashed">
+                                No items added. Click "Add Part" to begin.
+                            </p>
+                        )}
+
+                        {items.map((item, index) => (
+                            <div key={index} className="flex gap-4 items-end bg-muted p-3 rounded-md border">
+                                <div className="flex-1 space-y-2">
+                                    <Label className="text-xs">Part</Label>
+                                    <PartSelector
+                                        selectedPartId={item.partId || undefined}
+                                        onSelect={(part) => handleItemPartChange(index, part.id)}
+                                        branchId={sourceBranchId ? parseInt(sourceBranchId) : undefined}
+                                    />
+                                </div>
+                                <div className="w-32 space-y-2">
+                                    <Label className="text-xs">Quantity</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        value={item.quantity}
+                                        onChange={e => handleItemQuantityChange(index, parseInt(e.target.value) || 0)}
+                                    />
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleRemoveItem(index)}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Submitting...
+                                </>
+                            ) : (
+                                "Create Transfer"
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </CardContent>
+        </Card>
+    </div>
+);
 }

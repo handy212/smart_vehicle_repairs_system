@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { User, FileText, Wrench, Search, Truck, Clock, Calendar } from "lucide-react";
 
 interface VehicleSidebarProps {
@@ -12,6 +13,7 @@ interface VehicleSidebarProps {
 }
 
 export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleSidebarProps) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const pathname = usePathname();
 
     const menuItems = [

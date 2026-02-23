@@ -47,6 +47,7 @@ const formSchema = z.object({
 });
 
 export function FeedbackForm() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const router = useRouter();
     const searchParams = useSearchParams();
     const branchCode = searchParams.get('branch');
@@ -145,6 +146,7 @@ export function FeedbackForm() {
                 recaptcha_token: recaptchaToken || undefined,
             });
             setSuccess(true);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Something went wrong. Please try again.');
             // Reset reCAPTCHA on error

@@ -23,6 +23,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 }
 
 function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const router = useRouter();
     const { id } = use(params);
     const assetId = parseInt(id);

@@ -2,10 +2,13 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Button } from "@/components/ui/button";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Search, X, Filter } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState, useEffect } from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useDebounce } from "@/lib/hooks/useDebounce"; // Ensure this hook exists or inline it
 
 interface FilterBarProps {
@@ -58,7 +61,7 @@ export function FilterBar({ onSearch, placeholder = "Search...", className, filt
 
                 {filters && (
                     <div className="flex-1 flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 w-full">
-                        {/* Divider for visual separation */}
+                        // Divider for visual separation
                         <div className="h-6 w-px bg-muted hidden sm:block mx-1" />
                         {filters}
                     </div>

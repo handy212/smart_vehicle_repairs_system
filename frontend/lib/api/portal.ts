@@ -62,8 +62,9 @@ export interface PortalDashboardStats {
 
 export interface PortalDashboardResponse {
   stats: PortalDashboardStats;
-  recent_appointments: any[]; // Using any for simplicty or define specific Appt type
-  recent_invoices: PortalInvoice[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+recent_appointments: any[]; // Using any for simplicty or define specific Appt type
+recent_invoices: PortalInvoice[];
 }
 
 export interface AvailabilityResponse {
@@ -102,10 +103,11 @@ export const portalApi = {
     return response.data;
   },
 
-  createBooking: async (data: PortalBookingRequest): Promise<any> => {
-    const response = await apiClient.post("/portal/bookings/", data);
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+createBooking: async (data: PortalBookingRequest): Promise<any> => {
+  const response = await apiClient.post("/portal/bookings/", data);
+  return response.data;
+},
 
   dashboard: async (): Promise<PortalDashboardResponse> => {
     const response = await apiClient.get("/portal/dashboard/");

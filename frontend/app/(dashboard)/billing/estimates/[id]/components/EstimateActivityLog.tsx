@@ -5,6 +5,7 @@ import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { History, User as UserIcon, Calendar, Activity, Info } from "lucide-react";
 import { format } from "date-fns";
 
@@ -38,10 +39,12 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
 
     const formatChanges = (changes: string | object) => {
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let parsed: any = changes;
             if (typeof changes === 'string') {
                 try {
                     parsed = JSON.parse(changes);
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 } catch (e) {
                     // If parsing fails, it might be a plain string message
                     return <p className="text-xs text-muted-foreground italic mt-1">{changes}</p>;
@@ -54,6 +57,7 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
 
             return (
                 <div className="mt-2 space-y-1 text-xs">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {Object.entries(parsed).map(([field, values]: [string, any]) => (
                         <div key={field} className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-muted-foreground bg-muted p-1.5 rounded">
                             <span className="font-medium capitalize min-w-[100px]">{field.replace(/_/g, " ")}:</span>

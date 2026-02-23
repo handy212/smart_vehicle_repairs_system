@@ -171,8 +171,45 @@ def payment_callback(request):
     
     POST /api/payments/hubtel/callback/
     
-    Hubtel sends payment status updates here
+    Hubtel sends payment status updates here.
+    Security: Verifies HMAC-SHA256 signature using HUBTEL_API_SECRET.
     """
+    import hashlib
+    import hmac
+    from django.conf import settings as django_settings
+
+    # --- Webhook Signature Verification ---
+    hubtel_secret = getattr(django_settings, 'HUBTEL_API_SECRET', '')
+    hubtel_signature = request.headers.get('X-Hubtel-Signature', '') or request.headers.get('Authorization', '')
+
+    if hubtel_secret:
+        if not hubtel_signature:
+            logger.warning("Hubtel callback received without signature header")
+            return Response(
+                {'message': 'Missing webhook signature'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Compute HMAC-SHA256 of the raw body
+        raw_body = request.body
+        expected_sig = hmac.new(
+            hubtel_secret.encode('utf-8'),
+            raw_body,
+            hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(expected_sig, hubtel_signature):
+            logger.warning("Invalid Hubtel webhook signature")
+            return Response(
+                {'message': 'Invalid webhook signature'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    else:
+        logger.warning(
+            "HUBTEL_API_SECRET not configured — webhook signature verification skipped. "
+            "Set HUBTEL_API_SECRET in settings to enable verification."
+        )
+
     logger.info(f"Hubtel payment callback received: {request.data}")
     
     try:

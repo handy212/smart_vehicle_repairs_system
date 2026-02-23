@@ -15,9 +15,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 interface CustomerSelectorProps {
-    onSelect: (customer: any) => void;
-    selectedCustomerId?: number;
-    placeholder?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+onSelect: (customer: any) => void;
+selectedCustomerId ?: number;
+placeholder ?: string;
 }
 
 export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "Search and select a customer..." }: CustomerSelectorProps) {
@@ -45,6 +46,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
 
     const customers = data?.results || [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleSelect = (customer: any) => {
         onSelect(customer);
         setOpen(false);
@@ -104,6 +106,7 @@ export function CustomerSelector({ onSelect, selectedCustomerId, placeholder = "
                         </div>
                     ) : (
                         <div className="space-y-1">
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             {customers.map((customer: any) => (
                                 <div
                                     key={customer.id}

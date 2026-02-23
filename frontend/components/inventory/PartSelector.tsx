@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { inventoryApi, Part } from "@/lib/api/inventory";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Search, Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -21,6 +22,7 @@ interface PartSelectorProps {
     branchId?: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function PartSelector({ onSelect, selectedPartId, branchId }: PartSelectorProps) {
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");

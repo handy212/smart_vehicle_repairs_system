@@ -1,6 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useBranchStore } from "@/store/branchStore";
 import { queueRequest } from "@/lib/offline/queue";
+import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from "@/lib/utils/token";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
@@ -31,6 +32,7 @@ apiClient.interceptors.request.use(
           queued: true,
           message: "Request queued for offline sync",
           config,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
       }
 
@@ -38,14 +40,16 @@ apiClient.interceptors.request.use(
       if (config.data instanceof FormData && config.headers) {
         // Axios v1.x uses AxiosHeaders which requires .delete()
         // But we check for method existence to be safe
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof (config.headers as any).delete === 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (config.headers as any).delete('Content-Type');
         } else {
           delete config.headers['Content-Type'];
         }
       }
 
-      const token = localStorage.getItem("access_token");
+      const token = getAccessToken();
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -77,8 +81,10 @@ apiClient.interceptors.request.use(
 // Flag to track if token refresh is in progress
 let isRefreshing = false;
 // Queue of failed requests waiting for token refresh
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let failedQueue: any[] = [];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -94,6 +100,7 @@ const processQueue = (error: any, token: string | null = null) => {
 // Response interceptor for token refresh and offline handling
 apiClient.interceptors.response.use(
   (response) => response,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (error: AxiosError | any) => {
     // Handle offline queued requests
     if (error?.isOffline && error?.queued) {
@@ -133,7 +140,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       if (typeof window !== "undefined") {
-        const refreshToken = localStorage.getItem("refresh_token");
+        const refreshToken = getRefreshToken();
         if (refreshToken) {
           try {
             const response = await axios.post(
@@ -144,7 +151,7 @@ apiClient.interceptors.response.use(
             );
 
             const { access } = response.data;
-            localStorage.setItem("access_token", access);
+            setAccessToken(access);
 
             // Process queue with new token
             processQueue(null, access);
@@ -159,8 +166,7 @@ apiClient.interceptors.response.use(
             processQueue(refreshError, null);
 
             // Refresh failed, redirect to login
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("refresh_token");
+            clearTokens();
             if (typeof window !== "undefined") {
               window.location.href = "/login";
             }
@@ -175,6 +181,15 @@ apiClient.interceptors.response.use(
           }
         }
       }
+    }
+
+    // Handle 403 Forbidden — user's token is valid but lacks permissions
+    if (error.response?.status === 403) {
+      console.warn(
+        `[API] 403 Forbidden: ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+      );
+      // Components should handle 403 in their own catch blocks to show
+      // contextual "Access Denied" messages. We just log here.
     }
 
     return Promise.reject(error);

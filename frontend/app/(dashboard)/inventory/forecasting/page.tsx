@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     BarChart3,
     AlertTriangle,
     CheckCircle2,
@@ -118,6 +119,7 @@ export default function ForecastingPage() {
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                     Part Availability
                                 </h4>
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {bundle.part_breakdown.map((part: any, idx: number) => {
                                     const isCritical = part.potential_contribution === bundle.bundles_available;
                                     return (

@@ -670,6 +670,21 @@ class PaymentViewSet(viewsets.ModelViewSet):
         'invoice', 'customer', 'processed_by', 'refunded_by'
     )
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated()]
+            return [IsAuthenticated(), HasPermission('view_billing')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_payments')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_payments')]
+        elif self.action in ['destroy', 'refund']:
+            return [IsAuthenticated(), HasPermission('manage_billing')]
+        return [IsAuthenticated()]
+
     serializer_class = PaymentSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['invoice', 'customer', 'payment_method', 'status', 'payment_date']
@@ -1606,6 +1621,18 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
 class CreditNoteViewSet(viewsets.ModelViewSet):
     """ViewSet for managing credit notes"""
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_billing')]
+        elif self.action in ['create']:
+            return [IsAuthenticated(), HasPermission('create_credit_notes')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_credit_notes')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('manage_billing')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'invoice', 'credit_date']
     search_fields = ['credit_note_number', 'customer__first_name', 'customer__last_name', 'customer__company_name']
@@ -1689,6 +1716,18 @@ class BillViewSet(viewsets.ModelViewSet):
     """
     queryset = Bill.objects.select_related('vendor', 'branch', 'created_by').prefetch_related('line_items')
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_bills')]
+        elif self.action in ['create']:
+            return [IsAuthenticated(), HasPermission('create_bills')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_bills')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('manage_billing')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'vendor', 'branch', 'due_date']
     search_fields = ['bill_number', 'vendor__name', 'reference_number', 'notes']

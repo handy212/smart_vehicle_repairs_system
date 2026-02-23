@@ -298,18 +298,18 @@ export default function NotificationsPage() {
                 )}
                 onClick={() => isClickable && handleNotificationClick(notification)}
               >
-                {/* Unread Dot */}
+                // Unread Dot
                 {isUnread && (
                   <div className="absolute left-1.5 top-5 w-2 h-2 rounded-full bg-primary dark:bg-orange-400" />
                 )}
 
                 <div className="flex items-start gap-3">
-                  {/* Avatar/Icon */}
+                  // Avatar/Icon
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                     {getTypeIcon(notification.notification_type)}
                   </div>
 
-                  {/* Content */}
+                  // Content
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-foreground mb-0.5">
                       {notification.title}
@@ -318,7 +318,7 @@ export default function NotificationsPage() {
                       {notification.message}
                     </p>
 
-                    {/* Metadata */}
+                    // Metadata
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         {getTypeIcon(notification.notification_type)}
@@ -331,7 +331,7 @@ export default function NotificationsPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  // Actions
                   <div className="flex-shrink-0 flex items-center gap-1 transition-opacity">
                     {isUnread && (
                       <Button
@@ -353,7 +353,7 @@ export default function NotificationsPage() {
             );
           })}
 
-          {/* Load More */}
+          // Load More
           {hasNextPage && (
             <div className="flex justify-center pt-4">
               <Button

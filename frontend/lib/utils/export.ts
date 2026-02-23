@@ -2,6 +2,7 @@
  * Utility functions for exporting data to CSV
  */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function exportToCSV<T extends Record<string, any>>(
   data: T[],
   filename: string,

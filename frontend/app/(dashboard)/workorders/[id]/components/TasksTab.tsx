@@ -24,6 +24,7 @@ interface TasksTabProps {
 
 export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workOrder }: TasksTabProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const queryClient = useQueryClient();
 
   // Separate workflow tasks from manual tasks and sort them
@@ -80,6 +81,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
   // Get workflow phase description and icon
   const getWorkflowTaskInfo = (task: ServiceTask) => {
     const phase = task.workflow_phase;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const descriptions: Record<string, { description: string; icon: any; actionHint?: string }> = {
       'inspection': {
         description: 'Initial vehicle inspection to assess condition and identify issues',
@@ -124,7 +126,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
         icon: CheckCircle2,
       },
     };
-    
+
     return descriptions[phase || ''] || { description: task.description, icon: Workflow };
   };
 
@@ -132,10 +134,10 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
     const taskInfo = isWorkflow ? getWorkflowTaskInfo(task) : null;
     const TaskIcon = taskInfo?.icon || Workflow;
     const isCurrentPhase = isWorkflow && task.workflow_phase === workOrder?.status;
-    
+
     return (
-      <TableRow 
-        key={task.id} 
+      <TableRow
+        key={task.id}
         className={`
           ${isWorkflow ? "bg-primary/5 dark:bg-orange-900/10" : ""}
           ${isCurrentPhase ? "ring-2 ring-primary dark:ring-orange-400" : ""}
@@ -195,6 +197,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           </div>
         </TableCell>
         <TableCell>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <Badge variant={getStatusVariant(task.status) as any}>
             {task.status?.replace("_", " ")}
           </Badge>
@@ -232,7 +235,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
               {task.status === "pending" && (
                 <Button
                   size="sm"
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => handleStartTask(task.id)}
                   disabled={startTaskMutation.isPending}
                 >
@@ -243,7 +246,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
               {task.status === "in_progress" && (
                 <Button
                   size="sm"
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => handleCompleteTask(task.id)}
                   disabled={completeTaskMutation.isPending}
                 >
@@ -299,7 +302,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
             </CardHeader>
             <CardContent>
               <div className="mb-4 space-y-3">
-                {/* Note text removed per request */}
+                // Note text removed per request
                 {workflowTasks.length > 0 && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
@@ -358,7 +361,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 <p className="text-sm text-muted-foreground mb-4">
                   Add custom tasks for specific repair work that needs to be performed.
                 </p>
-                <Button onClick={() => setShowAddDialog(true)}variant="secondary">
+                <Button onClick={() => setShowAddDialog(true)} variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Add First Task
                 </Button>

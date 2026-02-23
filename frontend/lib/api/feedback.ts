@@ -23,10 +23,11 @@ export const feedbackApi = {
     /**
      * List all feedback (Admin/Manager only)
      */
-    getFeedback: async (params?: any) => {
-        const response = await client.get('/feedback/', { params });
-        return response.data;
-    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+getFeedback: async (params?: any) => {
+    const response = await client.get('/feedback/', { params });
+    return response.data;
+},
 
     /**
      * Get single feedback detail
@@ -35,13 +36,13 @@ export const feedbackApi = {
         const response = await client.get(`/feedback/${id}/`);
         return response.data;
     },
-    /**
-     * Update feedback (Admin/Manager only - status, notes)
-     */
-    updateFeedback: async (id: number, data: Partial<FeedbackData>) => {
-        const response = await client.patch(`/feedback/${id}/`, data);
-        return response.data;
-    }
+        /**
+         * Update feedback (Admin/Manager only - status, notes)
+         */
+        updateFeedback: async (id: number, data: Partial<FeedbackData>) => {
+            const response = await client.patch(`/feedback/${id}/`, data);
+            return response.data;
+        }
 };
 
 export default feedbackApi;

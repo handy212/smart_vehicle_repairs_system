@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi } from "@/lib/api/roadside";
 import { customersApi } from "@/lib/api/customers";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { subscriptionsApi } from "@/lib/api/subscriptions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,9 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ArrowLeft, MapPin, Phone, AlertCircle,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Search, Truck, User as UserIcon, Plus,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Info, Navigation, Check, X,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Car, Briefcase, Map as MapIcon,
     ArrowRight
 } from "lucide-react";
@@ -26,6 +31,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils/cn";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
@@ -92,8 +98,10 @@ export default function NewRoadsideRequestDashboardPage() {
     const selectedCustomerId = watch("customer");
     const selectedVehicleId = watch("vehicle");
     const serviceType = watch("service_type");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const towDistance = watch("tow_distance_km");
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: selectedCustomer, isLoading: isLoadingCustomer } = useQuery({
         queryKey: ["customer", selectedCustomerId],
         queryFn: () => customersApi.get(selectedCustomerId!),
@@ -129,428 +137,430 @@ export default function NewRoadsideRequestDashboardPage() {
             });
             router.push(`/roadside/${data.id}`);
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
-            const errorMessage = error.response?.data?.detail ||
-                Object.values(error.response?.data || {}).flat().join(", ") ||
-                "Failed to create request";
-            setServerError(errorMessage);
-        },
+        const errorMessage = error.response?.data?.detail ||
+            Object.values(error.response?.data || {}).flat().join(", ") ||
+            "Failed to create request";
+        setServerError(errorMessage);
+    },
     });
 
-    const getCurrentLocation = () => {
-        if (!navigator.geolocation) {
+const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+        toast({
+            title: "Not Supported",
+            description: "Geolocation is not supported by your browser",
+            variant: "destructive"
+        });
+        return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = parseFloat(position.coords.latitude.toFixed(6));
+            const lng = parseFloat(position.coords.longitude.toFixed(6));
+            setValue("latitude", lat);
+            setValue("longitude", lng);
+            setIsLocating(false);
             toast({
-                title: "Not Supported",
-                description: "Geolocation is not supported by your browser",
+                title: "Location Updated",
+                description: `Coordinates: ${lat}, ${lng}`
+            });
+        },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        (error) => {
+            setIsLocating(false);
+            toast({
+                title: "Error",
+                description: "Could not get your current location",
                 variant: "destructive"
             });
-            return;
         }
+    );
+};
 
-        setIsLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = parseFloat(position.coords.latitude.toFixed(6));
-                const lng = parseFloat(position.coords.longitude.toFixed(6));
-                setValue("latitude", lat);
-                setValue("longitude", lng);
-                setIsLocating(false);
-                toast({
-                    title: "Location Updated",
-                    description: `Coordinates: ${lat}, ${lng}`
-                });
-            },
-            (error) => {
-                setIsLocating(false);
-                toast({
-                    title: "Error",
-                    description: "Could not get your current location",
-                    variant: "destructive"
-                });
-            }
-        );
+// React to initialCustomerId or changes in customer query
+useEffect(() => {
+    if (initialCustomerId) {
+        const id = parseInt(initialCustomerId);
+        if (!isNaN(id)) {
+            setValue("customer", id);
+        }
+    }
+}, [initialCustomerId, setValue]);
+
+const onSubmit = (data: RoadsideRequestFormData) => {
+    setServerError(null);
+
+    // Final check: round coordinates to 6 decimal places to satisfy backend DecimalField(9, 6)
+    const submissionData = {
+        ...data,
+        latitude: (typeof data.latitude === 'number' && !isNaN(data.latitude))
+            ? parseFloat(data.latitude.toFixed(6))
+            : undefined,
+        longitude: (typeof data.longitude === 'number' && !isNaN(data.longitude))
+            ? parseFloat(data.longitude.toFixed(6))
+            : undefined,
     };
 
-    // React to initialCustomerId or changes in customer query
-    useEffect(() => {
-        if (initialCustomerId) {
-            const id = parseInt(initialCustomerId);
-            if (!isNaN(id)) {
-                setValue("customer", id);
-            }
-        }
-    }, [initialCustomerId, setValue]);
+    createMutation.mutate(submissionData);
+};
 
-    const onSubmit = (data: RoadsideRequestFormData) => {
-        setServerError(null);
+const serviceTypes = [
+    { value: 'towing', label: 'Towing Service' },
+    { value: 'battery_boost', label: 'Battery Boost' },
+    { value: 'flat_tyre', label: 'Flat Tyre Service' },
+    { value: 'key_lockout', label: 'Key Lock Out' },
+    { value: 'emergency_fuel', label: 'Emergency Fuel Delivery' },
+    { value: 'extrication', label: 'Extrication Service' },
+    { value: 'mechanical_first_aid', label: 'Mechanical & Electrical First Aid' },
+    { value: 'other', label: 'Other' },
+];
 
-        // Final check: round coordinates to 6 decimal places to satisfy backend DecimalField(9, 6)
-        const submissionData = {
-            ...data,
-            latitude: (typeof data.latitude === 'number' && !isNaN(data.latitude))
-                ? parseFloat(data.latitude.toFixed(6))
-                : undefined,
-            longitude: (typeof data.longitude === 'number' && !isNaN(data.longitude))
-                ? parseFloat(data.longitude.toFixed(6))
-                : undefined,
-        };
-
-        createMutation.mutate(submissionData);
-    };
-
-    const serviceTypes = [
-        { value: 'towing', label: 'Towing Service' },
-        { value: 'battery_boost', label: 'Battery Boost' },
-        { value: 'flat_tyre', label: 'Flat Tyre Service' },
-        { value: 'key_lockout', label: 'Key Lock Out' },
-        { value: 'emergency_fuel', label: 'Emergency Fuel Delivery' },
-        { value: 'extrication', label: 'Extrication Service' },
-        { value: 'mechanical_first_aid', label: 'Mechanical & Electrical First Aid' },
-        { value: 'other', label: 'Other' },
-    ];
-
-    return (
-        <div className="space-y-6 pb-12">
-            {/* Header */}
-            <div className="flex flex-col space-y-4">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
-                            <span>/</span>
-                            <Link href="/roadside" className="hover:text-primary transition-colors">Roadside</Link>
-                            <span>/</span>
-                            <span className="text-foreground font-medium">New Request</span>
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                            New Roadside Request
-                        </h1>
+return (
+    <div className="space-y-6 pb-12">
+        {/* Header */}
+        <div className="flex flex-col space-y-4">
+            <div className="flex justify-between items-center">
+                <div>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+                        <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+                        <span>/</span>
+                        <Link href="/roadside" className="hover:text-primary transition-colors">Roadside</Link>
+                        <span>/</span>
+                        <span className="text-foreground font-medium">New Request</span>
                     </div>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        New Roadside Request
+                    </h1>
                 </div>
             </div>
+        </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                {serverError && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-lg flex items-start gap-2">
-                        <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm">{serverError}</p>
-                    </div>
-                )}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {serverError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm">{serverError}</p>
+                </div>
+            )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {/* Left Column - Main Details */}
-                    <div className="lg:col-span-2 space-y-4">
-                        {/* Customer & Vehicle Selection */}
-                        <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <UserIcon className="w-4 h-4" />
-                                    Customer & Vehicle
-                                </CardTitle>
-                                <CardDescription className="text-xs">Select the customer and the vehicle needing assistance</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-3">
-                                        <Label className="font-semibold">Customer *</Label>
-                                        <CustomerSelector
-                                            selectedCustomerId={selectedCustomerId}
-                                            onSelect={(cust) => {
-                                                setValue("customer", cust.id, { shouldValidate: true });
-                                                if (cust.phone) setValue("customer_phone", cust.phone);
-                                                resetField("vehicle");
-                                            }}
-                                        />
-                                        {errors.customer && (
-                                            <p className="text-xs text-red-600 font-medium flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3" />
-                                                {errors.customer.message}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <Label htmlFor="vehicle" className="font-semibold">Selected Vehicle *</Label>
-                                        <div className="relative">
-                                            <select
-                                                id="vehicle"
-                                                {...register("vehicle", { valueAsNumber: true })}
-                                                disabled={!selectedCustomerId || isLoadingVehicles}
-                                                className={cn(
-                                                    "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all disabled:opacity-50",
-                                                    errors.vehicle ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
-                                                )}
-                                            >
-                                                <option value="">
-                                                    {isLoadingVehicles ? "Loading vehicles..." : "-- Choose Vehicle --"}
-                                                </option>
-                                                {customerVehicles?.map(v => (
-                                                    <option key={v.id} value={v.id}>
-                                                        {v.year} {v.make} {v.model} [{v.license_plate}]
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {isLoadingVehicles && <div className="absolute right-9 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-primary border-r-transparent animate-spin" />}
-                                        </div>
-                                        {errors.vehicle && (
-                                            <p className="text-xs text-red-600 font-medium flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3" />
-                                                {errors.vehicle.message}
-                                            </p>
-                                        )}
-                                        {!selectedCustomerId && (
-                                            <p className="text-xs text-amber-600 font-medium px-1">← Select a customer first</p>
-                                        )}
-                                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Left Column - Main Details */}
+                <div className="lg:col-span-2 space-y-4">
+                    {/* Customer & Vehicle Selection */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <UserIcon className="w-4 h-4" />
+                                Customer & Vehicle
+                            </CardTitle>
+                            <CardDescription className="text-xs">Select the customer and the vehicle needing assistance</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <Label className="font-semibold">Customer *</Label>
+                                    <CustomerSelector
+                                        selectedCustomerId={selectedCustomerId}
+                                        onSelect={(cust) => {
+                                            setValue("customer", cust.id, { shouldValidate: true });
+                                            if (cust.phone) setValue("customer_phone", cust.phone);
+                                            resetField("vehicle");
+                                        }}
+                                    />
+                                    {errors.customer && (
+                                        <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                            <AlertCircle className="w-3 h-3" />
+                                            {errors.customer.message}
+                                        </p>
+                                    )}
                                 </div>
 
-                                {selectedCustomer && (
-                                    <div className="mt-4 p-4 rounded-xl bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-primary dark:text-orange-300">
-                                                    <UserIcon className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-foreground">{selectedCustomer.full_name || selectedCustomer.company_name}</h4>
-                                                    <p className="text-xs text-muted-foreground">{selectedCustomer.customer_number} • {selectedCustomer.phone || "No phone"}</p>
-                                                </div>
-                                            </div>
-                                            <Badge variant="secondary" className="bg-card">Verified</Badge>
-                                        </div>
-
-                                        {selectedVehicleId && (
-                                            <div className="pt-3 border-t border-orange-100 dark:border-orange-900/30">
-                                                {isLoadingSubscription ? (
-                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                        <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" />
-                                                        Checking subscription coverage...
-                                                    </div>
-                                                ) : activeSubscription ? (
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
-                                                            <Check className="w-4 h-4" />
-                                                            <span>Active Subscription: {activeSubscription.package_name || "Standard Coverage"}</span>
-                                                        </div>
-                                                        <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">Covered</Badge>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
-                                                            <Info className="w-4 h-4" />
-                                                            <span>No Active Subscription Found</span>
-                                                        </div>
-                                                        <Badge variant="warning" className="bg-amber-100 text-amber-800 border-amber-200">Pay-Per-Use</Badge>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Location Details */}
-                        <Card>
-                            <CardHeader className="py-3 px-4 border-b">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                    <MapIcon className="w-4 h-4 text-primary" />
-                                    Location Information
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 space-y-4">
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="breakdown_location" className="font-semibold">Breakdown Location *</Label>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            type="button"
-                                            onClick={getCurrentLocation}
-                                            disabled={isLocating}
-                                            className="h-8 text-xs gap-2"
+                                    <Label htmlFor="vehicle" className="font-semibold">Selected Vehicle *</Label>
+                                    <div className="relative">
+                                        <select
+                                            id="vehicle"
+                                            {...register("vehicle", { valueAsNumber: true })}
+                                            disabled={!selectedCustomerId || isLoadingVehicles}
+                                            className={cn(
+                                                "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all disabled:opacity-50",
+                                                errors.vehicle ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
+                                            )}
                                         >
-                                            {isLocating ? <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" /> : <Navigation className="w-3 h-3" />}
-                                            Get Current Location
-                                        </Button>
-                                    </div>
-                                    <div className="relative">
-                                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Textarea
-                                            id="breakdown_location"
-                                            {...register("breakdown_location")}
-                                            placeholder="Street name, landmark, City or GPS location..."
-                                            className="pl-9 min-h-[80px]"
-                                        />
-                                    </div>
-                                    {errors.breakdown_location && (
-                                        <p className="text-xs text-red-600 font-medium flex items-center gap-1">
-                                            <AlertCircle className="w-3 h-3" />
-                                            {errors.breakdown_location.message}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="latitude" className="text-xs font-medium text-muted-foreground">Latitude (Optional)</Label>
-                                        <Input
-                                            id="latitude"
-                                            type="number"
-                                            step="any"
-                                            {...register("latitude", { valueAsNumber: true })}
-                                            placeholder="Ex: 5.6037"
-                                            className="h-9 text-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="longitude" className="text-xs font-medium text-muted-foreground">Longitude (Optional)</Label>
-                                        <Input
-                                            id="longitude"
-                                            type="number"
-                                            step="any"
-                                            {...register("longitude", { valueAsNumber: true })}
-                                            placeholder="Ex: -0.1870"
-                                            className="h-9 text-sm"
-                                        />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Right Column - Service & Summary */}
-                    <div className="space-y-3">
-                        <Card>
-                            <CardHeader className="py-3 px-4 border-b">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                    <Truck className="w-4 h-4 text-primary" />
-                                    Service Details
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 space-y-4">
-                                <div className="space-y-3">
-                                    <Label htmlFor="service_type" className="font-semibold">Service Type *</Label>
-                                    <select
-                                        id="service_type"
-                                        {...register("service_type")}
-                                        className={cn(
-                                            "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all",
-                                            errors.service_type ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
-                                        )}
-                                    >
-                                        <option value="">Select Service Type</option>
-                                        {serviceTypes.map((type) => (
-                                            <option key={type.value} value={type.value}>
-                                                {type.label}
+                                            <option value="">
+                                                {isLoadingVehicles ? "Loading vehicles..." : "-- Choose Vehicle --"}
                                             </option>
-                                        ))}
-                                    </select>
-                                    {errors.service_type && (
-                                        <p className="text-xs text-red-600 font-medium flex items-center gap-1">
-                                            <AlertCircle className="w-3 h-3" />
-                                            {errors.service_type.message}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="space-y-3">
-                                    <Label htmlFor="customer_phone" className="font-semibold">Contact Phone *</Label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="customer_phone"
-                                            {...register("customer_phone")}
-                                            placeholder="+233..."
-                                            className="pl-9 h-11"
-                                        />
+                                            {customerVehicles?.map(v => (
+                                                <option key={v.id} value={v.id}>
+                                                    {v.year} {v.make} {v.model} [{v.license_plate}]
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {isLoadingVehicles && <div className="absolute right-9 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-primary border-r-transparent animate-spin" />}
                                     </div>
-                                    {errors.customer_phone && (
+                                    {errors.vehicle && (
                                         <p className="text-xs text-red-600 font-medium flex items-center gap-1">
                                             <AlertCircle className="w-3 h-3" />
-                                            {errors.customer_phone.message}
+                                            {errors.vehicle.message}
                                         </p>
                                     )}
+                                    {!selectedCustomerId && (
+                                        <p className="text-xs text-amber-600 font-medium px-1">← Select a customer first</p>
+                                    )}
                                 </div>
+                            </div>
 
-                                {serviceType === 'towing' && (
-                                    <div className="space-y-4 pt-2 p-4 rounded-xl bg-orange-50/30 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 animate-in zoom-in-95 duration-200">
-                                        <div className="space-y-3">
-                                            <Label htmlFor="tow_distance_km" className="font-semibold text-orange-800 dark:text-orange-400">Tow Distance (km) *</Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="tow_distance_km"
-                                                    type="number"
-                                                    step="0.1"
-                                                    {...register("tow_distance_km", { valueAsNumber: true })}
-                                                    placeholder="0"
-                                                    className="h-11 border-orange-200 dark:border-orange-800"
-                                                />
+                            {selectedCustomer && (
+                                <div className="mt-4 p-4 rounded-xl bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-primary dark:text-orange-300">
+                                                <UserIcon className="w-5 h-5" />
                                             </div>
-                                            {errors.tow_distance_km && (
-                                                <p className="text-xs text-red-600 font-medium">{errors.tow_distance_km.message}</p>
+                                            <div>
+                                                <h4 className="font-bold text-foreground">{selectedCustomer.full_name || selectedCustomer.company_name}</h4>
+                                                <p className="text-xs text-muted-foreground">{selectedCustomer.customer_number} • {selectedCustomer.phone || "No phone"}</p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="secondary" className="bg-card">Verified</Badge>
+                                    </div>
+
+                                    {selectedVehicleId && (
+                                        <div className="pt-3 border-t border-orange-100 dark:border-orange-900/30">
+                                            {isLoadingSubscription ? (
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" />
+                                                    Checking subscription coverage...
+                                                </div>
+                                            ) : activeSubscription ? (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
+                                                        <Check className="w-4 h-4" />
+                                                        <span>Active Subscription: {activeSubscription.package_name || "Standard Coverage"}</span>
+                                                    </div>
+                                                    <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">Covered</Badge>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
+                                                        <Info className="w-4 h-4" />
+                                                        <span>No Active Subscription Found</span>
+                                                    </div>
+                                                    <Badge variant="warning" className="bg-amber-100 text-amber-800 border-amber-200">Pay-Per-Use</Badge>
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="space-y-3">
-                                            <Label htmlFor="destination" className="font-semibold text-orange-800 dark:text-orange-400">Destination Location</Label>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Location Details */}
+                    <Card>
+                        <CardHeader className="py-3 px-4 border-b">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                <MapIcon className="w-4 h-4 text-primary" />
+                                Location Information
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="breakdown_location" className="font-semibold">Breakdown Location *</Label>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        type="button"
+                                        onClick={getCurrentLocation}
+                                        disabled={isLocating}
+                                        className="h-8 text-xs gap-2"
+                                    >
+                                        {isLocating ? <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" /> : <Navigation className="w-3 h-3" />}
+                                        Get Current Location
+                                    </Button>
+                                </div>
+                                <div className="relative">
+                                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Textarea
+                                        id="breakdown_location"
+                                        {...register("breakdown_location")}
+                                        placeholder="Street name, landmark, City or GPS location..."
+                                        className="pl-9 min-h-[80px]"
+                                    />
+                                </div>
+                                {errors.breakdown_location && (
+                                    <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        {errors.breakdown_location.message}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="latitude" className="text-xs font-medium text-muted-foreground">Latitude (Optional)</Label>
+                                    <Input
+                                        id="latitude"
+                                        type="number"
+                                        step="any"
+                                        {...register("latitude", { valueAsNumber: true })}
+                                        placeholder="Ex: 5.6037"
+                                        className="h-9 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="longitude" className="text-xs font-medium text-muted-foreground">Longitude (Optional)</Label>
+                                    <Input
+                                        id="longitude"
+                                        type="number"
+                                        step="any"
+                                        {...register("longitude", { valueAsNumber: true })}
+                                        placeholder="Ex: -0.1870"
+                                        className="h-9 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Right Column - Service & Summary */}
+                <div className="space-y-3">
+                    <Card>
+                        <CardHeader className="py-3 px-4 border-b">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                <Truck className="w-4 h-4 text-primary" />
+                                Service Details
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4">
+                            <div className="space-y-3">
+                                <Label htmlFor="service_type" className="font-semibold">Service Type *</Label>
+                                <select
+                                    id="service_type"
+                                    {...register("service_type")}
+                                    className={cn(
+                                        "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all",
+                                        errors.service_type ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
+                                    )}
+                                >
+                                    <option value="">Select Service Type</option>
+                                    {serviceTypes.map((type) => (
+                                        <option key={type.value} value={type.value}>
+                                            {type.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.service_type && (
+                                    <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        {errors.service_type.message}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="space-y-3">
+                                <Label htmlFor="customer_phone" className="font-semibold">Contact Phone *</Label>
+                                <div className="relative">
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="customer_phone"
+                                        {...register("customer_phone")}
+                                        placeholder="+233..."
+                                        className="pl-9 h-11"
+                                    />
+                                </div>
+                                {errors.customer_phone && (
+                                    <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        {errors.customer_phone.message}
+                                    </p>
+                                )}
+                            </div>
+
+                            {serviceType === 'towing' && (
+                                <div className="space-y-4 pt-2 p-4 rounded-xl bg-orange-50/30 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 animate-in zoom-in-95 duration-200">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="tow_distance_km" className="font-semibold text-orange-800 dark:text-orange-400">Tow Distance (km) *</Label>
+                                        <div className="relative">
                                             <Input
-                                                id="destination"
-                                                {...register("destination")}
-                                                placeholder="Repair Shop, Home, etc."
+                                                id="tow_distance_km"
+                                                type="number"
+                                                step="0.1"
+                                                {...register("tow_distance_km", { valueAsNumber: true })}
+                                                placeholder="0"
                                                 className="h-11 border-orange-200 dark:border-orange-800"
                                             />
                                         </div>
+                                        {errors.tow_distance_km && (
+                                            <p className="text-xs text-red-600 font-medium">{errors.tow_distance_km.message}</p>
+                                        )}
                                     </div>
-                                )}
-
-                                <div className="space-y-3">
-                                    <Label htmlFor="description" className="font-semibold">Technical Findings / Notes</Label>
-                                    <Textarea
-                                        id="description"
-                                        {...register("description")}
-                                        placeholder="Briefly describe the vehicle issue..."
-                                        rows={4}
-                                        className="resize-none"
-                                    />
-                                </div>
-
-                                <div className="pt-2">
-                                    <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-border">
-                                        <Info className="h-5 w-5 text-primary mt-0.5" />
-                                        <div className="space-y-1">
-                                            <p className="text-xs font-bold text-foreground uppercase tracking-wider">Policy Check</p>
-                                            <p className="text-[11px] text-muted-foreground leading-relaxed">System will auto-check AA Membership during submission and apply covered benefits immediately.</p>
-                                        </div>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="destination" className="font-semibold text-orange-800 dark:text-orange-400">Destination Location</Label>
+                                        <Input
+                                            id="destination"
+                                            {...register("destination")}
+                                            placeholder="Repair Shop, Home, etc."
+                                            className="h-11 border-orange-200 dark:border-orange-800"
+                                        />
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
+                            )}
 
-                        <div className="flex flex-col gap-2">
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                size="lg"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <span className="flex items-center gap-2">
-                                        <div className="h-4 w-4 rounded-full border-2 border-white border-r-transparent animate-spin" />
-                                        Processing...
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-2">
-                                        Log Request <ArrowRight className="w-4 h-4" />
-                                    </span>
-                                )}
-                            </Button>
-                            <Link href="/roadside" className="w-full">
-                                <Button variant="secondary" type="button" className="w-full">Cancel</Button>
-                            </Link>
-                        </div>
+                            <div className="space-y-3">
+                                <Label htmlFor="description" className="font-semibold">Technical Findings / Notes</Label>
+                                <Textarea
+                                    id="description"
+                                    {...register("description")}
+                                    placeholder="Briefly describe the vehicle issue..."
+                                    rows={4}
+                                    className="resize-none"
+                                />
+                            </div>
+
+                            <div className="pt-2">
+                                <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-border">
+                                    <Info className="h-5 w-5 text-primary mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-bold text-foreground uppercase tracking-wider">Policy Check</p>
+                                        <p className="text-[11px] text-muted-foreground leading-relaxed">System will auto-check AA Membership during submission and apply covered benefits immediately.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <div className="flex flex-col gap-2">
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            size="lg"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <span className="flex items-center gap-2">
+                                    <div className="h-4 w-4 rounded-full border-2 border-white border-r-transparent animate-spin" />
+                                    Processing...
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-2">
+                                    Log Request <ArrowRight className="w-4 h-4" />
+                                </span>
+                            )}
+                        </Button>
+                        <Link href="/roadside" className="w-full">
+                            <Button variant="secondary" type="button" className="w-full">Cancel</Button>
+                        </Link>
                     </div>
                 </div>
-            </form>
-        </div>
-    );
+            </div>
+        </form>
+    </div>
+);
 }

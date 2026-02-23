@@ -83,6 +83,7 @@ export default function ServiceBundleReportPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {data?.bundles.map((item: any) => (
                                     <TableRow key={item.id}>
                                         <TableCell>

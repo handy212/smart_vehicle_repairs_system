@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button } from "./button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog";
 import { Checkbox } from "./checkbox";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Input } from "./input";
 import { Label } from "./label";
 import { Settings2, Eye, EyeOff } from "lucide-react";

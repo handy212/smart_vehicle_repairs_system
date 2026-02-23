@@ -431,257 +431,259 @@ export const billingApi = {
       return response.data;
     },
 
-    sendSms: async (id: number, message: string): Promise<any> => {
-      const response = await apiClient.post(`/billing/invoices/${id}/send_customer_sms/`, { message });
-      return response.data;
-    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+sendSms: async (id: number, message: string): Promise<any> => {
+  const response = await apiClient.post(`/billing/invoices/${id}/send_customer_sms/`, { message });
+  return response.data;
+},
 
-    sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
-      const response = await apiClient.post(`/billing/invoices/${id}/send_customer_email/`, { subject, message });
-      return response.data;
-    },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
+  const response = await apiClient.post(`/billing/invoices/${id}/send_customer_email/`, { subject, message });
+  return response.data;
+},
 
-    downloadAgingReport: async (): Promise<Blob> => {
-      const response = await apiClient.get('/billing/invoices/aging_report_pdf/', {
-        responseType: 'blob',
-      });
-      return response.data;
-    },
+  downloadAgingReport: async (): Promise<Blob> => {
+    const response = await apiClient.get('/billing/invoices/aging_report_pdf/', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
   },
 
-  creditNotes: {
-    list: async (params?: {
-      page?: number;
-      status?: string;
-      customer?: number;
-      search?: string;
-      date_from?: string;
-      date_to?: string;
-      ordering?: string;
-    }): Promise<CreditNoteListResponse> => {
-      const response = await apiClient.get("/billing/credit-notes/", { params });
-      return response.data;
-    },
+creditNotes: {
+  list: async (params?: {
+    page?: number;
+    status?: string;
+    customer?: number;
+    search?: string;
+    date_from?: string;
+    date_to?: string;
+    ordering?: string;
+  }): Promise<CreditNoteListResponse> => {
+    const response = await apiClient.get("/billing/credit-notes/", { params });
+    return response.data;
+  },
 
     get: async (id: number): Promise<CreditNote> => {
       const response = await apiClient.get(`/billing/credit-notes/${id}/`);
       return response.data;
     },
 
-    create: async (data: Partial<CreditNote>): Promise<CreditNote> => {
-      const response = await apiClient.post("/billing/credit-notes/", data);
-      return response.data;
-    },
+      create: async (data: Partial<CreditNote>): Promise<CreditNote> => {
+        const response = await apiClient.post("/billing/credit-notes/", data);
+        return response.data;
+      },
 
-    update: async (id: number, data: Partial<CreditNote>): Promise<CreditNote> => {
-      const response = await apiClient.put(`/billing/credit-notes/${id}/`, data);
-      return response.data;
-    },
+        update: async (id: number, data: Partial<CreditNote>): Promise<CreditNote> => {
+          const response = await apiClient.put(`/billing/credit-notes/${id}/`, data);
+          return response.data;
+        },
 
-    delete: async (id: number): Promise<void> => {
-      await apiClient.delete(`/billing/credit-notes/${id}/`);
-    },
+          delete: async (id: number): Promise<void> => {
+            await apiClient.delete(`/billing/credit-notes/${id}/`);
+          },
 
-    approve: async (id: number): Promise<void> => {
-      await apiClient.post(`/billing/credit-notes/${id}/approve/`);
-    },
+            approve: async (id: number): Promise<void> => {
+              await apiClient.post(`/billing/credit-notes/${id}/approve/`);
+            },
   },
 
-  payments: {
-    list: async (params?: {
-      page?: number;
-      invoice?: number;
-      customer?: number;
-      status?: string;
-      payment_method?: string;
-      ordering?: string;
-    }): Promise<Payment[]> => {
-      const response = await apiClient.get("/billing/payments/", { params });
-      return response.data.results || response.data;
-    },
+payments: {
+  list: async (params?: {
+    page?: number;
+    invoice?: number;
+    customer?: number;
+    status?: string;
+    payment_method?: string;
+    ordering?: string;
+  }): Promise<Payment[]> => {
+    const response = await apiClient.get("/billing/payments/", { params });
+    return response.data.results || response.data;
+  },
 
     get: async (id: number): Promise<Payment> => {
       const response = await apiClient.get(`/billing/payments/${id}/`);
       return response.data;
     },
 
-    create: async (data: Partial<Payment>): Promise<Payment> => {
-      const response = await apiClient.post("/billing/payments/", data);
-      return response.data;
-    },
-    refund: async (id: number, data: { refund_amount: string; refund_reason: string }): Promise<Payment> => {
-      const response = await apiClient.post(`/billing/payments/${id}/refund/`, data);
-      return response.data;
-    },
+      create: async (data: Partial<Payment>): Promise<Payment> => {
+        const response = await apiClient.post("/billing/payments/", data);
+        return response.data;
+      },
+        refund: async (id: number, data: { refund_amount: string; refund_reason: string }): Promise<Payment> => {
+          const response = await apiClient.post(`/billing/payments/${id}/refund/`, data);
+          return response.data;
+        },
 
-    allocations: async (paymentId: number): Promise<PaymentAllocation[]> => {
-      const response = await apiClient.get(`/billing/payments/${paymentId}/allocations/`);
-      return response.data;
-    },
+          allocations: async (paymentId: number): Promise<PaymentAllocation[]> => {
+            const response = await apiClient.get(`/billing/payments/${paymentId}/allocations/`);
+            return response.data;
+          },
 
-    unallocatedAmount: async (paymentId: number): Promise<UnallocatedAmountResponse> => {
-      const response = await apiClient.get(`/billing/payments/${paymentId}/unallocated_amount/`);
-      return response.data;
-    },
+            unallocatedAmount: async (paymentId: number): Promise<UnallocatedAmountResponse> => {
+              const response = await apiClient.get(`/billing/payments/${paymentId}/unallocated_amount/`);
+              return response.data;
+            },
   },
 
-  paymentAllocations: {
-    list: async (params?: {
-      payment?: number;
-      invoice?: number;
-      customer?: number;
-    }): Promise<{ results: PaymentAllocation[] }> => {
-      const response = await apiClient.get("/billing/payment-allocations/", { params });
-      return response.data;
-    },
+paymentAllocations: {
+  list: async (params?: {
+    payment?: number;
+    invoice?: number;
+    customer?: number;
+  }): Promise<{ results: PaymentAllocation[] }> => {
+    const response = await apiClient.get("/billing/payment-allocations/", { params });
+    return response.data;
+  },
 
     get: async (id: number): Promise<PaymentAllocation> => {
       const response = await apiClient.get(`/billing/payment-allocations/${id}/`);
       return response.data;
     },
 
-    create: async (data: Partial<PaymentAllocation>): Promise<PaymentAllocation> => {
-      const response = await apiClient.post("/billing/payment-allocations/", data);
-      return response.data;
-    },
+      create: async (data: Partial<PaymentAllocation>): Promise<PaymentAllocation> => {
+        const response = await apiClient.post("/billing/payment-allocations/", data);
+        return response.data;
+      },
 
-    allocatePayment: async (data: AllocatePaymentRequest): Promise<PaymentAllocation[]> => {
-      const response = await apiClient.post(
-        "/billing/payment-allocations/allocate_payment/",
-        data
-      );
-      return response.data;
-    },
+        allocatePayment: async (data: AllocatePaymentRequest): Promise<PaymentAllocation[]> => {
+          const response = await apiClient.post(
+            "/billing/payment-allocations/allocate_payment/",
+            data
+          );
+          return response.data;
+        },
 
-    autoAllocate: async (paymentId: number): Promise<{
-      allocations: PaymentAllocation[];
-      unallocated_amount: string;
-    }> => {
-      const response = await apiClient.post(
-        "/billing/payment-allocations/auto_allocate/",
-        { payment_id: paymentId }
-      );
-      return response.data;
-    },
+          autoAllocate: async (paymentId: number): Promise<{
+            allocations: PaymentAllocation[];
+            unallocated_amount: string;
+          }> => {
+            const response = await apiClient.post(
+              "/billing/payment-allocations/auto_allocate/",
+              { payment_id: paymentId }
+            );
+            return response.data;
+          },
 
-    byCustomer: async (customerId: number): Promise<PaymentAllocation[]> => {
-      const response = await apiClient.get("/billing/payment-allocations/by_customer/", {
-        params: { customer_id: customerId }
-      });
-      return response.data;
-    },
+            byCustomer: async (customerId: number): Promise<PaymentAllocation[]> => {
+              const response = await apiClient.get("/billing/payment-allocations/by_customer/", {
+                params: { customer_id: customerId }
+              });
+              return response.data;
+            },
   },
 
-  estimates: {
-    list: async (params?: {
-      page?: number;
-      status?: string;
-      customer?: number;
-      search?: string;
-      estimate_date?: string;
-      date_from?: string;
-      date_to?: string;
-      estimate_date__gte?: string;
-      estimate_date__lte?: string;
-      ordering?: string;
-    }): Promise<EstimateListResponse> => {
-      const response = await apiClient.get("/billing/estimates/", { params });
-      return response.data;
-    },
+estimates: {
+  list: async (params?: {
+    page?: number;
+    status?: string;
+    customer?: number;
+    search?: string;
+    estimate_date?: string;
+    date_from?: string;
+    date_to?: string;
+    estimate_date__gte?: string;
+    estimate_date__lte?: string;
+    ordering?: string;
+  }): Promise<EstimateListResponse> => {
+    const response = await apiClient.get("/billing/estimates/", { params });
+    return response.data;
+  },
 
     get: async (id: number): Promise<Estimate> => {
       const response = await apiClient.get(`/billing/estimates/${id}/`);
       return response.data;
     },
 
-    create: async (data: Partial<Estimate>): Promise<Estimate> => {
-      const response = await apiClient.post("/billing/estimates/", data);
-      return response.data;
-    },
+      create: async (data: Partial<Estimate>): Promise<Estimate> => {
+        const response = await apiClient.post("/billing/estimates/", data);
+        return response.data;
+      },
 
-    update: async (id: number, data: Partial<Estimate>): Promise<Estimate> => {
-      const response = await apiClient.put(`/billing/estimates/${id}/`, data);
-      return response.data;
-    },
+        update: async (id: number, data: Partial<Estimate>): Promise<Estimate> => {
+          const response = await apiClient.put(`/billing/estimates/${id}/`, data);
+          return response.data;
+        },
 
-    delete: async (id: number): Promise<void> => {
-      await apiClient.delete(`/billing/estimates/${id}/`);
-    },
+          delete: async (id: number): Promise<void> => {
+            await apiClient.delete(`/billing/estimates/${id}/`);
+          },
 
-    send: async (id: number): Promise<void> => {
-      await apiClient.post(`/billing/estimates/${id}/send/`);
-    },
+            send: async (id: number): Promise<void> => {
+              await apiClient.post(`/billing/estimates/${id}/send/`);
+            },
 
-    approve: async (id: number): Promise<Estimate> => {
-      const response = await apiClient.post(`/billing/estimates/${id}/approve/`);
-      return response.data;
-    },
+              approve: async (id: number): Promise<Estimate> => {
+                const response = await apiClient.post(`/billing/estimates/${id}/approve/`);
+                return response.data;
+              },
 
-    decline: async (id: number, reason?: string): Promise<Estimate> => {
-      const response = await apiClient.post(`/billing/estimates/${id}/decline/`, { reason });
-      return response.data;
-    },
+                decline: async (id: number, reason?: string): Promise<Estimate> => {
+                  const response = await apiClient.post(`/billing/estimates/${id}/decline/`, { reason });
+                  return response.data;
+                },
 
-    convertToInvoice: async (id: number): Promise<Invoice> => {
-      const response = await apiClient.post(`/billing/estimates/${id}/convert_to_invoice/`);
-      // Backend returns { "message": "...", "invoice": {...} }
-      return response.data.invoice || response.data;
-    },
+                  convertToInvoice: async (id: number): Promise<Invoice> => {
+                    const response = await apiClient.post(`/billing/estimates/${id}/convert_to_invoice/`);
+                    // Backend returns { "message": "...", "invoice": {...} }
+                    return response.data.invoice || response.data;
+                  },
 
-    history: async (id: number) => {
-      const response = await apiClient.get(`/billing/estimates/${id}/history/`);
-      return response.data.history || response.data;
-    },
+                    history: async (id: number) => {
+                      const response = await apiClient.get(`/billing/estimates/${id}/history/`);
+                      return response.data.history || response.data;
+                    },
 
-    convertToWorkOrder: async (id: number): Promise<{ work_order_id: number; work_order_number: string }> => {
-      const response = await apiClient.post(`/billing/estimates/${id}/convert_to_work_order/`);
-      return response.data;
-    },
+                      convertToWorkOrder: async (id: number): Promise<{ work_order_id: number; work_order_number: string }> => {
+                        const response = await apiClient.post(`/billing/estimates/${id}/convert_to_work_order/`);
+                        return response.data;
+                      },
 
-    bulkSend: async (ids: number[]): Promise<{ message: string; sent_count: number; errors?: string[] }> => {
-      const response = await apiClient.post(`/billing/estimates/bulk_send/`, { ids });
-      return response.data;
-    },
+                        bulkSend: async (ids: number[]): Promise<{ message: string; sent_count: number; errors?: string[] }> => {
+                          const response = await apiClient.post(`/billing/estimates/bulk_send/`, { ids });
+                          return response.data;
+                        },
 
-    bulkUpdateStatus: async (ids: number[], status: string): Promise<{ message: string; updated_count: number; errors?: string[] }> => {
-      const response = await apiClient.post(`/billing/estimates/bulk_update_status/`, { ids, status });
-      return response.data;
-    },
+                          bulkUpdateStatus: async (ids: number[], status: string): Promise<{ message: string; updated_count: number; errors?: string[] }> => {
+                            const response = await apiClient.post(`/billing/estimates/bulk_update_status/`, { ids, status });
+                            return response.data;
+                          },
 
-    duplicate: async (id: number): Promise<Estimate> => {
-      const response = await apiClient.post(`/billing/estimates/${id}/duplicate/`);
-      // Backend returns { message: "...", estimate: {...} }
-      return response.data.estimate || response.data;
-    },
+                            duplicate: async (id: number): Promise<Estimate> => {
+                              const response = await apiClient.post(`/billing/estimates/${id}/duplicate/`);
+                              // Backend returns { message: "...", estimate: {...} }
+                              return response.data.estimate || response.data;
+                            },
 
-    pending: async (): Promise<Estimate[]> => {
-      const response = await apiClient.get("/billing/estimates/pending/");
-      return response.data.results || response.data;
-    },
+                              pending: async (): Promise<Estimate[]> => {
+                                const response = await apiClient.get("/billing/estimates/pending/");
+                                return response.data.results || response.data;
+                              },
 
-    expiringSoon: async (): Promise<Estimate[]> => {
-      const response = await apiClient.get("/billing/estimates/expiring_soon/");
-      return response.data.results || response.data;
-    },
+                                expiringSoon: async (): Promise<Estimate[]> => {
+                                  const response = await apiClient.get("/billing/estimates/expiring_soon/");
+                                  return response.data.results || response.data;
+                                },
 
-    stats: async (): Promise<{
-      counts: { total: number; draft: number; sent: number; approved: number; declined: number; expired: number };
-      financials: { total_approved: number; total_pending: number; total_declined: number };
-    }> => {
-      const response = await apiClient.get("/billing/estimates/stats/");
-      return response.data;
-    },
+                                  stats: async (): Promise<{
+                                    counts: { total: number; draft: number; sent: number; approved: number; declined: number; expired: number };
+                                    financials: { total_approved: number; total_pending: number; total_declined: number };
+                                  }> => {
+                                    const response = await apiClient.get("/billing/estimates/stats/");
+                                    return response.data;
+                                  },
 
-    nextNumber: async (): Promise<{ next_number: string }> => {
-      const response = await apiClient.get("/billing/estimates/next_number/");
-      return response.data;
-    },
+                                    nextNumber: async (): Promise<{ next_number: string }> => {
+                                      const response = await apiClient.get("/billing/estimates/next_number/");
+                                      return response.data;
+                                    },
   },
 
-  taxes: {
-    config: async (): Promise<TaxConfig> => {
-      const response = await apiClient.get("/billing/tax/config/");
-      return response.data;
-    },
+taxes: {
+  config: async (): Promise<TaxConfig> => {
+    const response = await apiClient.get("/billing/tax/config/");
+    return response.data;
+  },
   },
 };

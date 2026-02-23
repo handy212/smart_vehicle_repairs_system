@@ -74,7 +74,6 @@ export default function DashboardLayoutWrapper({
     );
   }
 
-  // Don't render dashboard if user is a customer (will be redirected)
   if (user?.role === "customer") {
     return null;
   }

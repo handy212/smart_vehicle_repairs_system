@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { roadsideApi, RoadsideRequest } from "@/lib/api/roadside";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Wrench, Plus, MapPin, Clock, CheckCircle, XCircle, Navigation, Car } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";

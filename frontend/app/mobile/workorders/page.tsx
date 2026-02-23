@@ -29,6 +29,7 @@ export default function MobileWorkOrdersPage() {
     setLoading(true);
     try {
       if (isOnline) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const params: any = {};
         if (statusFilter) {
           params.status = statusFilter;

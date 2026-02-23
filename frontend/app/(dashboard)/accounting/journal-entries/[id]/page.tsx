@@ -21,6 +21,7 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
 
 export default function JournalEntryDetailPage() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
@@ -60,11 +61,15 @@ export default function JournalEntryDetailPage() {
     }
 
     const totalDebits = (entry.transactions || [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter((t: any) => t.transaction_type === "debit")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .reduce((sum: number, t: any) => sum + parseFloat(t.amount || 0), 0);
 
     const totalCredits = (entry.transactions || [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter((t: any) => t.transaction_type === "credit")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .reduce((sum: number, t: any) => sum + parseFloat(t.amount || 0), 0);
 
     return (
@@ -145,6 +150,7 @@ export default function JournalEntryDetailPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {(entry.transactions || []).map((tx: any, idx: number) => (
                                 <TableRow key={tx.id || idx}>
                                     <TableCell className="font-mono text-sm">

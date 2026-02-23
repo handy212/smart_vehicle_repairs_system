@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PremiumIcons } from "@/components/ui/icons";

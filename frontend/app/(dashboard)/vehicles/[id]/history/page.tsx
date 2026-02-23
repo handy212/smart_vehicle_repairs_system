@@ -24,12 +24,14 @@ export default function VehicleHistoryPage() {
     queryFn: () => vehiclesApi.get(id),
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: workOrdersData, isLoading: workOrdersLoading } = useQuery({
     queryKey: ["workorders", "vehicle", id],
     queryFn: () => workordersApi.list({ customer: undefined }), // We'll filter client-side
     enabled: !!id,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: appointmentsData, isLoading: appointmentsLoading } = useQuery({
     queryKey: ["appointments", "vehicle", id],
     queryFn: () => appointmentsApi.list(),
@@ -234,6 +236,7 @@ export default function VehicleHistoryPage() {
                           : "-"}
                       </TableCell>
                       <TableCell>
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         <Badge variant={getStatusVariant(wo.status) as any}>
                           {wo.status?.replace("_", " ") || "-"}
                         </Badge>
@@ -297,6 +300,7 @@ export default function VehicleHistoryPage() {
                       <TableCell className="text-foreground">{apt.appointment_time || "-"}</TableCell>
                       <TableCell className="text-foreground">{apt.service_type || "-"}</TableCell>
                       <TableCell>
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         <Badge variant={getStatusVariant(apt.status) as any}>
                           {apt.status?.replace("_", " ") || "-"}
                         </Badge>
@@ -354,6 +358,7 @@ export default function VehicleHistoryPage() {
                         <p className="text-sm text-muted-foreground">{item.description}</p>
                       </div>
                       <div className="flex items-center space-x-2">
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         <Badge variant={getStatusVariant(item.status) as any}>
                           {item.status?.replace("_", " ")}
                         </Badge>

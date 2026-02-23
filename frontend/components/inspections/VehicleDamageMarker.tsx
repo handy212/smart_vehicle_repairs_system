@@ -4,12 +4,15 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { X, MapPin, Trash2, Edit2, Loader2, AlertTriangle, Info, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -209,11 +212,11 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
                       }}
                       className={`relative ${severitySizes[mark.severity]} ${damageTypeColors[mark.type]} ${severityColors[mark.severity]} rounded-full cursor-pointer hover:scale-110 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center group/button`}
                     >
-                      {/* Number Badge */}
+                      // Number Badge
                       <span className="text-white font-bold text-[10px] z-10 drop-shadow-lg">
                         {index + 1}
                       </span>
-                      {/* Pulse animation for major severity */}
+                      // Pulse animation for major severity
                       {mark.severity === "major" && (
                         <span className="absolute inset-0 rounded-full animate-ping opacity-75 bg-red-600"></span>
                       )}

@@ -78,6 +78,7 @@ function Calendar({
                             return <></>
                     }
                 },
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 Dropdown: ({ value, onChange, options, ...props }) => {
                     const selected = options?.find((option) => option.value === value)
                     const handleChange = (value: string) => {

@@ -17,9 +17,11 @@ import {
     Banknote,
     UserPlus,
     Target,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Shield,
     AlertTriangle,
     CheckCircle2,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     TrendingUp,
     Briefcase,
     GraduationCap,

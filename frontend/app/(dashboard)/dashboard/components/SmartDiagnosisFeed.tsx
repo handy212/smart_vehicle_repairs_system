@@ -47,6 +47,7 @@ export function SmartDiagnosisFeed({ logs, isLoading }: SmartDiagnosisFeedProps)
                 </div>
             ) : (
                 <div className="space-y-1">
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     {logs.map((log, idx) => (
                         <div
                             key={log.id}

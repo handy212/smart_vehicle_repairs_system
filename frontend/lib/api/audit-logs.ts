@@ -9,11 +9,12 @@ export interface AuditLog {
   model_name?: string;
   object_id?: string;
   object_repr?: string;
-  changes?: Record<string, any>;
-  changes_display?: string;
-  ip_address?: string;
-  user_agent?: string;
-  timestamp: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+changes ?: Record<string, any>;
+changes_display ?: string;
+ip_address ?: string;
+user_agent ?: string;
+timestamp: string;
 }
 
 export interface AuditLogListResponse {

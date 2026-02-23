@@ -64,7 +64,7 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
         unsyncedCounts: status.unsyncedCounts,
         queueStats: status.queueStats,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[OfflineStore] Failed to update sync status:', error);
     }
   },
@@ -89,8 +89,8 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
       await get().updateSyncStatus();
 
       return result;
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Sync failed';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Sync failed';
       set({
         isSyncing: false,
         syncError: errorMessage,
@@ -123,8 +123,12 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
 
 // Initialize online/offline listeners
 // Initialize online/offline listeners
-if (typeof window !== 'undefined' && !(window as any).__offline_listeners_initialized__) {
-  (window as any).__offline_listeners_initialized__ = true;
+interface OfflineWindow extends Window {
+  __offline_listeners_initialized__?: boolean;
+}
+
+if (typeof window !== 'undefined' && !(window as OfflineWindow).__offline_listeners_initialized__) {
+  (window as OfflineWindow).__offline_listeners_initialized__ = true;
 
   window.addEventListener('online', () => {
     useOfflineStore.getState().setOnline(true);

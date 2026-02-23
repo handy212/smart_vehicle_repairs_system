@@ -79,11 +79,11 @@ class IsAdmin(permissions.BasePermission):
 
 
 class IsManager(permissions.BasePermission):
-    """Permission check for manager users"""
+    """Permission check for manager users (also grants access to admins and superusers)"""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return request.user.role == 'manager'
+        return request.user.role in ('manager', 'admin') or request.user.is_superuser
 
 
 class IsStaff(permissions.BasePermission):

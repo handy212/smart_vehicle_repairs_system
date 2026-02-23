@@ -1,6 +1,7 @@
 "use client";
 
 import { useOfflineStore } from "@/store/offlineStore";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

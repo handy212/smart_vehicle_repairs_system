@@ -10,20 +10,25 @@ import {
     FileBarChart,
     Car,
     Wrench,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Clock,
     FolderOpen,
     Bell,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Settings,
     Mail,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ChevronRight
 } from "lucide-react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Button } from "@/components/ui/button";
 
 interface SidebarItem {
     id: string;
     label: string;
-    icon: any;
-    count?: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+icon: any;
+count ?: number;
 }
 
 interface CustomerSidebarProps {

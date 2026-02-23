@@ -39,12 +39,13 @@ export interface DiagnosticCode {
   description: string;
   severity: "critical" | "warning" | "info";
   severity_display?: string;
-  freeze_frame_data?: Record<string, any>;
-  status: "active" | "pending" | "resolved";
-  status_display?: string;
-  recorded_at: string;
-  created_at: string;
-  updated_at?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+freeze_frame_data ?: Record<string, any>;
+status: "active" | "pending" | "resolved";
+status_display ?: string;
+recorded_at: string;
+created_at: string;
+updated_at ?: string;
 }
 
 export interface DiagnosticTest {
@@ -55,19 +56,20 @@ export interface DiagnosticTest {
   test_procedure?: string;
   expected_result?: string;
   actual_result?: string;
-  measurements?: Record<string, any>;
-  tools_used?: string;
-  status: "pass" | "fail" | "inconclusive";
-  status_display?: string;
-  performed_at: string;
-  performed_by?: number | {
-    id: number;
-    first_name: string;
-    last_name: string;
-  };
-  performed_by_name?: string;
-  created_at: string;
-  updated_at?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+measurements ?: Record<string, any>;
+tools_used ?: string;
+status: "pass" | "fail" | "inconclusive";
+status_display ?: string;
+performed_at: string;
+performed_by ?: number | {
+  id: number;
+  first_name: string;
+  last_name: string;
+};
+performed_by_name ?: string;
+created_at: string;
+updated_at ?: string;
 }
 
 export interface DiagnosisFinding {
@@ -206,6 +208,7 @@ export const diagnosisApi = {
         return await diagnosisApi.get(diagnosis.id);
       }
       return null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;
@@ -347,6 +350,7 @@ export const diagnosisApi = {
       valid_until_days?: number;
       labor_rate?: number;
     }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<{ message: string; estimate: any }> => {
     const response = await apiClient.post(`/diagnosis/diagnoses/${diagnosisId}/create_estimate/`, data || {});
     return response.data;
@@ -456,85 +460,94 @@ export const diagnosisApi = {
       severity?: string;
       is_active?: boolean;
       search?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }): Promise<any[]> => {
-      const response = await apiClient.get("/diagnosis/code-library/", { params });
-      return response.data.results || response.data;
-    },
-    lookup: async (codeNumber: string, codeType: string = "obd_ii"): Promise<any> => {
-      // Trim and uppercase code number, lowercase code type for consistency
-      const cleanCodeNumber = codeNumber.trim().toUpperCase();
-      const cleanCodeType = codeType.trim().toLowerCase();
-      const response = await apiClient.get("/diagnosis/code-library/lookup/", {
-        params: { code_number: cleanCodeNumber, code_type: cleanCodeType },
-      });
-      return response.data;
-    },
-    search: async (query: string, codeType?: string): Promise<any[]> => {
-      const params: any = { search: query, is_active: true };
-      if (codeType) params.code_type = codeType;
-      const response = await apiClient.get("/diagnosis/code-library/", { params });
-      return response.data.results || response.data;
-    },
+  const response = await apiClient.get("/diagnosis/code-library/", { params });
+  return response.data.results || response.data;
+},
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+lookup: async (codeNumber: string, codeType: string = "obd_ii"): Promise<any> => {
+  // Trim and uppercase code number, lowercase code type for consistency
+  const cleanCodeNumber = codeNumber.trim().toUpperCase();
+  const cleanCodeType = codeType.trim().toLowerCase();
+  const response = await apiClient.get("/diagnosis/code-library/lookup/", {
+    params: { code_number: cleanCodeNumber, code_type: cleanCodeType },
+  });
+  return response.data;
+},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+search: async (query: string, codeType?: string): Promise<any[]> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const params: any = { search: query, is_active: true };
+  if (codeType) params.code_type = codeType;
+  const response = await apiClient.get("/diagnosis/code-library/", { params });
+  return response.data.results || response.data;
+},
   },
 
-  // Test Procedure Library
-  testProcedureLibrary: {
-    list: async (params?: {
-      category?: string;
-      is_active?: boolean;
-      search?: string;
+// Test Procedure Library
+testProcedureLibrary: {
+  list: async (params?: {
+    category?: string;
+    is_active?: boolean;
+    search?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }): Promise<any[]> => {
-      const response = await apiClient.get("/diagnosis/test-procedures/", { params });
-      return response.data.results || response.data;
-    },
-    get: async (id: number): Promise<any> => {
-      const response = await apiClient.get(`/diagnosis/test-procedures/${id}/`);
-      return response.data;
-    },
-    search: async (query: string, category?: string): Promise<any[]> => {
-      const params: any = { search: query, is_active: true };
-      if (category) params.category = category;
-      const response = await apiClient.get("/diagnosis/test-procedures/", { params });
-      return response.data.results || response.data;
-    },
-    use: async (id: number): Promise<any> => {
-      const response = await apiClient.post(`/diagnosis/test-procedures/${id}/use/`);
-      return response.data;
-    },
+  const response = await apiClient.get("/diagnosis/test-procedures/", { params });
+  return response.data.results || response.data;
+},
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+get: async (id: number): Promise<any> => {
+  const response = await apiClient.get(`/diagnosis/test-procedures/${id}/`);
+  return response.data;
+},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+search: async (query: string, category?: string): Promise<any[]> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const params: any = { search: query, is_active: true };
+  if (category) params.category = category;
+  const response = await apiClient.get("/diagnosis/test-procedures/", { params });
+  return response.data.results || response.data;
+},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+use: async (id: number): Promise<any> => {
+  const response = await apiClient.post(`/diagnosis/test-procedures/${id}/use/`);
+  return response.data;
+},
   },
 
-  // Diagnosis Photos
-  photos: {
-    list: async (params?: {
-      diagnosis?: number;
-      finding?: number;
-      photo_type?: string;
-    }): Promise<DiagnosisPhoto[]> => {
-      const response = await apiClient.get("/diagnosis/photos/", { params });
-      return response.data.results || response.data;
-    },
+// Diagnosis Photos
+photos: {
+  list: async (params?: {
+    diagnosis?: number;
+    finding?: number;
+    photo_type?: string;
+  }): Promise<DiagnosisPhoto[]> => {
+    const response = await apiClient.get("/diagnosis/photos/", { params });
+    return response.data.results || response.data;
+  },
     get: async (id: number): Promise<DiagnosisPhoto> => {
       const response = await apiClient.get(`/diagnosis/photos/${id}/`);
       return response.data;
     },
-    create: async (diagnosisId: number, data: FormData): Promise<DiagnosisPhoto> => {
-      const response = await apiClient.post("/diagnosis/photos/", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return response.data;
-    },
-    delete: async (id: number): Promise<void> => {
-      await apiClient.delete(`/diagnosis/photos/${id}/`);
-    },
-    analyzeDamage: async (id: number): Promise<{
-      detected_issues: string[];
-      confidence_score: number;
-      summary: string;
-      suggested_severity: string;
-    }> => {
-      const response = await apiClient.post(`/diagnosis/photos/${id}/analyze_damage/`);
-      return response.data;
-    },
+      create: async (diagnosisId: number, data: FormData): Promise<DiagnosisPhoto> => {
+        const response = await apiClient.post("/diagnosis/photos/", data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        return response.data;
+      },
+        delete: async (id: number): Promise<void> => {
+          await apiClient.delete(`/diagnosis/photos/${id}/`);
+        },
+          analyzeDamage: async (id: number): Promise<{
+            detected_issues: string[];
+            confidence_score: number;
+            summary: string;
+            suggested_severity: string;
+          }> => {
+            const response = await apiClient.post(`/diagnosis/photos/${id}/analyze_damage/`);
+            return response.data;
+          },
   },
 };
 

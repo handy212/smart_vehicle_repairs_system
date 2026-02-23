@@ -2,6 +2,7 @@
 
 import { Button, ButtonProps } from "@/components/ui/button";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useAuthStore } from "@/store/authStore";
 
 interface PermissionButtonProps extends ButtonProps {
   permission?: string;
@@ -27,10 +28,17 @@ export function PermissionButton({
   ...props
 }: PermissionButtonProps) {
   const { hasPermission, hasAnyPermission, hasAllPermissions } = usePermissions();
+  const { user } = useAuthStore();
+
+  // Admin bypass — consistent with PermissionGuard
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isAdmin = user?.role === 'admin' || (user as any)?.is_superuser;
 
   let hasAccess = true;
 
-  if (permission) {
+  if (isAdmin) {
+    hasAccess = true;
+  } else if (permission) {
     hasAccess = hasPermission(permission);
   } else if (permissions && permissions.length > 0) {
     hasAccess = requireAll

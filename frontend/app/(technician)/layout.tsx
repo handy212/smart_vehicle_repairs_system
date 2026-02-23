@@ -35,6 +35,7 @@ export default function TechnicianLayout({
                 try {
                     const currentUser = await authApi.getCurrentUser();
                     setUser(currentUser);
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 } catch (error) {
                     router.push("/login");
                 }

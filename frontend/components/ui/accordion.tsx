@@ -142,29 +142,31 @@ export function AccordionTrigger({ children, className, asChild }: AccordionTrig
   const { isOpen, onToggle } = itemContext;
 
   if (asChild && React.isValidElement(children)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return React.cloneElement(children as React.ReactElement<any>, {
       onClick: onToggle,
       "aria-expanded": isOpen,
       "data-state": isOpen ? "open" : "closed",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       className: cn(className, (children.props as any).className),
     });
-  }
+}
 
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={isOpen}
-      data-state={isOpen ? "open" : "closed"}
-      className={cn(
-        "flex w-full items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className
-      )}
-    >
-      {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-    </button>
-  );
+return (
+  <button
+    type="button"
+    onClick={onToggle}
+    aria-expanded={isOpen}
+    data-state={isOpen ? "open" : "closed"}
+    className={cn(
+      "flex w-full items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+      className
+    )}
+  >
+    {children}
+    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+  </button>
+);
 }
 
 interface AccordionContentProps {

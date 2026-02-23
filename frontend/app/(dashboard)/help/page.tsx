@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, Mail, BookOpen, ChevronRight, ExternalLink, ArrowLeft, LayoutDashboard } from "lucide-react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

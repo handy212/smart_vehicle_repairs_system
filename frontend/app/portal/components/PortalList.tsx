@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils/cn";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Column<T> {

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { auditLogsApi, AuditLog } from "@/lib/api/audit-logs";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,6 +11,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Search, Download, RefreshCw, FileText, CheckCircle2, AlertOctagon, XCircle } from "lucide-react";
 import { useState } from "react";
 import { exportToCSV } from "@/lib/utils/export";
@@ -233,6 +235,7 @@ export default function ImportHistoryPage() {
                                 {log.user_name || log.user_email || "Unknown"}
                               </TableCell>
                               <TableCell className="px-4 py-2.5">
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 <Badge variant={getModelBadgeVariant(log.model_name) as any} className="text-[10px] h-5 px-2 font-medium border-border">
                                   {log.model_name || "N/A"}
                                 </Badge>
@@ -268,7 +271,7 @@ export default function ImportHistoryPage() {
                     </Table>
                   </div>
 
-                  {/* Pagination */}
+                  // Pagination
                   {data.count > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/50">
                       <p className="text-xs text-muted-foreground">

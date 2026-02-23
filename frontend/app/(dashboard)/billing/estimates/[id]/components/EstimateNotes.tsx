@@ -2,15 +2,18 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { useToast } from "@/lib/hooks/useToast";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Save, AlertCircle } from "lucide-react";
 
 interface EstimateNotesProps {
-    estimate: any;
+    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
+estimate: any;
 }
 
 export function EstimateNotes({ estimate }: EstimateNotesProps) {

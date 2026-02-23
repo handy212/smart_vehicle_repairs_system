@@ -42,6 +42,7 @@ export default function BankReconciliationPage() {
         queryFn: async () => {
             const allAccounts = await accountingApi.getAccounts();
             // Filter only Asset accounts that look like banks
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return allAccounts.filter((acc: any) =>
                 acc.account_type === 'asset' &&
                 (acc.code.startsWith('10') ||
@@ -135,46 +136,47 @@ export default function BankReconciliationPage() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                (Array.isArray(statements) ? statements : (statements as any)?.results || []).map((statement: any) => (
-                                    <TableRow key={statement.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
-                                        <TableCell className="px-4 py-2 text-sm text-foreground">
-                                            <div className="flex items-center">
-                                                <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
-                                                {format(new Date(statement.statement_date), 'MMM d, yyyy')}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm text-muted-foreground">
-                                            {statement.bank_account_name || 'Bank Account'}
-                                        </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm font-mono text-muted-foreground text-right">
-                                            {formatCurrency(statement.opening_balance)}
-                                        </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm font-mono text-foreground font-medium text-right">
-                                            {formatCurrency(statement.closing_balance)}
-                                        </TableCell>
-                                        <TableCell className="px-4 py-2">
-                                            {statement.reconciled ? (
-                                                <Badge variant="outline" className="text-[10px] bg-success/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
-                                                    <Check className="w-3 h-3 mr-1" /> Reconciled
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="outline" className="text-[10px] bg-warning/10 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
-                                                    <AlertCircle className="w-3 h-3 mr-1" /> Pending
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="px-4 py-2 text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 text-xs"
-                                                onClick={() => router.push(`/accounting/banking/reconciliation/${statement.id}`)}
-                                            >
-                                                {statement.reconciled ? 'View' : 'Reconcile'}
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    (Array.isArray(statements) ? statements : (statements as any)?.results || []).map((statement: any) => (
+                                        <TableRow key={statement.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
+                                            <TableCell className="px-4 py-2 text-sm text-foreground">
+                                                <div className="flex items-center">
+                                                    <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
+                                                    {format(new Date(statement.statement_date), 'MMM d, yyyy')}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-sm text-muted-foreground">
+                                                {statement.bank_account_name || 'Bank Account'}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-sm font-mono text-muted-foreground text-right">
+                                                {formatCurrency(statement.opening_balance)}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-sm font-mono text-foreground font-medium text-right">
+                                                {formatCurrency(statement.closing_balance)}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2">
+                                                {statement.reconciled ? (
+                                                    <Badge variant="outline" className="text-[10px] bg-success/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                                                        <Check className="w-3 h-3 mr-1" /> Reconciled
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-[10px] bg-warning/10 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
+                                                        <AlertCircle className="w-3 h-3 mr-1" /> Pending
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-2 text-right">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => router.push(`/accounting/banking/reconciliation/${statement.id}`)}
+                                                >
+                                                    {statement.reconciled ? 'View' : 'Reconcile'}
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
                             )}
                         </TableBody>
                     </Table>
@@ -202,6 +204,7 @@ export default function BankReconciliationPage() {
                                     <SelectValue placeholder="Select account" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     {accounts?.map((acc: any) => (
                                         <SelectItem key={acc.id} value={acc.id.toString()}>
                                             {acc.code} - {acc.name}

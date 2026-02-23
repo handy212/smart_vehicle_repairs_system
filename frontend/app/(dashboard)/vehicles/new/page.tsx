@@ -19,6 +19,7 @@ export default function NewVehiclePage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const createMutation = useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: (data: VehicleFormData | FormData) => vehiclesApi.create(data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
@@ -31,14 +32,14 @@ export default function NewVehiclePage() {
     onError: (error) => {
       console.error("Error creating vehicle:", error);
       setFieldErrors({});
-      
+
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
-        
+
         // Extract field-level errors
         const extractedFieldErrors: Record<string, string> = {};
         let hasFieldErrors = false;
-        
+
         Object.keys(errorData).forEach((field) => {
           if (field !== 'non_field_errors' && field !== 'detail') {
             const fieldError = Array.isArray(errorData[field])
@@ -50,7 +51,7 @@ export default function NewVehiclePage() {
             }
           }
         });
-        
+
         if (hasFieldErrors) {
           setFieldErrors(extractedFieldErrors);
           // Show a summary message
@@ -80,60 +81,60 @@ export default function NewVehiclePage() {
     }
   });
 
-  const handleSubmit = async (data: VehicleFormData, imageFile: File | null) => {
-    setServerError(null);
-    let payload: VehicleFormData | FormData;
+const handleSubmit = async (data: VehicleFormData, imageFile: File | null) => {
+  setServerError(null);
+  let payload: VehicleFormData | FormData;
 
-    if (imageFile) {
-      const formData = new FormData();
-      Object.keys(data).forEach((key) => {
-        const value = data[key as keyof VehicleFormData];
-        if (value !== undefined && value !== null) {
-          formData.append(key, value.toString());
-        }
-      });
-      formData.append('image', imageFile);
-      payload = formData;
-    } else {
-      payload = data;
-    }
+  if (imageFile) {
+    const formData = new FormData();
+    Object.keys(data).forEach((key) => {
+      const value = data[key as keyof VehicleFormData];
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+    formData.append('image', imageFile);
+    payload = formData;
+  } else {
+    payload = data;
+  }
 
-    await createMutation.mutateAsync(payload);
-  };
+  await createMutation.mutateAsync(payload);
+};
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href={customerId ? `/customers/${customerId}` : "/vehicles"}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">New Vehicle</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Register a new vehicle</p>
-          </div>
+return (
+  <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    {/* Header */}
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <Link href={customerId ? `/customers/${customerId}` : "/vehicles"}>
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">New Vehicle</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Register a new vehicle</p>
         </div>
       </div>
-
-      {serverError && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
-        </div>
-      )}
-
-      <VehicleForm
-        customerId={customerId}
-        onSubmit={handleSubmit}
-        isSubmitting={createMutation.isPending}
-        mode="create"
-        onCancel={() => router.back()}
-        serverFieldErrors={fieldErrors}
-      />
     </div>
-  );
+
+    {serverError && (
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
+      </div>
+    )}
+
+    <VehicleForm
+      customerId={customerId}
+      onSubmit={handleSubmit}
+      isSubmitting={createMutation.isPending}
+      mode="create"
+      onCancel={() => router.back()}
+      serverFieldErrors={fieldErrors}
+    />
+  </div>
+);
 }

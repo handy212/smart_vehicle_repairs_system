@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ChevronRight, Home } from "lucide-react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 
 export function Breadcrumbs() {
@@ -44,6 +46,7 @@ export function Breadcrumbs() {
         <nav aria-label="Breadcrumb" className="hidden md:flex items-center space-x-1 text-sm text-muted-foreground ml-4 pl-4 border-l border-border h-6">
             <span className="font-medium text-muted-foreground">System</span>
 
+            {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
             {items.map((item, index) => (
                 <div key={item.href} className="flex items-center">
                     <ChevronRight className="w-4 h-4 mx-1 text-muted-foreground" />

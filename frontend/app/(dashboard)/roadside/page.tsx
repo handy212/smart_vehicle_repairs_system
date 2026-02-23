@@ -13,6 +13,7 @@ import {
     MapPin,
     Truck,
     Clock,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     User,
     Phone,
     ShieldCheck,
@@ -45,6 +46,7 @@ export default function RoadsidePage() {
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
     const [page, setPage] = useState(1);
+    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 

@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import * as React from 'react';
 
 // Cleanup after each test
 afterEach(() => {
@@ -39,8 +40,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock Next.js Link
 vi.mock('next/link', () => ({
-    default: ({ children, href }: any) => {
-        const React = require('react');
+    default: ({ children, href }: { children: React.ReactNode; href: string }) => {
         return React.createElement('a', { href }, children);
     },
 }));

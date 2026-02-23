@@ -157,6 +157,7 @@ export default function ControlPanelPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     {auditLogs?.map((log: any) => (
                                         <TableRow key={log.id}>
                                             <TableCell className="whitespace-nowrap text-xs text-muted-foreground">

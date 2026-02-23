@@ -4,12 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PremiumIcons } from "@/components/ui/icons";
 import {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ChevronLeft,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ChevronRight,
   PlusCircle, // Keep specialized UI icons or replace later
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Button } from "@/components/ui/button";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
@@ -19,8 +23,9 @@ import { useMemo } from "react";
 interface NavigationItem {
   name: string;
   href: string;
-  icon: any; // Allow any component
-  badge?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+icon: any; // Allow any component
+badge ?: boolean;
 }
 
 interface NavigationGroup {

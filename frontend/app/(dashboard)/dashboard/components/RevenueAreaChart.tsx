@@ -1,5 +1,6 @@
 "use client";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Dot } from "recharts";
 import { memo, useMemo } from "react";
 import { PremiumIcons } from "@/components/ui/icons";
@@ -42,6 +43,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const d = payload[0].payload;

@@ -18,85 +18,87 @@ export default function NewBundlePage() {
     const [serverError, setServerError] = useState<string | null>(null);
 
     const createMutation = useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => {
-            // Map frontend items format back to backend expectations
-            const payload = {
-                ...data,
-                items: data.items.map((item: any) => ({
-                    part_id: item.part_id,
-                    quantity: item.quantity
-                }))
-            };
-            return inventoryApi.createBundle(payload);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["service-bundles"] });
-            toast({
-                title: "Success",
-                description: "Service bundle created successfully",
-            });
-            router.push("/inventory/bundles");
-        },
-        onError: (error) => {
-            if (error instanceof AxiosError && error.response?.data) {
-                const data = error.response.data;
-                if (typeof data === 'string') {
-                    setServerError(data);
-                } else if (data.detail) {
-                    setServerError(data.detail);
-                } else {
-                    // Format field-level errors
-                    const fieldErrors = Object.entries(data)
-                        .map(([field, msgs]) => {
-                            const label = field.charAt(0).toUpperCase() + field.slice(1).replace('_', ' ');
-                            return `${label}: ${Array.isArray(msgs) ? msgs[0] : msgs}`;
-                        })
-                        .join('. ');
-                    setServerError(fieldErrors || "Failed to create bundle. Please check the data.");
-                }
+        // Map frontend items format back to backend expectations
+        const payload = {
+            ...data,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        items: data.items.map((item: any) => ({
+            part_id: item.part_id,
+            quantity: item.quantity
+        }))
+    };
+    return inventoryApi.createBundle(payload);
+},
+onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["service-bundles"] });
+    toast({
+        title: "Success",
+        description: "Service bundle created successfully",
+    });
+    router.push("/inventory/bundles");
+},
+    onError: (error) => {
+        if (error instanceof AxiosError && error.response?.data) {
+            const data = error.response.data;
+            if (typeof data === 'string') {
+                setServerError(data);
+            } else if (data.detail) {
+                setServerError(data.detail);
             } else {
-                setServerError("An unexpected error occurred.");
+                // Format field-level errors
+                const fieldErrors = Object.entries(data)
+                    .map(([field, msgs]) => {
+                        const label = field.charAt(0).toUpperCase() + field.slice(1).replace('_', ' ');
+                        return `${label}: ${Array.isArray(msgs) ? msgs[0] : msgs}`;
+                    })
+                    .join('. ');
+                setServerError(fieldErrors || "Failed to create bundle. Please check the data.");
             }
-        },
+        } else {
+            setServerError("An unexpected error occurred.");
+        }
+    },
     });
 
-    const onSubmit = async (data: BundleFormData) => {
-        setServerError(null);
-        createMutation.mutate(data);
-    };
+const onSubmit = async (data: BundleFormData) => {
+    setServerError(null);
+    createMutation.mutate(data);
+};
 
-    return (
-        <div className="space-y-6 pb-12">
-            <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center gap-4">
-                    <Link href="/inventory/bundles">
-                        <Button variant="ghost" size="sm">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Back
-                        </Button>
-                    </Link>
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">New Service Bundle</h1>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                            Create a reusable bundle of parts.
-                        </p>
-                    </div>
+return (
+    <div className="space-y-6 pb-12">
+        <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-4">
+                <Link href="/inventory/bundles">
+                    <Button variant="ghost" size="sm">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back
+                    </Button>
+                </Link>
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">New Service Bundle</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                        Create a reusable bundle of parts.
+                    </p>
                 </div>
             </div>
-
-            {serverError && (
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 border border-red-200">
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-800">{serverError}</p>
-                </div>
-            )}
-
-            <BundleForm
-                onSubmit={onSubmit}
-                isSubmitting={createMutation.isPending}
-                mode="create"
-                onCancel={() => router.push("/inventory/bundles")}
-            />
         </div>
-    );
+
+        {serverError && (
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 border border-red-200">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800">{serverError}</p>
+            </div>
+        )}
+
+        <BundleForm
+            onSubmit={onSubmit}
+            isSubmitting={createMutation.isPending}
+            mode="create"
+            onCancel={() => router.push("/inventory/bundles")}
+        />
+    </div>
+);
 }

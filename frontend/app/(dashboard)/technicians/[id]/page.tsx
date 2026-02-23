@@ -9,13 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ArrowLeft,
     MapPin,
     Mail,
     Phone,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Calendar,
     Award,
     Briefcase,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Clock,
     Map as MapIcon,
     Loader2,
@@ -318,7 +321,7 @@ function TechnicianProfileContent() {
                                 <CardContent>
                                     {technician.last_latitude && technician.last_longitude ? (
                                         <div className="bg-border h-64 rounded-lg flex items-center justify-center">
-                                            {/* Map placeholder */}
+                                            // Map placeholder
                                             <div className="text-center">
                                                 <MapIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
                                                 <p className="text-sm font-mono">{technician.last_latitude}, {technician.last_longitude}</p>

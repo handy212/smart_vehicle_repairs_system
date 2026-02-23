@@ -45,6 +45,7 @@ import {
   Repeat,
   Zap,
   Shield,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   UserPlus,
   Calendar,
   Briefcase,

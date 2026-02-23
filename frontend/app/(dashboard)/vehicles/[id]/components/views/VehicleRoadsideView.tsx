@@ -14,7 +14,8 @@ import { Truck, Eye, Plus } from "lucide-react";
 import Link from "next/link";
 
 interface VehicleRoadsideViewProps {
-    roadsideRequests: any[];
+    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
+roadsideRequests: any[];
 }
 
 export function VehicleRoadsideView({ roadsideRequests }: VehicleRoadsideViewProps) {
@@ -44,6 +45,7 @@ export function VehicleRoadsideView({ roadsideRequests }: VehicleRoadsideViewPro
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {roadsideRequests.map((req: any) => (
                                     <TableRow key={req.id} className="group hover:bg-muted/80 transition-colors border-b border-border last:border-0 hover:bg-muted">
                                         <TableCell className="px-4 py-2 font-medium font-mono text-xs text-foreground">

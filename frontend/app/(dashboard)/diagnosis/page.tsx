@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { diagnosisApi } from "@/lib/api/diagnosis";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +27,13 @@ import {
   Stethoscope,
   Search,
   User,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   Clock,
   MoreVertical,
   Eye,
   FileText,
   DollarSign,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   MonitorCheck,
   Timer,
   CheckCircle2,

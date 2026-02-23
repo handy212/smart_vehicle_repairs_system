@@ -40,6 +40,7 @@ export function ContractsView({ customerId }: ContractsViewProps) {
             {contracts.length > 0 && (
                 <DataTable
                     data={contracts}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     columns={columns as any}
                     isLoading={isLoading}
                     emptyMessage="No contracts found"

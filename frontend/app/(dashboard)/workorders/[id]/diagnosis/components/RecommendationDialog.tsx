@@ -20,7 +20,9 @@ import { Package } from "lucide-react";
 interface RecommendationDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSave: (data: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recommendation?: any;
     isLoading: boolean;
 }
@@ -38,6 +40,7 @@ export function RecommendationDialog({
         description: "",
         priority: "necessary" as const,
         service_package_id: undefined as number | undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         parts_needed: [] as any[],
         estimated_labor_hours: 0,
         estimated_parts_cost: 0,
@@ -56,6 +59,7 @@ export function RecommendationDialog({
         if (pkg) {
             // Map package parts to parts_needed format
             // Assuming pkg.parts is available and has structure we need
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const partsNeeded = pkg.parts?.map((p: any) => ({
                 name: p.part_name || p.part?.name,
                 part_id: p.part?.id,
@@ -153,6 +157,7 @@ export function RecommendationDialog({
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">-- Select a Service Package --</SelectItem>
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     {servicePackages?.results.map((pkg: any) => (
                                         <SelectItem key={pkg.id} value={pkg.id.toString()}>
                                             {pkg.name} ({pkg.estimated_labor_hours}h)
@@ -169,6 +174,7 @@ export function RecommendationDialog({
                                 </Label>
                                 <Select
                                     value={formData.recommendation_type}
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     onValueChange={(val) => setFormData({ ...formData, recommendation_type: val as any })}
                                     required
                                 >
@@ -191,6 +197,7 @@ export function RecommendationDialog({
                                 </Label>
                                 <Select
                                     value={formData.priority}
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     onValueChange={(val) => setFormData({ ...formData, priority: val as any })}
                                     required
                                 >

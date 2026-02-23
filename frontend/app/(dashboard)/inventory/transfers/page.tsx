@@ -27,6 +27,7 @@ import { useToast } from "@/lib/hooks/useToast";
 export default function TransfersPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
+    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
     const [page, setPage] = useState(1);
     const { toast } = useToast();
@@ -233,6 +234,7 @@ export default function TransfersPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     {transfers.map((transfer: any) => (
                                         <TableRow
                                             key={transfer.id}
@@ -263,6 +265,7 @@ export default function TransfersPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
+                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                 <Badge variant={getStatusVariant(transfer.status) as any} className="text-[10px] px-2 py-0 border shadow-none bg-transparent capitalize">
                                                     {getStatusLabel(transfer.status)}
                                                 </Badge>

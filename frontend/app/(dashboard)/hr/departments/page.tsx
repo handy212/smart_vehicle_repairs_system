@@ -6,9 +6,12 @@ import { hrApi, Department, Position } from "@/lib/api/hr";
 import { branchesApi } from "@/lib/api/branches";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Plus, Building2, Briefcase, Pencil, Trash2 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useRouter } from "next/navigation";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
@@ -219,6 +222,7 @@ function CreateDepartmentDialog({ open, onOpenChange, onCreated }: { open: boole
     });
 
     const mut = useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => hrApi.departments.create(data),
         onSuccess: () => {
             toast.success("Department created");
@@ -230,60 +234,60 @@ function CreateDepartmentDialog({ open, onOpenChange, onCreated }: { open: boole
         onError: () => toast.error("Failed to create department"),
     });
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>New Department</DialogTitle>
-                    <DialogDescription>Create a new functional unit.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label>Name</Label>
-                        <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Engineering" />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Branch</Label>
-                        <Select value={branchId} onValueChange={setBranchId}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select Branch" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {branches?.map(b => (
-                                    <SelectItem key={b.id} value={b.id.toString()}>
-                                        {b.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                            If left empty, your primary branch will be assigned.
-                        </p>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Department responsibilities..." />
-                    </div>
+return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>New Department</DialogTitle>
+                <DialogDescription>Create a new functional unit.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Engineering" />
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button
-                        onClick={() => mut.mutate({
-                            name,
-                            description: desc,
-                            branch: branchId ? Number(branchId) : null,
-                            is_active: true
-                        })}
-                        disabled={!name || mut.isPending}
-                    >
-                        Create
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+
+                <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select Branch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {branches?.map(b => (
+                                <SelectItem key={b.id} value={b.id.toString()}>
+                                    {b.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                        If left empty, your primary branch will be assigned.
+                    </p>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Department responsibilities..." />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button
+                    onClick={() => mut.mutate({
+                        name,
+                        description: desc,
+                        branch: branchId ? Number(branchId) : null,
+                        is_active: true
+                    })}
+                    disabled={!name || mut.isPending}
+                >
+                    Create
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
 }
 
 function CreatePositionDialog({ open, onOpenChange, onCreated }: { open: boolean, onOpenChange: (o: boolean) => void, onCreated: () => void }) {
@@ -296,40 +300,41 @@ function CreatePositionDialog({ open, onOpenChange, onCreated }: { open: boolean
     const { data: departments } = useQuery({ queryKey: ["hr", "departments", "list"], queryFn: async () => (await hrApi.departments.list()).data });
 
     const mut = useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => hrApi.positions.create(data),
         onSuccess: () => { toast.success("Position created"); onCreated(); setTitle(""); setDesc(""); setDeptId(""); },
         onError: () => toast.error("Failed to create position"),
     });
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>New Position</DialogTitle><DialogDescription>Define a job role.</DialogDescription></DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2"><Label>Job Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Senior Technician" /></div>
-                    <div className="space-y-2">
-                        <Label>Department</Label>
-                        <Select value={deptId} onValueChange={setDeptId}>
-                            <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
-                            <SelectContent>
-                                {departments?.results?.map(d => (
-                                    <SelectItem key={d.id} value={d.id.toString()}>
-                                        {d.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Min Salary</Label><Input type="number" value={minSal} onChange={e => setMinSal(e.target.value)} /></div>
-                        <div className="space-y-2"><Label>Max Salary</Label><Input type="number" value={maxSal} onChange={e => setMaxSal(e.target.value)} /></div>
-                    </div>
-                    <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} /></div>
+return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader><DialogTitle>New Position</DialogTitle><DialogDescription>Define a job role.</DialogDescription></DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2"><Label>Job Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Senior Technician" /></div>
+                <div className="space-y-2">
+                    <Label>Department</Label>
+                    <Select value={deptId} onValueChange={setDeptId}>
+                        <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                        <SelectContent>
+                            {departments?.results?.map(d => (
+                                <SelectItem key={d.id} value={d.id.toString()}>
+                                    {d.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ title, department: Number(deptId), description: desc, min_salary: minSal || null, max_salary: maxSal || null, is_active: true })} disabled={!title || !deptId || mut.isPending}>Create</Button></DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>Min Salary</Label><Input type="number" value={minSal} onChange={e => setMinSal(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Max Salary</Label><Input type="number" value={maxSal} onChange={e => setMaxSal(e.target.value)} /></div>
+                </div>
+                <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} /></div>
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ title, department: Number(deptId), description: desc, min_salary: minSal || null, max_salary: maxSal || null, is_active: true })} disabled={!title || !deptId || mut.isPending}>Create</Button></DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
 }
 
 function EditDepartmentDialog({ dept, open, onOpenChange, onUpdated }: { dept: Department | null, open: boolean, onOpenChange: (o: boolean) => void, onUpdated: () => void }) {
@@ -346,30 +351,31 @@ function EditDepartmentDialog({ dept, open, onOpenChange, onUpdated }: { dept: D
     }, [dept]);
 
     const mut = useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => hrApi.departments.update(dept!.id, data),
         onSuccess: () => { toast.success("Department updated"); onUpdated(); },
         onError: () => toast.error("Failed to update department"),
     });
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Edit Department</DialogTitle></DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} /></div>
-                    <div className="flex items-center gap-2">
-                        <Switch checked={isActive} onCheckedChange={setIsActive} />
-                        <Label>Active</Label>
-                    </div>
+return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader><DialogTitle>Edit Department</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} /></div>
+                <div className="flex items-center gap-2">
+                    <Switch checked={isActive} onCheckedChange={setIsActive} />
+                    <Label>Active</Label>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={() => mut.mutate({ name, description: desc, is_active: isActive })} disabled={!name || mut.isPending}>Save Changes</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onClick={() => mut.mutate({ name, description: desc, is_active: isActive })} disabled={!name || mut.isPending}>Save Changes</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
 }
 
 function EditPositionDialog({ pos, open, onOpenChange, onUpdated }: { pos: Position | null, open: boolean, onOpenChange: (o: boolean) => void, onUpdated: () => void }) {
@@ -394,61 +400,63 @@ function EditPositionDialog({ pos, open, onOpenChange, onUpdated }: { pos: Posit
     }, [pos]);
 
     const mut = useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => hrApi.positions.update(pos!.id, data),
         onSuccess: () => { toast.success("Position updated"); onUpdated(); },
         onError: () => toast.error("Failed to update position"),
     });
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Edit Position</DialogTitle></DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2"><Label>Job Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} /></div>
-                    <div className="space-y-2">
-                        <Label>Department</Label>
-                        <Select value={deptId} onValueChange={setDeptId}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                {departments?.results?.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Min Salary</Label><Input type="number" value={minSal} onChange={e => setMinSal(e.target.value)} /></div>
-                        <div className="space-y-2"><Label>Max Salary</Label><Input type="number" value={maxSal} onChange={e => setMaxSal(e.target.value)} /></div>
-                    </div>
-                    <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} /></div>
-                    <div className="flex items-center gap-2">
-                        <Switch checked={isActive} onCheckedChange={setIsActive} />
-                        <Label>Active</Label>
-                    </div>
+return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader><DialogTitle>Edit Position</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2"><Label>Job Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} /></div>
+                <div className="space-y-2">
+                    <Label>Department</Label>
+                    <Select value={deptId} onValueChange={setDeptId}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {departments?.results?.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={() => mut.mutate({ title, department: Number(deptId), description: desc, min_salary: minSal || null, max_salary: maxSal || null, is_active: isActive })} disabled={!title || !deptId || mut.isPending}>Save Changes</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2"><Label>Min Salary</Label><Input type="number" value={minSal} onChange={e => setMinSal(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Max Salary</Label><Input type="number" value={maxSal} onChange={e => setMaxSal(e.target.value)} /></div>
+                </div>
+                <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} /></div>
+                <div className="flex items-center gap-2">
+                    <Switch checked={isActive} onCheckedChange={setIsActive} />
+                    <Label>Active</Label>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onClick={() => mut.mutate({ title, department: Number(deptId), description: desc, min_salary: minSal || null, max_salary: maxSal || null, is_active: isActive })} disabled={!title || !deptId || mut.isPending}>Save Changes</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
 }
 
 function DeleteConfirmDialog({ open, onOpenChange, type, id, onDeleted }: { open: boolean, onOpenChange: (o: boolean) => void, type: "department" | "position", id: number | null, onDeleted: () => void }) {
     const mut = useMutation({
         mutationFn: () => type === "department" ? hrApi.departments.delete(id!) : hrApi.positions.delete(id!),
         onSuccess: () => { toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted`); onDeleted(); },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (err: any) => toast.error(err.response?.data?.detail || `Failed to delete ${type}`),
     });
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Are you sure?</DialogTitle><DialogDescription>This action cannot be undone. This will permanently delete the {type}.</DialogDescription></DialogHeader>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button variant="destructive" onClick={() => mut.mutate()} disabled={mut.isPending}>{mut.isPending ? "Deleting..." : "Delete"}</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader><DialogTitle>Are you sure?</DialogTitle><DialogDescription>This action cannot be undone. This will permanently delete the {type}.</DialogDescription></DialogHeader>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button variant="destructive" onClick={() => mut.mutate()} disabled={mut.isPending}>{mut.isPending ? "Deleting..." : "Delete"}</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
 }

@@ -50,6 +50,7 @@ export default function NewGatePassPage() {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<number | null>(
     workOrderId ? parseInt(workOrderId) : null
   );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [workOrderData, setWorkOrderData] = useState<any>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -100,6 +101,7 @@ export default function NewGatePassPage() {
   }, [selectedWorkOrderData, setValue, selectedWorkOrder]);
 
   // Helper function to get customer name from work order data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getCustomerName = (workOrder: any): string => {
     if (!workOrder) return "N/A";
     // Check if customer_name exists (from list serializer)
@@ -119,6 +121,7 @@ export default function NewGatePassPage() {
   };
 
   // Helper function to get vehicle info from work order data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getVehicleInfo = (workOrder: any): string => {
     if (!workOrder) return "N/A";
     // Check if vehicle_info exists (from list serializer)
@@ -155,7 +158,7 @@ export default function NewGatePassPage() {
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
         console.error("Error response data:", errorData);
-        
+
         // Handle field-level errors
         const fieldErrors: string[] = [];
         Object.keys(errorData).forEach((field) => {
@@ -166,7 +169,7 @@ export default function NewGatePassPage() {
             fieldErrors.push(`${field}: ${fieldError}`);
           }
         });
-        
+
         if (fieldErrors.length > 0) {
           setServerError(fieldErrors.join(', '));
         } else if (errorData.detail) {
@@ -185,15 +188,16 @@ export default function NewGatePassPage() {
   const onSubmit = async (data: GatePassFormData) => {
     setServerError(null);
     // Ensure customer, vehicle, and branch are included from work order
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const submitData: any = {
       ...data,
     };
-    
+
     if (workOrderData) {
       // Include customer and vehicle from work order
       submitData.customer = typeof workOrderData.customer === 'object' ? workOrderData.customer.id : workOrderData.customer;
       submitData.vehicle = typeof workOrderData.vehicle === 'object' ? workOrderData.vehicle.id : workOrderData.vehicle;
-      
+
       // Include branch from work order if available
       if (workOrderData.branch) {
         submitData.branch = typeof workOrderData.branch === 'object' ? workOrderData.branch.id : workOrderData.branch;

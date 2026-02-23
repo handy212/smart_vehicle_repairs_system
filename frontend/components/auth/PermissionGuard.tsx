@@ -36,6 +36,7 @@ export function PermissionGuard({
   const { user } = useAuthStore();
 
   // Check if user is admin or superuser - admins have all permissions
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const isAdmin = user?.role === 'admin' || (user as any)?.is_superuser;
 
   // If user is admin/superuser, always allow (backend will verify)
@@ -46,35 +47,27 @@ export function PermissionGuard({
 
   // Single permission check
   if (permission) {
-    // While loading, show by default (optimistic rendering) to prevent flickering
-    if (isLoading && !user) {
-      return null; // Wait for auth to load
-    }
+    // Wait for auth/permissions to fully load before rendering
     if (isLoading) {
-      return <>{children}</>; // Show while permissions load (optimistic)
+      return <>{fallback}</>;
     }
     return hasPermission(permission) ? <>{children}</> : <>{fallback}</>;
   }
 
   // Multiple permissions check
   if (permissions && permissions.length > 0) {
-    // While loading, show by default (optimistic rendering)
-    if (isLoading && !user) {
-      return null; // Wait for auth to load
-    }
+    // Wait for auth/permissions to fully load before rendering
     if (isLoading) {
-      return <>{children}</>; // Show while permissions load (optimistic)
+      return <>{fallback}</>;
     }
-    
+
     const hasAccess = requireAll
       ? hasAllPermissions(permissions)
       : hasAnyPermission(permissions);
-    
+
     return hasAccess ? <>{children}</> : <>{fallback}</>;
   }
 
   // No permission specified - render children
   return <>{children}</>;
 }
-
-

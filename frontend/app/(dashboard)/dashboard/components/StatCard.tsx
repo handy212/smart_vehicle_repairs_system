@@ -44,7 +44,7 @@ export const StatCard = memo(function StatCard({
         !alert && !link && "hover:shadow-md"
       )}
     >
-      {/* Decorative gradient background */}
+      // Decorative gradient background
       <div
         className={cn(
           "absolute top-0 right-0 w-24 h-24 rounded-full opacity-10 blur-2xl -translate-y-1/2 translate-x-1/2",
@@ -132,7 +132,7 @@ export const StatCard = memo(function StatCard({
         )}
       </CardContent>
 
-      {/* Hover effect overlay */}
+      // Hover effect overlay
       {link && (
         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
       )}

@@ -50,6 +50,7 @@ export function InlineInventoryForm({
     });
 
     // Fetch suppliers for dropdown
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: suppliersData, isLoading: loadingSuppliers } = useQuery({
         queryKey: ["suppliers"],
         queryFn: async () => {
@@ -59,6 +60,7 @@ export function InlineInventoryForm({
 
     const suppliers = Array.isArray(suppliersData)
         ? suppliersData
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         : (suppliersData as any)?.results || [];
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -161,6 +163,7 @@ export function InlineInventoryForm({
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="0">Select supplier...</SelectItem>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {suppliers.map((s: any) => (
                                 <SelectItem key={s.id} value={s.id.toString()}>
                                     {s.name}

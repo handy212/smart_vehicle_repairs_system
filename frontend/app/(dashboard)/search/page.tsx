@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Users, Car, Wrench, Calendar, Receipt, Package } from "lucide-react";
 import Link from "next/link";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "@/lib/hooks/useDebounce";

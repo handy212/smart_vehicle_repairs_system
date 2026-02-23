@@ -678,7 +678,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             }
         })
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, HasPermission('manage_workorders')])
     def check_overdue(self, request):
         """Check for overdue work orders and send notifications"""
         from apps.notifications_app.triggers import notification_triggers

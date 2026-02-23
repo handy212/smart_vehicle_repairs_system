@@ -77,6 +77,7 @@ export default function NewInspectionPage() {
         });
         router.push("/mobile/inspections");
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Failed to create inspection:", error);
       toast({

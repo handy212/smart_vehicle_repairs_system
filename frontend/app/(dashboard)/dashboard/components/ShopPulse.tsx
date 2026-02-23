@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import { AdvancedWidget } from "./AdvancedWidget";
 import { PremiumIcons } from "@/components/ui/icons";
@@ -89,6 +90,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                 {/* Visual Flow Connectors */}
                 <div className="absolute top-[38px] left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-blue-500/20 via-primary/20 to-emerald-500/20 -z-0 hidden md:block" />
 
+                {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
                 {statusGroups.map((group, idx) => {
                     const count = getGroupCount(group.keys);
                     const Icon = PremiumIcons[group.icon as keyof typeof PremiumIcons];

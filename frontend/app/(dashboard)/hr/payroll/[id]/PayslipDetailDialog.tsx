@@ -8,6 +8,7 @@ import {
     DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Loader2, Download, Building2, User, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 

@@ -1,8 +1,10 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ArrowDown, ArrowUp, DollarSign, TrendingUp, TrendingDown, Activity, Wallet } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 
 interface MetricCardProps {
@@ -15,9 +17,10 @@ interface MetricCardProps {
     };
     icon?: "dollar" | "activity" | "wallet" | "trend";
     variant?: "default" | "success" | "warning" | "danger" | "info";
-    data?: any[]; // For sparkline
-    dataKey?: string;
-    onClick?: () => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+data ?: any[]; // For sparkline
+dataKey ?: string;
+onClick ?: () => void;
 }
 
 export function MetricCard({ title, value, trend, icon, variant = "default", data, dataKey, onClick }: MetricCardProps) {

@@ -48,36 +48,37 @@ export interface PurchaseOrder {
   id: number;
   po_number: string;
   supplier: number | Supplier;
-  branch?: number | any;
-  supplier_name?: string;
-  order_date: string;
-  expected_delivery_date?: string;
-  status: 'draft' | 'pending_approval' | 'approved' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
-  subtotal?: string;
-  tax?: string;
-  tax_amount?: string;
-  shipping?: string;
-  shipping_cost?: string;
-  total?: string;
-  notes?: string;
-  internal_notes?: string;
-  submitted_at?: string;
-  submitted_by?: number;
-  submitted_by_name?: string;
-  approved_at?: string;
-  approved_by?: number;
-  approved_by_name?: string;
-  received_date?: string;
-  received_at?: string;
-  received_by?: number;
-  received_by_name?: string;
-  created_by?: number;
-  created_by_name?: string;
-  created_at?: string;
-  updated_at?: string;
-  items?: PurchaseOrderItem[];
-  assigned_approver?: number;
-  assigned_approver_name?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+branch ?: number | any;
+supplier_name ?: string;
+order_date: string;
+expected_delivery_date ?: string;
+status: 'draft' | 'pending_approval' | 'approved' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
+subtotal ?: string;
+tax ?: string;
+tax_amount ?: string;
+shipping ?: string;
+shipping_cost ?: string;
+total ?: string;
+notes ?: string;
+internal_notes ?: string;
+submitted_at ?: string;
+submitted_by ?: number;
+submitted_by_name ?: string;
+approved_at ?: string;
+approved_by ?: number;
+approved_by_name ?: string;
+received_date ?: string;
+received_at ?: string;
+received_by ?: number;
+received_by_name ?: string;
+created_by ?: number;
+created_by_name ?: string;
+created_at ?: string;
+updated_at ?: string;
+items ?: PurchaseOrderItem[];
+assigned_approver ?: number;
+assigned_approver_name ?: string;
 }
 
 export interface PurchaseOrderItem {
@@ -495,139 +496,149 @@ export const inventoryApi = {
     await apiClient.delete(`/inventory/purchase-orders/${id}/`);
   },
 
-  submitPurchaseOrderForApproval: async (id: number, approverId?: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/purchase-orders/${id}/submit-for-approval/`, {
-      approver_id: approverId
-    });
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+submitPurchaseOrderForApproval: async (id: number, approverId?: number): Promise<any> => {
+  const response = await apiClient.post(`/inventory/purchase-orders/${id}/submit-for-approval/`, {
+    approver_id: approverId
+  });
+  return response.data;
+},
 
-  approvePurchaseOrder: async (id: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/purchase-orders/${id}/approve/`);
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+approvePurchaseOrder: async (id: number): Promise<any> => {
+  const response = await apiClient.post(`/inventory/purchase-orders/${id}/approve/`);
+  return response.data;
+},
 
-  confirmPurchaseOrder: async (id: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/purchase-orders/${id}/confirm/`);
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+confirmPurchaseOrder: async (id: number): Promise<any> => {
+  const response = await apiClient.post(`/inventory/purchase-orders/${id}/confirm/`);
+  return response.data;
+},
 
-  cancelPurchaseOrder: async (id: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/purchase-orders/${id}/cancel/`);
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+cancelPurchaseOrder: async (id: number): Promise<any> => {
+  const response = await apiClient.post(`/inventory/purchase-orders/${id}/cancel/`);
+  return response.data;
+},
 
   addPurchaseOrderItem: async (id: number, item: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem> => {
     const response = await apiClient.post(`/inventory/purchase-orders/${id}/add_item/`, item);
     return response.data;
   },
 
-  removePurchaseOrderItem: async (poId: number, itemId: number): Promise<void> => {
-    await apiClient.post(`/inventory/purchase-orders/${poId}/remove_item/`, { item_id: itemId });
-  },
+    removePurchaseOrderItem: async (poId: number, itemId: number): Promise<void> => {
+      await apiClient.post(`/inventory/purchase-orders/${poId}/remove_item/`, { item_id: itemId });
+    },
 
 
-  updatePurchaseOrderItem: async (poId: number, itemId: number, data: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem> => {
-    const response = await apiClient.post(`/inventory/purchase-orders/${poId}/update_item/`, {
-      item_id: itemId,
-      ...data
-    });
-    return response.data;
-  },
+      updatePurchaseOrderItem: async (poId: number, itemId: number, data: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem> => {
+        const response = await apiClient.post(`/inventory/purchase-orders/${poId}/update_item/`, {
+          item_id: itemId,
+          ...data
+        });
+        return response.data;
+      },
 
-  receiveItem: async (itemId: number, quantityReceived: number, notes?: string): Promise<any> => {
-    const response = await apiClient.post(`/inventory/po-items/${itemId}/receive/`, {
-      quantity_received: quantityReceived,
-      notes: notes || ''
-    });
-    return response.data;
-  },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+receiveItem: async (itemId: number, quantityReceived: number, notes?: string): Promise<any> => {
+  const response = await apiClient.post(`/inventory/po-items/${itemId}/receive/`, {
+    quantity_received: quantityReceived,
+    notes: notes || ''
+  });
+  return response.data;
+},
 
   pendingPurchaseOrders: async (): Promise<PurchaseOrder[]> => {
     const response = await apiClient.get("/inventory/purchase-orders/pending/");
     return response.data.results || response.data;
   },
 
-  overduePurchaseOrders: async (): Promise<PurchaseOrder[]> => {
-    const response = await apiClient.get("/inventory/purchase-orders/overdue/");
-    return response.data;
-  },
+    overduePurchaseOrders: async (): Promise<PurchaseOrder[]> => {
+      const response = await apiClient.get("/inventory/purchase-orders/overdue/");
+      return response.data;
+    },
 
-  // Stock Items (Branch Inventory)
-  listStockItems: async (params?: {
-    page?: number;
-    search?: string;
-    branch?: number;
-    is_low_stock?: boolean;
-    is_out_of_stock?: boolean;
-  }): Promise<{ count: number; next: string | null; previous: string | null; results: StockItem[] }> => {
-    const response = await apiClient.get("/inventory/stock-items/", { params });
-    return response.data;
-  },
+      // Stock Items (Branch Inventory)
+      listStockItems: async (params?: {
+        page?: number;
+        search?: string;
+        branch?: number;
+        is_low_stock?: boolean;
+        is_out_of_stock?: boolean;
+      }): Promise<{ count: number; next: string | null; previous: string | null; results: StockItem[] }> => {
+        const response = await apiClient.get("/inventory/stock-items/", { params });
+        return response.data;
+      },
 
-  getStockItem: async (id: number): Promise<StockItem> => {
-    const response = await apiClient.get(`/inventory/stock-items/${id}/`);
-    return response.data;
-  },
+        getStockItem: async (id: number): Promise<StockItem> => {
+          const response = await apiClient.get(`/inventory/stock-items/${id}/`);
+          return response.data;
+        },
 
-  updateStockItem: async (id: number, data: Partial<StockItem>): Promise<StockItem> => {
-    const response = await apiClient.patch(`/inventory/stock-items/${id}/`, data);
-    return response.data;
-  },
+          updateStockItem: async (id: number, data: Partial<StockItem>): Promise<StockItem> => {
+            const response = await apiClient.patch(`/inventory/stock-items/${id}/`, data);
+            return response.data;
+          },
 
-  // Transfers
-  listTransfers: async (params?: {
-    page?: number;
-    search?: string;
-    status?: string;
-    source_branch?: number;
-    destination_branch?: number;
-  }): Promise<{ count: number; next: string | null; previous: string | null; results: Transfer[] }> => {
-    const response = await apiClient.get("/inventory/transfers/", { params });
-    return response.data;
-  },
+            // Transfers
+            listTransfers: async (params?: {
+              page?: number;
+              search?: string;
+              status?: string;
+              source_branch?: number;
+              destination_branch?: number;
+            }): Promise<{ count: number; next: string | null; previous: string | null; results: Transfer[] }> => {
+              const response = await apiClient.get("/inventory/transfers/", { params });
+              return response.data;
+            },
 
-  getTransfer: async (id: number): Promise<Transfer> => {
-    const response = await apiClient.get(`/inventory/transfers/${id}/`);
-    return response.data;
-  },
+              getTransfer: async (id: number): Promise<Transfer> => {
+                const response = await apiClient.get(`/inventory/transfers/${id}/`);
+                return response.data;
+              },
 
-  createTransfer: async (data: Partial<Transfer>): Promise<Transfer> => {
-    const response = await apiClient.post("/inventory/transfers/", data);
-    return response.data;
-  },
+                createTransfer: async (data: Partial<Transfer>): Promise<Transfer> => {
+                  const response = await apiClient.post("/inventory/transfers/", data);
+                  return response.data;
+                },
 
-  updateTransfer: async (id: number, data: Partial<Transfer>): Promise<Transfer> => {
-    const response = await apiClient.patch(`/inventory/transfers/${id}/`, data);
-    return response.data;
-  },
+                  updateTransfer: async (id: number, data: Partial<Transfer>): Promise<Transfer> => {
+                    const response = await apiClient.patch(`/inventory/transfers/${id}/`, data);
+                    return response.data;
+                  },
 
-  submitTransferForApproval: async (id: number, approverId?: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/transfers/${id}/submit-for-approval/`, {
-      approver_id: approverId
-    });
-    return response.data;
-  },
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+submitTransferForApproval: async (id: number, approverId?: number): Promise<any> => {
+  const response = await apiClient.post(`/inventory/transfers/${id}/submit-for-approval/`, {
+    approver_id: approverId
+  });
+  return response.data;
+},
 
-  approveTransfer: async (id: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/transfers/${id}/approve/`);
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+approveTransfer: async (id: number): Promise<any> => {
+  const response = await apiClient.post(`/inventory/transfers/${id}/approve/`);
+  return response.data;
+},
 
-  rejectTransfer: async (id: number, reason?: string): Promise<any> => {
-    const response = await apiClient.post(`/inventory/transfers/${id}/reject/`, { reason });
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+rejectTransfer: async (id: number, reason?: string): Promise<any> => {
+  const response = await apiClient.post(`/inventory/transfers/${id}/reject/`, { reason });
+  return response.data;
+},
 
-  shipTransfer: async (id: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/transfers/${id}/ship/`);
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+shipTransfer: async (id: number): Promise<any> => {
+  const response = await apiClient.post(`/inventory/transfers/${id}/ship/`);
+  return response.data;
+},
 
-  receiveTransfer: async (id: number, items: Record<number, number>): Promise<any> => {
-    const response = await apiClient.post(`/inventory/transfers/${id}/receive/`, { items });
-    return response.data;
-  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+receiveTransfer: async (id: number, items: Record<number, number>): Promise<any> => {
+  const response = await apiClient.post(`/inventory/transfers/${id}/receive/`, { items });
+  return response.data;
+},
 
   // Service Bundles
   listBundles: async (params?: {
@@ -639,27 +650,28 @@ export const inventoryApi = {
     return response.data;
   },
 
-  getBundle: async (id: number): Promise<ServiceBundle> => {
-    const response = await apiClient.get(`/inventory/service-bundles/${id}/`);
-    return response.data;
-  },
+    getBundle: async (id: number): Promise<ServiceBundle> => {
+      const response = await apiClient.get(`/inventory/service-bundles/${id}/`);
+      return response.data;
+    },
 
-  createBundle: async (data: Partial<ServiceBundle>): Promise<ServiceBundle> => {
-    const response = await apiClient.post("/inventory/service-bundles/", data);
-    return response.data;
-  },
+      createBundle: async (data: Partial<ServiceBundle>): Promise<ServiceBundle> => {
+        const response = await apiClient.post("/inventory/service-bundles/", data);
+        return response.data;
+      },
 
-  updateBundle: async (id: number, data: Partial<ServiceBundle>): Promise<ServiceBundle> => {
-    const response = await apiClient.patch(`/inventory/service-bundles/${id}/`, data);
-    return response.data;
-  },
+        updateBundle: async (id: number, data: Partial<ServiceBundle>): Promise<ServiceBundle> => {
+          const response = await apiClient.patch(`/inventory/service-bundles/${id}/`, data);
+          return response.data;
+        },
 
-  deleteBundle: async (id: number): Promise<void> => {
-    await apiClient.delete(`/inventory/service-bundles/${id}/`);
-  },
+          deleteBundle: async (id: number): Promise<void> => {
+            await apiClient.delete(`/inventory/service-bundles/${id}/`);
+          },
 
-  getBundleForecast: async (branchId: number): Promise<any[]> => {
-    const response = await apiClient.get(`/inventory/service-bundles/forecast/?branch=${branchId}`);
-    return response.data;
-  },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+getBundleForecast: async (branchId: number): Promise<any[]> => {
+  const response = await apiClient.get(`/inventory/service-bundles/forecast/?branch=${branchId}`);
+  return response.data;
+},
 };

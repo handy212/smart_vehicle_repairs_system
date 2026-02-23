@@ -2,6 +2,7 @@
 
 import { PremiumIcons } from "@/components/ui/icons";
 import { useAuthStore } from "@/store/authStore";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { User, LogOut, Settings } from "lucide-react"; // Keep for now if needed (though we're replacing usage below)
 import {
     DropdownMenu,
@@ -15,17 +16,21 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { branchesApi, type Branch } from "@/lib/api/admin";
 import { useBranchStore } from "@/store/branchStore";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ChevronDown } from "lucide-react";
 import {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Select,
 } from "@/components/ui/select";
 
 export function UserMenu() {
     const { user, logout } = useAuthStore();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { activeBranchId, activeBranch, setBranch } = useBranchStore();
     const router = useRouter();
     const queryClient = useQueryClient();

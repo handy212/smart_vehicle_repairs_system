@@ -2,6 +2,7 @@
 import {
     ClipboardList, Package, CreditCard, Users, Car, Calendar,
     BarChart3, Settings, Truck, Wrench, Search, LayoutDashboard, FileCheck,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Bell, Ticket, FileBarChart, MessageSquare, ShieldAlert, UserCog
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ export type HelpModule = {
     id: string;
     title: string;
     description: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     topics: HelpTopic[];
 };

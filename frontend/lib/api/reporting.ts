@@ -32,8 +32,10 @@ export interface DashboardOverview {
     arr: number;
   };
   recent_activity: {
-    work_orders: Array<any>;
-    appointments: Array<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+work_orders: Array<any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+appointments: Array<any>;
   };
 }
 

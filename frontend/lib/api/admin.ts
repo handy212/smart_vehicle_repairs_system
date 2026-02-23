@@ -101,11 +101,12 @@ export interface AuditLog {
   model_name: string;
   object_id: string;
   object_repr: string;
-  changes: Record<string, any>;
-  changes_display?: string;
-  ip_address?: string;
-  user_agent?: string;
-  timestamp: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+changes: Record<string, any>;
+changes_display ?: string;
+ip_address ?: string;
+user_agent ?: string;
+timestamp: string;
 }
 
 export interface SystemBackup {
@@ -458,6 +459,7 @@ export const adminApi = {
     }): Promise<Blob> => {
       const format = params?.format || 'csv';
       // Map format to file_format for backend to avoid DRF content negotiation issues
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { format: _, ...rest } = params || {};
       const queryParams = { ...rest, file_format: format };
       try {
@@ -474,6 +476,7 @@ export const adminApi = {
         }
 
         return response.data;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // If it's already an Error, rethrow it
         if (error instanceof Error) {

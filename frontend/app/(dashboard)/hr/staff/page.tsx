@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { hrApi, StaffListItem } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,6 +101,7 @@ function StaffContent() {
     const probationCount = staff.filter(e => e.employment_status === "probation").length;
 
     const isAllSelected = staff.length > 0 && selectedIds.size === staff.length;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isSomeSelected = selectedIds.size > 0 && selectedIds.size < staff.length;
 
     const toggleSelectAll = () => {

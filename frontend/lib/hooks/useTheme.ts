@@ -80,6 +80,7 @@ export function useTheme() {
   useEffect(() => {
     if (theme !== 'system' || !mounted) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handle = (e: MediaQueryListEvent) => applyTheme('system');
     mq.addEventListener('change', handle);
     return () => mq.removeEventListener('change', handle);

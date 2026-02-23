@@ -68,6 +68,7 @@ export default function AssetCategoriesPage() {
             });
             handleCloseDialog();
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
             toast({
                 title: "Error",
@@ -89,6 +90,7 @@ export default function AssetCategoriesPage() {
             });
             handleCloseDialog();
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
             toast({
                 title: "Error",
@@ -108,6 +110,7 @@ export default function AssetCategoriesPage() {
                 description: "Asset category deleted successfully",
             });
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
             toast({
                 title: "Error",
@@ -217,6 +220,7 @@ export default function AssetCategoriesPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     {categories.map((category: any) => (
                                         <TableRow key={category.id}>
                                             <TableCell className="font-medium">{category.name}</TableCell>

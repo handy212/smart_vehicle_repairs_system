@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ChevronsUpDown } from "lucide-react"
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {

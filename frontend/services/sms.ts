@@ -10,12 +10,12 @@ export interface SendSMSResponse {
     status: string;
     message: string;
     notification_id?: number;
-    details?: any;
+    details?: Record<string, unknown>;
 }
 
 export interface BulkSendSMSResponse {
     message: string;
-    results: any[];
+    results: Record<string, unknown>[];
     total: number;
     successful: number;
     failed?: number; // Added in backend response

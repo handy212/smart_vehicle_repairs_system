@@ -45,6 +45,7 @@ describe('ErrorBoundary', () => {
         );
 
         // Should show the error boundary fallback, not crash
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(screen.queryByText('test crash')).not.toBeNull;
         // The error boundary should catch and display something
         expect(

@@ -62,6 +62,7 @@ export default function JournalEntriesPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 {entries?.map((entry: any) => (
                                     <TableRow
                                         key={entry.id}

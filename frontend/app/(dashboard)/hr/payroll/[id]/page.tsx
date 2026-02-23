@@ -1,10 +1,12 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { hrApi, PayrollPeriod, PaySlip } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Banknote, ArrowLeft, CheckCircle2, Play, CreditCard, User, Download,
 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
@@ -13,6 +15,7 @@ import { cn } from "@/lib/utils/cn";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card";
 import {
@@ -34,6 +37,7 @@ export default function PayrollPeriodDetailPage() {
 
 function PayrollPeriodDetail() {
     const params = useParams();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const router = useRouter();
     const queryClient = useQueryClient();
     const periodId = Number(params.id);

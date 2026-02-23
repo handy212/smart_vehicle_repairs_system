@@ -56,6 +56,7 @@ export default function TimeTrackingPage() {
           setActiveLog(active);
         }
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       // 404 is expected when no active time log exists - silently ignore
       if (error?.response?.status !== 404) {
@@ -69,9 +70,9 @@ export default function TimeTrackingPage() {
     try {
       if (isOnline) {
         const response = await apiClient.get("/workorders/time-logs/", {
-          params: { 
-            limit: 10, 
-            ordering: "-clock_in", 
+          params: {
+            limit: 10,
+            ordering: "-clock_in",
             ...(user?.id ? { technician: user.id } : {})
           },
         });

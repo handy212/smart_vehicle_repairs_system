@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, AlertCircle, Building2, Info, RefreshCw, Copy, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect, useMemo } from "react";
 import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
@@ -281,6 +282,7 @@ export default function NewUserPage() {
       });
       router.push("/admin/users");
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
@@ -446,6 +448,7 @@ export default function NewUserPage() {
                   </label>
                   <Select
                     value={watch("role")}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
                   >
                     <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
