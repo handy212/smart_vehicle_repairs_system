@@ -91,7 +91,7 @@ export default function NewStaffPage() {
     const { data: branchesData } = useQuery({
         queryKey: ["branches"],
         queryFn: () => branchesApi.list({ is_active: true }).then(res => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             const data = res as any;
             return Array.isArray(data) ? data : data.results || [];
         }),
@@ -131,7 +131,7 @@ export default function NewStaffPage() {
 
             // Append all fields to FormData
             Object.keys(data).forEach((key) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 const value = (data as any)[key];
                 if (key === "profile_picture") {
                     if (value instanceof File) {
@@ -152,7 +152,7 @@ export default function NewStaffPage() {
                 type: "success",
             });
             router.push("/hr/staff");
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } catch (error: any) {
             console.error(error);
             addToast({
@@ -504,7 +504,7 @@ export default function NewStaffPage() {
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                                 {branchesData?.map((branch: any) => (
                                                     <SelectItem key={branch.id} value={branch.id.toString()}>
                                                         {branch.name}

@@ -87,7 +87,7 @@ export function NotesView({ customerId }: NotesViewProps) {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const startEdit = (note: any) => {
         setEditingNote(note);
         setNewNote(note.content || "");
@@ -152,27 +152,27 @@ export function NotesView({ customerId }: NotesViewProps) {
                         <p>No notes found.</p>
                     </div>
                 ) : (
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     notes.map((note: any) => (
-                <Card key={note.id}>
-                    <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-sm">{note.created_by_name || "User"}</span>
-                                <span className="text-xs text-muted-foreground">{format(new Date(note.created_at), "MMM dd, yyyy h:mm a")}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {note.is_important && <Badge variant="danger">Important</Badge>}
-                                <div className="flex gap-1 ml-2">
-                                    <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground" onClick={() => startEdit(note)}>Edit</Button>
-                                    <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500 hover:text-red-600" onClick={() => { if (confirm("Delete note?")) deleteMutation.mutate(note.id); }}>Delete</Button>
+                        <Card key={note.id}>
+                            <CardContent className="p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-sm">{note.created_by_name || "User"}</span>
+                                        <span className="text-xs text-muted-foreground">{format(new Date(note.created_at), "MMM dd, yyyy h:mm a")}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {note.is_important && <Badge variant="danger">Important</Badge>}
+                                        <div className="flex gap-1 ml-2">
+                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground" onClick={() => startEdit(note)}>Edit</Button>
+                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500 hover:text-red-600" onClick={() => { if (confirm("Delete note?")) deleteMutation.mutate(note.id); }}>Delete</Button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <p className="text-sm text-card-foreground whitespace-pre-wrap">{note.content}</p>
-                    </CardContent>
-                </Card>
-                ))
+                                <p className="text-sm text-card-foreground whitespace-pre-wrap">{note.content}</p>
+                            </CardContent>
+                        </Card>
+                    ))
                 )}
             </div>
         </div >

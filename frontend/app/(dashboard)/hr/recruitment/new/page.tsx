@@ -51,7 +51,7 @@ function NewJobOpeningContent() {
     });
 
     const createMutation = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (data: any) => hrApi.jobOpenings.create(data),
         onSuccess: () => {
             toast.success("Job posting created");
@@ -61,73 +61,73 @@ function NewJobOpeningContent() {
         onError: () => toast.error("Failed to create job posting"),
     });
 
-const handleSubmit = () => {
-    createMutation.mutate({
-        title,
-        department: Number(deptId),
-        employment_type: empType,
-        description,
-        requirements,
-        salary_range_min: salaryMin || null,
-        salary_range_max: salaryMax || null,
-        status: "draft"
-    });
-};
+    const handleSubmit = () => {
+        createMutation.mutate({
+            title,
+            department: Number(deptId),
+            employment_type: empType,
+            description,
+            requirements,
+            salary_range_min: salaryMin || null,
+            salary_range_max: salaryMax || null,
+            status: "draft"
+        });
+    };
 
-return (
-    <div className="space-y-4 max-w-3xl mx-auto">
-        <StaffPageHeader
-            title="Post New Job"
-            breadcrumbs={[{ label: "Recruitment", href: "/hr/recruitment" }, { label: "New Job" }]}
-        />
+    return (
+        <div className="space-y-4 max-w-3xl mx-auto">
+            <StaffPageHeader
+                title="Post New Job"
+                breadcrumbs={[{ label: "Recruitment", href: "/hr/recruitment" }, { label: "New Job" }]}
+            />
 
-        <Card>
-            <CardHeader><CardTitle>Job Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2"><Label>Job Title</Label><Input placeholder="e.g. Senior Mechanic" value={title} onChange={e => setTitle(e.target.value)} /></div>
+            <Card>
+                <CardHeader><CardTitle>Job Details</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2"><Label>Job Title</Label><Input placeholder="e.g. Senior Mechanic" value={title} onChange={e => setTitle(e.target.value)} /></div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Department</Label>
-                        <Select value={deptId} onValueChange={setDeptId}>
-                            <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
-                            <SelectContent>
-                                {deptData?.results.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Department</Label>
+                            <Select value={deptId} onValueChange={setDeptId}>
+                                <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                                <SelectContent>
+                                    {deptData?.results.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Employment Type</Label>
+                            <Select value={empType} onValueChange={setEmpType}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="full_time">Full Time</SelectItem>
+                                    <SelectItem value="part_time">Part Time</SelectItem>
+                                    <SelectItem value="contract">Contract</SelectItem>
+                                    <SelectItem value="intern">Intern</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label>Employment Type</Label>
-                        <Select value={empType} onValueChange={setEmpType}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="full_time">Full Time</SelectItem>
-                                <SelectItem value="part_time">Part Time</SelectItem>
-                                <SelectItem value="contract">Contract</SelectItem>
-                                <SelectItem value="intern">Intern</SelectItem>
-                            </SelectContent>
-                        </Select>
+
+                    <div className="space-y-2 bg-muted/20 p-4 rounded-md">
+                        <Label>Salary Range (Optional)</Label>
+                        <div className="flex gap-4 items-center">
+                            <Input placeholder="Min" type="number" value={salaryMin} onChange={e => setSalaryMin(e.target.value)} />
+                            <span>-</span>
+                            <Input placeholder="Max" type="number" value={salaryMax} onChange={e => setSalaryMax(e.target.value)} />
+                        </div>
                     </div>
-                </div>
 
-                <div className="space-y-2 bg-muted/20 p-4 rounded-md">
-                    <Label>Salary Range (Optional)</Label>
-                    <div className="flex gap-4 items-center">
-                        <Input placeholder="Min" type="number" value={salaryMin} onChange={e => setSalaryMin(e.target.value)} />
-                        <span>-</span>
-                        <Input placeholder="Max" type="number" value={salaryMax} onChange={e => setSalaryMax(e.target.value)} />
+                    <div className="space-y-2"><Label>Description</Label><Textarea placeholder="Job duties and responsibilities..." rows={4} value={description} onChange={e => setDescription(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Requirements</Label><Textarea placeholder="Skills and qualifications..." rows={4} value={requirements} onChange={e => setRequirements(e.target.value)} /></div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
+                        <Button onClick={handleSubmit} disabled={!title || !deptId || createMutation.isPending}>{createMutation.isPending ? "Creating..." : "Create Job Posting"}</Button>
                     </div>
-                </div>
-
-                <div className="space-y-2"><Label>Description</Label><Textarea placeholder="Job duties and responsibilities..." rows={4} value={description} onChange={e => setDescription(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Requirements</Label><Textarea placeholder="Skills and qualifications..." rows={4} value={requirements} onChange={e => setRequirements(e.target.value)} /></div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={!title || !deptId || createMutation.isPending}>{createMutation.isPending ? "Creating..." : "Create Job Posting"}</Button>
-                </div>
-            </CardContent>
-        </Card>
-    </div>
-);
+                </CardContent>
+            </Card>
+        </div>
+    );
 }

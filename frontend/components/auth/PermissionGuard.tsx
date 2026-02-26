@@ -36,7 +36,7 @@ export function PermissionGuard({
   const { user } = useAuthStore();
 
   // Check if user is admin or superuser - admins have all permissions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const isAdmin = user?.role === 'admin' || (user as any)?.is_superuser;
 
   // If user is admin/superuser, always allow (backend will verify)

@@ -20,19 +20,19 @@ export interface FilterOption {
 export interface QuickFilter {
   label: string;
   value: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-filters: Record<string, any>;
+
+  filters: Record<string, any>;
 }
 
 export interface AdvancedFiltersProps {
   filters: FilterOption[];
   quickFilters?: QuickFilter[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-activeFilters: Record<string, any>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-onFiltersChange: (filters: Record<string, any>) => void;
-onClear: () => void;
-title ?: string;
+
+  activeFilters: Record<string, any>;
+
+  onFiltersChange: (filters: Record<string, any>) => void;
+  onClear: () => void;
+  title?: string;
 }
 
 export function AdvancedFilters({
@@ -44,7 +44,7 @@ export function AdvancedFilters({
   title = "Advanced Filters",
 }: AdvancedFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [localFilters, setLocalFilters] = useState<Record<string, any>>(activeFilters);
 
   // Sync local filters when activeFilters change
@@ -58,7 +58,7 @@ export function AdvancedFilters({
     (key) => activeFilters[key] !== "" && activeFilters[key] !== null && activeFilters[key] !== undefined
   ).length;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleFilterChange = (key: string, value: any) => {
     setLocalFilters((prev) => ({
       ...prev,

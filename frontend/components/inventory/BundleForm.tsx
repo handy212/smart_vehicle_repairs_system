@@ -58,7 +58,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
 
     // Strictly filter service types to ONLY those specified by the user.
     const BUNDLE_SERVICE_NAMES = ["minor service", "medium service", "major service"];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const serviceTypes = (serviceTypesResponse?.results || []).filter((type: any) => {
         // Must be one of the three specific names (case-insensitive)
         return BUNDLE_SERVICE_NAMES.includes(type.name.toLowerCase());
@@ -156,7 +156,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <option value="">None</option>
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                     {serviceTypes.map((type: any) => {
                                         const isAlreadyBundled = type.has_bundle && !(mode === "edit" && type.id === initialData?.service_type);
                                         return (

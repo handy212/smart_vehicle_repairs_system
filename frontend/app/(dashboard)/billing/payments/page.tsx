@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Plus, Search, Eye, Filter, Download } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -59,7 +59,7 @@ export default function PaymentsPage() {
     }) || [];
 
     const getStatusVariant = (status: string) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const variants: Record<string, any> = {
             completed: 'success',
             pending: 'warning',

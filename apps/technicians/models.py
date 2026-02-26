@@ -246,29 +246,28 @@ class Certification(models.Model):
         return f"{self.technician.user.get_full_name()} - {self.name}"
     
     @property
-    def is_expiring_soon(self):
-        """Returns True if certification expires within 30 days"""
-        if not self.expiry_date:
-            return False
-        from django.utils import timezone
-        days_until_expiry = (self.expiry_date - timezone.now().date()).days
-        return 0 <= days_until_expiry <= 30
-    
-    @property
     def days_until_expiry(self):
         """Returns number of days until expiry, None if no expiry date"""
         if not self.expiry_date:
             return None
         from django.utils import timezone
         return (self.expiry_date - timezone.now().date()).days
+        
+    @property
+    def is_expiring_soon(self):
+        """Returns True if certification expires within 30 days"""
+        days = self.days_until_expiry
+        if days is None:
+            return False
+        return 0 <= days <= 30
     
     @property
     def is_expired(self):
         """Returns True if certification is expired"""
-        if not self.expiry_date:
+        days = self.days_until_expiry
+        if days is None:
             return False
-        from django.utils import timezone
-        return self.expiry_date < timezone.now().date()
+        return days < 0
     
     def save(self, *args, **kwargs):
         """Auto-update status based on expiry date"""

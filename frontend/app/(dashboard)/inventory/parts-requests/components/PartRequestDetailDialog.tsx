@@ -71,7 +71,6 @@ export function PartRequestDetailDialog({
             onRefresh();
             toast({ title: "Part Allocated", variant: "success" });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any) => {
             toast({
                 title: "Allocation Failed",
@@ -89,7 +88,6 @@ export function PartRequestDetailDialog({
             setShowInventoryForm(null);
             toast({ title: "PO Created", description: `PO #${data.po_number}`, variant: "success" });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onError: (error: any, partId: number) => {
             const errorData = error.response?.data;
             if (errorData?.needs_inventory_item && errorData?.part_data) {
@@ -119,7 +117,7 @@ export function PartRequestDetailDialog({
                 variant: "success"
             });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Creation Failed",
@@ -154,7 +152,7 @@ export function PartRequestDetailDialog({
                 });
             }
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Bulk Order Failed",
@@ -173,7 +171,7 @@ export function PartRequestDetailDialog({
             setEditingPart(null);
             toast({ title: "Part Updated", variant: "success" });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Update Failed",
@@ -190,7 +188,7 @@ export function PartRequestDetailDialog({
             onRefresh();
             toast({ title: "Request Removed", variant: "success" });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Remove Failed",

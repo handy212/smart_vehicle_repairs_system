@@ -6,23 +6,23 @@ export interface Vehicle {
   make: string;
   model: string;
   year: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-vin_decoded_data ?: any;
-vin_decoded_at ?: string | null;
-license_plate ?: string;
-exterior_color ?: string;
-current_mileage ?: number;
-engine_type ?: string;
-owner: number | { id: number };
-owner_name ?: string;
-status: "active" | "in_service" | "sold" | "totaled" | "inactive" | string;
-created_at: string;
-image ?: string;
-vehicle_type ?: "other" | "saloon" | "suv" | "pickup" | "minivan" | "motorcycle" | "truck" | string;
-// Legacy fields for backward compatibility
-color ?: string;
-mileage ?: number;
-fuel_type ?: string;
+
+  vin_decoded_data?: any;
+  vin_decoded_at?: string | null;
+  license_plate?: string;
+  exterior_color?: string;
+  current_mileage?: number;
+  engine_type?: string;
+  owner: number | { id: number };
+  owner_name?: string;
+  status: "active" | "in_service" | "sold" | "totaled" | "inactive" | string;
+  created_at: string;
+  image?: string;
+  vehicle_type?: "other" | "saloon" | "suv" | "pickup" | "minivan" | "motorcycle" | "truck" | string;
+  // Legacy fields for backward compatibility
+  color?: string;
+  mileage?: number;
+  fuel_type?: string;
 }
 
 export interface VehicleListResponse {
@@ -78,7 +78,7 @@ export const vehiclesApi = {
   },
 
   update: async (id: number, data: Partial<Vehicle> | FormData): Promise<Vehicle> => {
-    const response = await apiClient.put(`/vehicles/vehicles/${id}/`, data, {
+    const response = await apiClient.patch(`/vehicles/vehicles/${id}/`, data, {
       headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
     });
     return response.data;
@@ -139,11 +139,11 @@ export const vehiclesApi = {
     return response.data;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-history: async (id: number): Promise<any> => {
-  const response = await apiClient.get(`/vehicles/vehicles/${id}/history/`);
-  return response.data;
-},
+
+  history: async (id: number): Promise<any> => {
+    const response = await apiClient.get(`/vehicles/vehicles/${id}/history/`);
+    return response.data;
+  },
 
   decodeVin: async (vin: string): Promise<{
     success: boolean;
@@ -184,29 +184,29 @@ history: async (id: number): Promise<any> => {
     airbag_curtain?: string;
     airbag_seat_cushion?: string;
     other_restraint_info?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-full_data ?: any;
-error ?: string;
-  }> => {
-  // VIN decode can involve an external API (NHTSA). Allow a bit more time before aborting.
-  const response = await apiClient.post("/vehicles/vehicles/decode_vin/", { vin }, { timeout: 20000 });
-  return response.data;
-},
 
-checkLicensePlate: async (licensePlate: string, vehicleId?: number): Promise<{
-  success: boolean;
-  exists?: boolean;
-  vehicle_id?: number;
-  vehicle?: Vehicle;
-  message?: string;
-  error?: string;
-}> => {
-  const response = await apiClient.post("/vehicles/vehicles/check_license_plate/", {
-    license_plate: licensePlate,
-    vehicle_id: vehicleId
-  });
-  return response.data;
-},
+    full_data?: any;
+    error?: string;
+  }> => {
+    // VIN decode can involve an external API (NHTSA). Allow a bit more time before aborting.
+    const response = await apiClient.post("/vehicles/vehicles/decode_vin/", { vin }, { timeout: 20000 });
+    return response.data;
+  },
+
+  checkLicensePlate: async (licensePlate: string, vehicleId?: number): Promise<{
+    success: boolean;
+    exists?: boolean;
+    vehicle_id?: number;
+    vehicle?: Vehicle;
+    message?: string;
+    error?: string;
+  }> => {
+    const response = await apiClient.post("/vehicles/vehicles/check_license_plate/", {
+      license_plate: licensePlate,
+      vehicle_id: vehicleId
+    });
+    return response.data;
+  },
 
   getServiceTypes: async (): Promise<{
     count: number;
@@ -223,16 +223,16 @@ checkLicensePlate: async (licensePlate: string, vehicleId?: number): Promise<{
     return response.data;
   },
 
-    getSuggestedService: async (id: number): Promise<{
-      suggested_service_id: number;
-      suggested_service_name: string;
-      reason: string;
-      last_service_id?: number;
-      last_service_name?: string;
-      last_service_date?: string;
-    }> => {
-      const response = await apiClient.get(`/vehicles/vehicles/${id}/suggested_service/`);
-      return response.data;
-    },
+  getSuggestedService: async (id: number): Promise<{
+    suggested_service_id: number;
+    suggested_service_name: string;
+    reason: string;
+    last_service_id?: number;
+    last_service_name?: string;
+    last_service_date?: string;
+  }> => {
+    const response = await apiClient.get(`/vehicles/vehicles/${id}/suggested_service/`);
+    return response.data;
+  },
 };
 

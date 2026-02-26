@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function VehicleHistoryPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   const id = parseInt(params.id as string);
 
@@ -51,7 +51,7 @@ export default function VehicleHistoryPage() {
       <div className="text-center py-12">
         <p className="text-muted-foreground">Vehicle not found.</p>
         <Link href="/vehicles">
-          <Button className="mt-4"variant="secondary">
+          <Button className="mt-4" variant="secondary">
             Back to Vehicles
           </Button>
         </Link>
@@ -236,9 +236,9 @@ export default function VehicleHistoryPage() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                         <Badge variant={getStatusVariant(wo.status) as any}>
-                          {wo.status?.replace("_", " ") || "-"}
+                          {wo.status?.replace(/_/g, " ") || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -300,9 +300,9 @@ export default function VehicleHistoryPage() {
                       <TableCell className="text-foreground">{apt.appointment_time || "-"}</TableCell>
                       <TableCell className="text-foreground">{apt.service_type || "-"}</TableCell>
                       <TableCell>
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                         <Badge variant={getStatusVariant(apt.status) as any}>
-                          {apt.status?.replace("_", " ") || "-"}
+                          {apt.status?.replace(/_/g, " ") || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -335,11 +335,10 @@ export default function VehicleHistoryPage() {
                 <div key={`${item.type}-${item.id}`} className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        item.type === "work_order"
-                          ? "bg-orange-100 dark:bg-orange-900/30 text-primary"
-                          : "bg-green-100 dark:bg-green-900/30 text-success"
-                      }`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center ${item.type === "work_order"
+                        ? "bg-orange-100 dark:bg-orange-900/30 text-primary"
+                        : "bg-green-100 dark:bg-green-900/30 text-success"
+                        }`}
                     >
                       {item.type === "work_order" ? (
                         <Wrench className="w-5 h-5" />
@@ -358,9 +357,9 @@ export default function VehicleHistoryPage() {
                         <p className="text-sm text-muted-foreground">{item.description}</p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                         <Badge variant={getStatusVariant(item.status) as any}>
-                          {item.status?.replace("_", " ")}
+                          {item.status?.replace(/_/g, " ")}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
                           {format(new Date(item.date), "MMM dd, yyyy")}

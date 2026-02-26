@@ -70,7 +70,7 @@ export default function SystemSettingsPage() {
         description: "Setting updated successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -91,7 +91,7 @@ export default function SystemSettingsPage() {
         description: "Setting deleted successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -122,7 +122,7 @@ export default function SystemSettingsPage() {
         description: "The file has been uploaded successfully.",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Upload failed",
@@ -222,7 +222,7 @@ export default function SystemSettingsPage() {
         const { [id]: _, ...rest } = prev;
         return rest;
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || error.response?.data?.value?.[0] || "Failed to update setting";
       toast({

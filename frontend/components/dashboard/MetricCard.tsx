@@ -17,10 +17,10 @@ interface MetricCardProps {
     };
     icon?: "dollar" | "activity" | "wallet" | "trend";
     variant?: "default" | "success" | "warning" | "danger" | "info";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-data ?: any[]; // For sparkline
-dataKey ?: string;
-onClick ?: () => void;
+
+    data?: any[]; // For sparkline
+    dataKey?: string;
+    onClick?: () => void;
 }
 
 export function MetricCard({ title, value, trend, icon, variant = "default", data, dataKey, onClick }: MetricCardProps) {

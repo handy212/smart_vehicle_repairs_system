@@ -135,7 +135,7 @@ function DeleteConfirmDialog({ open, onOpenChange, id, onDeleted }: { open: bool
     );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function ReviewForm({ review, onUpdate, onSubmit, onAcknowledge, isUpdating }: { review: PerformanceReview, onUpdate: (d: any) => void, onSubmit: () => void, onAcknowledge: (c: string) => void, isUpdating: boolean }) {
     const [strengths, setStrengths] = useState(review.strengths || "");
     const [improvements, setImprovements] = useState(review.areas_for_improvement || "");

@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { Trash2, Plus, Search, DollarSign, Package, Pencil, CheckCircle, X } from "lucide-react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -26,7 +26,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
     const queryClient = useQueryClient();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
+
     const [selectedPart, setSelectedPart] = useState<any>(null);
     const [quantity, setQuantity] = useState(1);
     const [unitCost, setUnitCost] = useState("");
@@ -39,7 +39,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
     // Let's defer part search logic to a simpler implementation or reuse existing components if available.
     // For now, I will implement a simple search input that fetches parts.
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -73,7 +73,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
             {/* Keep dialog open for multiple additions */ }
             resetForm();
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Error",
@@ -90,7 +90,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
             queryClient.invalidateQueries({ queryKey: ["purchase-order", purchaseOrder.id] });
             toast({ title: "Success", description: "Item removed successfully" });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Error",
@@ -108,7 +108,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
             toast({ title: "Success", description: "Item updated successfully" });
             setEditingItemId(null);
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Error",
@@ -126,14 +126,14 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         setSearchResults([]);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const handleAddItem = () => {
         if (!selectedPart) return;
         addItemMutation.mutate({
             part: selectedPart.id,
             quantity: quantity,
             unit_cost: unitCost || selectedPart.cost_price,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } as any);
     };
 
@@ -246,10 +246,10 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                                     <span className="text-sm font-semibold text-foreground truncate">
                                                         {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
                                                     </span>
-                                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                                     {typeof item.part === 'object' && (item.part as any).category_name && (
                                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted border-border">
-                                                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                                             {(item.part as any).category_name}
                                                         </Badge>
                                                     )}
@@ -371,7 +371,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
     );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function SearchResultItem({ part, onAdd, isAdding }: { part: any, onAdd: (data: any) => void, isAdding: boolean }) {
     const { formatCurrency } = useCurrency();
     const [isExpanded, setIsExpanded] = useState(false);

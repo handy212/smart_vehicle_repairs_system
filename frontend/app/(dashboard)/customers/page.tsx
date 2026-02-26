@@ -55,13 +55,13 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 
 // Memoized Customer Row Component
 interface CustomerRowProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   customer: any;
   visibleColumns: Set<string>;
   formatCurrency: (amount: number) => string;
   bulkSelection: ReturnType<typeof useBulkSelection>;
   router: ReturnType<typeof useRouter>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   onDelete: (customer: any) => void;
 }
 
@@ -284,7 +284,7 @@ export default function CustomersPage() {
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("active");
   const [showImportDialog, setShowImportDialog] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -436,7 +436,7 @@ export default function CustomersPage() {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast({ title: "Success", description: "Customer deleted successfully" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -455,7 +455,7 @@ export default function CustomersPage() {
       bulkSelection.clearSelection();
       toast({ title: "Success", description: `${bulkSelection.selectedCount} customers deleted successfully` });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -470,7 +470,7 @@ export default function CustomersPage() {
       await Promise.all(
         ids.map((id) =>
           customersApi.update(id, {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             status: status as any,
           })
         )
@@ -482,7 +482,7 @@ export default function CustomersPage() {
       setShowStatusDialog(false);
       toast({ title: "Success", description: `Status updated for ${bulkSelection.selectedCount} customers` });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -492,7 +492,7 @@ export default function CustomersPage() {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleDelete = useCallback((customer: any) => {
     if (confirm(`Are you sure you want to delete customer "${customer.full_name || customer.company_name || customer.user?.email || 'this customer'}"? This action cannot be undone.`)) {
       deleteMutation.mutate(customer.id);
@@ -895,7 +895,7 @@ export default function CustomersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                   {customers.map((customer: any) => (
                     <CustomerRow
                       key={customer.id}

@@ -31,6 +31,7 @@ class DocumentPrinter:
         'aging_report': 'printing/reports/aging_report.html',
         'revenue_summary': 'printing/reports/revenue_summary.html',
         'payslip': 'printing/documents/payslip.html',
+        'diagnosis_report': 'diagnosis/customer_report.html',
     }
     
     def __init__(self, document_type: str):
@@ -620,3 +621,34 @@ def generate_payslip_pdf(payslip):
     safe_name = "".join(c for c in payslip.employee.full_name if c.isalnum() or c in (' ', '_', '-')).strip().replace(' ', '_')
     filename = f"payslip_{safe_name}_{payslip.payroll_period.start_date}.pdf"
     return printer.generate_pdf(context, filename)
+
+
+def generate_diagnosis_report_pdf(diagnosis, base_context=None):
+    """Generate PDF for diagnosis report"""
+    printer = DocumentPrinter('diagnosis_report')
+    context = base_context or {}
+    context.update({
+        'document': diagnosis,
+        'branch': diagnosis.work_order.branch if diagnosis.work_order else None,
+    })
+    filename = f"diagnosis_report_{diagnosis.work_order.work_order_number if diagnosis.work_order else diagnosis.id}.pdf"
+    return printer.generate_pdf(context, filename)
+
+
+def render_diagnosis_report_print_html(diagnosis, base_context=None, request=None):
+    """Render diagnosis report as HTML for browser print."""
+    from apps.accounts.settings_utils import get_company_info, get_branding_settings
+    base_url = request.build_absolute_uri('/') if request else '/'
+    company_info = get_company_info()
+    branding = get_branding_settings()
+    _make_logo_absolute(branding, base_url)
+    context = base_context or {}
+    context.update({
+        'document': diagnosis,
+        'branch': diagnosis.work_order.branch if diagnosis.work_order else None,
+        'show_print_controls': True,
+        'base_url': base_url.rstrip('/'),
+        **company_info,
+        **branding,
+    })
+    return render_to_string('diagnosis/customer_report.html', context)

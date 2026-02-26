@@ -113,7 +113,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
               </label>
               <Select
                 value={watch("note_type")}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 onValueChange={(val) => setValue("note_type", val as any)}
               >
                 <SelectTrigger id="note_type" className="w-full">

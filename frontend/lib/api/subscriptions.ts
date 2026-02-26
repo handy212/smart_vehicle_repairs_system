@@ -72,8 +72,8 @@ export interface Subscription {
 
     created_at: string;
     updated_at: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-metadata ?: Record<string, any>;
+
+    metadata?: Record<string, any>;
 }
 
 export interface SubscriptionUsage {
@@ -250,26 +250,26 @@ export const subscriptionsApi = {
 
     stats: async (id: number): Promise<{
         days_remaining: number;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         usage_summary: Record<string, any>;
-    remaining_allowances: Record<string, number>;
-} > => {
-    const response = await apiClient.get(`/subscriptions/subscriptions/${id}/stats/`);
-    return response.data;
-},
-downloadCard: async (id: number, subNumber: string): Promise<void> => {
-    const response = await apiClient.get(`/subscriptions/subscriptions/${id}/pdf/`, {
-        responseType: 'blob',
-    });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `membership_card_${subNumber}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-},
+        remaining_allowances: Record<string, number>;
+    }> => {
+        const response = await apiClient.get(`/subscriptions/subscriptions/${id}/stats/`);
+        return response.data;
+    },
+    downloadCard: async (id: number, subNumber: string): Promise<void> => {
+        const response = await apiClient.get(`/subscriptions/subscriptions/${id}/pdf/`, {
+            responseType: 'blob',
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `membership_card_${subNumber}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    },
     changePlan: async (id: number, packageId: number): Promise<{ subscription: Subscription; message: string }> => {
         const response = await apiClient.post(`/subscriptions/subscriptions/${id}/change_plan/`, {
             package_id: packageId,

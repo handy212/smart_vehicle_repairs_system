@@ -21,11 +21,11 @@ interface FinancialTableColumn {
 
 interface FinancialTableSection {
     title?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-data: any[];
-className ?: string;
-showTotal ?: boolean;
-totalLabel ?: string;
+
+    data: any[];
+    className?: string;
+    showTotal?: boolean;
+    totalLabel?: string;
 }
 
 interface FinancialTableProps {
@@ -43,7 +43,7 @@ export function FinancialTable({
 }: FinancialTableProps) {
     const { formatCurrency } = useCurrency();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const formatValue = (value: any, format?: string) => {
         if (value === null || value === undefined) return "—";
 

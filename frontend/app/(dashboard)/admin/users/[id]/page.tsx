@@ -129,7 +129,7 @@ export default function UserDetailPage() {
         email_notifications: user.email_notifications,
         sms_notifications: user.sms_notifications,
         is_active: user.is_active,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         role: user.role as any,
         branch: user.branch || null,
         managed_branches: user.managed_branches || [],
@@ -176,7 +176,7 @@ export default function UserDetailPage() {
       });
       setIsEditing(false);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
@@ -212,7 +212,7 @@ export default function UserDetailPage() {
       setShowPasswordReset(false);
       setNewPassword("");
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -230,7 +230,7 @@ export default function UserDetailPage() {
         description: data.detail || "Password reset link sent successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -380,7 +380,7 @@ export default function UserDetailPage() {
               <h1 className="text-3xl font-bold text-foreground">
                 {user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}
               </h1>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
               <Badge variant={getRoleVariant(user.role) as any} className="bg-muted text-foreground">
                 {getRoleLabel(user.role)}
               </Badge>
@@ -505,7 +505,7 @@ export default function UserDetailPage() {
                     </label>
                     <Select
                       value={watch("role")}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
                     >
                       <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
@@ -931,7 +931,7 @@ export default function UserDetailPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Role</p>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     <Badge variant={getRoleVariant(user.role) as any} className="mt-2 bg-muted text-foreground">
                       {getRoleLabel(user.role)}
                     </Badge>
@@ -996,7 +996,7 @@ export default function UserDetailPage() {
               </CardContent>
             </Card>
 
-          // Account Details
+          {/* // Account Details */}
             <Card className="bg-muted border-border">
               <CardHeader>
                 <CardTitle className="text-foreground text-lg font-semibold">Account Details</CardTitle>
@@ -1037,7 +1037,7 @@ export default function UserDetailPage() {
             </Card>
           </div>
 
-        // Branch & Employment Information
+        {/* // Branch & Employment Information */}
           <Card className="bg-muted border-border border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">

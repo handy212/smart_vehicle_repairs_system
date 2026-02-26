@@ -72,7 +72,7 @@ export function WhatsAppButton({
             const url = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
             window.open(url, '_blank');
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } catch (error: any) {
             console.error("WhatsApp Error:", error);
 

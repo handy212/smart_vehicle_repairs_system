@@ -63,7 +63,7 @@ export default function RegisterPage() {
     const [otpCode, setOtpCode] = useState("");
 
     // Google Registration State
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
 
     // reCAPTCHA state

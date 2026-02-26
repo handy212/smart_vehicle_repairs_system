@@ -43,7 +43,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const d = payload[0].payload;

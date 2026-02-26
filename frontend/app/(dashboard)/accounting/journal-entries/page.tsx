@@ -25,6 +25,8 @@ export default function JournalEntriesPage() {
         queryFn: () => accountingApi.getJournalEntries(),
     });
 
+    const journalEntries = Array.isArray(entries) ? entries : (entries as any)?.results || [];
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -62,8 +64,8 @@ export default function JournalEntriesPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                {entries?.map((entry: any) => (
+
+                                {journalEntries.map((entry: any) => (
                                     <TableRow
                                         key={entry.id}
                                         className="cursor-pointer hover:bg-muted "
@@ -83,7 +85,7 @@ export default function JournalEntriesPage() {
                                         <TableCell>{entry.transactions?.length || 0} lines</TableCell>
                                     </TableRow>
                                 ))}
-                                {(!entries || entries.length === 0) && (
+                                {journalEntries.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                                             No journal entries found. Create your first entry to get started.

@@ -108,9 +108,9 @@ class EstimateLineItemCreateSerializer(serializers.ModelSerializer):
         if item_type == 'labor':
             labor_hours = data.get('labor_hours')
             labor_rate = data.get('labor_rate')
-            if not labor_hours or labor_hours <= 0:
+            if labor_hours is None or labor_hours <= 0:
                 raise serializers.ValidationError({"labor_hours": "Labor hours must be greater than 0"})
-            if not labor_rate or (isinstance(labor_rate, str) and float(labor_rate) < 0) or (isinstance(labor_rate, (int, float)) and labor_rate < 0):
+            if labor_rate is None or (isinstance(labor_rate, str) and float(labor_rate) < 0) or (isinstance(labor_rate, (int, float)) and labor_rate < 0):
                 raise serializers.ValidationError({"labor_rate": "Labor rate must be greater than or equal to 0"})
             # For labor items, quantity should match labor_hours
             if not data.get('quantity'):
@@ -118,7 +118,7 @@ class EstimateLineItemCreateSerializer(serializers.ModelSerializer):
         else:
             # For non-labor items, ensure quantity and unit_price are valid
             quantity = data.get('quantity')
-            if not quantity or quantity <= 0:
+            if quantity is None or quantity <= 0:
                 raise serializers.ValidationError({"quantity": "Quantity must be greater than 0"})
             
             unit_price = data.get('unit_price')
@@ -237,7 +237,7 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Estimate
         fields = [
-            'id', 'estimate_number', 'customer', 'vehicle', 'work_order', 'title', 'description',
+            'id', 'estimate_number', 'customer', 'vehicle', 'work_order', 'status', 'title', 'description',
             'reference_number', 'sales_agent',
             'notes', 'customer_notes', 'estimate_date', 'valid_until',
             'discount_percentage', 'discount_type', 'discount_reason',

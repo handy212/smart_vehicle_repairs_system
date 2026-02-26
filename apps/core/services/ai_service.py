@@ -416,3 +416,77 @@ class AIService:
             summary += "Your vehicle is in good health with no immediate repairs recommended at this time."
             
         return summary
+
+    @staticmethod
+    def decode_obd_code(code):
+        """
+        AI Proxy to decode an unknown OBD-II code.
+        In a production environment, this calls an LLM or an external OBD API
+        (like CarMD) to get the description, severity, and common fixes dynamically.
+        """
+        code = str(code).upper().strip()
+        
+        # Simulate AI identifying P-codes (Powertrain), C-codes (Chassis), B-codes (Body), U-codes (Network)
+        if code.startswith('P03'):
+            return {"description": f"Cylinder/Ignition Misfire Detected ({code})", "severity": "critical", "common_fixes": "Inspect Spark Plugs and Ignition Coils"}
+        elif code.startswith('P01'):
+            return {"description": f"Fuel/Air Metering Issue ({code})", "severity": "warning", "common_fixes": "Check MAF sensor and Vacuum Leaks"}
+        elif code.startswith('P04'):
+            return {"description": f"Auxiliary Emission Controls ({code})", "severity": "warning", "common_fixes": "Inspect Catalytic Converter and O2 Sensors"}
+        elif code.startswith('C'):
+            return {"description": f"Chassis/ABS System Fault ({code})", "severity": "critical", "common_fixes": "Check Wheel Speed Sensors"}
+        elif code.startswith('B'):
+            return {"description": f"Body Control Module Fault ({code})", "severity": "info", "common_fixes": "Check Interior Electronics/Sensors"}
+        elif code.startswith('U'):
+            return {"description": f"Network Communication Error ({code})", "severity": "warning", "common_fixes": "Check CAN Bus Connections"}
+            
+        # Generic AI fallback for any totally unknown code
+        return {
+            "description": f"Manufacturer Specific Diagnostic Code {code}",
+            "severity": "info",
+            "common_fixes": "Perform detailed component diagnosis"
+        }
+
+    @staticmethod
+    def analyze_inspection_results(inspection):
+        """
+        AI Proxy to analyze inspection results and generate notes + recommendations.
+        """
+        pass_count = inspection.results.filter(result='pass').count()
+        fail_count = inspection.results.filter(result='fail').count()
+        advisory_count = inspection.results.filter(result='advisory').count()
+        attention_count = inspection.results.filter(needs_immediate_attention=True).count()
+        
+        vehicle = inspection.vehicle
+        
+        # AI generated summary
+        notes = f"AI Analysis: Vehicle Health Report for {vehicle.year} {vehicle.make} {vehicle.model}.\n\n"
+        notes += f"Overall Condition: The multi-point inspection recorded {pass_count} passed items, {fail_count} failed items, and {advisory_count} items requiring monitoring.\n\n"
+        
+        if fail_count > 0:
+            notes += f"Safety Alert: {fail_count} components failed inspection"
+            if attention_count > 0:
+                notes += f", including {attention_count} critical item(s) that pose an immediate safety risk."
+            else:
+                notes += "."
+        elif pass_count > 0:
+            notes += "The vehicle is generally in good health with no major safety failures."
+        
+        # AI generated recommendation
+        recommendations = "AI Generated Service Recommendations:\n"
+        if fail_count > 0:
+            failed_items = inspection.results.filter(result='fail').select_related('inspection_item')[:3]
+            recommendations += "- Immediate Repairs Required for Safety:\n"
+            for fail in failed_items:
+                recommendations += f"  • {fail.inspection_item.name}\n"
+            if fail_count > 3:
+                recommendations += f"  • ...and {fail_count - 3} other items.\n"
+        elif advisory_count > 0:
+            recommendations += "- Near-term Maintenance Advice: Monitor the items marked as 'advisory' and plan to replace them within the next routine service interval.\n"
+        else:
+            recommendations += "- Congratulations, your vehicle passed with flying colors. Continue adhering to the manufacturer's preventative maintenance schedule."
+            
+        return {
+            "notes": notes,
+            "recommendations": recommendations,
+        }

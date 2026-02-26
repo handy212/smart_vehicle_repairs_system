@@ -581,87 +581,23 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             )
             
         results = []
-        raw_phones = []
         
-        # Process User recipients first
-        for recipient in recipients:
-            if recipient.get('type') == 'user':
-                try:
-                    user_id = recipient.get('value')
-                    notification = Notification.objects.create(
-                        recipient_id=user_id,
-                        notification_type='custom',
-                        channel='sms',
-                        priority='normal',
-                        title='SMS Console Message',
-                        message=message,
-                        scheduled_for=scheduled_for
-                    )
-                    service = NotificationService()
-                    success = service.send_notification(notification)
-                    
-                    # If scheduled, we consider it "successful" for now (queued)
-                    is_scheduled = bool(scheduled_for)
-                    status_label = 'scheduled' if is_scheduled else ('sent' if success else 'failed')
-                    
-                    results.append({
-                        'recipient': f"User ID {user_id}",
-                        'success': success or is_scheduled,
-                        'status': status_label,
-                        'error': None if (success or is_scheduled) else notification.error_message
-                    })
-                except Exception as e:
-                    results.append({
-                        'recipient': f"User ID {recipient.get('value')}",
-                        'success': False,
-                        'status': 'failed',
-                        'error': str(e)
-                    })
-            elif recipient.get('type') == 'phone':
-                raw_phones.append(recipient.get('value'))
+        # Dispatch to background task to avoid timeout
+        from .tasks import send_bulk_sms_async
+        send_bulk_sms_async.delay(recipients, message, scheduled_for)
         
-        # Process Raw Phones in (pseudo) bulk
-        # We use our existing bulk helper if available, or just loop
-        # The existing send_bulk_sms takes a list of numbers
-        if raw_phones:
-            if scheduled_for:
-                # Raw phones + scheduling is tricky if Hubtel API doesn't support it directly.
-                # We can't use Notification model easily without a dummy user.
-                # For now, we'll mark them as failed/unsupported for scheduling.
-                for phone in raw_phones:
-                    results.append({
-                        'recipient': phone,
-                        'success': False,
-                        'status': 'failed',
-                        'error': 'Scheduling not supported for raw phone numbers yet'
-                    })
-            else:
-                bulk_results = send_bulk_sms(raw_phones, message)
-                for phone, res in bulk_results.items():
-                    results.append({
-                        'recipient': phone,
-                        'success': res['success'],
-                        'status': 'sent' if res['success'] else 'failed',
-                        'error': None if res['success'] else str(res['response'])
-                    })
-
-        success_count = sum(1 for r in results if r['success'])
-        failed_count = len(results) - success_count
-        
-        # Build clear message
-        if failed_count == 0:
-            message = f"Successfully sent to all {len(results)} recipient(s)."
-        elif success_count == 0:
-            message = f"Failed to send to all {len(results)} recipient(s)."
-        else:
-            message = f"Sent to {success_count} recipient(s). {failed_count} failed."
-        
+        # We don't have immediate results anymore since it's async,
+        # but we need to return a compatible response format for the frontend.
+        message_str = f"Bulk SMS queued for {len(recipients)} recipient(s)."
+        if scheduled_for:
+            message_str = f"Bulk SMS scheduled for {len(recipients)} recipient(s)."
+            
         return Response({
-            'message': message,
-            'results': results,
-            'total': len(results),
-            'successful': success_count,
-            'failed': failed_count
+            'message': message_str,
+            'results': [],
+            'total': len(recipients),
+            'successful': len(recipients),  # Optimistically assumed successful queuing
+            'failed': 0
         })
 
     @action(detail=False, methods=['get'])

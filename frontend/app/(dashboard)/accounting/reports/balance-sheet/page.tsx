@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Download, Filter, ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
@@ -37,7 +37,7 @@ export default function BalanceSheetPage() {
     const handleExportCSV = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
         rows.push(['Balance Sheet']);
         rows.push([`As of: ${date}`]);
@@ -45,7 +45,7 @@ export default function BalanceSheetPage() {
 
         // Assets
         rows.push(['ASSETS']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.assets.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
@@ -54,7 +54,7 @@ export default function BalanceSheetPage() {
 
         // Liabilities
         rows.push(['LIABILITIES']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.liabilities.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
@@ -63,7 +63,7 @@ export default function BalanceSheetPage() {
 
         // Equity
         rows.push(['EQUITY']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.equity.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
@@ -78,7 +78,7 @@ export default function BalanceSheetPage() {
     const handleExportExcel = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
         rows.push(['Balance Sheet']);
         rows.push([`As of: ${date}`]);
@@ -87,7 +87,7 @@ export default function BalanceSheetPage() {
         // Assets
         rows.push(['ASSETS', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.assets.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
@@ -97,7 +97,7 @@ export default function BalanceSheetPage() {
         // Liabilities
         rows.push(['LIABILITIES', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.liabilities.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
@@ -107,7 +107,7 @@ export default function BalanceSheetPage() {
         // Equity
         rows.push(['EQUITY', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.equity.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });

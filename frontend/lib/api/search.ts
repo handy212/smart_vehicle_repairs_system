@@ -7,8 +7,8 @@ export interface SearchResult {
   subtitle?: string;
   url: string;
   status?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-metadata ?: Record<string, any>;
+
+  metadata?: Record<string, any>;
 }
 
 export interface SearchResponse {
@@ -73,33 +73,33 @@ export const searchApi = {
       const results = response.data?.results || [];
 
       return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      results: results.map((r: any) => ({
-        type: r.type,
-        id: r.id,
-        title: r.title,
-        subtitle: r.subtitle,
-        url: r.url?.startsWith('/') ? r.url : `/${r.url || ''}`,
-        status: r.status,
-        metadata: r.metadata,
-      })),
+
+        results: results.map((r: any) => ({
+          type: r.type,
+          id: r.id,
+          title: r.title,
+          subtitle: r.subtitle,
+          url: r.url?.startsWith('/') ? r.url : `/${r.url || ''}`,
+          status: r.status,
+          metadata: r.metadata,
+        })),
         total: results.length,
-          query: trimmedQuery,
+        query: trimmedQuery,
       };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch(error: any) {
-    console.error("Search API error:", {
-      query: trimmedQuery,
-      type: type || "all",
-      baseURL: searchClient.defaults.baseURL,
-      error: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      url: error.config?.url,
-      fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'unknown',
-    });
-    throw error;
-  }
-},
+
+    } catch (error: any) {
+      console.error("Search API error:", {
+        query: trimmedQuery,
+        type: type || "all",
+        baseURL: searchClient.defaults.baseURL,
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'unknown',
+      });
+      throw error;
+    }
+  },
 };
 

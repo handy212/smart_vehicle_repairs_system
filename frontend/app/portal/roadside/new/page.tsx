@@ -64,7 +64,7 @@ export default function NewRoadsideRequestPage() {
     queryFn: () => authApi.getCurrentUser(),
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
 
   const { data: vehicles } = useQuery({
@@ -167,7 +167,7 @@ export default function NewRoadsideRequestPage() {
       });
       router.push(`/portal/roadside/${data.id}`);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       const errorMessage = error.response?.data?.detail ||
         error.response?.data?.message ||
@@ -187,7 +187,7 @@ export default function NewRoadsideRequestPage() {
     createMutation.mutate(data);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const onError = (errors: any) => {
     const missingFields = Object.keys(errors).map(field => {
       if (field === 'vehicle') return 'Vehicle';
@@ -273,7 +273,7 @@ export default function NewRoadsideRequestPage() {
                 )}
               >
                 <option value="">Select a vehicle</option>
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 {vehicles?.results?.map((vehicle: any) => (
                   <option key={vehicle.id} value={vehicle.id}>
                     {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.license_plate ? `(${vehicle.license_plate})` : ''}

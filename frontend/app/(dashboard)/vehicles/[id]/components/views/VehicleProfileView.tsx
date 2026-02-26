@@ -20,9 +20,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 interface VehicleProfileViewProps {
     vehicle: Vehicle;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     vehicleWorkOrders?: any[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     vehicleAppointments?: any[];
 }
 
@@ -52,10 +52,10 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
         )[0]?.completed_at || completedWorkOrders[0]?.created_at
         : null;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const vinData = (vehicle as any)?.vin_decoded_data || null;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const DataField = ({ label, value, icon: Icon, className }: { label: string, value: React.ReactNode, icon?: any, className?: string }) => (
         <div className={`space-y-0.5 ${className}`}>
             <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -118,15 +118,17 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                     <DataField
                                         label="Color"
                                         value={
-                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                             (vehicle as any).exterior_color ? (
                                                 <div className="flex items-center gap-2">
                                                     <div
                                                         className="w-4 h-4 rounded-full border border-border shadow-sm shrink-0"
-                                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                                        style={{ backgroundColor: (vehicle as any).exterior_color }}
+                                                        style={{
+
+                                                            backgroundColor: (vehicle as any).exterior_color
+                                                        }}
                                                     />
-                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                                     <span className="truncate">{(vehicle as any).exterior_color}</span>
                                                 </div>
                                             ) : "-"
@@ -135,14 +137,18 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                     />
                                     <DataField
                                         label="Mileage"
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        value={(vehicle as any).current_mileage ? `${((vehicle as any).current_mileage).toLocaleString()} mi` : "-"}
+                                        value={
+
+                                            (vehicle as any).current_mileage ? `${((vehicle as any).current_mileage).toLocaleString()} mi` : "-"
+                                        }
                                         icon={Gauge}
                                     />
                                     <DataField
                                         label="Engine"
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        value={vinData?.engine_model || ((vehicle as any).engine_type || "").replace("_", " ")}
+                                        value={
+
+                                            vinData?.engine_model || ((vehicle as any).engine_type || "").replace(/_/g, " ")
+                                        }
                                         icon={Cog}
                                     />
                                     <DataField label="Fuel Type" value={vinData?.fuel_type_primary} icon={Fuel} />

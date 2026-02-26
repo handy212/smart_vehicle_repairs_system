@@ -100,7 +100,7 @@ export function CommandPalette() {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const handleSelect = (item: any) => {
         router.push(item.url);
         setOpen(false);

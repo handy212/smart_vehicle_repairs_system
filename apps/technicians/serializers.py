@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Technician, Skill, TimeOffRequest, Shift, Certification
 from apps.accounts.serializers import UserSerializer
+from apps.workorders.models import WorkOrder
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
@@ -163,11 +164,6 @@ class TechnicianJobHistorySerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     class Meta:
-        # We need to import WorkOrder inside the method or here to avoid circular imports?
-        # Ideally import at top if possible, but apps.workorders might import technicians.
-        # Let's use string reference if possible or handle import carefully.
-        # Check if we can import WorkOrder at top of file.
-        from apps.workorders.models import WorkOrder
         model = WorkOrder
         fields = [
             'id', 'work_order_number', 'customer_name', 'vehicle_info', 
@@ -179,15 +175,12 @@ class CertificationSerializer(serializers.ModelSerializer):
     """
     Serializer for Certification model with expiry tracking
     """
-    from .models import Certification
-    
     technician_name = serializers.CharField(source='technician.user.get_full_name', read_only=True)
     is_expiring_soon = serializers.BooleanField(read_only=True)
     days_until_expiry = serializers.IntegerField(read_only=True)
     is_expired = serializers.BooleanField(read_only=True)
     
     class Meta:
-        from .models import Certification
         model = Certification
         fields = [
             'id', 'technician', 'technician_name', 'name', 'certification_number',

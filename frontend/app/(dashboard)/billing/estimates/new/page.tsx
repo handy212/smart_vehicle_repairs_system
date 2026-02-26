@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -162,7 +162,7 @@ export default function NewEstimatePage() {
 
       // Labor from Tasks
       if (Array.isArray(tasks)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         tasks.forEach((t: any) => {
           newLineItems.push({
             item_type: 'labor',
@@ -179,7 +179,7 @@ export default function NewEstimatePage() {
 
       // Parts
       if (Array.isArray(parts)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         parts.forEach((p: any) => {
           newLineItems.push({
             item_type: 'part',
@@ -200,7 +200,7 @@ export default function NewEstimatePage() {
 
         // Auto-select vehicle if available in WO
         // use query cache or finding in list
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const wo = workOrdersData?.results?.find((w: any) => w.id === wId);
         if (wo && wo.vehicle) {
           setValue("vehicle", typeof wo.vehicle === 'object' ? wo.vehicle.id : wo.vehicle);
@@ -222,7 +222,7 @@ export default function NewEstimatePage() {
     setValue("vehicle", undefined);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
     if (type === "part" && partData) {
       setLineItems([
@@ -250,7 +250,7 @@ export default function NewEstimatePage() {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const updateLineItem = (index: number, field: keyof ExtendedLineItem, value: any) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value } as ExtendedLineItem;
@@ -303,7 +303,7 @@ export default function NewEstimatePage() {
 
 
   const createMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     mutationFn: (apiData: any) => {
       return billingApi.estimates.create(apiData);
     },
@@ -324,7 +324,7 @@ export default function NewEstimatePage() {
   const onSubmit = async (data: EstimateFormData, statusAction: string = "draft") => {
     setServerError(null);
     const lineItemsForApi = lineItems.map((item) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const lineItem: any = {
         item_type: item.item_type,
         description: item.description,
@@ -347,7 +347,7 @@ export default function NewEstimatePage() {
       return lineItem;
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const apiData: any = {
       ...data,
       line_items: lineItemsForApi,
@@ -442,7 +442,7 @@ export default function NewEstimatePage() {
                       <SelectValue placeholder={!selectedCustomer ? "Select a customer first" : "Select Work Order"} />
                     </SelectTrigger>
                     <SelectContent>
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       {workOrdersData?.results?.map((wo: any) => (
                         <SelectItem key={wo.id} value={wo.id.toString()}>
                           #{wo.work_order_number} - {wo.vehicle_display || "Unknown Vehicle"} ({wo.status.replace('_', ' ')})
@@ -461,7 +461,7 @@ export default function NewEstimatePage() {
                       <SelectValue placeholder="Select Agent" />
                     </SelectTrigger>
                     <SelectContent>
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       {salesAgents?.map((agent: any) => (
                         <SelectItem key={agent.id} value={agent.id.toString()}>
                           {agent.first_name} {agent.last_name}
@@ -504,7 +504,7 @@ export default function NewEstimatePage() {
                   <label className="text-sm font-medium">Status</label>
                   <Select
                     value={watch("status")}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     onValueChange={(val: any) => setValue("status", val)}
                   >
                     <SelectTrigger>
@@ -536,7 +536,7 @@ export default function NewEstimatePage() {
                 <label className="text-sm font-medium">Discount Type</label>
                 <Select
                   value={watch("discount_type")}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                   onValueChange={(val: any) => setValue("discount_type", val)}
                 >
                   <SelectTrigger>
@@ -644,7 +644,7 @@ export default function NewEstimatePage() {
                           ) : (
                             <Select
                               value={item.item_type}
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               onValueChange={(val: any) => updateLineItem(index, 'item_type', val)}
                             >
                               <SelectTrigger className="h-8 text-xs">

@@ -1,9 +1,9 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +30,10 @@ export default function ProformasPage() {
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({
         status: "proforma"
     });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const router = useRouter();

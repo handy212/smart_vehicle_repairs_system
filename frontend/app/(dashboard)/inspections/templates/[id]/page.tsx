@@ -45,9 +45,9 @@ export default function TemplateDetailPage() {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [editingCategory, setEditingCategory] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [editingItem, setEditingItem] = useState<any>(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
@@ -72,7 +72,7 @@ export default function TemplateDetailPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const updateTemplateMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     mutationFn: (data: any) => inspectionsApi.templates.update(templateId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["template", templateId] });
@@ -99,7 +99,7 @@ export default function TemplateDetailPage() {
         variant: "success",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -120,7 +120,7 @@ export default function TemplateDetailPage() {
   });
 
   const addItemMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     mutationFn: async (data: any) => {
       if (editingItem) {
         return inspectionsApi.templates.updateItem(templateId, editingItem.id, data);
@@ -141,7 +141,7 @@ export default function TemplateDetailPage() {
         variant: "success",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -298,7 +298,7 @@ export default function TemplateDetailPage() {
             </div>
           ) : (
             <Accordion type="multiple" className="w-full">
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
               {categories.map((category: any) => (
                 <AccordionItem key={category.id} value={`category-${category.id}`}>
                   <AccordionTrigger className="hover:no-underline">
@@ -356,7 +356,7 @@ export default function TemplateDetailPage() {
                   <AccordionContent>
                     <div className="space-y-2 pt-2">
                       {category.items && category.items.length > 0 ? (
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                         category.items.map((item: any) => (
                           <div
                             key={item.id}
@@ -529,7 +529,7 @@ export default function TemplateDetailPage() {
               <select
                 id="item-type"
                 value={itemType}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 onChange={(e) => setItemType(e.target.value as any)}
                 className="w-full rounded-md border border-border px-3 py-2 text-sm mt-1"
               >
@@ -613,7 +613,7 @@ export default function TemplateDetailPage() {
                   return;
                 }
 
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 const itemData: any = {
                   name: itemName,
                   description: itemDescription || "",

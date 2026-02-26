@@ -20,7 +20,7 @@ export interface ExcelExportOptions {
  * Export data to Excel (.xlsx) with professional formatting
  */
 export function exportToExcel(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     data: any[][],
     filename: string,
     options: ExcelExportOptions = {}
@@ -40,7 +40,7 @@ export function exportToExcel(
         const wb = XLSX.utils.book_new();
 
         // Add professional header rows if requested
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const headerRows: any[][] = [];
         let dataStartRow = 0;
 
@@ -218,16 +218,16 @@ export function exportToExcel(
 export function exportFinancialToExcel(
     sections: {
         title: string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         data: any[];
-    headers: string[];
-    isTotalRow?: boolean;
+        headers: string[];
+        isTotalRow?: boolean;
     }[],
     filename: string,
     reportTitle: string,
     dateInfo?: string
 ): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const rows: any[][] = [];
     const boldRows: number[] = [];
     const colorRows: { row: number; color: string }[] = [];

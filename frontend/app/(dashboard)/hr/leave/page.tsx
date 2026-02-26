@@ -300,48 +300,48 @@ function ApplyLeaveDialog({ open, onOpenChange, onCreated }: { open: boolean, on
     const { data: leaveTypes } = useQuery({ queryKey: ["hr", "leave-types"], queryFn: async () => (await hrApi.leaveTypes.list()).data });
 
     const mut = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (data: any) => hrApi.leaveRequests.create(data),
         onSuccess: () => { toast.success("Leave applied successfully"); onCreated(); },
         onError: () => toast.error("Failed to apply leave"),
     });
 
-return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader><DialogTitle>Apply for Leave</DialogTitle><DialogDescription>Submit a leave request on behalf of a staff member.</DialogDescription></DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label>Staff</Label>
-                    <Select value={staffId} onValueChange={setStaffId}>
-                        <SelectTrigger><SelectValue placeholder="Select Staff" /></SelectTrigger>
-                        <SelectContent>
-                            {staff?.results?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.full_name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>Apply for Leave</DialogTitle><DialogDescription>Submit a leave request on behalf of a staff member.</DialogDescription></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Staff</Label>
+                        <Select value={staffId} onValueChange={setStaffId}>
+                            <SelectTrigger><SelectValue placeholder="Select Staff" /></SelectTrigger>
+                            <SelectContent>
+                                {staff?.results?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.full_name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Leave Type</Label>
+                        <Select value={leaveTypeId} onValueChange={setLeaveTypeId}>
+                            <SelectTrigger><SelectValue placeholder="Select Type" /></SelectTrigger>
+                            <SelectContent>
+                                {leaveTypes?.results?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>End Date</Label><Input type="date" value={end} onChange={e => setEnd(e.target.value)} /></div>
+                    </div>
+                    <div className="space-y-2"><Label>Reason</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} /></div>
                 </div>
-                <div className="space-y-2">
-                    <Label>Leave Type</Label>
-                    <Select value={leaveTypeId} onValueChange={setLeaveTypeId}>
-                        <SelectTrigger><SelectValue placeholder="Select Type" /></SelectTrigger>
-                        <SelectContent>
-                            {leaveTypes?.results?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>End Date</Label><Input type="date" value={end} onChange={e => setEnd(e.target.value)} /></div>
-                </div>
-                <div className="space-y-2"><Label>Reason</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} /></div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button onClick={() => mut.mutate({ staff: Number(staffId), leave_type: Number(leaveTypeId), start_date: start, end_date: end, reason, status: "pending" })} disabled={!staffId || !leaveTypeId || !start || !end || mut.isPending}>Apply</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-);
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={() => mut.mutate({ staff: Number(staffId), leave_type: Number(leaveTypeId), start_date: start, end_date: end, reason, status: "pending" })} disabled={!staffId || !leaveTypeId || !start || !end || mut.isPending}>Apply</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 function EditLeaveDialog({ request, open, onOpenChange, onUpdated }: { request: LeaveRequest | null, open: boolean, onOpenChange: (o: boolean) => void, onUpdated: () => void }) {
@@ -364,50 +364,50 @@ function EditLeaveDialog({ request, open, onOpenChange, onUpdated }: { request: 
     }, [request]);
 
     const mut = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (data: any) => hrApi.leaveRequests.update(request!.id, data),
         onSuccess: () => { toast.success("Leave request updated"); onUpdated(); },
         onError: () => toast.error("Failed to update leave request"),
     });
 
-return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader><DialogTitle>Edit Leave Request</DialogTitle></DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label>Leave Type</Label>
-                    <Select value={leaveTypeId} onValueChange={setLeaveTypeId}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {leaveTypes?.results?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>Edit Leave Request</DialogTitle></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Leave Type</Label>
+                        <Select value={leaveTypeId} onValueChange={setLeaveTypeId}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {leaveTypes?.results?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>End Date</Label><Input type="date" value={end} onChange={e => setEnd(e.target.value)} /></div>
+                    </div>
+                    <div className="space-y-2"><Label>Status</Label>
+                        <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="approved">Approved</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2"><Label>Reason</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} /></div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>End Date</Label><Input type="date" value={end} onChange={e => setEnd(e.target.value)} /></div>
-                </div>
-                <div className="space-y-2"><Label>Status</Label>
-                    <Select value={status} onValueChange={setStatus}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="approved">Approved</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2"><Label>Reason</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} /></div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button onClick={() => mut.mutate({ leave_type: Number(leaveTypeId), start_date: start, end_date: end, reason, status })} disabled={!leaveTypeId || !start || !end || mut.isPending}>Save Changes</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-);
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={() => mut.mutate({ leave_type: Number(leaveTypeId), start_date: start, end_date: end, reason, status })} disabled={!leaveTypeId || !start || !end || mut.isPending}>Save Changes</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

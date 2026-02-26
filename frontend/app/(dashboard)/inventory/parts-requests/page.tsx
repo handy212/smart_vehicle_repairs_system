@@ -7,13 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowRight, Package, Search, AlertCircle, CheckCircle, Clock, X, ChevronDown, Download } from "lucide-react";
 import Link from "next/link";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { Input } from "@/components/ui/input";
 import { PartRequestDetailDialog } from "./components/PartRequestDetailDialog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import {
@@ -26,7 +26,7 @@ import { useToast } from "@/lib/hooks/useToast";
 
 // Stats Grid Component
 // Stats Grid Component
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
     if (loading) {
         return (
@@ -99,7 +99,7 @@ export default function PartsRequestsPage() {
             const response = await workordersApi.parts.list({
                 status: activeStatus === "all" ? undefined : activeStatus
             });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             return Array.isArray(response) ? response : (response as any).results || [];
         },
     });
@@ -139,7 +139,7 @@ export default function PartsRequestsPage() {
         toast({ title: "Export", description: "Export functionality coming soon" });
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const filterOptions: FilterOption[] = [
         {
             key: "status",

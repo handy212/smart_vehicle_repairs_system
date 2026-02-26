@@ -23,16 +23,16 @@ export function WorkOrdersView({ customerId }: WorkOrdersViewProps) {
     const workOrders = response.results || [];
 
     const columns = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Order #", accessorKey: "order_number", cell: (item: any) => <Link href={`/workorders/${item.id}`} className="text-primary hover:underline">{item.order_number}</Link> },
         { header: "Vehicle", accessorKey: "vehicle_display" },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Created", accessorKey: "created_at", cell: (item: any) => format(new Date(item.created_at), "MMM dd, yyyy") },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Due Date", accessorKey: "due_date", cell: (item: any) => item.due_date ? format(new Date(item.due_date), "MMM dd, yyyy") : "-" },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Total", accessorKey: "total", cell: (item: any) => item.total ? formatCurrency(parseFloat(item.total)) : "-" },
     ];
 
@@ -40,7 +40,7 @@ export function WorkOrdersView({ customerId }: WorkOrdersViewProps) {
         <div className="space-y-6">
             <DataTable
                 data={workOrders}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 columns={columns as any}
                 isLoading={isLoading}
                 emptyMessage="No work orders found"

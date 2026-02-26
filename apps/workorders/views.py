@@ -622,31 +622,6 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         
         # Cost variance analysis
         from django.db import models as db_models
-
-    @action(detail=True, methods=['get'])
-    def predict_service(self, request, pk=None):
-        """Predict next service date and odometer using AI based on vehicle history"""
-        work_order = self.get_object()
-        vehicle = work_order.vehicle
-        
-        # Get history of completed/closed work orders for this vehicle
-        # We need this to calculate usage patterns (km per day)
-        from .models import WorkOrder
-        history = WorkOrder.objects.filter(
-            vehicle=vehicle,
-            status__in=['completed', 'closed']
-        ).order_by('created_at')
-        
-        from apps.core.services.ai_service import AIService
-        prediction = AIService.predict_next_service(history)
-        
-        if not prediction:
-            return Response(
-                {'message': 'Insufficient historical data for prediction (at least one completed work order with odometer required)'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-            
-        return Response(prediction)
         cost_variance_data = queryset.filter(
             status='completed',
             estimated_total__gt=0
@@ -677,6 +652,31 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
                 'avg_variance_percent': float(cost_variance_data['avg_variance_percent'] or 0)
             }
         })
+
+    @action(detail=True, methods=['get'])
+    def predict_service(self, request, pk=None):
+        """Predict next service date and odometer using AI based on vehicle history"""
+        work_order = self.get_object()
+        vehicle = work_order.vehicle
+        
+        # Get history of completed/closed work orders for this vehicle
+        # We need this to calculate usage patterns (km per day)
+        from .models import WorkOrder
+        history = WorkOrder.objects.filter(
+            vehicle=vehicle,
+            status__in=['completed', 'closed']
+        ).order_by('created_at')
+        
+        from apps.core.services.ai_service import AIService
+        prediction = AIService.predict_next_service(history)
+        
+        if not prediction:
+            return Response(
+                {'message': 'Insufficient historical data for prediction (at least one completed work order with odometer required)'},
+                status=status.HTTP_200_OK
+            )
+            
+        return Response(prediction)
     
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, HasPermission('manage_workorders')])
     def check_overdue(self, request):

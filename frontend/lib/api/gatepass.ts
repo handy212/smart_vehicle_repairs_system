@@ -118,7 +118,7 @@ export const gatepassApi = {
     try {
       const response = await apiClient.get(`/gatepass/gate-passes/from-workorder/${workOrderId}/`);
       return response.data;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;

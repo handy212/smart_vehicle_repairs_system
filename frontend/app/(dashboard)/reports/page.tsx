@@ -685,7 +685,7 @@ export default function ReportsPage() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                           label={(entry: any) => {
                             const percent = entry.percent || 0;
                             return `${entry.status}: ${(percent * 100).toFixed(0)}%`;
@@ -762,7 +762,7 @@ export default function ReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       {technicianPerf.technicians.map((tech: { technician: { id: number; name: string }; metrics: any }) => (
                         <TableRow key={tech.technician.id}>
                           <TableCell className="font-medium text-xs sm:text-sm">
@@ -912,7 +912,7 @@ export default function ReportsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                         {lowStockData.items.map((item: any) => (
                           <TableRow key={item.part.id}>
                             <TableCell className="font-medium text-xs sm:text-sm">
@@ -1042,7 +1042,7 @@ export default function ReportsPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                           {customerStats.top_customers.map((customer: any) => (
                             <TableRow key={customer.id}>
                               <TableCell className="font-medium text-xs sm:text-sm">
@@ -1135,7 +1135,7 @@ export default function ReportsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                         {serviceDueData.vehicles.map((vehicle: any) => (
                           <TableRow key={vehicle.id}>
                             <TableCell className="font-medium text-xs sm:text-sm min-w-[150px]">

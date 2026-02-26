@@ -231,7 +231,7 @@ function CompDialog({ open, onOpenChange, existing, onSaved }: { open: boolean; 
                     <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Taxable</Label><p className="text-xs text-muted-foreground">Subject to tax</p></div><Switch checked={taxable} onCheckedChange={setTaxable} /></div>
                     <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Active</Label><p className="text-xs text-muted-foreground">Include in payroll</p></div><Switch checked={active} onCheckedChange={setActive} /></div>
                 </div>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                 <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ name, component_type: compType as any, calculation_type: calcType as any, amount: calcType === "fixed" ? amount : "0", percentage: calcType === "percentage" ? pct : "0", is_taxable: taxable, is_active: active })} disabled={!name || mut.isPending}>{mut.isPending ? "Saving..." : isEdit ? "Update" : "Create"}</Button></DialogFooter>
             </DialogContent>
         </Dialog>
@@ -249,49 +249,49 @@ function AssignmentDialog({ open, onOpenChange, existing, onSaved }: { open: boo
     const { data: components } = useQuery({ queryKey: ["hr", "salary-components", "active"], queryFn: async () => (await hrApi.salaryComponents.list({ is_active: true })).data.results });
 
     const mut = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (d: any) => isEdit ? hrApi.employeeSalaryComponents.update(existing!.id, d) : hrApi.employeeSalaryComponents.create(d),
         onSuccess: () => { toast.success(isEdit ? "Updated" : "Assigned"); onSaved(); },
         onError: () => toast.error("Failed"),
     });
 
-return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader><DialogTitle>{isEdit ? "Edit" : "New"} Assignment</DialogTitle><DialogDescription>Assign a component to an employee with a specific amount.</DialogDescription></DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label>Employee</Label>
-                    <Select value={empId} onValueChange={setEmpId} disabled={isEdit}>
-                        <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
-                        <SelectContent>
-                            {employees?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.full_name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>{isEdit ? "Edit" : "New"} Assignment</DialogTitle><DialogDescription>Assign a component to an employee with a specific amount.</DialogDescription></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Employee</Label>
+                        <Select value={empId} onValueChange={setEmpId} disabled={isEdit}>
+                            <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                            <SelectContent>
+                                {employees?.map(e => <SelectItem key={e.id} value={e.id.toString()}>{e.full_name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Component</Label>
+                        <Select value={compId} onValueChange={setCompId} disabled={isEdit}>
+                            <SelectTrigger><SelectValue placeholder="Select component" /></SelectTrigger>
+                            <SelectContent>
+                                {components?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name} ({c.component_type})</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Amount</Label>
+                        <Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
+                        <p className="text-xs text-muted-foreground">Override amount for this employee</p>
+                    </div>
+                    <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Active</Label><p className="text-xs text-muted-foreground">Include in payroll</p></div><Switch checked={active} onCheckedChange={setActive} /></div>
                 </div>
-                <div className="space-y-2">
-                    <Label>Component</Label>
-                    <Select value={compId} onValueChange={setCompId} disabled={isEdit}>
-                        <SelectTrigger><SelectValue placeholder="Select component" /></SelectTrigger>
-                        <SelectContent>
-                            {components?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name} ({c.component_type})</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label>Amount</Label>
-                    <Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">Override amount for this employee</p>
-                </div>
-                <div className="flex items-center justify-between rounded-md border p-3"><div><Label>Active</Label><p className="text-xs text-muted-foreground">Include in payroll</p></div><Switch checked={active} onCheckedChange={setActive} /></div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button onClick={() => mut.mutate({ employee: parseInt(empId), component: parseInt(compId), amount, is_active: active })} disabled={!empId || !compId || !amount || mut.isPending}>
-                    {mut.isPending ? "Saving..." : "Save"}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-);
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={() => mut.mutate({ employee: parseInt(empId), component: parseInt(compId), amount, is_active: active })} disabled={!empId || !compId || !amount || mut.isPending}>
+                        {mut.isPending ? "Saving..." : "Save"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }

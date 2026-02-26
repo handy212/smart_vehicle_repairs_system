@@ -23,6 +23,12 @@ from apps.branches.utils import filter_queryset_for_user_branches
 from apps.core.services.ai_service import AIService
 
 
+import logging
+from apps.notifications_app.triggers import notification_triggers
+from apps.subscriptions.services import SubscriptionUsageService
+
+logger = logging.getLogger(__name__)
+
 class RoadsideRequestViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing roadside assistance requests
@@ -133,15 +139,14 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         from django.db import transaction
+        from rest_framework.exceptions import ValidationError
         
         request = self.request
         # Determine branch
-        from apps.branches.utils import resolve_branch
         branch_id = request.data.get('branch') or request.data.get('branch_id')
         branch = resolve_branch(request, branch_id=branch_id)
         
         if branch is None:
-            from rest_framework.exceptions import ValidationError
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
             
         # 1. Start atomic transaction for the entire request creation
@@ -160,19 +165,14 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         # 3. Send notification ONLY after successful commit
         def send_notification():
             try:
-                from apps.notifications_app.triggers import notification_triggers
                 notification_triggers.roadside_requested(roadside_request)
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to send roadside request notification: {e}")
 
         transaction.on_commit(send_notification)
 
     def _handle_subscription_usage(self, request, roadside_request):
         """Helper to handle strict subscription logic inside a transaction"""
-        from apps.subscriptions.services import SubscriptionUsageService
-        from apps.subscriptions.models import Subscription
         from django.db import transaction
         
         # Map service types to subscription feature keys
@@ -237,8 +237,6 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                         
                 except Exception as sub_e:
                     # Log the internal subscription failure
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.warning(f"Subscription consumption failed in atomic block: {sub_e}", exc_info=True)
                     
                     # Ensure request is clean (the savepoint rollback handled the usage record creation)
@@ -252,8 +250,6 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             # Catch top-level logic errors in this helper
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error in _handle_subscription_usage: {e}", exc_info=True)
             # Ensure safe fallback - clear ALL subscription fields
             roadside_request.is_covered_by_subscription = False
@@ -289,11 +285,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         # Send notification
         try:
-            from apps.notifications_app.triggers import notification_triggers
             notification_triggers.roadside_dispatched(roadside_request)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"Failed to send dispatch notification: {e}")
         
         serializer = self.get_serializer(roadside_request)
@@ -346,11 +339,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         # Send notification
         try:
-            from apps.notifications_app.triggers import notification_triggers
             notification_triggers.roadside_arrived(roadside_request)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"Failed to send arrival notification: {e}")
         
         serializer = self.get_serializer(roadside_request)
@@ -422,11 +412,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         # Send notification
         try:
-            from apps.notifications_app.triggers import notification_triggers
             notification_triggers.roadside_completed(roadside_request)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"Failed to send completion notification: {e}")
         
         serializer = self.get_serializer(roadside_request)
@@ -460,8 +447,6 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                     roadside_request.subscription_allowance_deducted = False
                     roadside_request.save(update_fields=['subscription_allowance_deducted'])
                 except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.error(f"Failed to refund allowance for cancelled request {roadside_request.id}: {e}")
 
             roadside_request.mark_cancelled()
@@ -473,11 +458,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         # Send notification
         try:
-            from apps.notifications_app.triggers import notification_triggers
             notification_triggers.roadside_cancelled(roadside_request)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"Failed to send cancellation notification: {e}")
             
         serializer = self.get_serializer(roadside_request)
@@ -530,8 +512,6 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(requests, many=True)
             return Response(serializer.data)
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error in my_requests: {e}", exc_info=True)
             return Response(
                 {'detail': f'An error occurred: {str(e)}'},
@@ -545,12 +525,10 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         # Verify user is the customer
         is_customer = False
-        if request.user.role == 'customer':
-            try:
-                if roadside_request.customer == request.user.customer_profile:
-                    is_customer = True
-            except AttributeError:
-                pass
+        if getattr(request.user, 'role', '') == 'customer':
+            customer_profile = getattr(request.user, 'customer_profile', None)
+            if customer_profile and roadside_request.customer == customer_profile:
+                is_customer = True
         
         if not is_customer and request.user.role not in ['admin', 'manager']: # Allow admins to test
              return Response(
@@ -694,8 +672,6 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error sending custom email: {e}", exc_info=True)
             return Response(
                 {'error': f'An error occurred while sending email: {str(e)}'},

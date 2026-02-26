@@ -282,7 +282,7 @@ export default function NewUserPage() {
       });
       router.push("/admin/users");
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
@@ -448,7 +448,7 @@ export default function NewUserPage() {
                   </label>
                   <Select
                     value={watch("role")}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
                   >
                     <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>

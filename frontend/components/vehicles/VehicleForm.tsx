@@ -54,7 +54,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
     const { toast } = useToast();
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const [vinOtherInfo, setVinOtherInfo] = useState<any | null>(null);
 
     const { data: customersData } = useQuery({
@@ -128,13 +128,13 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
         make?: string;
         model?: string;
         engine_type?: string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         vin_other_information?: any;
     }) => {
         if (decodedData.year) setValue("year", decodedData.year);
         if (decodedData.make) setValue("make", decodedData.make);
         if (decodedData.model) setValue("model", decodedData.model);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         if (decodedData.engine_type) setValue("engine_type", decodedData.engine_type as any);
         if (decodedData.vin_other_information) {
             setVinOtherInfo(decodedData.vin_other_information);
@@ -174,7 +174,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                     const vinCheck = await vehiclesApi.decodeVin(data.vin.toUpperCase());
                     if (vinCheck.success && vinCheck.exists && vinCheck.vehicle) {
                         // If checking for edit, ensure it's not the same vehicle
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                         if (mode === "create" || (vinCheck.vehicle_id && vinCheck.vehicle_id !== (initialData as any)?.id)) {
                             setError("vin", { type: "manual", message: "This VIN is already registered." });
                             toast({
@@ -284,7 +284,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 <label className="text-sm font-medium">Status</label>
                                 <Select
                                     value={watch("status")}
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     onValueChange={(val) => setValue("status", val as any)}
                                 >
                                     <SelectTrigger className="w-full">
@@ -339,7 +339,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 <label className="text-sm font-medium">Body Style <span className="text-red-500">*</span></label>
                                 <Select
                                     value={watch("vehicle_type")}
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     onValueChange={(val) => setValue("vehicle_type", val as any)}
                                 >
                                     <SelectTrigger className="w-full">
@@ -361,7 +361,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 <label className="text-sm font-medium">Engine Type</label>
                                 <Select
                                     value={watch("engine_type")}
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     onValueChange={(val) => setValue("engine_type", val as any)}
                                 >
                                     <SelectTrigger className="w-full">

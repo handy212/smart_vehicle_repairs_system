@@ -24,7 +24,7 @@ export default function EditVehiclePage() {
   });
 
   const updateMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     mutationFn: ({ id, data }: { id: number; data: FormData | VehicleFormData }) => vehiclesApi.update(id, data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicle", vehicleId] });
@@ -83,107 +83,107 @@ export default function EditVehiclePage() {
     }
   });
 
-const handleSubmit = async (data: VehicleFormData, imageFile: File | null) => {
-  setServerError(null);
-  let payload: VehicleFormData | FormData;
+  const handleSubmit = async (data: VehicleFormData, imageFile: File | null) => {
+    setServerError(null);
+    let payload: VehicleFormData | FormData;
 
-  if (imageFile) {
-    const formData = new FormData();
-    Object.keys(data).forEach((key) => {
-      const value = data[key as keyof VehicleFormData];
-      if (value !== undefined && value !== null) {
-        formData.append(key, value.toString());
-      }
-    });
-    formData.append('image', imageFile);
-    payload = formData;
-  } else {
-    // Logic: if vehicle has image but form data image is missing/null, it might imply deletion if we explicitly cleared it?
-    // Currently backend likely ignores missing image field, so this preserves existing image.
-    payload = data;
-  }
+    if (imageFile) {
+      const formData = new FormData();
+      Object.keys(data).forEach((key) => {
+        const value = data[key as keyof VehicleFormData];
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
+        }
+      });
+      formData.append('image', imageFile);
+      payload = formData;
+    } else {
+      // Logic: if vehicle has image but form data image is missing/null, it might imply deletion if we explicitly cleared it?
+      // Currently backend likely ignores missing image field, so this preserves existing image.
+      payload = data;
+    }
 
-  await updateMutation.mutateAsync({ id: vehicleId, data: payload });
-};
-
-if (isLoading) {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
-    </div>
-  );
-}
-
-if (!vehicle) {
-  return (
-    <div className="space-y-4">
-      <Link href="/vehicles">
-        <Button variant="secondary">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-      </Link>
-      <div className="p-6 bg-card rounded-lg shadow-sm border border-border">
-        <p className="text-red-600 dark:text-red-400">Vehicle not found.</p>
-      </div>
-    </div>
-  );
-}
-
-// Map backend data to form data
-const initialData: Partial<VehicleFormData> & { image?: string | null } = {
-  vin: vehicle.vin || "",
-  make: vehicle.make || "",
-  model: vehicle.model || "",
-  year: vehicle.year || new Date().getFullYear(),
-  license_plate: vehicle.license_plate || "",
-  exterior_color: vehicle.exterior_color || "",
-  current_mileage: vehicle.current_mileage || 0,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-engine_type: (vehicle.engine_type as any) || "gasoline",
-  owner: typeof vehicle.owner === 'object' && vehicle.owner !== null ? vehicle.owner.id : (vehicle.owner || 0),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-status: (vehicle.status as any) || "active",
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-vehicle_type: (vehicle.vehicle_type as any) || "saloon",
-  image: vehicle.image,
+    await updateMutation.mutateAsync({ id: vehicleId, data: payload });
   };
 
-return (
-  <div className="max-w-5xl mx-auto space-y-8 pb-12">
-    {/* Header */}
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <Link href={`/vehicles/${vehicleId}`}>
-          <Button variant="ghost" size="sm">
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
+      </div>
+    );
+  }
+
+  if (!vehicle) {
+    return (
+      <div className="space-y-4">
+        <Link href="/vehicles">
+          <Button variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Edit Vehicle</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {vehicle.make} {vehicle.model} {vehicle.year}
-          </p>
+        <div className="p-6 bg-card rounded-lg shadow-sm border border-border">
+          <p className="text-red-600 dark:text-red-400">Vehicle not found.</p>
         </div>
       </div>
-    </div>
+    );
+  }
 
-    {serverError && (
-      <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
+  // Map backend data to form data
+  const initialData: Partial<VehicleFormData> & { image?: string | null } = {
+    vin: vehicle.vin || "",
+    make: vehicle.make || "",
+    model: vehicle.model || "",
+    year: vehicle.year || new Date().getFullYear(),
+    license_plate: vehicle.license_plate || "",
+    exterior_color: vehicle.exterior_color || "",
+    current_mileage: vehicle.current_mileage || 0,
+
+    engine_type: (vehicle.engine_type as any) || "gasoline",
+    owner: typeof vehicle.owner === 'object' && vehicle.owner !== null ? vehicle.owner.id : (vehicle.owner || 0),
+
+    status: (vehicle.status as any) || "active",
+
+    vehicle_type: (vehicle.vehicle_type as any) || "saloon",
+    image: vehicle.image,
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href={`/vehicles/${vehicleId}`}>
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Edit Vehicle</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {vehicle.make} {vehicle.model} {vehicle.year}
+            </p>
+          </div>
+        </div>
       </div>
-    )}
 
-    <VehicleForm
-      initialData={initialData}
-      onSubmit={handleSubmit}
-      isSubmitting={updateMutation.isPending}
-      mode="edit"
-      onCancel={() => router.back()}
-      serverFieldErrors={fieldErrors}
-    />
-  </div>
-);
+      {serverError && (
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
+        </div>
+      )}
+
+      <VehicleForm
+        initialData={initialData}
+        onSubmit={handleSubmit}
+        isSubmitting={updateMutation.isPending}
+        mode="edit"
+        onCancel={() => router.back()}
+        serverFieldErrors={fieldErrors}
+      />
+    </div>
+  );
 }

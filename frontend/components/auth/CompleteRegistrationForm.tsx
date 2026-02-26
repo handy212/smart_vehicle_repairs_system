@@ -25,9 +25,9 @@ interface CompleteRegistrationFormProps {
         google_id: string;
         profile_picture?: string;
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-onSuccess: (data: any) => void;
-onCancel: () => void;
+
+    onSuccess: (data: any) => void;
+    onCancel: () => void;
 }
 
 export default function CompleteRegistrationForm({ userData, onSuccess, onCancel }: CompleteRegistrationFormProps) {
@@ -80,7 +80,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const onSubmit = async (data: any) => {
         setSubmitting(true);
         setError(null);
@@ -120,7 +120,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
             localStorage.setItem('user', JSON.stringify(authData.user));
 
             onSuccess(authData);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } catch (err: any) {
             console.error('Registration error:', err);
             setError(err.message);

@@ -297,7 +297,7 @@ export default function BranchDetailPage() {
                 </div>
               ) : staff && staff.length > 0 ? (
                 <div className="space-y-2">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                   {staff.map((member: any) => (
                     <div
                       key={member.id}
@@ -340,7 +340,7 @@ export default function BranchDetailPage() {
                 </div>
               ) : managers && managers.length > 0 ? (
                 <div className="space-y-2">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                   {managers.map((manager: any) => (
                     <div
                       key={manager.id}

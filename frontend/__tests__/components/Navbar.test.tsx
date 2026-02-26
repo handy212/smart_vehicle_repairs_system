@@ -65,7 +65,7 @@ const createWrapper = () => {
 
 describe('Navbar Component', () => {
     beforeEach(() => {
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
+
         (useAuthStore as any).mockReturnValue({
             user: {
                 id: 1,

@@ -10,7 +10,7 @@ import { inventoryApi } from "@/lib/api/inventory";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { adminApi } from "@/lib/api/admin";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import {
   AlertCircle,
   Plus,
   Trash2,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   Package,
   Search,
   FileText,
@@ -131,7 +131,7 @@ export default function EditEstimatePage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     setError,
     reset,
     watch,
@@ -154,17 +154,17 @@ export default function EditEstimatePage() {
     if (estimate && !isLoading) {
       // Extract IDs from objects, handling both nested objects and direct IDs
       const customerId = typeof estimate.customer === 'object' && estimate.customer
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         ? (estimate.customer as any).id
         : estimate.customer;
 
       const vehicleId = typeof estimate.vehicle === 'object' && estimate.vehicle
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         ? (estimate.vehicle as any).id
         : estimate.vehicle;
 
       const salesAgentId = typeof estimate.sales_agent === 'object' && estimate.sales_agent
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         ? (estimate.sales_agent as any).id
         : estimate.sales_agent;
 
@@ -173,7 +173,7 @@ export default function EditEstimatePage() {
         setSelectedCustomer(customerId);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const loadedLineItems = (estimate.line_items || []).map((item: any) => ({
         item_type: item.item_type || "other",
         description: item.description || "",
@@ -203,7 +203,7 @@ export default function EditEstimatePage() {
         valid_until: estimate.valid_until ? estimate.valid_until.split("T")[0] : "",
         sales_agent: salesAgentId || undefined,
         discount_percentage: dPercent,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         discount_type: (estimate as any).discount_type || dType,
         discount_reason: estimate.discount_reason || "",
         line_items: loadedLineItems,
@@ -212,10 +212,10 @@ export default function EditEstimatePage() {
     }
   }, [estimate, isLoading, reset, setValue]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
     if (type === "part" && partData) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const newLineItem: any = {
         item_type: "part",
         description: partData.name,
@@ -228,7 +228,7 @@ export default function EditEstimatePage() {
       setLineItems([...lineItems, newLineItem]);
       setValue("line_items", [...lineItems, newLineItem]);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const newItem: any = { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true };
       setLineItems([...lineItems, newItem]);
       setValue("line_items", [...lineItems, newItem]);
@@ -241,10 +241,10 @@ export default function EditEstimatePage() {
     setValue("line_items", updated);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const updateLineItem = (index: number, field: string, value: any) => {
     const updated = [...lineItems];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     updated[index] = { ...updated[index], [field]: value } as any;
     setLineItems(updated);
     setValue("line_items", updated, { shouldValidate: false });
@@ -288,7 +288,7 @@ export default function EditEstimatePage() {
   const updateMutation = useMutation({
     mutationFn: async (data: EstimateUpdateFormData) => {
       const lineItemsForApi = lineItems.map((item) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const lineItem: any = {
           item_type: item.item_type,
           description: item.description,
@@ -312,7 +312,7 @@ export default function EditEstimatePage() {
         return lineItem;
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const payload: any = {
         customer: data.customer,
         vehicle: data.vehicle || undefined,
@@ -335,7 +335,7 @@ export default function EditEstimatePage() {
       queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: AxiosError<any>) => {
       // Error handling is done in onSubmit via promise catch or here
       const message = error.response?.data?.detail || error.response?.data?.message || "Failed to update estimate";
@@ -351,7 +351,7 @@ export default function EditEstimatePage() {
         // Or if 'sent', maybe go to list? keeping same pattern as Invoice:
         router.push(`/billing/estimates/${estimateId}`);
       })
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       .catch((err) => {
         // handled in onError
       });
@@ -463,7 +463,7 @@ export default function EditEstimatePage() {
                     <SelectValue placeholder="Select customer..." />
                   </SelectTrigger>
                   <SelectContent>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     {customersData?.results.map((c: any) => (
                       <SelectItem key={c.id} value={c.id.toString()}>
                         {c.full_name
@@ -497,7 +497,7 @@ export default function EditEstimatePage() {
                     <SelectValue placeholder="Select vehicle..." />
                   </SelectTrigger>
                   <SelectContent>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     {vehiclesData?.results.map((v: any) => (
                       <SelectItem key={v.id} value={v.id.toString()}>
                         {v.year} {v.make} {v.model}
@@ -522,7 +522,7 @@ export default function EditEstimatePage() {
                     <SelectValue placeholder="Select Agent" />
                   </SelectTrigger>
                   <SelectContent>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     {salesAgents?.map((agent: any) => (
                       <SelectItem key={agent.id} value={agent.id.toString()}>
                         {agent.first_name} {agent.last_name}
@@ -614,7 +614,7 @@ export default function EditEstimatePage() {
                 <label className="text-sm font-medium">Discount Type</label>
                 <Select
                   value={watch("discount_type") || "none"}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                   onValueChange={(val: any) => setValue("discount_type", val, { shouldValidate: true })}
                 >
                   <SelectTrigger>
@@ -677,7 +677,7 @@ export default function EditEstimatePage() {
                 />
                 {partSearchTerm.length > 1 && partsData?.results && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     {partsData.results.map((part: any) => (
                       <div
                         key={part.id}

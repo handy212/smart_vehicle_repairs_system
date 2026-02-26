@@ -2,14 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { format, startOfYear, endOfMonth } from "date-fns";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Download, Loader2, ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Separator } from "@/components/ui/separator";
@@ -33,7 +33,7 @@ export default function CashFlowPage() {
     const handleExportCSV = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
         rows.push(['Cash Flow Statement']);
         rows.push([`Period: ${startDate} to ${endDate}`]);
@@ -72,7 +72,7 @@ export default function CashFlowPage() {
     const handleExportExcel = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
 
         // Summary
@@ -121,7 +121,7 @@ export default function CashFlowPage() {
         });
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const ActivitySection = ({ title, data }: { title: string, data: any }) => (
         <div className="space-y-2">
             <h3 className="font-semibold text-lg">{title}</h3>

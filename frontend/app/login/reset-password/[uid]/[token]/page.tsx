@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
                 new_password_confirm: confirmPassword
             });
             setIsSubmitted(true);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } catch (err: any) {
             console.error("Reset Password error:", err);
             const data = err?.response?.data;

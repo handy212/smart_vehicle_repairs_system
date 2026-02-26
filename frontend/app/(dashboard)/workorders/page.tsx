@@ -45,7 +45,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { getStatusVariant } from "@/lib/utils/workorder-status";
+import { getStatusVariant, getStatusLabel } from "@/lib/utils/workorder-status";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
@@ -60,7 +60,7 @@ export default function WorkOrdersPage() {
   const [page, setPage] = useState(1);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("in_progress");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
@@ -182,7 +182,7 @@ export default function WorkOrdersPage() {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
       toast({ title: "Success", description: "Work order deleted successfully" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -192,7 +192,7 @@ export default function WorkOrdersPage() {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleDelete = (workOrder: any) => {
     if (confirm(`Are you sure you want to delete work order "${workOrder.work_order_number}"? This action cannot be undone.`)) {
       deleteMutation.mutate(workOrder.id);
@@ -208,7 +208,7 @@ export default function WorkOrdersPage() {
       bulkSelection.clearSelection();
       toast({ title: "Success", description: `${bulkSelection.selectedCount} work orders deleted successfully` });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -220,14 +220,8 @@ export default function WorkOrdersPage() {
 
   const bulkStatusUpdateMutation = useMutation({
     mutationFn: async ({ ids, status }: { ids: number[]; status: string }) => {
-      await Promise.all(
-        ids.map((id) =>
-          workordersApi.update(id, {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            status: status as any,
-          })
-        )
-      );
+      const response = await workordersApi.bulkUpdateStatus(ids, status);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
@@ -235,7 +229,7 @@ export default function WorkOrdersPage() {
       setShowStatusDialog(false);
       toast({ title: "Success", description: `Status updated for ${bulkSelection.selectedCount} work orders` });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -597,13 +591,12 @@ export default function WorkOrdersPage() {
                       <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{workorder.customer_name || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
-                          {workorder.status?.replace("_", " ") || workorder.status || "-"}
+                          {getStatusLabel(workorder.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                         <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
                           {workorder.priority || "-"}
                         </Badge>
@@ -660,11 +653,7 @@ export default function WorkOrdersPage() {
                             <DropdownMenuSeparator />
                             <PermissionGuard permission="delete_workorders">
                               <DropdownMenuItem
-                                onClick={() => {
-                                  if (window.confirm(`Are you sure you want to delete work order "${workorder.work_order_number}"? This action cannot be undone.`)) {
-                                    handleDelete(workorder);
-                                  }
-                                }}
+                                onClick={() => handleDelete(workorder)}
                                 className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 text-xs"
                                 disabled={deleteMutation.isPending}
                               >

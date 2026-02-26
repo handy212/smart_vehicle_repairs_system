@@ -25,9 +25,9 @@ export function SubscriptionsView({ customerId }: SubscriptionsViewProps) {
 
     const subscriptions = response.results || [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const activeCount = subscriptions.filter((s: any) => s.status === 'active').length;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const expiredCount = subscriptions.filter((s: any) => s.status === 'expired').length;
     const carCount = subscriptions.length;
 
@@ -38,16 +38,16 @@ export function SubscriptionsView({ customerId }: SubscriptionsViewProps) {
     ];
 
     const columns = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Subscription #", accessorKey: "subscription_number", cell: (item: any) => <Link href={`/subscriptions/${item.id}`} className="text-primary hover:underline">{item.subscription_number}</Link> },
         { header: "Plan", accessorKey: "package_name" },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Start Date", accessorKey: "start_date", cell: (item: any) => format(new Date(item.start_date), "MMM dd, yyyy") },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "End Date", accessorKey: "end_date", cell: (item: any) => format(new Date(item.end_date), "MMM dd, yyyy") },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Price", accessorKey: "purchase_price", cell: (item: any) => formatCurrency(parseFloat(item.purchase_price)) },
     ];
 
@@ -56,7 +56,7 @@ export function SubscriptionsView({ customerId }: SubscriptionsViewProps) {
             <StatsGrid stats={stats} columns={3} />
             <DataTable
                 data={subscriptions}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 columns={columns as any}
                 isLoading={isLoading}
                 emptyMessage="No subscriptions found"

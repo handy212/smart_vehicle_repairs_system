@@ -8,17 +8,17 @@ import { Textarea } from "@/components/ui/textarea";
 interface Diagnosis {
     customer_complaint?: string;
     initial_observations?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-[key: string]: any;
+
+    [key: string]: any;
 }
 
 interface ComplaintTabProps {
     diagnosis: Diagnosis;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-workOrder: any;
-onUpdate: (data: Partial<Diagnosis>) => void;
-isUpdating: boolean;
-isDisabled ?: boolean;
+
+    workOrder: any;
+    onUpdate: (data: Partial<Diagnosis>) => void;
+    isUpdating: boolean;
+    isDisabled?: boolean;
 }
 
 export function ComplaintTab({

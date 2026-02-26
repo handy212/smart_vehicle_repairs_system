@@ -97,27 +97,27 @@ export function DataTable<T>({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                             data.map((item: any, rowIndex) => (
-                        <TableRow
-                            key={item.id || rowIndex}
-                            className={cn(
-                                "group hover:bg-muted/80 transition-colors border-b border-border",
-                                (onRowClick || onRowDoubleClick) && "cursor-pointer"
-                            )}
-                            onClick={() => onRowClick && onRowClick(item)}
-                            onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(item)}
-                        >
-                            {columns.map((col, colIndex) => (
-                                <TableCell
-                                    key={colIndex}
-                                    className={cn("px-4 py-2 text-sm", col.className)}
+                                <TableRow
+                                    key={item.id || rowIndex}
+                                    className={cn(
+                                        "group hover:bg-muted/80 transition-colors border-b border-border",
+                                        (onRowClick || onRowDoubleClick) && "cursor-pointer"
+                                    )}
+                                    onClick={() => onRowClick && onRowClick(item)}
+                                    onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(item)}
                                 >
-                                    {col.cell ? col.cell(item) : item[col.accessorKey as string]}
-                                </TableCell>
-                            ))}
-                        </TableRow>
-                        ))
+                                    {columns.map((col, colIndex) => (
+                                        <TableCell
+                                            key={colIndex}
+                                            className={cn("px-4 py-2 text-sm", col.className)}
+                                        >
+                                            {col.cell ? col.cell(item) : item[col.accessorKey as string]}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
                         )}
                     </TableBody>
                 </Table>

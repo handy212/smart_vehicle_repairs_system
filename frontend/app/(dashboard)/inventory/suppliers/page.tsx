@@ -1,25 +1,25 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { inventoryApi, Supplier } from "@/lib/api/inventory";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Plus, Search, Eye, Edit, Building2, MoreVertical, Trash2, X, Download, Upload, ChevronDown, CheckCircle, Store, Factory, Truck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -27,7 +27,7 @@ import { useToast } from "@/lib/hooks/useToast";
 
 // Stats Grid Component
 // Stats Grid Component
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   if (loading) {
     return (
@@ -46,7 +46,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
 
   if (!stats) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const items = [
     { label: "Total Suppliers", value: stats.total_suppliers, color: "text-primary" },
     { label: "Active", value: stats.active_suppliers, color: "text-success" },

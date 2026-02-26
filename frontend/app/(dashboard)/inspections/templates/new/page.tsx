@@ -64,212 +64,212 @@ export default function NewTemplatePage() {
       });
       router.push(`/inspections/templates/${template.id}`);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
-    console.error("Template creation error:", error);
-    console.error("Error response data:", JSON.stringify(error.response?.data, null, 2));
-    console.error("Error response status:", error.response?.status);
-    console.error("Error response headers:", error.response?.headers);
+      console.error("Template creation error:", error);
+      console.error("Error response data:", JSON.stringify(error.response?.data, null, 2));
+      console.error("Error response status:", error.response?.status);
+      console.error("Error response headers:", error.response?.headers);
 
-    const errorData = error.response?.data;
-    let errorMessage = "Failed to create template";
+      const errorData = error.response?.data;
+      let errorMessage = "Failed to create template";
 
-    if (errorData) {
-      if (errorData.detail) {
-        errorMessage = errorData.detail;
-      } else if (typeof errorData === "string") {
-        errorMessage = errorData;
-      } else if (typeof errorData === "object") {
-        // Format all validation errors with user-friendly messages
-        const errors = Object.entries(errorData)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (errorData) {
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === "string") {
+          errorMessage = errorData;
+        } else if (typeof errorData === "object") {
+          // Format all validation errors with user-friendly messages
+          const errors = Object.entries(errorData)
+
             .map(([field, messages]: [string, any]) => {
-          const msg = Array.isArray(messages) ? messages.join(", ") : String(messages);
-          // Capitalize field name and format nicely
-          const fieldLabel = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, " ");
-          return `${fieldLabel}: ${msg}`;
-        })
-    .join("; ");
-  errorMessage = errors || errorMessage;
-}
+              const msg = Array.isArray(messages) ? messages.join(", ") : String(messages);
+              // Capitalize field name and format nicely
+              const fieldLabel = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, " ");
+              return `${fieldLabel}: ${msg}`;
+            })
+            .join("; ");
+          errorMessage = errors || errorMessage;
+        }
       }
 
-toast({
-  title: "Error",
-  description: errorMessage,
-  variant: "destructive",
-});
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
     },
   });
 
-const onSubmit = async (data: TemplateFormData) => {
-  // Clean up the data - convert empty strings to undefined for optional fields
-  const cleanedData = {
-    ...data,
-    description: data.description?.trim() || undefined,
+  const onSubmit = async (data: TemplateFormData) => {
+    // Clean up the data - convert empty strings to undefined for optional fields
+    const cleanedData = {
+      ...data,
+      description: data.description?.trim() || undefined,
+    };
+    await createMutation.mutateAsync(cleanedData);
   };
-  await createMutation.mutateAsync(cleanedData);
-};
 
-return (
-  <div className="space-y-6">
-    <div className="flex items-center space-x-4">
-      <Link href="/inspections/templates">
-        <Button variant="secondary" size="icon">
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-      </Link>
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">New Inspection Template</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create a new inspection template with categories and items
-        </p>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <Link href="/inspections/templates">
+          <Button variant="secondary" size="icon">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">New Inspection Template</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create a new inspection template with categories and items
+          </p>
+        </div>
       </div>
-    </div>
 
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Template Details</CardTitle>
-          <CardDescription>
-            Basic information about the inspection template
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <Label htmlFor="name">
-              Template Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              {...register("name")}
-              placeholder="e.g., Multi-Point Inspection"
-              className="mt-1"
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-            )}
-            {/* Server-side validation errors will be shown in toast */}
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              {...register("description")}
-              placeholder="Template description..."
-              rows={3}
-              className="mt-1"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="is_active"
-                {...register("is_active", { valueAsNumber: false })}
-                className="h-4 w-4 rounded border-border"
-              />
-              <Label htmlFor="is_active" className="cursor-pointer">
-                Active
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Template Details</CardTitle>
+            <CardDescription>
+              Basic information about the inspection template
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <Label htmlFor="name">
+                Template Name <span className="text-red-500">*</span>
               </Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="is_default"
-                {...register("is_default", { valueAsNumber: false })}
-                className="h-4 w-4 rounded border-border"
+              <Input
+                id="name"
+                {...register("name")}
+                placeholder="e.g., Multi-Point Inspection"
+                className="mt-1"
               />
-              <Label htmlFor="is_default" className="cursor-pointer">
-                Set as Default
-              </Label>
+              {errors.name && (
+                <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+              )}
+              {/* Server-side validation errors will be shown in toast */}
             </div>
-          </div>
 
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-foreground mb-4">Template Settings</h3>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                {...register("description")}
+                placeholder="Template description..."
+                rows={3}
+                className="mt-1"
+              />
+            </div>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  id="requires_odometer"
-                  {...register("requires_odometer", { valueAsNumber: false })}
+                  id="is_active"
+                  {...register("is_active", { valueAsNumber: false })}
                   className="h-4 w-4 rounded border-border"
                 />
-                <Label htmlFor="requires_odometer" className="cursor-pointer">
-                  Requires Odometer Reading
+                <Label htmlFor="is_active" className="cursor-pointer">
+                  Active
                 </Label>
               </div>
 
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  id="requires_technician_signature"
-                  {...register("requires_technician_signature", { valueAsNumber: false })}
+                  id="is_default"
+                  {...register("is_default", { valueAsNumber: false })}
                   className="h-4 w-4 rounded border-border"
                 />
-                <Label htmlFor="requires_technician_signature" className="cursor-pointer">
-                  Requires Technician Signature
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="requires_customer_signature"
-                  {...register("requires_customer_signature", { valueAsNumber: false })}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="requires_customer_signature" className="cursor-pointer">
-                  Requires Customer Signature
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="allows_photos"
-                  {...register("allows_photos", { valueAsNumber: false })}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="allows_photos" className="cursor-pointer">
-                  Allows Photos
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="allows_video"
-                  {...register("allows_video", { valueAsNumber: false })}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="allows_video" className="cursor-pointer">
-                  Allows Video
+                <Label htmlFor="is_default" className="cursor-pointer">
+                  Set as Default
                 </Label>
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Link href="/inspections/templates">
-              <Button type="button" variant="secondary">
-                Cancel
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Template Settings</h3>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="requires_odometer"
+                    {...register("requires_odometer", { valueAsNumber: false })}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="requires_odometer" className="cursor-pointer">
+                    Requires Odometer Reading
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="requires_technician_signature"
+                    {...register("requires_technician_signature", { valueAsNumber: false })}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="requires_technician_signature" className="cursor-pointer">
+                    Requires Technician Signature
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="requires_customer_signature"
+                    {...register("requires_customer_signature", { valueAsNumber: false })}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="requires_customer_signature" className="cursor-pointer">
+                    Requires Customer Signature
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="allows_photos"
+                    {...register("allows_photos", { valueAsNumber: false })}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="allows_photos" className="cursor-pointer">
+                    Allows Photos
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="allows_video"
+                    {...register("allows_video", { valueAsNumber: false })}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="allows_video" className="cursor-pointer">
+                    Allows Video
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Link href="/inspections/templates">
+                <Button type="button" variant="secondary">
+                  Cancel
+                </Button>
+              </Link>
+              <Button type="submit" disabled={isSubmitting}>
+                <Save className="w-4 h-4 mr-2" />
+                {isSubmitting ? "Creating..." : "Create Template"}
               </Button>
-            </Link>
-            <Button type="submit" disabled={isSubmitting}>
-              <Save className="w-4 h-4 mr-2" />
-              {isSubmitting ? "Creating..." : "Create Template"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </form>
-  </div>
-);
+            </div>
+          </CardContent>
+        </Card>
+      </form>
+    </div>
+  );
 }
 

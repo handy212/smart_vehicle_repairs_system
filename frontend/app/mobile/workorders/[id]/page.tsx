@@ -132,7 +132,7 @@ export default function MobileWorkOrderDetailPage() {
         const updated = { ...workOrder, status: newStatus };
         await workOrdersDB.set(workOrder.id, updated, false);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const pathMap: any = {
           startWork: 'start_work',
           pause: 'pause',
@@ -163,7 +163,7 @@ export default function MobileWorkOrderDetailPage() {
           description: "Status change will sync when online",
         });
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } catch (error: any) {
       console.error(`Failed to update status via ${action}:`, error);
       const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update status";
@@ -182,652 +182,652 @@ export default function MobileWorkOrderDetailPage() {
       const partData = {
         work_order: workOrder.id,
         ...newPart,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      status: 'pending' as any,
+
+        status: 'pending' as any,
       };
 
-    if (isOnline) {
-      await workOrderPartsApi.create(partData);
-      await loadWorkOrder();
-      setShowPartRequestDialog(false);
-      setNewPart({ part_name: "", quantity: 1, description: "" });
-      toast({ title: "Success", description: "Part requested successfully" });
-    } else {
-      await queueRequest("create", "/workorders/parts/", "POST", partData);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setParts([...parts, { id: Date.now(), ...partData } as any]);
-      setShowPartRequestDialog(false);
-      setNewPart({ part_name: "", quantity: 1, description: "" });
-      toast({ title: "Queued", description: "Part request will sync when online" });
-    }
-  } catch (error) {
-    console.error("Failed to request part:", error);
-    toast({ title: "Error", description: "Failed to request part", variant: "destructive" });
-  } finally {
-    setLoading(false);
-  }
-};
+      if (isOnline) {
+        await workOrderPartsApi.create(partData);
+        await loadWorkOrder();
+        setShowPartRequestDialog(false);
+        setNewPart({ part_name: "", quantity: 1, description: "" });
+        toast({ title: "Success", description: "Part requested successfully" });
+      } else {
+        await queueRequest("create", "/workorders/parts/", "POST", partData);
 
-const handleClockIn = async () => {
-  if (!workOrder) return;
-  setLoading(true);
-  try {
-    const timeLog = {
-      work_order: workOrder.id,
-      clock_in: new Date().toISOString(),
-      description: "Started work via Mobile detail",
-    };
-
-    if (isOnline) {
-      const response = await apiClient.post("/workorders/time-logs/", timeLog);
-      setActiveLog(response.data);
-      if (workOrder.status === 'assigned') {
-        await handleStatusChangeAction('startWork');
+        setParts([...parts, { id: Date.now(), ...partData } as any]);
+        setShowPartRequestDialog(false);
+        setNewPart({ part_name: "", quantity: 1, description: "" });
+        toast({ title: "Queued", description: "Part request will sync when online" });
       }
-      toast({ title: "Clocked In", description: `Started time for WO #${workOrder.work_order_number}` });
+    } catch (error) {
+      console.error("Failed to request part:", error);
+      toast({ title: "Error", description: "Failed to request part", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to clock in:", error);
-    toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-const handleClockOut = async () => {
-  if (!activeLog) return;
-  setLoading(true);
-  try {
-    const clockOut = new Date().toISOString();
-    if (isOnline && activeLog.id) {
-      await apiClient.post(`/workorders/time-logs/${activeLog.id}/clock_out/`, {
-        clock_out: clockOut,
-      });
+  const handleClockIn = async () => {
+    if (!workOrder) return;
+    setLoading(true);
+    try {
+      const timeLog = {
+        work_order: workOrder.id,
+        clock_in: new Date().toISOString(),
+        description: "Started work via Mobile detail",
+      };
+
+      if (isOnline) {
+        const response = await apiClient.post("/workorders/time-logs/", timeLog);
+        setActiveLog(response.data);
+        if (workOrder.status === 'assigned') {
+          await handleStatusChangeAction('startWork');
+        }
+        toast({ title: "Clocked In", description: `Started time for WO #${workOrder.work_order_number}` });
+      }
+    } catch (error) {
+      console.error("Failed to clock in:", error);
+      toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setActiveLog(null);
-    toast({ title: "Clocked Out", description: "Time log saved" });
-  } catch (error) {
-    console.error("Failed to clock out:", error);
-    toast({ title: "Error", description: "Failed to clock out", variant: "destructive" });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-const handleAdditionalWork = async () => {
-  if (!workOrder) return;
-
-  try {
-    if (isOnline) {
-      await workordersApi.updateStatus(workOrder.id, "additional_work_found");
-      // Create note if provided
-      if (additionalWorkNotes.trim()) {
-        await workOrderNotesApi.create({
-          work_order: workOrder.id,
-          note: additionalWorkNotes,
-          note_type: 'technician',
-          is_important: true,
-          is_customer_visible: false
+  const handleClockOut = async () => {
+    if (!activeLog) return;
+    setLoading(true);
+    try {
+      const clockOut = new Date().toISOString();
+      if (isOnline && activeLog.id) {
+        await apiClient.post(`/workorders/time-logs/${activeLog.id}/clock_out/`, {
+          clock_out: clockOut,
         });
       }
-      await loadWorkOrder();
-      setShowAdditionalWorkDialog(false);
-      setAdditionalWorkNotes("");
-      toast({
-        title: "Success",
-        description: "Additional work flagged - customer approval required",
-      });
-    } else {
-      const updated = { ...workOrder, status: "additional_work_found" };
-      await workOrdersDB.set(workOrder.id, updated, false);
-      await queueRequest(
-        "update",
-        `/workorders/work-orders/${workOrder.id}/`,
-        "PATCH",
-        { status: "additional_work_found" }
-      );
-      // Queue note
-      if (additionalWorkNotes.trim()) {
-        await queueRequest(
-          "create",
-          "/workorders/notes/",
-          "POST",
-          {
+      setActiveLog(null);
+      toast({ title: "Clocked Out", description: "Time log saved" });
+    } catch (error) {
+      console.error("Failed to clock out:", error);
+      toast({ title: "Error", description: "Failed to clock out", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdditionalWork = async () => {
+    if (!workOrder) return;
+
+    try {
+      if (isOnline) {
+        await workordersApi.updateStatus(workOrder.id, "additional_work_found");
+        // Create note if provided
+        if (additionalWorkNotes.trim()) {
+          await workOrderNotesApi.create({
             work_order: workOrder.id,
             note: additionalWorkNotes,
             note_type: 'technician',
             is_important: true,
             is_customer_visible: false
-          }
+          });
+        }
+        await loadWorkOrder();
+        setShowAdditionalWorkDialog(false);
+        setAdditionalWorkNotes("");
+        toast({
+          title: "Success",
+          description: "Additional work flagged - customer approval required",
+        });
+      } else {
+        const updated = { ...workOrder, status: "additional_work_found" };
+        await workOrdersDB.set(workOrder.id, updated, false);
+        await queueRequest(
+          "update",
+          `/workorders/work-orders/${workOrder.id}/`,
+          "PATCH",
+          { status: "additional_work_found" }
+        );
+        // Queue note
+        if (additionalWorkNotes.trim()) {
+          await queueRequest(
+            "create",
+            "/workorders/notes/",
+            "POST",
+            {
+              work_order: workOrder.id,
+              note: additionalWorkNotes,
+              note_type: 'technician',
+              is_important: true,
+              is_customer_visible: false
+            }
+          );
+        }
+        setWorkOrder(updated);
+        setShowAdditionalWorkDialog(false);
+        setAdditionalWorkNotes("");
+        toast({
+          title: "Queued",
+          description: "Additional work will be flagged when online",
+        });
+      }
+
+    } catch (error: any) {
+      console.error("Failed to flag additional work:", error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to flag additional work";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleTask = async (task: ServiceTask) => {
+    const newStatus = task.status === "completed" ? "in_progress" : "completed";
+    try {
+      if (isOnline) {
+        // Use patch and only send the status field
+        await apiClient.patch(`/workorders/tasks/${task.id}/`, {
+          status: newStatus
+        });
+        await loadWorkOrder();
+      } else {
+        // Update locally and queue
+        const updatedTasks = tasks.map((t) =>
+          t.id === task.id ? { ...t, status: newStatus } : t
+        );
+        setTasks(updatedTasks);
+        await queueRequest(
+          "update",
+          `/workorders/tasks/${task.id}/`,
+          "PATCH",
+          { status: newStatus }
         );
       }
-      setWorkOrder(updated);
-      setShowAdditionalWorkDialog(false);
-      setAdditionalWorkNotes("");
+
+    } catch (error: any) {
+      console.error("Failed to toggle task:", error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update task";
       toast({
-        title: "Queued",
-        description: "Additional work will be flagged when online",
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
       });
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    console.error("Failed to flag additional work:", error);
-    const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to flag additional work";
-    toast({
-      title: "Error",
-      description: errorMessage,
-      variant: "destructive",
-    });
-  }
-};
-
-const handleToggleTask = async (task: ServiceTask) => {
-  const newStatus = task.status === "completed" ? "in_progress" : "completed";
-  try {
-    if (isOnline) {
-      // Use patch and only send the status field
-      await apiClient.patch(`/workorders/tasks/${task.id}/`, {
-        status: newStatus
-      });
-      await loadWorkOrder();
-    } else {
-      // Update locally and queue
-      const updatedTasks = tasks.map((t) =>
-        t.id === task.id ? { ...t, status: newStatus } : t
-      );
-      setTasks(updatedTasks);
-      await queueRequest(
-        "update",
-        `/workorders/tasks/${task.id}/`,
-        "PATCH",
-        { status: newStatus }
-      );
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    console.error("Failed to toggle task:", error);
-    const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update task";
-    toast({
-      title: "Error",
-      description: errorMessage,
-      variant: "destructive",
-    });
-  }
-};
-
-if (loading) {
-  return (
-    <div className="p-4 flex items-center justify-center min-h-[400px]">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-muted-foreground">Loading...</p>
-      </div>
-    </div>
-  );
-}
-
-if (!workOrder) {
-  return (
-    <div className="p-4 text-center">
-      <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-      <p className="text-muted-foreground">Work order not found</p>
-      <Link href="/mobile/workorders">
-        <Button className="mt-4">Back to Work Orders</Button>
-      </Link>
-    </div>
-  );
-}
-
-// Use actual backend statuses
-const canStart = ["assigned", "approved"].includes(workOrder.status);
-const canPause = workOrder.status === "in_progress";
-const canRequestQC = workOrder.status === "in_progress";
-const canComplete = workOrder.status === "quality_check";
-const canResume = workOrder.status === "paused";
-const canFlagAdditionalWork = workOrder.status === "in_progress";
-
-const getPartStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    draft: "bg-muted text-foreground",
-    pending: "bg-yellow-100 text-yellow-700",
-    ordered: "bg-orange-100 text-primary",
-    ready: "bg-green-100 text-green-700",
-    received: "bg-green-100 text-green-700",
-    installed: "bg-green-100 text-green-700",
-    returned: "bg-red-100 text-red-700",
   };
-  return colors[status] || "bg-muted text-foreground";
-};
 
-return (
-  <div className="p-4 space-y-4">
-    {/* Header */}
-    <div className="flex items-center justify-between">
-      <Link href="/mobile/workorders">
-        <Button variant="ghost" size="sm">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-      </Link>
-      {!isOnline && (
-        <Badge variant="outline" className="bg-orange-50 text-primary border-orange-200">
-          Offline
-        </Badge>
-      )}
-    </div>
+  if (loading) {
+    return (
+      <div className="p-4 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-    {/* Work Order Info */}
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            {workOrder.work_order_number || `WO #${workOrder.id}`}
-          </CardTitle>
-          <Badge
-            className={cn(
-              "text-xs",
-              workOrder.status === "in_progress" &&
-              "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300",
-              workOrder.status === "assigned" &&
-              "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
-              workOrder.status === "approved" &&
-              "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-              workOrder.status === "completed" &&
-              "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-              workOrder.status === "paused" &&
-              "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300"
-            )}
-          >
-            {workOrder.status?.replace("_", " ").toUpperCase()}
+  if (!workOrder) {
+    return (
+      <div className="p-4 text-center">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Work order not found</p>
+        <Link href="/mobile/workorders">
+          <Button className="mt-4">Back to Work Orders</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Use actual backend statuses
+  const canStart = ["assigned", "approved"].includes(workOrder.status);
+  const canPause = workOrder.status === "in_progress";
+  const canRequestQC = workOrder.status === "in_progress";
+  const canComplete = workOrder.status === "quality_check";
+  const canResume = workOrder.status === "paused";
+  const canFlagAdditionalWork = workOrder.status === "in_progress";
+
+  const getPartStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      draft: "bg-muted text-foreground",
+      pending: "bg-yellow-100 text-yellow-700",
+      ordered: "bg-orange-100 text-primary",
+      ready: "bg-green-100 text-green-700",
+      received: "bg-green-100 text-green-700",
+      installed: "bg-green-100 text-green-700",
+      returned: "bg-red-100 text-red-700",
+    };
+    return colors[status] || "bg-muted text-foreground";
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Link href="/mobile/workorders">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        </Link>
+        {!isOnline && (
+          <Badge variant="outline" className="bg-orange-50 text-primary border-orange-200">
+            Offline
           </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-start gap-2">
-          <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-foreground">
-              {workOrder.customer_name || "Customer"}
-            </div>
-            {workOrder.primary_technician_name && (
-              <div className="text-xs text-muted-foreground">
-                Tech: {workOrder.primary_technician_name}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-start gap-2">
-          <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
-          <div className="text-sm text-card-foreground">
-            {workOrder.vehicle_display || workOrder.vehicle_info || "Vehicle"}
-          </div>
-        </div>
-
-        {workOrder.customer_concerns && (
-          <div className="flex items-start gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div className="text-sm text-card-foreground">
-              {workOrder.customer_concerns}
-            </div>
-          </div>
         )}
+      </div>
 
-        {(workOrder.estimated_total || workOrder.total_cost) && (
-          <div className="pt-2 border-t border-border">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Estimated Total</span>
-              <span className="font-semibold text-foreground">
-                ${workOrder.estimated_total || workOrder.total_cost}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Link to Photos */}
-        <div className="pt-3 border-t border-border">
-          <Link href={`/mobile/workorders/${workOrderId}/photos`}>
-            <Button variant="outline" size="sm" className="w-full">
-              <Package className="h-4 w-4 mr-2" />
-              View/Add Photos
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Quick Actions */}
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Quick Actions</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {/* Time Tracking */}
-        {activeLog && activeLog.work_order === workOrderId ? (
-          <Button
-            variant="destructive"
-            className="w-full"
-            onClick={handleClockOut}
-            disabled={loading}
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            Clock Out
-          </Button>
-        ) : activeLog ? (
-          <Button
-            variant="outline"
-            className="w-full border-primary text-primary"
-            onClick={async () => {
-              await handleClockOut();
-              await handleClockIn();
-            }}
-            disabled={loading}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Switch to this Work Order
-          </Button>
-        ) : (
-          <Button
-            className="w-full bg-primary"
-            onClick={handleClockIn}
-            disabled={loading}
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            Clock In
-          </Button>
-        )}
-
-        {canStart && (
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={() => handleStatusChangeAction("startWork")}
-          >
-            <Play className="h-4 w-4 mr-2" />
-            Start Work
-          </Button>
-        )}
-
-        {canResume && (
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={() => handleStatusChangeAction("resume")}
-          >
-            <Play className="h-4 w-4 mr-2" />
-            Resume Work
-          </Button>
-        )}
-
-        {canPause && (
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => handleStatusChangeAction("pause")}
-          >
-            <Pause className="h-4 w-4 mr-2" />
-            Pause
-          </Button>
-        )}
-
-        {canRequestQC && (
-          <Button
-            className="w-full"
-            onClick={() => handleStatusChangeAction("requestQualityCheck")}
-          >
-            <CheckCheck className="h-4 w-4 mr-2" />
-            Request Quality Check
-          </Button>
-        )}
-
-        {canComplete && (
-          <Button
-            className="w-full bg-success hover:bg-green-700"
-            onClick={() => handleStatusChangeAction("complete")}
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Mark Complete
-          </Button>
-        )}
-
-        {canFlagAdditionalWork && (
-          <Button
-            variant="outline"
-            className="w-full border-orange-300 text-primary hover:bg-orange-50"
-            onClick={() => setShowAdditionalWorkDialog(true)}
-          >
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            Flag Additional Work
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-
-    {/* Parts */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>Parts Required ({parts.length})</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs font-normal"
-            onClick={() => setShowPartRequestDialog(true)}
-          >
-            <Package className="h-4 w-4 mr-1" />
-            Request Part
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {parts.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No parts requested</p>
-        ) : (
-          parts.map((part) => (
-            <div
-              key={part.id}
-              className="p-3 rounded-lg border border-border bg-card"
-            >
-              <div className="flex items-start justify-between mb-1">
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-foreground">
-                    {part.part_name}
-                  </div>
-                  {part.part_number && (
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      #{part.part_number}
-                    </div>
-                  )}
-                </div>
-                <Badge className={cn("text-xs ml-2", getPartStatusColor(part.status))}>
-                  {part.status?.replace("_", " ").toUpperCase() || 'UNKNOWN'}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between mt-2 text-xs">
-                <span className="text-muted-foreground">Qty: {part.quantity}</span>
-                {part.total_cost && (
-                  <span className="font-medium text-foreground">
-                    ${part.total_cost}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-
-    {/* Tasks */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>Tasks ({tasks.length})</span>
-          <Clock className="h-4 w-4 text-muted-foreground" />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {tasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No tasks assigned yet
-          </p>
-        ) : (
-          tasks.map((task) => (
-            <div
-              key={task.id}
+      {/* Work Order Info */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">
+              {workOrder.work_order_number || `WO #${workOrder.id}`}
+            </CardTitle>
+            <Badge
               className={cn(
-                "p-3 rounded-lg border transition-colors cursor-pointer",
-                task.status === "completed"
-                  ? "bg-success/10 border-green-200 dark:bg-green-950 dark:border-green-800"
-                  : "bg-card border-border bg-background border-border hover:bg-muted hover:bg-muted"
+                "text-xs",
+                workOrder.status === "in_progress" &&
+                "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300",
+                workOrder.status === "assigned" &&
+                "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+                workOrder.status === "approved" &&
+                "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                workOrder.status === "completed" &&
+                "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                workOrder.status === "paused" &&
+                "bg-orange-100 text-primary dark:bg-orange-900 dark:text-orange-300"
               )}
-              onClick={() => handleToggleTask(task)}
             >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5">
-                  {task.status === "completed" ? (
-                    <CheckCircle2 className="h-5 w-5 text-success" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground" />
-                  )}
+              {workOrder.status?.replace("_", " ").toUpperCase()}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-start gap-2">
+            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-foreground">
+                {workOrder.customer_name || "Customer"}
+              </div>
+              {workOrder.primary_technician_name && (
+                <div className="text-xs text-muted-foreground">
+                  Tech: {workOrder.primary_technician_name}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div
-                    className={cn(
-                      "text-sm font-medium",
-                      task.status === "completed"
-                        ? "line-through text-muted-foreground"
-                        : "text-foreground"
-                    )}
-                  >
-                    {task.description}
-                  </div>
-                  {task.detailed_notes && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {task.detailed_notes}
-                    </div>
-                  )}
-                  {task.estimated_hours && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Est. {task.estimated_hours}h
-                    </div>
-                  )}
-                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <Car className="h-4 w-4 text-muted-foreground mt-0.5" />
+            <div className="text-sm text-card-foreground">
+              {workOrder.vehicle_display || workOrder.vehicle_info || "Vehicle"}
+            </div>
+          </div>
+
+          {workOrder.customer_concerns && (
+            <div className="flex items-start gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="text-sm text-card-foreground">
+                {workOrder.customer_concerns}
               </div>
             </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
+          )}
 
-    {/* Offline Warning */}
-    {!isOnline && (
-      <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800">
-        <CardContent className="pt-4 flex items-start gap-2">
-          <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-orange-900 dark:text-orange-200">
-              Offline Mode
+          {(workOrder.estimated_total || workOrder.total_cost) && (
+            <div className="pt-2 border-t border-border">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Estimated Total</span>
+                <span className="font-semibold text-foreground">
+                  ${workOrder.estimated_total || workOrder.total_cost}
+                </span>
+              </div>
             </div>
-            <div className="text-xs text-primary dark:text-orange-300 mt-1">
-              Changes will sync automatically when you're back online.
-            </div>
+          )}
+
+          {/* Quick Link to Photos */}
+          <div className="pt-3 border-t border-border">
+            <Link href={`/mobile/workorders/${workOrderId}/photos`}>
+              <Button variant="outline" size="sm" className="w-full">
+                <Package className="h-4 w-4 mr-2" />
+                View/Add Photos
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
-    )}
 
-    {/* Additional Work Dialog */}
-    <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Flag Additional Work</DialogTitle>
-          <DialogDescription>
-            Document additional issues found during repairs. This will require customer approval before proceeding.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="additional-work-notes">What additional work is needed?</Label>
-            <Textarea
-              id="additional-work-notes"
-              placeholder="Describe the additional issues discovered..."
-              value={additionalWorkNotes}
-              onChange={(e) => setAdditionalWorkNotes(e.target.value)}
-              rows={4}
-            />
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {/* Time Tracking */}
+          {activeLog && activeLog.work_order === workOrderId ? (
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={handleClockOut}
+              disabled={loading}
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Clock Out
+            </Button>
+          ) : activeLog ? (
+            <Button
+              variant="outline"
+              className="w-full border-primary text-primary"
+              onClick={async () => {
+                await handleClockOut();
+                await handleClockIn();
+              }}
+              disabled={loading}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Switch to this Work Order
+            </Button>
+          ) : (
+            <Button
+              className="w-full bg-primary"
+              onClick={handleClockIn}
+              disabled={loading}
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Clock In
+            </Button>
+          )}
+
+          {canStart && (
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => handleStatusChangeAction("startWork")}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Start Work
+            </Button>
+          )}
+
+          {canResume && (
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => handleStatusChangeAction("resume")}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Resume Work
+            </Button>
+          )}
+
+          {canPause && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleStatusChangeAction("pause")}
+            >
+              <Pause className="h-4 w-4 mr-2" />
+              Pause
+            </Button>
+          )}
+
+          {canRequestQC && (
+            <Button
+              className="w-full"
+              onClick={() => handleStatusChangeAction("requestQualityCheck")}
+            >
+              <CheckCheck className="h-4 w-4 mr-2" />
+              Request Quality Check
+            </Button>
+          )}
+
+          {canComplete && (
+            <Button
+              className="w-full bg-success hover:bg-green-700"
+              onClick={() => handleStatusChangeAction("complete")}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Mark Complete
+            </Button>
+          )}
+
+          {canFlagAdditionalWork && (
+            <Button
+              variant="outline"
+              className="w-full border-orange-300 text-primary hover:bg-orange-50"
+              onClick={() => setShowAdditionalWorkDialog(true)}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Flag Additional Work
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Parts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span>Parts Required ({parts.length})</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs font-normal"
+              onClick={() => setShowPartRequestDialog(true)}
+            >
+              <Package className="h-4 w-4 mr-1" />
+              Request Part
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {parts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No parts requested</p>
+          ) : (
+            parts.map((part) => (
+              <div
+                key={part.id}
+                className="p-3 rounded-lg border border-border bg-card"
+              >
+                <div className="flex items-start justify-between mb-1">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-foreground">
+                      {part.part_name}
+                    </div>
+                    {part.part_number && (
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        #{part.part_number}
+                      </div>
+                    )}
+                  </div>
+                  <Badge className={cn("text-xs ml-2", getPartStatusColor(part.status))}>
+                    {part.status?.replace("_", " ").toUpperCase() || 'UNKNOWN'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs">
+                  <span className="text-muted-foreground">Qty: {part.quantity}</span>
+                  {part.total_cost && (
+                    <span className="font-medium text-foreground">
+                      ${part.total_cost}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tasks */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span>Tasks ({tasks.length})</span>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {tasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No tasks assigned yet
+            </p>
+          ) : (
+            tasks.map((task) => (
+              <div
+                key={task.id}
+                className={cn(
+                  "p-3 rounded-lg border transition-colors cursor-pointer",
+                  task.status === "completed"
+                    ? "bg-success/10 border-green-200 dark:bg-green-950 dark:border-green-800"
+                    : "bg-card border-border bg-background border-border hover:bg-muted hover:bg-muted"
+                )}
+                onClick={() => handleToggleTask(task)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5">
+                    {task.status === "completed" ? (
+                      <CheckCircle2 className="h-5 w-5 text-success" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={cn(
+                        "text-sm font-medium",
+                        task.status === "completed"
+                          ? "line-through text-muted-foreground"
+                          : "text-foreground"
+                      )}
+                    >
+                      {task.description}
+                    </div>
+                    {task.detailed_notes && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {task.detailed_notes}
+                      </div>
+                    )}
+                    {task.estimated_hours && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Est. {task.estimated_hours}h
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Offline Warning */}
+      {!isOnline && (
+        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800">
+          <CardContent className="pt-4 flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-orange-900 dark:text-orange-200">
+                Offline Mode
+              </div>
+              <div className="text-xs text-primary dark:text-orange-300 mt-1">
+                Changes will sync automatically when you're back online.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Additional Work Dialog */}
+      <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Flag Additional Work</DialogTitle>
+            <DialogDescription>
+              Document additional issues found during repairs. This will require customer approval before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="additional-work-notes">What additional work is needed?</Label>
+              <Textarea
+                id="additional-work-notes"
+                placeholder="Describe the additional issues discovered..."
+                value={additionalWorkNotes}
+                onChange={(e) => setAdditionalWorkNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowAdditionalWorkDialog(false);
-              setAdditionalWorkNotes("");
-            }}
-          >
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button
-            onClick={handleAdditionalWork}
-            className="bg-primary hover:bg-orange-700"
-          >
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            Flag for Approval
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    {/* Part Request Dialog */}
-    <Dialog open={showPartRequestDialog} onOpenChange={setShowPartRequestDialog}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Request New Part</DialogTitle>
-          <DialogDescription>
-            Submit a request for a part that is not currently listed for this work order.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="part-name">Part Name</Label>
-            <input
-              id="part-name"
-              className="w-full p-2 border rounded-md"
-              placeholder="e.g. Oil Filter"
-              value={newPart.part_name}
-              onChange={(e) => setNewPart({ ...newPart, part_name: e.target.value })}
-            />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAdditionalWorkDialog(false);
+                setAdditionalWorkNotes("");
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAdditionalWork}
+              className="bg-primary hover:bg-orange-700"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Flag for Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Part Request Dialog */}
+      <Dialog open={showPartRequestDialog} onOpenChange={setShowPartRequestDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request New Part</DialogTitle>
+            <DialogDescription>
+              Submit a request for a part that is not currently listed for this work order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="part-name">Part Name</Label>
+              <input
+                id="part-name"
+                className="w-full p-2 border rounded-md"
+                placeholder="e.g. Oil Filter"
+                value={newPart.part_name}
+                onChange={(e) => setNewPart({ ...newPart, part_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="part-qty">Quantity</Label>
+              <input
+                id="part-qty"
+                type="number"
+                className="w-full p-2 border rounded-md"
+                value={newPart.quantity}
+                onChange={(e) => setNewPart({ ...newPart, quantity: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="part-desc">Description/Notes</Label>
+              <Textarea
+                id="part-desc"
+                placeholder="Specific brand, model or other details..."
+                value={newPart.description}
+                onChange={(e) => setNewPart({ ...newPart, description: e.target.value })}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="part-qty">Quantity</Label>
-            <input
-              id="part-qty"
-              type="number"
-              className="w-full p-2 border rounded-md"
-              value={newPart.quantity}
-              onChange={(e) => setNewPart({ ...newPart, quantity: parseInt(e.target.value) || 1 })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="part-desc">Description/Notes</Label>
-            <Textarea
-              id="part-desc"
-              placeholder="Specific brand, model or other details..."
-              value={newPart.description}
-              onChange={(e) => setNewPart({ ...newPart, description: e.target.value })}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setShowPartRequestDialog(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handlePartRequest} disabled={!newPart.part_name}>
-            Submit Request
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </div>
-);
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPartRequestDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handlePartRequest} disabled={!newPart.part_name}>
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

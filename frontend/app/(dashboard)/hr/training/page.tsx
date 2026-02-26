@@ -182,33 +182,33 @@ function EditProgramDialog({ program, open, onOpenChange, onUpdated }: { program
     }, [program]);
 
     const mut = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (data: any) => hrApi.trainingPrograms.update(program!.id, data),
         onSuccess: () => { toast.success("Program updated"); onUpdated(); },
         onError: () => toast.error("Failed to update"),
     });
 
-return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader><DialogTitle>Edit training Program</DialogTitle></DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2"><Label>Program Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Trainer</Label><Input value={trainer} onChange={e => setTrainer(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} /></div>
-                <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
-                <div className="flex items-center justify-between border p-3 rounded-lg">
-                    <div><Label>Mandatory</Label><p className="text-xs text-muted-foreground">Required for all staff?</p></div>
-                    <Switch checked={mandatory} onCheckedChange={setMandatory} />
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>Edit training Program</DialogTitle></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2"><Label>Program Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Trainer</Label><Input value={trainer} onChange={e => setTrainer(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} /></div>
+                    <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
+                    <div className="flex items-center justify-between border p-3 rounded-lg">
+                        <div><Label>Mandatory</Label><p className="text-xs text-muted-foreground">Required for all staff?</p></div>
+                        <Switch checked={mandatory} onCheckedChange={setMandatory} />
+                    </div>
                 </div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button onClick={() => mut.mutate({ name, trainer, description: desc, is_mandatory: mandatory, start_date: start || null, is_active: active })} disabled={mut.isPending}>Save Changes</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-);
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button onClick={() => mut.mutate({ name, trainer, description: desc, is_mandatory: mandatory, start_date: start || null, is_active: active })} disabled={mut.isPending}>Save Changes</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 function DeleteConfirmDialog({ open, onOpenChange, id, onDeleted }: { open: boolean, onOpenChange: (o: boolean) => void, id: number | null, onDeleted: () => void }) {
@@ -288,28 +288,28 @@ function CreateProgramDialog({ open, onOpenChange, onCreated }: { open: boolean,
     const [start, setStart] = useState("");
 
     const mut = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (data: any) => hrApi.trainingPrograms.create(data),
         onSuccess: () => { toast.success("Program created"); onCreated(); },
         onError: () => toast.error("Failed to create"),
     });
 
-return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader><DialogTitle>New Training Program</DialogTitle><DialogDescription>Create a new course or workshop.</DialogDescription></DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2"><Label>Program Name</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Safety 101" /></div>
-                <div className="space-y-2"><Label>Trainer (Optional)</Label><Input value={trainer} onChange={e => setTrainer(e.target.value)} placeholder="Instructor name" /></div>
-                <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} /></div>
-                <div className="space-y-2"><Label>Start Date (Optional)</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
-                <div className="flex items-center justify-between border p-3 rounded-lg">
-                    <div><Label>Mandatory</Label><p className="text-xs text-muted-foreground">Required for all staff?</p></div>
-                    <Switch checked={mandatory} onCheckedChange={setMandatory} />
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>New Training Program</DialogTitle><DialogDescription>Create a new course or workshop.</DialogDescription></DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2"><Label>Program Name</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Safety 101" /></div>
+                    <div className="space-y-2"><Label>Trainer (Optional)</Label><Input value={trainer} onChange={e => setTrainer(e.target.value)} placeholder="Instructor name" /></div>
+                    <div className="space-y-2"><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} /></div>
+                    <div className="space-y-2"><Label>Start Date (Optional)</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
+                    <div className="flex items-center justify-between border p-3 rounded-lg">
+                        <div><Label>Mandatory</Label><p className="text-xs text-muted-foreground">Required for all staff?</p></div>
+                        <Switch checked={mandatory} onCheckedChange={setMandatory} />
+                    </div>
                 </div>
-            </div>
-            <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ name, trainer, description: desc, is_mandatory: mandatory, start_date: start || null, is_active: true })} disabled={!name || mut.isPending}>Create</Button></DialogFooter>
-        </DialogContent>
-    </Dialog>
-);
+                <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ name, trainer, description: desc, is_mandatory: mandatory, start_date: start || null, is_active: true })} disabled={!name || mut.isPending}>Create</Button></DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }

@@ -138,208 +138,208 @@ export default function BookAppointmentPage() {
       });
       router.push("/portal");
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
-    console.error("Booking failed:", error);
-    toast({
-      title: "Booking Failed",
-      description: error.response?.data?.detail || "Please check your inputs and try again.",
-      variant: "destructive",
-    });
-  },
+      console.error("Booking failed:", error);
+      toast({
+        title: "Booking Failed",
+        description: error.response?.data?.detail || "Please check your inputs and try again.",
+        variant: "destructive",
+      });
+    },
   });
 
-const onSubmit = (data: AppointmentFormData) => {
-  createMutation.mutate(data);
-};
+  const onSubmit = (data: AppointmentFormData) => {
+    createMutation.mutate(data);
+  };
 
-const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0];
 
-return (
-  <div className="space-y-6 max-w-4xl mx-auto pb-10">
-    <PortalPageHeader
-      title="Schedule Service"
-      description="Book an appointment for your vehicle"
-    />
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto pb-10">
+      <PortalPageHeader
+        title="Schedule Service"
+        description="Book an appointment for your vehicle"
+      />
 
-    {vehiclesLoading ? (
-      <div className="p-8 text-center bg-card rounded-xl border border-border">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-        <p className="text-muted-foreground">Loading vehicles...</p>
-      </div>
-    ) : vehicles.length === 0 ? (
-      <Card className="border-l-4 border-l-yellow-500">
-        <CardContent className="py-8 text-center flex flex-col items-center">
-          <Car className="w-12 h-12 text-yellow-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Vehicles Found</h3>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            You need to have a registered vehicle to book a service. Please contact us to add your vehicle.
-          </p>
-          <Button onClick={() => router.push("/portal/vehicles/new")}>
-            Add Vehicle
-          </Button>
-        </CardContent>
-      </Card>
-    ) : (
-      <Card>
-        <CardHeader>
-          <CardTitle>Service Details</CardTitle>
-          <CardDescription>Fill in the details below to schedule your appointment.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {vehiclesLoading ? (
+        <div className="p-8 text-center bg-card rounded-xl border border-border">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-muted-foreground">Loading vehicles...</p>
+        </div>
+      ) : vehicles.length === 0 ? (
+        <Card className="border-l-4 border-l-yellow-500">
+          <CardContent className="py-8 text-center flex flex-col items-center">
+            <Car className="w-12 h-12 text-yellow-500 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Vehicles Found</h3>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              You need to have a registered vehicle to book a service. Please contact us to add your vehicle.
+            </p>
+            <Button onClick={() => router.push("/portal/vehicles/new")}>
+              Add Vehicle
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Service Details</CardTitle>
+            <CardDescription>Fill in the details below to schedule your appointment.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
             // 1. Vehicle Selection
-            <div className="space-y-2">
-              <Label htmlFor="vehicle_id">Select Vehicle <span className="text-red-500">*</span></Label>
-              <Controller
-                control={control}
-                name="vehicle_id"
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger className={cn(errors.vehicle_id && "border-red-500")}>
-                      <SelectValue placeholder="-- Choose a Vehicle --" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      {vehicles.map((v: any) => (
-                        <SelectItem key={v.id} value={v.id.toString()}>
-                          {v.year} {v.make} {v.model} ({v.license_plate})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.vehicle_id && <p className="text-xs text-red-500 font-medium">{errors.vehicle_id.message}</p>}
-            </div>
-
-            // 2. Service Selection (Bundle or Custom)
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="service_bundle_id">Service Bundle (Recommended)</Label>
+                <Label htmlFor="vehicle_id">Select Vehicle <span className="text-red-500">*</span></Label>
                 <Controller
                   control={control}
-                  name="service_bundle_id"
+                  name="vehicle_id"
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="-- No Bundle --" />
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <SelectTrigger className={cn(errors.vehicle_id && "border-red-500")}>
+                        <SelectValue placeholder="-- Choose a Vehicle --" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">-- No Bundle --</SelectItem>
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        {bundles.map((b: any) => (
-                          <SelectItem key={b.id} value={b.id.toString()}>
-                            {b.name} - {formatCurrency(b.price)}
+
+                        {vehicles.map((v: any) => (
+                          <SelectItem key={v.id} value={v.id.toString()}>
+                            {v.year} {v.make} {v.model} ({v.license_plate})
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Select a package for best value.</p>
+                {errors.vehicle_id && <p className="text-xs text-red-500 font-medium">{errors.vehicle_id.message}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="service_type">Service Type <span className="text-red-500">*</span></Label>
-                <Controller
-                  control={control}
-                  name="service_type"
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger className={cn(errors.service_type && "border-red-500")}>
-                        <SelectValue placeholder="-- Select Type --" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SERVICE_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                        <SelectItem value="other">Other / Custom Request</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.service_type && <p className="text-xs text-red-500 font-medium">{errors.service_type.message}</p>}
+            // 2. Service Selection (Bundle or Custom)
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="service_bundle_id">Service Bundle (Recommended)</Label>
+                  <Controller
+                    control={control}
+                    name="service_bundle_id"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="-- No Bundle --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">-- No Bundle --</SelectItem>
+
+                          {bundles.map((b: any) => (
+                            <SelectItem key={b.id} value={b.id.toString()}>
+                              {b.name} - {formatCurrency(b.price)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Select a package for best value.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="service_type">Service Type <span className="text-red-500">*</span></Label>
+                  <Controller
+                    control={control}
+                    name="service_type"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger className={cn(errors.service_type && "border-red-500")}>
+                          <SelectValue placeholder="-- Select Type --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SERVICE_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                          <SelectItem value="other">Other / Custom Request</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.service_type && <p className="text-xs text-red-500 font-medium">{errors.service_type.message}</p>}
+                </div>
               </div>
-            </div>
 
             // 3. Date & Time Selection
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
-              <div className="space-y-2">
-                <Label htmlFor="appointment_date">Preferred Date <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="appointment_date"
-                    type="date"
-                    min={today}
-                    {...register("appointment_date")}
-                    className={cn("pl-10", errors.appointment_date && "border-red-500")}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
+                <div className="space-y-2">
+                  <Label htmlFor="appointment_date">Preferred Date <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="appointment_date"
+                      type="date"
+                      min={today}
+                      {...register("appointment_date")}
+                      className={cn("pl-10", errors.appointment_date && "border-red-500")}
+                    />
+                  </div>
+                  {errors.appointment_date && <p className="text-xs text-red-500 font-medium">{errors.appointment_date.message}</p>}
                 </div>
-                {errors.appointment_date && <p className="text-xs text-red-500 font-medium">{errors.appointment_date.message}</p>}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="appointment_time">Available Time Slot <span className="text-red-500">*</span></Label>
-                <Controller
-                  control={control}
-                  name="appointment_time"
-                  render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      disabled={!selectedDate || checkingAvailability || availableSlots.length === 0}
-                      value={field.value}
-                    >
-                      <SelectTrigger className={cn("pl-10 relative", errors.appointment_time && "border-red-500")}>
-                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder={
-                          !selectedDate ? "-- Select Date First --" :
-                            checkingAvailability ? "Checking..." :
-                              availableSlots.length === 0 ? "No slots available" : "-- Select Time --"
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableSlots.map((slot) => (
-                          <SelectItem key={slot} value={slot}>{slot}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.appointment_time && <p className="text-xs text-red-500 font-medium">{errors.appointment_time.message}</p>}
+                <div className="space-y-2">
+                  <Label htmlFor="appointment_time">Available Time Slot <span className="text-red-500">*</span></Label>
+                  <Controller
+                    control={control}
+                    name="appointment_time"
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        disabled={!selectedDate || checkingAvailability || availableSlots.length === 0}
+                        value={field.value}
+                      >
+                        <SelectTrigger className={cn("pl-10 relative", errors.appointment_time && "border-red-500")}>
+                          <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder={
+                            !selectedDate ? "-- Select Date First --" :
+                              checkingAvailability ? "Checking..." :
+                                availableSlots.length === 0 ? "No slots available" : "-- Select Time --"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableSlots.map((slot) => (
+                            <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.appointment_time && <p className="text-xs text-red-500 font-medium">{errors.appointment_time.message}</p>}
+                </div>
               </div>
-            </div>
 
             // 4. Concerns
-            <div className="space-y-2">
-              <Label htmlFor="customer_concerns">Notes / Concerns</Label>
-              <Textarea
-                id="customer_concerns"
-                {...register("customer_concerns")}
-                placeholder="Please describe any specific issues..."
-                className="min-h-[100px]"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="customer_concerns">Notes / Concerns</Label>
+                <Textarea
+                  id="customer_concerns"
+                  {...register("customer_concerns")}
+                  placeholder="Please describe any specific issues..."
+                  className="min-h-[100px]"
+                />
+              </div>
 
             // Submit
-            <div className="flex justify-end pt-4">
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full md:w-auto"
-                disabled={isSubmitting || createMutation.isPending}
-              >
-                {isSubmitting || createMutation.isPending ? "Confirming Booking..." :
-                  <><CheckCircle2 className="w-4 h-4 mr-2" /> Confirm Booking</>}
-              </Button>
-            </div>
+              <div className="flex justify-end pt-4">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full md:w-auto"
+                  disabled={isSubmitting || createMutation.isPending}
+                >
+                  {isSubmitting || createMutation.isPending ? "Confirming Booking..." :
+                    <><CheckCircle2 className="w-4 h-4 mr-2" /> Confirm Booking</>}
+                </Button>
+              </div>
 
-          </form>
-        </CardContent>
-      </Card>
-    )}
-  </div>
-);
+            </form>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 }

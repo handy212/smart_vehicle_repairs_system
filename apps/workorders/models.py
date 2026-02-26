@@ -1,4 +1,5 @@
 import uuid
+import logging
 from django.db import models
 from django.db.models import Max
 from django.core.exceptions import FieldDoesNotExist
@@ -10,8 +11,7 @@ from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.appointments.models import Appointment
 
-
-
+logger = logging.getLogger(__name__)
 
 
 class WorkflowConfiguration(models.Model):
@@ -407,30 +407,30 @@ class WorkOrder(models.Model):
             return self.primary_technician
         return self.assigned_technicians.first()
     
+    VALID_TRANSITIONS = {
+        'draft': ['inspection', 'intake'],
+        'inspection': ['intake', 'draft'],
+        'intake': ['assigned', 'draft'],
+        'assigned': ['diagnosis', 'intake'],
+        'diagnosis': ['awaiting_approval', 'approved', 'in_progress'],
+        'awaiting_approval': ['approved', 'diagnosis'],
+        'approved': ['in_progress', 'awaiting_approval'],
+        'in_progress': ['paused', 'quality_check', 'completed', 'additional_work_found'],
+        'additional_work_found': ['awaiting_approval', 'in_progress'],
+        'paused': ['in_progress'],
+        'quality_check': ['completed', 'in_progress'],
+        'completed': ['invoiced', 'closed'],
+        'invoiced': ['closed'],
+        'closed': ['invoiced', 'completed', 'in_progress'],  # Allow reopen transitions
+    }
+
     def can_transition_to(self, new_status):
         """
         Validate if status transition is allowed.
         Returns (can_transition: bool, error_message: str or None)
         """
-        VALID_TRANSITIONS = {
-            'draft': ['inspection', 'intake'],
-            'inspection': ['intake', 'draft'],
-            'intake': ['assigned', 'draft'],
-            'assigned': ['diagnosis', 'intake'],
-            'diagnosis': ['awaiting_approval', 'approved', 'in_progress'],
-            'awaiting_approval': ['approved', 'diagnosis'],
-            'approved': ['in_progress', 'awaiting_approval'],
-            'in_progress': ['paused', 'quality_check', 'completed', 'additional_work_found'],
-            'additional_work_found': ['awaiting_approval', 'in_progress'],
-            'paused': ['in_progress'],
-            'quality_check': ['completed', 'in_progress'],
-            'completed': ['invoiced', 'closed'],
-            'invoiced': ['closed'],
-            'closed': ['invoiced', 'completed', 'in_progress'],  # Allow reopen transitions
-        }
-        
         # Check if transition is in valid transitions list
-        valid_next_statuses = VALID_TRANSITIONS.get(self.status, [])
+        valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
         if new_status not in valid_next_statuses:
             return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
         
@@ -441,6 +441,11 @@ class WorkOrder(models.Model):
         # Validate Service Coordinator is assigned when transitioning to assigned status
         if new_status == 'assigned' and not self.service_coordinator:
             return (False, 'A Service Coordinator must be assigned when moving to assigned status.')
+            
+        # Validate Initial Inspection is performed and completed before moving to intake
+        if new_status == 'intake':
+            if not self.inspections.filter(status__in=['completed', 'approved']).exists():
+                return False, "Initial inspection must be completed and approved before starting intake."
         
         # Check prerequisites
         if new_status == 'awaiting_approval':
@@ -580,8 +585,6 @@ class WorkOrder(models.Model):
         except Exception as e:
             # Log error but preserve transaction status (don't rollback whole WO transition)
             # In strict mode, we might want to raise here.
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Inventory integration failed for WO {self.work_order_number}: {e}")
         
         # Update service schedules when work order is completed
@@ -590,8 +593,6 @@ class WorkOrder(models.Model):
                 self._update_service_schedules()
             except Exception as e:
                 # Log error but don't fail the transition
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.error(f"Failed to update service schedules for WO {self.work_order_number}: {e}", exc_info=True)
         
         # Convert repair recommendations to tasks when starting work
@@ -637,8 +638,6 @@ class WorkOrder(models.Model):
                 notification_triggers.work_order_invoiced(self)
         except Exception as e:
             # Don't fail the transition if notification fails
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to send notification for work order {self.id}: {e}")
     
     def _update_service_schedules(self):
@@ -693,8 +692,6 @@ class WorkOrder(models.Model):
                         # Recalculate next service due
                         schedule.calculate_next_service_due()
                         
-                        import logging
-                        logger = logging.getLogger(__name__)
                         logger.info(
                             f"Updated service schedule for {self.vehicle} - {service_type.name} "
                             f"from work order {self.work_order_number}"
@@ -711,8 +708,6 @@ class WorkOrder(models.Model):
                 
         except Exception as e:
             # Log error but don't fail the work order completion
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error updating service schedules for work order {self.id}: {e}", exc_info=True)
     
     def recalculate_totals(self):
@@ -751,14 +746,10 @@ class WorkOrder(models.Model):
         unavailable = []
         
         for part in self.parts.filter(status__in=['pending', 'ordered']):
-            # If part is linked to inventory, check availability
-            # This assumes future integration with inventory system
-            # For now, just check if parts are in pending/ordered status
-            if part.status in ['pending', 'ordered']:
-                unavailable.append({
-                    'part': part,
-                    'reason': f'Part {part.part_name} is {part.get_status_display()}'
-                })
+            unavailable.append({
+                'part': part,
+                'reason': f'Part {part.part_name} is {part.get_status_display()}'
+            })
         
         return unavailable
     
@@ -1000,8 +991,6 @@ class WorkOrder(models.Model):
                                 
                         except Exception as e:
                             # Log error but continue with other parts
-                            import logging
-                            logger = logging.getLogger(__name__)
                             logger.warning(f"Failed to link part from recommendation {rec.id} to task: {e}")
             
             # Recalculate totals after creating tasks and linking parts
@@ -1010,8 +999,6 @@ class WorkOrder(models.Model):
             return tasks_created, parts_linked
             
         except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error converting recommendations to tasks for WO {self.work_order_number}: {e}", exc_info=True)
             return 0, 0
     
@@ -1031,8 +1018,6 @@ class WorkOrder(models.Model):
                             self.transition_to('quality_check', user=None, notify=True)
                     except Exception as e:
                         # Don't fail if auto-transition fails
-                        import logging
-                        logger = logging.getLogger(__name__)
                         logger.warning(f"Auto-transition to quality_check failed for WO {self.id}: {e}")
     
     def check_parts_ready(self):
@@ -1220,26 +1205,41 @@ class ServiceTask(models.Model):
         
         return Decimal('0')
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Track original status to detect changes without extra DB query
+        self._original_status = self.status if self.pk else None
+        self._original_labor_cost = self.labor_cost if self.pk else None
+        self._original_actual_hours = self.actual_hours if self.pk else None
+
     def save(self, *args, **kwargs):
         # Calculate labor cost from hours and rate
         if self.actual_hours and self.labor_rate:
             self.labor_cost = self.actual_hours * self.labor_rate
         
-        # Track if status changed to completed
+        # Track if status changed to completed (using tracked original, no extra query)
         status_changed = False
-        if self.pk:
-            try:
-                old_task = ServiceTask.objects.get(pk=self.pk)
-                status_changed = old_task.status != self.status and self.status == 'completed'
-            except ServiceTask.DoesNotExist:
-                status_changed = self.status == 'completed'
+        if self._original_status is not None:
+            status_changed = self._original_status != self.status and self.status == 'completed'
         else:
             status_changed = self.status == 'completed'
         
+        is_new = self.pk is None
+        cost_changed = is_new or (
+            self._original_labor_cost != self.labor_cost or
+            self._original_actual_hours != self.actual_hours
+        )
+        
         super().save(*args, **kwargs)
         
-        # Update work order totals
-        self.update_work_order_totals()
+        # Update original status after save
+        self._original_status = self.status
+        self._original_labor_cost = self.labor_cost
+        self._original_actual_hours = self.actual_hours
+        
+        # Update work order totals only if cost fields changed
+        if cost_changed:
+            self.update_work_order_totals()
         
         # Check for auto-complete if task was just completed
         if status_changed:
@@ -1384,6 +1384,10 @@ class WorkOrderPart(models.Model):
     def __str__(self):
         return f"{self.requisition_number or 'Draft'} - {self.part_number} - {self.part_name} (x{self.quantity})"
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_selling_price = self.selling_price if self.pk else None
+    
     def save(self, *args, **kwargs):
         # Generate Requisition Number
         if not self.requisition_number:
@@ -1417,11 +1421,17 @@ class WorkOrderPart(models.Model):
             self.selling_price = self.total_cost * (1 + (self.markup_percentage / 100))
         else:
             self.selling_price = self.total_cost
+            
+        is_new = self.pk is None
+        cost_changed = is_new or self._original_selling_price != self.selling_price
         
         super().save(*args, **kwargs)
         
-        # Update work order parts cost
-        self.update_work_order_parts_cost()
+        self._original_selling_price = self.selling_price
+        
+        # Update work order parts cost only if cost changed
+        if cost_changed:
+            self.update_work_order_parts_cost()
     
     def update_work_order_parts_cost(self):
         """Update work order's actual parts cost"""
@@ -1592,8 +1602,6 @@ class TechnicianTimeLog(models.Model):
                             
         except Exception as e:
             # Log error strictly, don't crash the save
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Failed to update technician status for user {self.technician.id}: {e}")
 
 

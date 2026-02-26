@@ -453,12 +453,12 @@ class TestServiceHistory:
         service = baker.make(
             VehicleMileageHistory,
             vehicle=vehicle,
-                notes='Regular oil change',
+            notes='Regular oil change',
             mileage=25000
         )
-            assert service.vehicle == vehicle
-            assert service.notes == 'Regular oil change'
-            assert service.mileage == 25000
+        assert service.vehicle == vehicle
+        assert service.notes == 'Regular oil change'
+        assert service.mileage == 25000
 
     def test_service_history_ordering(self):
         """Test service history ordering by date."""

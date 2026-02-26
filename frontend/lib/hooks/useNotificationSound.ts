@@ -33,7 +33,7 @@ export function useNotificationSound({ enabled = true, unreadCount }: UseNotific
     useEffect(() => {
         const initAudioContext = () => {
             if (!audioContextRef.current && typeof window !== 'undefined') {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
             }
             // Ensure we try to resume if suspended (common in Chrome/Edge)

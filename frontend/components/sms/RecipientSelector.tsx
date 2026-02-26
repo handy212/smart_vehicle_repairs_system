@@ -11,12 +11,12 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 interface RecipientSelectorProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-customers: any[]; // Using any[] to accept the customers list from parent
-onSelect: (recipient: { type: 'user' | 'phone'; value: string; name: string }) => void;
-placeholder ?: string;
-className ?: string;
-disabled ?: boolean;
+
+    customers: any[]; // Using any[] to accept the customers list from parent
+    onSelect: (recipient: { type: 'user' | 'phone'; value: string; name: string }) => void;
+    placeholder?: string;
+    className?: string;
+    disabled?: boolean;
 }
 
 export function RecipientSelector({ customers, onSelect, placeholder, className, disabled }: RecipientSelectorProps) {
@@ -57,14 +57,14 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
         };
     }, []);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const getCustomerName = (c: any) => {
         if (c.company_name) return c.company_name;
         if (c.full_name) return c.full_name;
         return `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const handleSelectCustomer = (customer: any) => {
         const name = getCustomerName(customer);
         if (customer.phone) {

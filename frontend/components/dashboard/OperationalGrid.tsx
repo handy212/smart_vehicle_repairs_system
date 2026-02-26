@@ -8,10 +8,10 @@ import Link from "next/link";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface OperationalGridProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-insights: any[];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-topJobs: any[];
+
+    insights: any[];
+
+    topJobs: any[];
 }
 
 export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {

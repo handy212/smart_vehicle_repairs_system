@@ -379,13 +379,24 @@ class VehicleViewSet(viewsets.ModelViewSet):
         """Get vehicle service history"""
         vehicle = self.get_object()
         
-        # This will be implemented when workorders app is ready
+        from apps.workorders.models import WorkOrder
+        work_orders = WorkOrder.objects.filter(
+            vehicle=vehicle
+        ).order_by('-created_at').values(
+            'id', 'work_order_number', 'status', 'created_at',
+            'completed_at', 'actual_total'
+        )[:50]
+        
+        total_services = WorkOrder.objects.filter(
+            vehicle=vehicle,
+            status__in=['completed', 'invoiced', 'closed']
+        ).count()
+        
         return Response({
             'vehicle': str(vehicle),
             'vin': vehicle.vin,
-            'total_services': 0,
-            'work_orders': [],
-            'message': 'Service history will be available when work orders are implemented'
+            'total_services': total_services,
+            'work_orders': list(work_orders),
         })
     
     @action(detail=True, methods=['post'])
@@ -742,11 +753,11 @@ class VehicleViewSet(viewsets.ModelViewSet):
                             model=model,
                             year=int(year),
                             owner=customer,
-                            license_plate=row.get('license_plate', '').strip() or None,
-                            exterior_color=row.get('exterior_color', '').strip() or None,
-                            current_mileage=int(row.get('current_mileage', 0)) if row.get('current_mileage') else None,
-                            engine_type=row.get('engine_type', '').strip() or None,
-                            transmission_type=row.get('transmission_type', '').strip() or None,
+                            license_plate=row.get('license_plate', '').strip() or f'VIN-{vin[-8:]}',
+                            exterior_color=row.get('exterior_color', '').strip(),
+                            current_mileage=int(row.get('current_mileage', 0)) if row.get('current_mileage', '').strip() else 0,
+                            engine_type=row.get('engine_type', '').strip() or 'gasoline',
+                            transmission_type=row.get('transmission_type', '').strip() or 'automatic',
                             status=row.get('status', 'active').strip() or 'active',
                         )
                         imported_count += 1

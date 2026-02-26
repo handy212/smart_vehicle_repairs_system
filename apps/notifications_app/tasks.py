@@ -128,3 +128,42 @@ def cleanup_old_notifications():
     logger.info("Cleanup old notifications task started")
     # Logic to delete old/read notifications
     return "Cleanup completed"
+
+@shared_task
+def send_bulk_sms_async(recipients, message, scheduled_for=None):
+    """
+    Async task to process bulk SMS sends.
+    recipients: list of dicts with 'type' and 'value'
+    """
+    from apps.notifications_app.models import Notification
+    from apps.notifications_app.services import NotificationService
+    from apps.notifications_app.hubtel_sms import send_bulk_sms
+    
+    logger.info(f"Starting async bulk SMS to {len(recipients)} recipients")
+    
+    raw_phones = []
+    
+    for recipient in recipients:
+        if recipient.get('type') == 'user':
+            try:
+                user_id = recipient.get('value')
+                notification = Notification.objects.create(
+                    recipient_id=user_id,
+                    notification_type='custom',
+                    channel='sms',
+                    priority='normal',
+                    title='SMS Console Message',
+                    message=message,
+                    scheduled_for=scheduled_for
+                )
+                service = NotificationService()
+                service.send_notification(notification)
+            except Exception as e:
+                logger.error(f"Async bulk SMS failed for user {recipient.get('value')}: {e}")
+        elif recipient.get('type') == 'phone':
+            raw_phones.append(recipient.get('value'))
+            
+    if raw_phones and not scheduled_for:
+        send_bulk_sms(raw_phones, message)
+    
+    return f"Completed async bulk SMS to {len(recipients)} recipients"

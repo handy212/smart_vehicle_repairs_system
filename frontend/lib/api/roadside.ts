@@ -77,7 +77,7 @@ export const roadsideApi = {
      * Get requests assigned to the current user (technician)
      */
     getAssignedRequests: async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const response = await apiClient.get<any>("/roadside/requests/");
         if (response.data && Array.isArray(response.data.results)) {
             return response.data.results;
@@ -157,7 +157,7 @@ export const roadsideApi = {
      * Admin: Get dashboard stats
      */
     dashboardStats: async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const response = await apiClient.get<any>("/roadside/requests/dashboard_stats/");
         return response.data;
     },
@@ -165,11 +165,11 @@ export const roadsideApi = {
     /**
      * Admin: List all requests with filtering
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-list: async (params?: any) => {
-    const response = await apiClient.get<{ results: RoadsideRequest[]; count: number; next?: string; previous?: string }>("/roadside/requests/", { params });
-    return response.data;
-},
+
+    list: async (params?: any) => {
+        const response = await apiClient.get<{ results: RoadsideRequest[]; count: number; next?: string; previous?: string }>("/roadside/requests/", { params });
+        return response.data;
+    },
 
     /**
      * Admin: Assign/Dispatch technician
@@ -179,44 +179,44 @@ list: async (params?: any) => {
         return response.data;
     },
 
-        /**
-         * Admin: Update request details
-         */
-        partialUpdate: async (id: number | string, data: Partial<RoadsideRequest>) => {
-            const response = await apiClient.patch<RoadsideRequest>(`/roadside/requests/${id}/`, data);
-            return response.data;
-        },
+    /**
+     * Admin: Update request details
+     */
+    partialUpdate: async (id: number | string, data: Partial<RoadsideRequest>) => {
+        const response = await apiClient.patch<RoadsideRequest>(`/roadside/requests/${id}/`, data);
+        return response.data;
+    },
 
-            /**
-             * Admin: Send SMS to customer
-             */
-            sendCustomerSms: async (id: number | string, message: string) => {
-                const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/requests/${id}/send_customer_sms/`, { message });
-                return response.data;
-            },
+    /**
+     * Admin: Send SMS to customer
+     */
+    sendCustomerSms: async (id: number | string, message: string) => {
+        const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/requests/${id}/send_customer_sms/`, { message });
+        return response.data;
+    },
 
-                /**
-                 * Admin: Send Email to customer
-                 */
-                sendCustomerEmail: async (id: number | string, message: string, subject?: string) => {
-                    const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/requests/${id}/send_customer_email/`, { message, subject });
-                    return response.data;
-                },
+    /**
+     * Admin: Send Email to customer
+     */
+    sendCustomerEmail: async (id: number | string, message: string, subject?: string) => {
+        const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/requests/${id}/send_customer_email/`, { message, subject });
+        return response.data;
+    },
 
-                    /**
-                     * Get a suggested message based on request status
-                     */
-                    getSuggestedMessage: async (id: number | string, channel: 'sms' | 'email') => {
-                        const response = await apiClient.get<{ subject: string; message: string; channel: string }>(`/roadside/requests/${id}/suggested_message/`, { params: { channel } });
-                        return response.data;
-                    },
+    /**
+     * Get a suggested message based on request status
+     */
+    getSuggestedMessage: async (id: number | string, channel: 'sms' | 'email') => {
+        const response = await apiClient.get<{ subject: string; message: string; channel: string }>(`/roadside/requests/${id}/suggested_message/`, { params: { channel } });
+        return response.data;
+    },
 
-                        /**
-                         * Create a new request (Admin/Manager)
-                         */
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-create: async (data: any) => {
-    const response = await apiClient.post<RoadsideRequest>("/roadside/requests/", data);
-    return response.data;
-}
+    /**
+     * Create a new request (Admin/Manager)
+     */
+
+    create: async (data: any) => {
+        const response = await apiClient.post<RoadsideRequest>("/roadside/requests/", data);
+        return response.data;
+    }
 };

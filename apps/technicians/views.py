@@ -209,9 +209,11 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
     serializer_class = TimeOffRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    # Reverting strict permissions for TimeOff/Shift to allow Technicians to view/manage their own via get_queryset
-    # def get_permissions(self):
-    #     ...
+    def get_permissions(self):
+        action = getattr(self, 'action', None)
+        if action in ['create', 'list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), HasPermission('manage_technicians')]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -241,7 +243,10 @@ class ShiftViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        action = getattr(self, 'action', None)
+        if action in ['clock_in', 'clock_out', 'add_break']:
+            return [permissions.IsAuthenticated()]
+        if action in ['list', 'retrieve']:
             return [permissions.IsAuthenticated(), HasPermission('view_users')]
         return [permissions.IsAuthenticated(), HasPermission('manage_technicians')]
 

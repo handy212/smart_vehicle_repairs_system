@@ -61,7 +61,7 @@ export default function EmailTemplatesPage() {
         description: "Template created successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -83,7 +83,7 @@ export default function EmailTemplatesPage() {
         description: "Template updated successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -103,7 +103,7 @@ export default function EmailTemplatesPage() {
         description: "Template status updated",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -123,7 +123,7 @@ export default function EmailTemplatesPage() {
         description: "Template deleted successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -188,7 +188,7 @@ export default function EmailTemplatesPage() {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const templates = (data as any)?.results || (Array.isArray(data) ? data : []) || [];
   const filteredTemplates = templates.filter((template: NotificationTemplateType) => {
     if (search) {

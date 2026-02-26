@@ -86,9 +86,9 @@ export default function EditAppointmentPage() {
         vehicle: vehicleId,
         appointment_date: appointmentDate,
         appointment_time: appointment.appointment_time || "",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         service_type: appointment.service_type as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         priority: appointment.priority as any,
         estimated_duration: appointment.estimated_duration || undefined,
         notes: appointment.notes || "",
@@ -296,7 +296,7 @@ export default function EditAppointmentPage() {
                     </label>
                     <Select
                       value={watch("service_type") || ""}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       onValueChange={(val: any) => setValue("service_type", val, { shouldValidate: true })}
                     >
                       <SelectTrigger>
@@ -316,7 +316,7 @@ export default function EditAppointmentPage() {
                     </label>
                     <Select
                       value={watch("priority") || ""}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       onValueChange={(val: any) => setValue("priority", val, { shouldValidate: true })}
                     >
                       <SelectTrigger>

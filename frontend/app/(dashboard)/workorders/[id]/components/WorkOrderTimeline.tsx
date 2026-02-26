@@ -5,9 +5,9 @@ import { format } from "date-fns";
 import { Clock } from "lucide-react";
 
 interface TimelineProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     workOrder: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     notes: any[];
 }
 
@@ -104,7 +104,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                     </p>
                                     {workOrder.approval_method && (
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            Via: {workOrder.approval_method.replace("_", " ")}
+                                            Via: {workOrder.approval_method.replace(/_/g, " ")}
                                         </p>
                                     )}
                                 </div>
@@ -183,12 +183,12 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                 </div>
                                 {notes
                                     .sort(
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                         (a: any, b: any) =>
                                             new Date(b.created_at).getTime() -
                                             new Date(a.created_at).getTime()
                                     )
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     .map((note: any) => (
                                         <div key={note.id} className="relative flex items-start">
                                             <div

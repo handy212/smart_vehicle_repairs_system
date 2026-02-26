@@ -50,7 +50,7 @@ export default function RefundsPage() {
     const filteredRefunds = data?.results || [];
 
     const getStatusBadge = (status: string) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const variants: Record<string, any> = {
             pending: 'warning',
             approved: 'default',

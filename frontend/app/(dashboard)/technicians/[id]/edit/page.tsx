@@ -97,7 +97,7 @@ export default function EditTechnicianPage() {
         setIsSubmitting(true);
         try {
             // Remove password if empty to avoid updating it
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             const updateData: any = { ...values };
             if (!updateData.password) {
                 delete updateData.password;
@@ -125,7 +125,7 @@ export default function EditTechnicianPage() {
                 });
                 formData.append('profile_picture', profilePictureFile);
 
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 await techniciansApi.update(id, formData as any);
             } else {
                 await techniciansApi.update(id, updateData);

@@ -134,7 +134,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(settings, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/branding')
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/branding', throttle_classes=[])
     def public_branding(self, request):
         """
         Public endpoint to get branding settings for login page and public pages.
@@ -164,7 +164,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         
         return Response(data)
     
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/firebase')
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/firebase', throttle_classes=[])
     def public_firebase(self, request):
         """
         Public endpoint to get Firebase configuration for frontend.
@@ -202,7 +202,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             'appId': '',
         })
     
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/integrations')
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/integrations', throttle_classes=[])
     def public_integrations(self, request):
         """
         Public endpoint to get integration settings (Google Analytics, Facebook Pixel, etc.)

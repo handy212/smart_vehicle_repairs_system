@@ -11,7 +11,7 @@ interface PaymentMethodBarChartProps {
 }
 
 // Payment method colors and icons
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const PAYMENT_METHOD_CONFIG: Record<string, { color: string; label: string; icon: any }> = {
   cash: { color: "#10B981", label: "Cash", icon: Banknote },
   check: { color: "#3B82F6", label: "Check", icon: Building2 },
@@ -68,7 +68,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;

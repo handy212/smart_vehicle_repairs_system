@@ -1,5 +1,6 @@
 from .models import WorkOrder, WorkOrderPart, WorkOrderNote, ServiceTask
 from django.db.models import Max
+from django.utils import timezone
 from apps.inventory.models import ServiceBundle
 
 def apply_service_bundle(work_order):
@@ -118,7 +119,7 @@ def assign_technician_by_skill(work_order):
                 
         # 2. Check Tasks
         for task in work_order.tasks.all():
-            skill = Skill.objects.filter(name__icontains=task.name).first()
+            skill = Skill.objects.filter(name__icontains=task.description).first()
             if skill:
                 required_skills.add(skill.id)
                 

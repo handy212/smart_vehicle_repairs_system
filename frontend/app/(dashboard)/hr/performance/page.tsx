@@ -169,37 +169,37 @@ function CreateReviewDialog({ open, onOpenChange, onCreated }: { open: boolean, 
     const { data: staff } = useQuery({ queryKey: ["hr", "staff-list"], queryFn: async () => (await hrApi.staff.list()).data });
 
     const mut = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (data: any) => hrApi.performanceReviews.create(data),
         onSuccess: () => { toast.success("Review initiated"); onCreated(); },
         onError: () => toast.error("Failed to create review"),
     });
 
-return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader><DialogTitle>Initiate Performance Review</DialogTitle><DialogDescription>Start a new review cycle for an staff.</DialogDescription></DialogHeader>
-            <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                    <Label>Staff</Label>
-                    <Select value={empId} onValueChange={setEmpId}>
-                        <SelectTrigger><SelectValue placeholder="Select Staff" /></SelectTrigger>
-                        <SelectContent>
-                            {staff?.results?.map(e => (
-                                <SelectItem key={e.id} value={e.id.toString()}>
-                                    {e.full_name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader><DialogTitle>Initiate Performance Review</DialogTitle><DialogDescription>Start a new review cycle for an staff.</DialogDescription></DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Staff</Label>
+                        <Select value={empId} onValueChange={setEmpId}>
+                            <SelectTrigger><SelectValue placeholder="Select Staff" /></SelectTrigger>
+                            <SelectContent>
+                                {staff?.results?.map(e => (
+                                    <SelectItem key={e.id} value={e.id.toString()}>
+                                        {e.full_name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label>Period Start</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Period End</Label><Input type="date" value={end} onChange={e => setEnd(e.target.value)} /></div>
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Period Start</Label><Input type="date" value={start} onChange={e => setStart(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Period End</Label><Input type="date" value={end} onChange={e => setEnd(e.target.value)} /></div>
-                </div>
-            </div>
-            <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ staff: Number(empId), review_period_start: start, review_period_end: end, status: "draft" })} disabled={!empId || !start || !end || mut.isPending}>Creating...</Button></DialogFooter>
-        </DialogContent>
-    </Dialog>
-);
+                <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={() => mut.mutate({ staff: Number(empId), review_period_start: start, review_period_end: end, status: "draft" })} disabled={!empId || !start || !end || mut.isPending}>Creating...</Button></DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }

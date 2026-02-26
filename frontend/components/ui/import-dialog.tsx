@@ -79,7 +79,7 @@ export function ImportDialog({
       try {
         const csvPreview = await previewCSV(selectedFile, 5);
         setPreview(csvPreview);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } catch (error: any) {
         toast({
           title: "Preview Error",
@@ -123,7 +123,7 @@ export function ImportDialog({
           variant: "warning",
         });
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } catch (error: any) {
       toast({
         title: "Import Failed",

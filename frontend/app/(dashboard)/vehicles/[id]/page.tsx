@@ -129,7 +129,7 @@ export default function VehicleDetailPage() {
       setTransferNotes("");
       setTransferDate(new Date().toISOString().split("T")[0]);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -256,9 +256,9 @@ export default function VehicleDetailPage() {
               <h1 className="text-2xl font-bold text-foreground">
                 {vehicle.make} {vehicle.model} {vehicle.year}
               </h1>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
               <Badge variant={getStatusVariant(vehicle.status) as any} className="capitalize">
-                {vehicle.status?.replace("_", " ") || vehicle.status}
+                {vehicle.status?.replace(/_/g, " ") || vehicle.status}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1 font-mono">

@@ -50,11 +50,11 @@ export default function AppointmentCalendarPage() {
 
   // Transform calendar data to FullCalendar events
   const events = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const eventList: any[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     calendarData.forEach((day: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       day.appointments?.forEach((appointment: any) => {
         const appointmentDate = parseISO(appointment.appointment_date);
         const appointmentTime = appointment.appointment_time
@@ -132,19 +132,19 @@ export default function AppointmentCalendarPage() {
     return eventList;
   }, [calendarData]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleEventClick = (info: any) => {
     router.push(`/appointments/${info.event.id}`);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleDateClick = (info: any) => {
     // Navigate to create appointment with pre-filled date
     const dateStr = format(info.date, "yyyy-MM-dd");
     router.push(`/appointments/new?date=${dateStr}`);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleDatesSet = (arg: any) => {
     setCurrentDate(arg.start);
   };

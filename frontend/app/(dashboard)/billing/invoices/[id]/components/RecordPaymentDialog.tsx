@@ -73,9 +73,9 @@ export default function RecordPaymentDialog({
       billingApi.payments.create({
         ...data,
         amount: data.amount.toString(),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         invoice: typeof invoice.id === 'number' ? invoice.id : parseInt(invoice.id as any),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } as any),
     onSuccess: () => {
       reset();
@@ -160,7 +160,7 @@ export default function RecordPaymentDialog({
               </label>
               <Select
                 value={watch("payment_method")}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 onValueChange={(val: any) => setValue("payment_method", val, { shouldValidate: true })}
               >
                 <SelectTrigger id="payment_method" className={`h-9 ${errors.payment_method ? "border-red-500" : ""}`}>

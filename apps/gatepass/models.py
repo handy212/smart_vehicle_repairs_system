@@ -36,7 +36,6 @@ class GatePass(models.Model):
         max_length=20,
         unique=True,
         editable=False,
-        db_index=True,
         help_text="Auto-generated gate pass number"
     )
     
@@ -153,7 +152,6 @@ class GatePass(models.Model):
             models.Index(fields=['work_order', 'status']),
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['branch', 'status']),
-            models.Index(fields=['gate_pass_number']),
         ]
     
     def __str__(self):
@@ -180,17 +178,7 @@ class GatePass(models.Model):
         
         super().save(*args, **kwargs)
     
-    def clean(self):
-        """Additional validation"""
-        # Check for active gate pass on same work order
-        if self.pk is None:  # New instance
-            existing = GatePass.objects.filter(
-                work_order=self.work_order,
-                status__in=['pending', 'issued']
-            ).exclude(pk=self.pk)
-            if existing.exists():
-                raise ValidationError("An active gate pass already exists for this work order.")
-    
+
     def issue(self, user=None):
         """Issue the gate pass"""
         if self.status != 'pending':

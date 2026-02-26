@@ -127,9 +127,9 @@ export default function WorkOrderPartsTab({
                       {formatCurrency(parseFloat(part.total_cost || "0"))}
                     </TableCell>
                     <TableCell>
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       <Badge variant={getStatusVariant(part.status) as any}>
-                        {part.status?.replace("_", " ")}
+                        {part.status?.replace(/_/g, " ")}
                       </Badge>
                     </TableCell>
                     <TableCell>

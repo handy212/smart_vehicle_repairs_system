@@ -355,8 +355,8 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            'owner', 'year', 'make', 'model', 'trim', 'exterior_color',
-            'interior_color', 'license_plate', 'license_plate_state',
+            'owner', 'year', 'make', 'model', 'trim', 'vehicle_type',
+            'exterior_color', 'interior_color', 'license_plate', 'license_plate_state',
             'current_mileage', 'engine_type', 'engine_size', 'transmission_type',
             'fuel_tank_capacity', 'tire_size', 'condition_rating',
             'warranty_expiry_date', 'warranty_type', 'warranty_coverage',

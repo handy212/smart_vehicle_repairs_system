@@ -44,6 +44,7 @@ export interface WorkOrder {
   days_in_shop?: number;
   is_approved?: boolean;
   is_warranty_rework?: boolean;
+  has_completed_inspection?: boolean;
   related_work_order?: number | {
     id: number;
     work_order_number: string;
@@ -123,7 +124,7 @@ export const workordersApi = {
       // Use PATCH for partial updates (only send the fields that are being updated)
       const response = await apiClient.patch(`/workorders/work-orders/${id}/`, data);
       return response.data;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } catch (error: any) {
       console.error("Work order update error:", error);
       console.error("Update data:", data);
@@ -195,6 +196,19 @@ export const workordersApi = {
 
   updateStatus: async (id: number, status: string): Promise<WorkOrder> => {
     const response = await apiClient.patch(`/workorders/work-orders/${id}/`, { status });
+    return response.data;
+  },
+
+  bulkUpdateStatus: async (ids: number[], status: string): Promise<{
+    updated: number[];
+    updated_count: number;
+    errors: Array<{ work_order_id: number; work_order_number: string; error: string }>;
+    error_count: number;
+  }> => {
+    const response = await apiClient.post(`/workorders/work-orders/bulk_update_status/`, {
+      work_order_ids: ids,
+      status,
+    });
     return response.data;
   },
 
@@ -347,23 +361,23 @@ export const workordersApi = {
       description: string;
       priority: string;
       estimated_total_cost: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      parts_needed?: Array<any>;
-} >;
-count: number;
-  }> => {
-  const response = await apiClient.get(`/workorders/work-orders/${id}/print_recommendations/`);
-  return response.data;
-},
 
-downloadRecommendationsPDF: async (id: number): Promise<Blob> => {
-  // Use the API endpoint for PDF generation
-  const response = await apiClient.get(
-    `/workorders/work-orders/${id}/recommendations_pdf/`,
-    { responseType: 'blob' }
-  );
-  return response.data;
-},
+      parts_needed?: Array<any>;
+    }>;
+    count: number;
+  }> => {
+    const response = await apiClient.get(`/workorders/work-orders/${id}/print_recommendations/`);
+    return response.data;
+  },
+
+  downloadRecommendationsPDF: async (id: number): Promise<Blob> => {
+    // Use the API endpoint for PDF generation
+    const response = await apiClient.get(
+      `/workorders/work-orders/${id}/recommendations_pdf/`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
 
   checkRepeatVisit: async (data: {
     vehicle: number;
@@ -385,74 +399,74 @@ downloadRecommendationsPDF: async (id: number): Promise<Blob> => {
     return response.data;
   },
 
-    parts: {
-  list: async (params: number | { work_order?: number; status?: string }): Promise<WorkOrderPart[]> => {
-    const queryParams = typeof params === 'number' ? { work_order: params } : params;
-    const response = await apiClient.get('/workorders/parts/', { params: queryParams });
-    return response.data;
-  },
+  parts: {
+    list: async (params: number | { work_order?: number; status?: string }): Promise<WorkOrderPart[]> => {
+      const queryParams = typeof params === 'number' ? { work_order: params } : params;
+      const response = await apiClient.get('/workorders/parts/', { params: queryParams });
+      return response.data;
+    },
     dashboardStats: async () => {
       const response = await apiClient.get("/workorders/parts/dashboard_stats/");
       return response.data;
     },
-      create: async (data: Partial<WorkOrderPart>): Promise<WorkOrderPart> => {
-        const response = await apiClient.post("/workorders/parts/", data);
-        return response.data;
-      },
-        update: async (id: number, data: Partial<WorkOrderPart>): Promise<WorkOrderPart> => {
-          const response = await apiClient.patch(`/workorders/parts/${id}/`, data);
-          return response.data;
-        },
-          delete: async (id: number): Promise<void> => {
-            await apiClient.delete(`/workorders/parts/${id}/`);
-          },
-            allocate: async (id: number): Promise<WorkOrderPart> => {
-              const response = await apiClient.post(`/workorders/parts/${id}/allocate/`);
-              return response.data;
-            },
-              order: async (id: number): Promise<{ status: string; po_number: string; po_id: number; message: string }> => {
-                const response = await apiClient.post(`/workorders/parts/${id}/order/`);
-                return response.data;
-              },
+    create: async (data: Partial<WorkOrderPart>): Promise<WorkOrderPart> => {
+      const response = await apiClient.post("/workorders/parts/", data);
+      return response.data;
+    },
+    update: async (id: number, data: Partial<WorkOrderPart>): Promise<WorkOrderPart> => {
+      const response = await apiClient.patch(`/workorders/parts/${id}/`, data);
+      return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/workorders/parts/${id}/`);
+    },
+    allocate: async (id: number): Promise<WorkOrderPart> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/allocate/`);
+      return response.data;
+    },
+    order: async (id: number): Promise<{ status: string; po_number: string; po_id: number; message: string }> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/order/`);
+      return response.data;
+    },
 
-                createAndOrder: async (
-                  id: number,
-                  inventoryData: {
-                    part_name: string;
-                    part_number: string;
-                    description: string;
-                    cost_price: string;
-                    selling_price?: string;
-                    supplier_id: number;
-                    minimum_stock_level?: number;
-                  }
-                ): Promise<{ status: string; po_number: string; po_id: number; part_id: number; message: string }> => {
-                  const response = await apiClient.post(`/workorders/parts/${id}/create_and_order/`, inventoryData);
-                  return response.data;
-                },
-                  bulkOrder: async (ids: number[]): Promise<{ status: string; processed: number; po_numbers: string[]; errors: string[] }> => {
-                    const response = await apiClient.post(`/workorders/parts/bulk_order/`, { ids });
-                    return response.data;
-                  },
+    createAndOrder: async (
+      id: number,
+      inventoryData: {
+        part_name: string;
+        part_number: string;
+        description: string;
+        cost_price: string;
+        selling_price?: string;
+        supplier_id: number;
+        minimum_stock_level?: number;
+      }
+    ): Promise<{ status: string; po_number: string; po_id: number; part_id: number; message: string }> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/create_and_order/`, inventoryData);
+      return response.data;
+    },
+    bulkOrder: async (ids: number[]): Promise<{ status: string; processed: number; po_numbers: string[]; errors: string[] }> => {
+      const response = await apiClient.post(`/workorders/parts/bulk_order/`, { ids });
+      return response.data;
+    },
   },
 
-// Public/Customer Portal APIs (unauthenticated)
-public: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  get: async (token: string): Promise<any> => {
-    const response = await apiClient.get(`/workorders/public/${token}/`);
-    return response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  approve: async (token: string, data: { notes?: string }): Promise<any> => {
-    const response = await apiClient.post(`/workorders/public/${token}/approve/`, data);
-    return response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  decline: async (token: string, data: { reason: string }): Promise<any> => {
-    const response = await apiClient.post(`/workorders/public/${token}/decline/`, data);
-    return response.data;
-  },
+  // Public/Customer Portal APIs (unauthenticated)
+  public: {
+
+    get: async (token: string): Promise<any> => {
+      const response = await apiClient.get(`/workorders/public/${token}/`);
+      return response.data;
+    },
+
+    approve: async (token: string, data: { notes?: string }): Promise<any> => {
+      const response = await apiClient.post(`/workorders/public/${token}/approve/`, data);
+      return response.data;
+    },
+
+    decline: async (token: string, data: { reason: string }): Promise<any> => {
+      const response = await apiClient.post(`/workorders/public/${token}/decline/`, data);
+      return response.data;
+    },
   },
 };
 

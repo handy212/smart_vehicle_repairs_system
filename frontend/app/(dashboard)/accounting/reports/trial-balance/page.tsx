@@ -2,13 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Download, Loader2, ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
@@ -37,13 +37,13 @@ export default function TrialBalancePage() {
     const handleExportCSV = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
         rows.push(['Trial Balance']);
         rows.push([`As of: ${date}`]);
         rows.push([]);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.accounts.forEach((account: any) => {
             rows.push([
                 account.code,
@@ -63,14 +63,14 @@ export default function TrialBalancePage() {
     const handleExportExcel = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
 
         // Headers
         rows.push(['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
 
         // Data
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.accounts.forEach((account: any) => {
             rows.push([
                 account.code,
@@ -164,7 +164,7 @@ export default function TrialBalancePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                             {report?.accounts.map((account: any, index: number) => (
                                 <TableRow key={index}>
                                     <TableCell className="font-medium">{account.code}</TableCell>

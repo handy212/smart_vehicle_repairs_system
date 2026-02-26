@@ -178,13 +178,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         """
         Custom delete to ensure the associated User is also deleted.
-        Since it's a OneToOne relationship, deleting the User will 
-        automatically delete the Customer (CASCADE), and AllAuth SocialAccounts.
+        Deleting the User cascades to Customer (CASCADE) and AllAuth SocialAccounts.
         """
         user = instance.user
-        instance.delete()
         if user:
-            user.delete()
+            user.delete()  # Cascades to Customer via OneToOneField
+        else:
+            instance.delete()
     
     @action(detail=True, methods=['get'])
     def vehicles(self, request, pk=None):
@@ -202,13 +202,23 @@ class CustomerViewSet(viewsets.ModelViewSet):
         """Get customer's service history"""
         customer = self.get_object()
         
-        # This will be implemented when workorders app is ready
-        # For now, return placeholder
+        from apps.workorders.models import WorkOrder
+        work_orders = WorkOrder.objects.filter(
+            customer=customer
+        ).order_by('-created_at').values(
+            'id', 'work_order_number', 'status', 'created_at',
+            'completed_at', 'actual_total'
+        )[:50]
+        
+        total_visits = WorkOrder.objects.filter(
+            customer=customer,
+            status__in=['completed', 'invoiced', 'closed']
+        ).count()
+        
         return Response({
             'customer': customer.customer_number,
-            'total_visits': 0,
-            'work_orders': [],
-            'message': 'Service history will be available when work orders are implemented'
+            'total_visits': total_visits,
+            'work_orders': list(work_orders),
         })
     
     @action(detail=False, methods=['post'])
@@ -279,7 +289,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
                         
                         Customer.objects.create(
                             user=user,
-                            company_name=row.get('company_name', '').strip() or None,
+                            company_name=row.get('company_name', '').strip(),
                             customer_type=row.get('customer_type', 'individual').strip() or 'individual',
                             status=row.get('status', 'active').strip() or 'active',
                         )

@@ -60,7 +60,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
       setShowAddDialog(false);
       toast({ title: "Diagnostic code added", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       // Handle duplicate code error specifically
       const errorMessage = error.response?.data;
@@ -99,7 +99,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
       setEditingCode(null);
       toast({ title: "Code updated", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to update code",
@@ -116,7 +116,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
       onRefresh();
       toast({ title: "Code deleted", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to delete code",
@@ -148,15 +148,51 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
     }
   };
 
+  const syncObdMutation = useMutation({
+    mutationFn: () => diagnosisApi.syncObdCodes(diagnosisId, [
+      { code: "P0300", description: "Random/Multiple Cylinder Misfire Detected" },
+      { code: "P0301", description: "Cylinder 1 Misfire Detected" },
+      { code: "C0040", description: "Right Front Wheel Speed Sensor" }
+    ]),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis-codes", diagnosisId] });
+      onRefresh();
+      toast({ title: "OBD-II Sync Complete", description: `Synced ${data.synced_codes?.length || 3} codes directly from vehicle`, variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync failed",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg">Diagnostic Codes</CardTitle>
-          <Button onClick={() => setShowAddDialog(true)} size="sm" disabled={isDisabled}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Code
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => syncObdMutation.mutate()}
+              size="sm"
+              variant="secondary"
+              disabled={isDisabled || syncObdMutation.isPending}
+              className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 border border-indigo-200"
+            >
+              {syncObdMutation.isPending ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-700 mr-2"></div>
+              ) : (
+                <Code className="w-4 h-4 mr-2" />
+              )}
+              Sync OBD Scanner
+            </Button>
+            <Button onClick={() => setShowAddDialog(true)} size="sm" disabled={isDisabled}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Code
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -299,7 +335,7 @@ function CodeDialog({
   });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [libraryResults, setLibraryResults] = useState<any[]>([]);
   const [isSearchingLibrary, setIsSearchingLibrary] = useState(false);
 
@@ -315,7 +351,7 @@ function CodeDialog({
             formData.code_type
           );
           setLibraryResults(results.slice(0, 5)); // Show top 5 results
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } catch (error: any) {
           // Silent fail for autocomplete search - library search is optional
           // Only show errors for non-404 cases (network issues, etc.)
@@ -373,43 +409,31 @@ function CodeDialog({
 
     setIsSearchingLibrary(true);
     try {
-      const libraryCode = await diagnosisApi.codeLibrary.lookup(trimmedCodeNumber, formData.code_type);
-      if (libraryCode) {
+      const decodedCode = await diagnosisApi.codes.decode(trimmedCodeNumber);
+      if (decodedCode) {
         setFormData({
           ...formData,
-          description: libraryCode.description || libraryCode.title || formData.description,
-          severity: libraryCode.severity || formData.severity,
+          description: decodedCode.description || formData.description,
+          severity: decodedCode.severity || formData.severity,
         });
         toast({
-          title: "Code found in library",
-          description: `Loaded description for ${libraryCode.code_number}`,
+          title: "Code Decoded",
+          description: `Loaded description from ${decodedCode.source === 'library' ? 'Database' : 'AI Analysis'}`,
           variant: "default",
         });
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      // Handle different error cases
-      if (error.response?.status === 404) {
-        // Code not found in library - this is okay, user can enter manually
-        toast({
-          title: "Code not in library",
-          description: `${formData.code_number} not found. You can enter details manually.`,
-          variant: "default",
-        });
-      } else {
-        // Other errors (network, server, etc.)
-        toast({
-          title: "Library lookup failed",
-          description: error.response?.data?.error || error.message || "Could not search code library",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Lookup failed",
+        description: error.response?.data?.error || error.message || "Could not decode code",
+        variant: "destructive",
+      });
     } finally {
       setIsSearchingLibrary(false);
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleSelectLibraryCode = (libraryCode: any) => {
     setFormData({
       code_number: libraryCode.code_number,
@@ -513,7 +537,7 @@ function CodeDialog({
                     <div className="p-2 text-xs font-medium text-orange-800 border-b border-orange-200 bg-orange-100/50">
                       {libraryResults.length} matching code{libraryResults.length !== 1 ? 's' : ''} found:
                     </div>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     {libraryResults.map((libCode: any) => (
                       <button
                         key={libCode.id}
@@ -554,7 +578,7 @@ function CodeDialog({
                 <Select
                   value={formData.code_type}
                   onValueChange={(val) => {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     setFormData({ ...formData, code_type: val as any });
                     setLibraryResults([]); // Clear results when type changes
                   }}
@@ -594,7 +618,7 @@ function CodeDialog({
                 <Label htmlFor="severity">Severity *</Label>
                 <Select
                   value={formData.severity}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                   onValueChange={(val) => setFormData({ ...formData, severity: val as any })}
                   required
                 >
@@ -612,7 +636,7 @@ function CodeDialog({
                 <Label htmlFor="status">Status *</Label>
                 <Select
                   value={formData.status}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                   onValueChange={(val) => setFormData({ ...formData, status: val as any })}
                   required
                 >

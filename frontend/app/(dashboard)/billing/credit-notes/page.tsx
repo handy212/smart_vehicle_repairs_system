@@ -41,9 +41,9 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function CreditNotesPage() {
     const { formatCurrency } = useCurrency();
     const router = useRouter();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const { toast } = useToast();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -136,7 +136,7 @@ export default function CreditNotesPage() {
                         </div>
                     ) : error ? (
                         <div className="bg-red-50 text-red-600 p-4 rounded-md">
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                             Error details: {(error as any).message || "Detailed error information unavailable"}
                         </div>
                     ) : !data?.results?.length ? (
@@ -182,7 +182,7 @@ export default function CreditNotesPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                                 <Badge variant={getStatusVariant(cn.status) as any}>
                                                     {cn.status.toUpperCase()}
                                                 </Badge>

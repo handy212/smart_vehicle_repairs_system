@@ -69,7 +69,7 @@ export const authApi = {
     return response.data;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   confirmResetPassword: async (data: any): Promise<{ detail: string }> => {
     const response = await apiClient.post("/auth/users/confirm_reset_password/", data);
     return response.data;
@@ -91,12 +91,12 @@ export const authApi = {
   },
 
   register: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     initiate: async (data: any): Promise<any> => {
       const response = await apiClient.post("/auth/register/initiate/", data);
       return response.data;
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     verify: async (data: any): Promise<any> => {
       const response = await apiClient.post("/auth/register/verify/", data);
       return response.data;

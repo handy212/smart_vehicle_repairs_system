@@ -142,7 +142,7 @@ export default function JobProfitabilityPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     {report.jobs.map((job: any) => (
                                         <TableRow key={job.work_order_id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
                                             <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">

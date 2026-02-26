@@ -1,13 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Plus, Search, Eye, FileText, MoreVertical, Edit, Printer, Truck, X, Download, Upload, ChevronDown, CheckCircle, Clock, AlertTriangle, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import {
@@ -31,7 +31,7 @@ import { usePrint } from "@/lib/hooks/usePrint";
 
 // Stats Grid Component
 // Stats Grid Component
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   if (loading) {
     return (
@@ -74,7 +74,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
 };
 
 // Helper component for currency
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const CurrencyValue = ({ value }: { value: any }) => {
   const { formatCurrency } = useCurrency();
   return <>{formatCurrency(value)}</>;
@@ -86,7 +86,7 @@ export default function PurchaseOrdersPage() {
   const { openPrintWindow } = usePrint();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [page, setPage] = useState(1);
   const { toast } = useToast();
@@ -335,7 +335,7 @@ export default function PurchaseOrdersPage() {
                           : "-"}
                       </TableCell>
                       <TableCell className="px-4 py-2">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                         <Badge variant={getStatusVariant(po.status) as any} className="text-[10px] px-2 py-0 border shadow-none bg-transparent capitalize">
                           {getStatusLabel(po.status)}
                         </Badge>

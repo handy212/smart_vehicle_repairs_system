@@ -5,7 +5,7 @@
 /**
  * Format a cell value for CSV export
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export function formatCellValue(value: any): string {
     if (value === null || value === undefined) return '';
 
@@ -39,7 +39,7 @@ export function generateFilenameWithTimestamp(prefix: string, extension: string 
  * Export data to CSV and trigger download
  */
 export function exportToCSV(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     data: any[][],
     filename: string,
     headers?: string[]
@@ -84,12 +84,12 @@ export function exportToCSV(
  * Convert financial report data to CSV format
  */
 export function exportFinancialReport(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     sections: { title: string; data: any[]; includeInTotal?: boolean }[],
     filename: string,
     headers: string[]
 ): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const rows: any[][] = [];
 
     sections.forEach((section, index) => {

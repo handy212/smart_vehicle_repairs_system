@@ -338,13 +338,11 @@ class DepreciationScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """Filter by user's accessible branches"""
         queryset = super().get_queryset()
-        # Filter through asset's branch
-        return queryset.filter(
-            asset__branch__in=filter_queryset_for_user_branches(
-                self.request.user.branches.all() if hasattr(self.request.user, 'branches') else [],
-                self.request.user,
-                self.request
-            )
+        return filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            self.request,
+            branch_lookup="asset__branch"
         )
     
     @action(detail=False, methods=['get'])
@@ -373,13 +371,11 @@ class AssetMaintenanceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter by user's accessible branches"""
         queryset = super().get_queryset()
-        # Filter through asset's branch
-        return queryset.filter(
-            asset__branch__in=filter_queryset_for_user_branches(
-                self.request.user.branches.all() if hasattr(self.request.user, 'branches') else [],
-                self.request.user,
-                self.request
-            )
+        return filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            self.request,
+            branch_lookup="asset__branch"
         )
     
     def get_serializer_class(self):

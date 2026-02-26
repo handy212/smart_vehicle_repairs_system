@@ -5,10 +5,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi, PurchaseOrder, PurchaseOrderItem } from "@/lib/api/inventory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Package, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -28,7 +28,7 @@ interface ItemReceiveState {
 }
 
 export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Receive Items" }: ReceiveItemsDialogProps) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const { formatCurrency } = useCurrency();
     const { toast } = useToast();
     const queryClient = useQueryClient();
@@ -86,7 +86,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
         }));
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const updateItemNotes = (itemId: number, notes: string) => {
         setItemStates((prev) => ({
             ...prev,
@@ -116,7 +116,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                 description: `Received ${variables.quantityReceived} item(s) successfully`,
             });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             const errorData = error.response?.data;
             let errorMessage = "Failed to receive item";

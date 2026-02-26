@@ -23,8 +23,8 @@ export interface Notification {
     customer_id?: number;
     vehicle_id?: number;
     inspection_id?: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-[key: string]: any;
+
+    [key: string]: any;
   };
 }
 

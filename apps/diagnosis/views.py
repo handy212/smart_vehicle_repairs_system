@@ -264,17 +264,88 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to update diagnosis history: {e}")
+            
+        # Predictive Pre-Booking: Predict next service
+        prediction = None
+        try:
+            if work_order and work_order.vehicle:
+                history = work_order.vehicle.work_orders.filter(status__in=['completed', 'invoiced', 'closed']).order_by('-created_at')[:5]
+                if history.exists():
+                    prediction = AIService.predict_next_service(list(history))
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to predict next service: {e}")
         
         serializer = self.get_serializer(diagnosis)
         return Response({
             'message': 'Diagnosis marked as completed',
             'diagnosis': serializer.data,
+            'prediction': prediction,
             'work_order': {
                 'id': work_order.id,
                 'status': work_order.status,
                 'requires_approval': work_order.requires_approval,
                 'diagnosis_completed_at': work_order.diagnosis_completed_at.isoformat() if work_order.diagnosis_completed_at else None,
             }
+        })
+    
+    @action(detail=True, methods=['post'])
+    def sync_obd_codes(self, request, pk=None):
+        """
+        Sync DTC codes directly from an OBD-II scanner
+        
+        Request body:
+        {
+            "codes": [
+                {"code": "P0301", "description": "Cylinder 1 Misfire Detected", "status": "active"},
+                {"code": "P0171", "description": "System Too Lean (Bank 1)", "status": "pending"}
+            ]
+        }
+        """
+        diagnosis = self.get_object()
+        codes_data = request.data.get('codes', [])
+        
+        if not isinstance(codes_data, list):
+            return Response(
+                {"error": "codes must be a list of code objects"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        synced_codes = []
+        for code_item in codes_data:
+            code_str = code_item.get('code')
+            if not code_str:
+                continue
+                
+            code_obj, created = DiagnosticCode.objects.get_or_create(
+                diagnosis=diagnosis,
+                code_number=code_str.upper(),
+                defaults={
+                    'code_type': 'OBD-II',
+                    'description': code_item.get('description', 'Auto-synced from scanner'),
+                    'status': code_item.get('status', 'active'),
+                    'severity': 'warning'  # Default for auto-sync
+                }
+            )
+            
+            if not created:
+                # Update existing if needed
+                code_obj.status = code_item.get('status', code_obj.status)
+                if 'description' in code_item:
+                    code_obj.description = code_item['description']
+                code_obj.save(update_fields=['status', 'description'])
+                
+            synced_codes.append(code_obj.code_number)
+            
+        # Refresh the diagnosis codes
+        codes = diagnosis.diagnostic_codes.all()
+        serializer = DiagnosticCodeSerializer(codes, many=True)
+        
+        return Response({
+            'message': f'Successfully synced {len(synced_codes)} codes',
+            'synced_codes': synced_codes,
+            'codes': serializer.data
         })
     
     @action(detail=True, methods=['get'])
@@ -440,22 +511,28 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                         # Map recommendation type to task type
                         task_type = TYPE_MAPPING.get(rec.recommendation_type, 'other')
                         
-                        # Increment sequence order for each task
+                        # Incremented sequence order for each task
                         current_sequence += 1
                         sequence_order = current_sequence
                         
-                        # Calculate labor cost if hours and rate are available
-                        labor_cost = Decimal('0')
-                        if rec.estimated_labor_hours and rec.estimated_labor_cost:
-                            labor_cost = rec.estimated_labor_cost
-                        elif rec.estimated_labor_hours:
-                            # Try to get labor rate from work order or use default
-                            # For now, calculate from estimated_labor_cost / hours if available
-                            if rec.estimated_labor_cost and rec.estimated_labor_hours > 0:
-                                labor_rate = rec.estimated_labor_cost / rec.estimated_labor_hours
+                        # Defend against None or invalid values sent from UI with complete fallback
+                        est_labor_hours = rec.estimated_labor_hours or Decimal('0.00')
+                        est_labor_cost = rec.estimated_labor_cost or Decimal('0.00')
+                        
+                        # Calculate labor cost and rate with safe defaults (especially when hours = 0)
+                        labor_cost = Decimal('0.00')
+                        labor_rate = Decimal('75.00')  # Default rate
+
+                        if est_labor_hours > Decimal('0.00'):
+                            if est_labor_cost > Decimal('0.00'):
+                                labor_cost = est_labor_cost
+                                labor_rate = est_labor_cost / est_labor_hours
                             else:
-                                labor_rate = Decimal('75.00')  # Default rate
-                            labor_cost = rec.estimated_labor_hours * labor_rate
+                                labor_cost = est_labor_hours * labor_rate
+                        elif est_labor_cost > Decimal('0.00'):
+                            # Edge case: Cost provided but no hours
+                            labor_cost = est_labor_cost
+                            # We can't determine a valid rate, leave as default but cost is fixed.
                         
                         # Create ServiceTask
                         task = ServiceTask.objects.create(
@@ -465,8 +542,8 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                             detailed_notes=f"Converted from diagnosis recommendation. Priority: {rec.get_priority_display()}. Recommendation Type: {rec.get_recommendation_type_display()}.",
                             status='pending',
                             sequence_order=sequence_order,
-                            estimated_hours=rec.estimated_labor_hours or Decimal('0'),
-                            labor_rate=rec.estimated_labor_cost / rec.estimated_labor_hours if (rec.estimated_labor_cost and rec.estimated_labor_hours and rec.estimated_labor_hours > 0) else Decimal('75.00'),
+                            estimated_hours=est_labor_hours,
+                            labor_rate=labor_rate,
                             labor_cost=labor_cost,
                             assigned_to=diagnosis.technician if (assign_to_technician and diagnosis.technician) else None,
                             is_workflow_task=True,
@@ -589,28 +666,17 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         }
         
         if format_type == 'pdf':
-            try:
-                from weasyprint import HTML
-                html_string = render_to_string('diagnosis/customer_report.html', context)
-                html = HTML(string=html_string)
-                pdf = html.write_pdf()
-                
-                response = HttpResponse(pdf, content_type='application/pdf')
-                response['Content-Disposition'] = f'attachment; filename="diagnosis_report_{diagnosis.work_order.work_order_number}.pdf"'
-                return response
-            except ImportError:
-                return Response(
-                    {'error': 'PDF generation requires weasyprint library'},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE
-                )
+            from apps.core.services.print_service import generate_diagnosis_report_pdf
+            return generate_diagnosis_report_pdf(diagnosis, base_context=context)
         elif format_type == 'text':
             text_content = render_to_string('diagnosis/customer_report.txt', context)
             response = HttpResponse(text_content, content_type='text/plain')
-            response['Content-Disposition'] = f'attachment; filename="diagnosis_report_{diagnosis.work_order.work_order_number}.txt"'
+            response['Content-Disposition'] = f'attachment; filename="diagnosis_report_{diagnosis.work_order.work_order_number if diagnosis.work_order else diagnosis.id}.txt"'
             return response
         else:
             # HTML format (default)
-            html_content = render_to_string('diagnosis/customer_report.html', context)
+            from apps.core.services.print_service import render_diagnosis_report_print_html
+            html_content = render_diagnosis_report_print_html(diagnosis, base_context=context, request=request)
             return HttpResponse(html_content, content_type='text/html')
 
 
@@ -698,6 +764,59 @@ class DiagnosticCodeViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return DiagnosticCodeCreateSerializer
         return DiagnosticCodeSerializer
+        
+    def perform_create(self, serializer):
+        """Auto-populate description from library if not provided"""
+        code_number = serializer.validated_data.get('code_number', '').upper()
+        description = serializer.validated_data.get('description', '')
+        severity = serializer.validated_data.get('severity', 'info')
+        
+        if not description or description == 'Unknown Code':
+            from apps.diagnosis.models import DiagnosticCodeLibrary
+            library_entry = DiagnosticCodeLibrary.objects.filter(code_number=code_number).first()
+            if library_entry:
+                serializer.validated_data['description'] = library_entry.description
+                if 'severity' not in self.request.data:
+                    serializer.validated_data['severity'] = library_entry.severity
+            else:
+                from apps.core.services.ai_service import AIService
+                ai_decoded = AIService.decode_obd_code(code_number)
+                serializer.validated_data['description'] = ai_decoded.get('description', f'Unknown Diagnostic Code {code_number}')
+                if 'severity' not in self.request.data:
+                    serializer.validated_data['severity'] = ai_decoded.get('severity', 'info')
+                        
+        serializer.save()
+        
+    @action(detail=False, methods=['get'])
+    def decode(self, request):
+        """Decode an OBD-II code via GET /api/diagnosis/codes/decode/?code=P0301"""
+        code_number = request.query_params.get('code', '').strip().upper()
+        if not code_number:
+            return Response({'error': 'Code parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from apps.diagnosis.models import DiagnosticCodeLibrary
+        library_entry = DiagnosticCodeLibrary.objects.filter(code_number=code_number).first()
+        
+        if library_entry:
+            return Response({
+                'code': code_number,
+                'description': library_entry.description,
+                'severity': library_entry.severity,
+                'common_fixes': library_entry.common_fixes,
+                'source': 'library'
+            })
+            
+        # AI/External API fallback for unknown codes
+        from apps.core.services.ai_service import AIService
+        ai_decoded = AIService.decode_obd_code(code_number)
+        
+        return Response({
+            'code': code_number,
+            'description': ai_decoded.get('description', f'Unknown Diagnostic Code {code_number}'),
+            'severity': ai_decoded.get('severity', 'info'),
+            'common_fixes': ai_decoded.get('common_fixes', ''),
+            'source': 'ai_fallback'
+        })
     
     @action(detail=True, methods=['post'])
     def resolve(self, request, pk=None):

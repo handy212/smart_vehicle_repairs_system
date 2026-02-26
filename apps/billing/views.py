@@ -363,18 +363,6 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    def perform_create(self, serializer):
-        """Assign branch when creating estimate"""
-        request = self.request
-        branch_id = request.data.get('branch') or request.data.get('branch_id')
-        branch = resolve_branch(request, branch_id=branch_id)
-        
-        if branch is None:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError({'branch': 'A valid branch assignment is required.'})
-        
-        serializer.save(branch=branch, created_by=request.user)
-    
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         """Get estimate history (audit log)"""
@@ -521,6 +509,15 @@ class EstimateLineItemViewSet(viewsets.ModelViewSet):
     
     queryset = EstimateLineItem.objects.select_related('estimate', 'part')
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated()]
+            return [IsAuthenticated(), HasPermission('view_billing')]
+        return [IsAuthenticated(), HasPermission('edit_estimates')]
+        
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['estimate', 'item_type', 'is_taxable']
     
@@ -1365,6 +1362,15 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         'payment', 'invoice', 'invoice__customer', 'allocated_by'
     ).all()
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated()]
+            return [IsAuthenticated(), HasPermission('view_billing')]
+        return [IsAuthenticated(), HasPermission('manage_billing')]
+        
     serializer_class = PaymentAllocationSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['payment', 'invoice', 'invoice__customer']

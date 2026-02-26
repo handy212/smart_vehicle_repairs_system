@@ -24,15 +24,15 @@ export function EstimatesView({ customerId }: EstimatesViewProps) {
 
     // Calculate counts
     const counts = {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         draft: estimates.filter((e: any) => e.status === 'draft').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         sent: estimates.filter((e: any) => e.status === 'sent').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         expired: estimates.filter((e: any) => e.status === 'expired').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         declined: estimates.filter((e: any) => e.status === 'declined').length,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         accepted: estimates.filter((e: any) => e.status === 'accepted').length,
     };
 
@@ -45,15 +45,15 @@ export function EstimatesView({ customerId }: EstimatesViewProps) {
     ];
 
     const columns = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Estimate #", accessorKey: "estimate_number", cell: (item: any) => <Link href={`/billing/estimates/${item.id}`} className="text-primary hover:underline">{item.estimate_number}</Link> },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Date", accessorKey: "estimate_date", cell: (item: any) => format(new Date(item.estimate_date), "MMM dd, yyyy") },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Expiry Date", accessorKey: "expiry_date", cell: (item: any) => item.expiry_date ? format(new Date(item.expiry_date), "MMM dd, yyyy") : "-" },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Amount", accessorKey: "total", cell: (item: any) => formatCurrency(parseFloat(item.total)) },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> }
     ];
 
@@ -62,7 +62,7 @@ export function EstimatesView({ customerId }: EstimatesViewProps) {
             <StatsGrid stats={stats} columns={4} />
             <DataTable
                 data={estimates}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 columns={columns as any}
                 isLoading={isLoading}
                 emptyMessage="No estimates found"

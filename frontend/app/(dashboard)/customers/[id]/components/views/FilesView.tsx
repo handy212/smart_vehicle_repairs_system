@@ -64,78 +64,78 @@ export function FilesView({ customerId }: FilesViewProps) {
     };
 
     const columns = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Name", accessorKey: "name", cell: (item: any) => <div className="flex items-center gap-2"><File className="w-4 h-4 text-primary" /><a href={item.file} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">{item.name}</a></div> },
         { header: "Type", accessorKey: "extension" },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Size", accessorKey: "size", cell: (item: any) => item.size ? `${(item.size / 1024).toFixed(0)} KB` : '-' },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Uploaded By", accessorKey: "uploaded_by_name", cell: (item: any) => item.uploaded_by_name || "System" },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Date", accessorKey: "created_at", cell: (item: any) => format(new Date(item.created_at), "MMM dd, yyyy") },
         {
             header: "Actions",
             accessorKey: "actions",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => (
-            <div className="flex gap-2 justify-end">
-                <Button variant="ghost" size="sm" asChild>
-                    <a href={item.file} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-4 h-4" /></a>
-                </Button>
-                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => { if (confirm("Delete file?")) deleteMutation.mutate(item.id); }}>
-                    <Trash2 className="w-4 h-4" />
-                </Button>
-            </div>
-        )
+                <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" asChild>
+                        <a href={item.file} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-4 h-4" /></a>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => { if (confirm("Delete file?")) deleteMutation.mutate(item.id); }}>
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
+                </div>
+            )
         },
     ];
 
-return (
-    <div className="space-y-6">
-        <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Documents</h3>
-            <div className="relative">
-                <input
-                    key={fileInputKey}
-                    type="file"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="file-upload"
-                    disabled={isUploading}
-                />
-                <label htmlFor="file-upload">
-                    <Button asChild disabled={isUploading} className="cursor-pointer">
-                        <span>
-                            <Upload className="w-4 h-4 mr-2" />
-                            {isUploading ? "Uploading..." : "Upload File"}
-                        </span>
-                    </Button>
-                </label>
-            </div>
-        </div>
-
-        {files.length === 0 ? (
-            <Card className="border-dashed shadow-none bg-muted/50">
-                <CardContent className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-                    <File className="w-12 h-12 mb-4 text-gray-300" />
-                    <h4 className="font-medium text-foreground mb-1">No files uploaded</h4>
-                    <p className="text-sm text-muted-foreground mb-4">Upload documents related to this customer</p>
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Documents</h3>
+                <div className="relative">
+                    <input
+                        key={fileInputKey}
+                        type="file"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="file-upload"
+                        disabled={isUploading}
+                    />
                     <label htmlFor="file-upload">
-                        <Button variant="outline" size="sm" className="cursor-pointer" asChild>
-                            <span>Select File</span>
+                        <Button asChild disabled={isUploading} className="cursor-pointer">
+                            <span>
+                                <Upload className="w-4 h-4 mr-2" />
+                                {isUploading ? "Uploading..." : "Upload File"}
+                            </span>
                         </Button>
                     </label>
-                </CardContent>
-            </Card>
-        ) : (
-            <DataTable
-                data={files}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                columns={columns as any}
-                isLoading={isLoading}
-                emptyMessage="No files found"
-            />
-        )}
-    </div>
-);
+                </div>
+            </div>
+
+            {files.length === 0 ? (
+                <Card className="border-dashed shadow-none bg-muted/50">
+                    <CardContent className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+                        <File className="w-12 h-12 mb-4 text-gray-300" />
+                        <h4 className="font-medium text-foreground mb-1">No files uploaded</h4>
+                        <p className="text-sm text-muted-foreground mb-4">Upload documents related to this customer</p>
+                        <label htmlFor="file-upload">
+                            <Button variant="outline" size="sm" className="cursor-pointer" asChild>
+                                <span>Select File</span>
+                            </Button>
+                        </label>
+                    </CardContent>
+                </Card>
+            ) : (
+                <DataTable
+                    data={files}
+
+                    columns={columns as any}
+                    isLoading={isLoading}
+                    emptyMessage="No files found"
+                />
+            )}
+        </div>
+    );
 }

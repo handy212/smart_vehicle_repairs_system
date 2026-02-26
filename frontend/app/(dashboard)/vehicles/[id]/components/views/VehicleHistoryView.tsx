@@ -18,8 +18,8 @@ import {
 
 interface VehicleHistoryViewProps {
     vehicleId: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-workOrders: any[];
+
+    workOrders: any[];
 }
 
 export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryViewProps) {
@@ -113,9 +113,9 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                             {sortedWorkOrders.length > 0 ? (
                                 sortedWorkOrders.map((wo) => {
                                     const date = wo.completed_at || wo.created_at;
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     const isWarrantyRework = (wo as any).is_warranty_rework;
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     const hasRelated = (wo as any).related_work_order_detail;
 
                                     return (
@@ -128,9 +128,9 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                                                 {wo.work_order_number}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                                 <Badge variant={getStatusVariant(wo.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
-                                                    {wo.status.replace("_", " ")}
+                                                    {wo.status.replace(/_/g, " ")}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-xs text-muted-foreground">

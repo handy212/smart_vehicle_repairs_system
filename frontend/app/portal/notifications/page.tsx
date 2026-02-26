@@ -289,65 +289,65 @@ export default function NotificationsPage() {
                               <Circle className="w-2 h-2 fill-primary text-primary" />
                             )}
                             {notification.priority && notification.priority !== "normal" && (
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               < Badge variant={getPriorityColor(notification.priority) as any}>
-                            {notification.priority}
-                          </Badge>
+                                {notification.priority}
+                              </Badge>
                             )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                            <span>
+                              {formatDistanceToNow(new Date(notification.created_at), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                            <span className="capitalize">{notification.notification_type}</span>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                          <span>
-                            {formatDistanceToNow(new Date(notification.created_at), {
-                              addSuffix: true,
-                            })}
-                          </span>
-                          <span className="capitalize">{notification.notification_type}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 ml-4">
-                        {!isRead && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markAsReadMutation.mutate(notification.id)}
-                            disabled={markAsReadMutation.isPending}
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {link && (
-                          <Link href={link}>
-                            <Button variant="secondary" size="sm">
-                              View <ArrowRight className="w-4 h-4 ml-1" />
+                        <div className="flex items-center space-x-2 ml-4">
+                          {!isRead && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markAsReadMutation.mutate(notification.id)}
+                              disabled={markAsReadMutation.isPending}
+                            >
+                              <CheckCircle className="w-4 h-4" />
                             </Button>
-                          </Link>
-                        )}
+                          )}
+                          {link && (
+                            <Link href={link}>
+                              <Button variant="secondary" size="sm">
+                                View <ArrowRight className="w-4 h-4 ml-1" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
+                </CardContent>
               </Card>
-      );
+            );
           })}
-    </div>
-  ) : (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground mb-2">No notifications found</p>
-        <p className="text-sm text-muted-foreground">
-          {filter === "unread"
-            ? "You're all caught up! No unread notifications."
-            : "You don't have any notifications yet."}
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-2">No notifications found</p>
+            <p className="text-sm text-muted-foreground">
+              {filter === "unread"
+                ? "You're all caught up! No unread notifications."
+                : "You don't have any notifications yet."}
+            </p>
+          </CardContent>
+        </Card>
+      )
+      }
     </div >
   );
 }

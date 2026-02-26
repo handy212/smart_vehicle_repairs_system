@@ -91,14 +91,14 @@ export default function AdminFeedbackPage() {
     };
 
     const updateFeedbackMutation = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: ({ id, data }: { id: number, data: any }) => feedbackApi.updateFeedback(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['feedback'] });
             toast.success('Feedback updated successfully');
             setIsDetailOpen(false);
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast.error(error.response?.data?.detail || 'Failed to update feedback');
         }
@@ -118,7 +118,7 @@ export default function AdminFeedbackPage() {
         {
             accessorKey: 'category' as const,
             header: 'Category',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => {
                 const category = item.category;
                 return (
@@ -132,7 +132,7 @@ export default function AdminFeedbackPage() {
         {
             accessorKey: 'message' as const,
             header: 'Message',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => (
                 <div className="max-w-[400px] truncate" title={item.message}>
                     {item.message}
@@ -142,19 +142,19 @@ export default function AdminFeedbackPage() {
         {
             accessorKey: 'branch_name' as const,
             header: 'Branch',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => item.branch_name || <span className="text-muted-foreground italic">General</span>
         },
         {
             accessorKey: 'created_at' as const,
             header: 'Received',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => format(new Date(item.created_at), 'MMM d, yyyy HH:mm')
         },
         {
             accessorKey: 'is_anonymous' as const,
             header: 'Submitter',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => {
                 const isAnonymous = item.is_anonymous;
                 if (isAnonymous) return <Badge variant="outline">Anonymous</Badge>;
@@ -169,7 +169,7 @@ export default function AdminFeedbackPage() {
         {
             accessorKey: 'status' as const,
             header: 'Status',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => getStatusBadge(item.status)
         }
     ];
@@ -217,7 +217,7 @@ export default function AdminFeedbackPage() {
                                 columns={columns}
                                 data={feedback}
                                 isLoading={feedbackLoading}
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                 onRowClick={(item: any) => {
                                     setSelectedFeedback(item);
                                     setIsDetailOpen(true);

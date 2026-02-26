@@ -127,7 +127,7 @@ class WorkOrderStateTransitionMixin:
                 work_order=work_order,
                 created_by=request.user,
                 note_type='internal',
-                content=f"Closing Notes: {closing_notes}\nPayment Received: {'Yes' if payment_received else 'No'}",
+                note=f"Closing Notes: {closing_notes}\nPayment Received: {'Yes' if payment_received else 'No'}",
             )
         
         try:
@@ -201,12 +201,6 @@ class WorkOrderStateTransitionMixin:
         try:
             work_order.transition_to('completed', user=request.user)
             
-            # Update vehicle's last service date and schedule
-            from apps.workorders.services import update_vehicle_service_schedule
-            work_order.vehicle.last_service_date = timezone.now().date()
-            work_order.vehicle.save()
-            update_vehicle_service_schedule(work_order)
-            
             # Create completion note
             if completion_notes:
                 WorkOrderNote.objects.create(
@@ -277,12 +271,6 @@ class WorkOrderStateTransitionMixin:
         if passed:
             try:
                 work_order.transition_to('completed', user=request.user)
-                
-                # Update vehicle's last service date and schedule
-                from apps.workorders.services import update_vehicle_service_schedule
-                work_order.vehicle.last_service_date = timezone.now().date()
-                work_order.vehicle.save()
-                update_vehicle_service_schedule(work_order)
             except ValidationError as e:
                 logger.warning(f"Validation error during QC completion for WO {work_order.work_order_number}: {e}")
                 return Response(
@@ -673,9 +661,15 @@ class WorkOrderStateTransitionMixin:
                 # If no technician, keep in diagnosis status (approved but waiting for technician)
                 if work_order.primary_technician or work_order.assigned_technicians.exists():
                     work_order.transition_to('in_progress', user=request.user)
-                # If no technician assigned, work order stays in 'diagnosis' status
-                # but is marked as approved, so it can be transitioned to in_progress
-                # once a technician is assigned
+                else:
+                    # Create a note so the user knows the WO is waiting for assignment
+                    WorkOrderNote.objects.create(
+                        work_order=work_order,
+                        note_type='internal',
+                        note='Diagnosis completed and auto-approved. Awaiting technician assignment before work can begin.',
+                        created_by=request.user,
+                        is_important=True
+                    )
         except (ValidationError, DRFValidationError) as e:
             # Handle both Django and DRF ValidationErrors
             error_message = str(e)

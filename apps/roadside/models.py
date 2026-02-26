@@ -259,19 +259,22 @@ class RoadsideRequest(models.Model):
         return f"{self.request_number} - {self.customer} - {self.get_service_type_display()}"
     
     def save(self, *args, **kwargs):
+        from django.db import transaction
+        
         # Auto-generate request number
         if not self.request_number:
-            last_request = RoadsideRequest.objects.order_by('-id').first()
-            if last_request and last_request.request_number:
-                try:
-                    number_part = last_request.request_number.replace('RSA-', '')
-                    next_num = int(number_part) + 1
-                    self.request_number = f"RSA-{next_num:06d}"
-                except (ValueError, AttributeError):
-                    next_num = RoadsideRequest.objects.count() + 1
-                    self.request_number = f"RSA-{next_num:06d}"
-            else:
-                self.request_number = "RSA-000001"
+            with transaction.atomic():
+                last_request = RoadsideRequest.objects.select_for_update().order_by('-id').first()
+                if last_request and last_request.request_number:
+                    try:
+                        number_part = last_request.request_number.replace('RSA-', '')
+                        next_num = int(number_part) + 1
+                        self.request_number = f"RSA-{next_num:06d}"
+                    except (ValueError, AttributeError):
+                        next_num = RoadsideRequest.objects.count() + 1
+                        self.request_number = f"RSA-{next_num:06d}"
+                else:
+                    self.request_number = "RSA-000001"
         
         super().save(*args, **kwargs)
     

@@ -47,7 +47,7 @@ export default function NewPartPage() {
     setServerError(null);
     try {
       // Exclude quantity_in_stock - stock is managed via StockItem per branch
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */}
       const { quantity_in_stock, ...dataWithoutStock } = data as any;
 
       if (imageFile) {
@@ -72,7 +72,7 @@ export default function NewPartPage() {
         };
         await createMutation.mutateAsync(apiData);
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
     } catch (error) {
       // Handled in mutation
     }

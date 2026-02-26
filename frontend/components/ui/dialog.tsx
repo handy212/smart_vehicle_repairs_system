@@ -127,7 +127,7 @@ const DialogTrigger = React.forwardRef<
   }
 >(({ asChild, children, onClick, ...props }, ref) => {
   if (asChild && React.isValidElement(children)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const childProps = children.props as any;
     return React.cloneElement(children, {
       ...props,
@@ -138,14 +138,14 @@ const DialogTrigger = React.forwardRef<
           childProps.onClick(e);
         }
       },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } as any);
   }
-return (
-  <button ref={ref} onClick={onClick} {...props}>
-    {children}
-  </button>
-);
+  return (
+    <button ref={ref} onClick={onClick} {...props}>
+      {children}
+    </button>
+  );
 });
 DialogTrigger.displayName = "DialogTrigger";
 

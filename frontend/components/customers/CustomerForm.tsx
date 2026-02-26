@@ -297,7 +297,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                 <Label htmlFor="customer_type">Customer Type</Label>
                                 <Select
                                     value={watch("customer_type")}
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     onValueChange={(val) => setValue("customer_type", val as any)}
                                 >
                                     <SelectTrigger className="w-full">
@@ -314,7 +314,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                 <Label htmlFor="status">Status</Label>
                                 <Select
                                     value={watch("status")}
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     onValueChange={(val) => setValue("status", val as any)}
                                 >
                                     <SelectTrigger className="w-full">
@@ -331,7 +331,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                 <Label htmlFor="payment_terms">Payment Terms</Label>
                                 <Select
                                     value={watch("payment_terms")}
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                     onValueChange={(val) => setValue("payment_terms", val as any)}
                                 >
                                     <SelectTrigger className="w-full">

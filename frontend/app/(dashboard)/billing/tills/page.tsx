@@ -1,6 +1,6 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tillApi, type Till } from "@/lib/api/till-refund";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,9 @@ import Link from "next/link";
 import { format } from "date-fns";
 
 export default function TillDashboardPage() {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
     const router = useRouter();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
     const queryClient = useQueryClient();
 
     const { data: currentTill, isLoading: currentLoading } = useQuery({

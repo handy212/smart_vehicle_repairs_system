@@ -21,7 +21,7 @@ export const settingsApi = {
     getBrandingMap: async (): Promise<Record<string, string>> => {
         const settings = await settingsApi.getPublicBranding();
         const map: Record<string, string> = {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         settings.forEach((s: any) => {
             map[s.key] = s.value;
         });

@@ -1,6 +1,6 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -158,17 +158,17 @@ export default function EditInvoicePage() {
     if (invoice && !isLoading) {
       // Extract IDs from objects, handling both nested objects and direct IDs
       const customerId = typeof invoice.customer === 'object' && invoice.customer
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         ? (invoice.customer as any).id
         : invoice.customer;
 
       const vehicleId = typeof invoice.vehicle === 'object' && invoice.vehicle
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         ? (invoice.vehicle as any).id
         : invoice.vehicle;
 
       const salesAgentId = typeof invoice.sales_agent === 'object' && invoice.sales_agent
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         ? (invoice.sales_agent as any).id
         : invoice.sales_agent;
 
@@ -183,7 +183,7 @@ export default function EditInvoicePage() {
         if (t) termsValue = t.value;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const loadedLineItems = (invoice.line_items || []).map((item: any) => ({
         item_type: item.item_type || "other",
         description: item.description || "",
@@ -212,7 +212,7 @@ export default function EditInvoicePage() {
         customer_notes: invoice.customer_notes || "",
         sales_agent: salesAgentId || undefined,
         discount_percentage: dPercent,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         discount_type: (invoice as any).discount_type || dType,
         discount_reason: invoice.discount_reason || "",
         line_items: loadedLineItems,
@@ -221,10 +221,10 @@ export default function EditInvoicePage() {
     }
   }, [invoice, isLoading, reset]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
     if (type === "part" && partData) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const newLineItem: any = {
         item_type: "part",
         description: partData.name,
@@ -237,7 +237,7 @@ export default function EditInvoicePage() {
       setLineItems([...lineItems, newLineItem]);
       setValue("line_items", [...lineItems, newLineItem]);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const newItem: any = { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true };
       setLineItems([...lineItems, newItem]);
       setValue("line_items", [...lineItems, newItem]);
@@ -250,10 +250,10 @@ export default function EditInvoicePage() {
     setValue("line_items", updated);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const updateLineItem = (index: number, field: string, value: any) => {
     const updated = [...lineItems];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     updated[index] = { ...updated[index], [field]: value } as any;
     setLineItems(updated);
     setValue("line_items", updated, { shouldValidate: false });
@@ -328,14 +328,14 @@ export default function EditInvoicePage() {
       queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: AxiosError<any>) => {
       const message = error.response?.data?.detail || error.response?.data?.message || "Failed to update invoice";
       setServerError(message);
       if (error.response?.data) {
         Object.entries(error.response.data).forEach(([field, errors]) => {
           if (Array.isArray(errors) && field !== 'detail' && field !== 'message') {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             setError(field as any, { message: errors[0] });
           }
         });
@@ -355,7 +355,7 @@ export default function EditInvoicePage() {
           router.push(`/billing/invoices/${id}`);
         }
       })
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       .catch((err) => {
         // Handled by onError
       });
@@ -432,7 +432,7 @@ export default function EditInvoicePage() {
                     <SelectValue placeholder="Select customer..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     {customersData?.results.map((c: any) => (
                       <SelectItem key={c.id} value={c.id.toString()}>
                         {c.full_name || c.company_name || c.email || `Customer #${c.id}`}
@@ -459,7 +459,7 @@ export default function EditInvoicePage() {
                     <SelectValue placeholder="Select vehicle..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     {vehiclesData?.results.map((v: any) => (
                       <SelectItem key={v.id} value={v.id.toString()}>
                         {v.year} {v.make} {v.model}
@@ -484,7 +484,7 @@ export default function EditInvoicePage() {
                     <SelectValue placeholder="Select Agent" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     {salesAgents?.map((agent: any) => (
                       <SelectItem key={agent.id} value={agent.id.toString()}>
                         {agent.first_name} {agent.last_name}
@@ -552,7 +552,7 @@ export default function EditInvoicePage() {
                 <label className="text-sm font-medium">Discount Type</label>
                 <Select
                   value={watch("discount_type") || "none"}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                   onValueChange={(val: any) => setValue("discount_type", val, { shouldValidate: true })}
                 >
                   <SelectTrigger>
@@ -608,7 +608,7 @@ export default function EditInvoicePage() {
                   />
                   {partSearchTerm.length > 1 && partsData?.results && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                       {partsData.results.map((part: any) => (
                         <div
                           key={part.id}

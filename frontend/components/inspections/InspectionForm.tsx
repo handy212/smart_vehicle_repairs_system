@@ -40,8 +40,8 @@ interface InspectionFormProps {
     activeWorkOrderBranch?: string | null;
     showActiveWorkOrderDialog?: boolean;
     setShowActiveWorkOrderDialog?: (show: boolean) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-workOrderData ?: any;
+
+    workOrderData?: any;
 }
 
 export function InspectionForm({
@@ -151,7 +151,7 @@ export function InspectionForm({
                                     )}
                                 >
                                     <option value="">Select a vehicle</option>
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                     {vehicles.map((vehicle: any) => (
                                         <option key={vehicle.id} value={vehicle.id}>
                                             {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate}
@@ -174,7 +174,7 @@ export function InspectionForm({
                                     )}
                                 >
                                     <option value="">Select a template</option>
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                     {templates.map((template: any) => (
                                         <option key={template.id} value={template.id}>
                                             {template.name}
@@ -206,7 +206,7 @@ export function InspectionForm({
                                 {workOrderData && (
                                     <div className="flex items-center gap-2 mt-1 bg-primary/10 dark:bg-orange-900/20 px-2 py-1 rounded text-xs text-orange-700 dark:text-orange-300">
                                         <Wrench className="w-3 h-3" />
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                         Linked to WO #{(workOrderData as any).wo_number || workOrderData.id}
                                     </div>
                                 )}

@@ -38,11 +38,11 @@ interface Customer {
 
 // Temporary Customers API definition
 const customersApi = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-getAll: async (params: any) => {
-    const response = await api.get('/customers/customers/', { params });
-    return response.data;
-}
+
+    getAll: async (params: any) => {
+        const response = await api.get('/customers/customers/', { params });
+        return response.data;
+    }
 };
 
 export default function SMSConsolePage() {
@@ -160,7 +160,7 @@ export default function SMSConsolePage() {
 
                 // Add first error detail if there are failures
                 if (failed > 0 && response.results) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                     const firstError = response.results.find((r: any) => !r.success)?.error;
                     if (firstError) {
                         description += `\nReason: ${firstError}`;
@@ -179,7 +179,7 @@ export default function SMSConsolePage() {
             setRecipients([]);
             setScheduledFor('');
             refetchHistory(); // Refresh history
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } catch (error: any) {
             toast({
                 title: 'Error',
@@ -222,382 +222,382 @@ export default function SMSConsolePage() {
 
     const customerColumns: Column<Customer>[] = [
         {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             accessorKey: 'checkbox' as any,
-        header: '',
-        cell: (c) => (
-            <div className="flex items-center justify-center">
-                <input
-                    type="checkbox"
-                    checked={selectedCustomerIds.includes(c.id)}
-                    onChange={() => handleToggleCustomerSelection(c.id)}
-                    className="h-4 w-4"
-                />
-            </div>
-        ),
+            header: '',
+            cell: (c) => (
+                <div className="flex items-center justify-center">
+                    <input
+                        type="checkbox"
+                        checked={selectedCustomerIds.includes(c.id)}
+                        onChange={() => handleToggleCustomerSelection(c.id)}
+                        className="h-4 w-4"
+                    />
+                </div>
+            ),
         },
-{
-    accessorKey: 'company_name',
-        header: 'Name',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cell: (c: any) => <span>{c.company_name || c.full_name || `${c.first_name || ''} ${c.last_name || ''}`}</span>
-},
-{
-    accessorKey: 'phone', // Use accessor for phone
-        header: 'Phone',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cell: (c: any) => <span>{c.phone}</span>
-},
-{
-    header: 'Actions',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cell: (c: any) => (
-        <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-                const name = c.company_name || c.full_name || `${c.first_name || ''} ${c.last_name || ''}`;
-                handleAddRecipient({
-                    type: 'user',
-                    value: c.id.toString(),
-                    name: `${name} (${c.phone})`
-                });
-            }}
-            disabled={recipients.some(r => r.value === c.id.toString() && r.type === 'user')}
-        >
-            Add
-        </Button>
-    )
-}
+        {
+            accessorKey: 'company_name',
+            header: 'Name',
+
+            cell: (c: any) => <span>{c.company_name || c.full_name || `${c.first_name || ''} ${c.last_name || ''}`}</span>
+        },
+        {
+            accessorKey: 'phone', // Use accessor for phone
+            header: 'Phone',
+
+            cell: (c: any) => <span>{c.phone}</span>
+        },
+        {
+            header: 'Actions',
+
+            cell: (c: any) => (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                        const name = c.company_name || c.full_name || `${c.first_name || ''} ${c.last_name || ''}`;
+                        handleAddRecipient({
+                            type: 'user',
+                            value: c.id.toString(),
+                            name: `${name} (${c.phone})`
+                        });
+                    }}
+                    disabled={recipients.some(r => r.value === c.id.toString() && r.type === 'user')}
+                >
+                    Add
+                </Button>
+            )
+        }
     ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const historyColumns: Column<any>[] = [
-    {
-        accessorKey: 'recipient',
-        header: 'Recipient',
-    },
-    {
-        accessorKey: 'message',
-        header: 'Message',
-        cell: (row) => <span className="truncate max-w-[200px] block" title={row.message}>{row.message}</span>
-    },
-    {
-        accessorKey: 'created_at',
-        header: 'Date',
-        cell: (row) => new Date(row.created_at).toLocaleString()
-    },
-    {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: (row) => (
-            <Badge variant={
-                row.status === 'sent' || row.status === 'delivered' ? 'default' :
-                    row.status === 'failed' ? 'danger' : 'secondary'
-            }>
-                {row.status}
-            </Badge>
-        )
-    }
-];
 
-// Helper: Calculate SMS count and cost
-const getSMSInfo = () => {
-    const length = message.length;
-    if (length === 0) return { count: 0, chars: 0, cost: 0 };
+    const historyColumns: Column<any>[] = [
+        {
+            accessorKey: 'recipient',
+            header: 'Recipient',
+        },
+        {
+            accessorKey: 'message',
+            header: 'Message',
+            cell: (row) => <span className="truncate max-w-[200px] block" title={row.message}>{row.message}</span>
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Date',
+            cell: (row) => new Date(row.created_at).toLocaleString()
+        },
+        {
+            accessorKey: 'status',
+            header: 'Status',
+            cell: (row) => (
+                <Badge variant={
+                    row.status === 'sent' || row.status === 'delivered' ? 'default' :
+                        row.status === 'failed' ? 'danger' : 'secondary'
+                }>
+                    {row.status}
+                </Badge>
+            )
+        }
+    ];
 
-    // SMS segmentation logic
-    const singleSMSLimit = 160;
-    const multiSMSLimit = 153;
+    // Helper: Calculate SMS count and cost
+    const getSMSInfo = () => {
+        const length = message.length;
+        if (length === 0) return { count: 0, chars: 0, cost: 0 };
 
-    let count = 1;
-    if (length > singleSMSLimit) {
-        count = Math.ceil(length / multiSMSLimit);
-    }
+        // SMS segmentation logic
+        const singleSMSLimit = 160;
+        const multiSMSLimit = 153;
 
-    // Estimated cost (adjust based on your pricing)
-    const costPerSMS = 0.05; // Example: 5 pesewas per SMS
-    const cost = count * costPerSMS * recipients.length;
+        let count = 1;
+        if (length > singleSMSLimit) {
+            count = Math.ceil(length / multiSMSLimit);
+        }
 
-    return { count, chars: length, cost };
-};
+        // Estimated cost (adjust based on your pricing)
+        const costPerSMS = 0.05; // Example: 5 pesewas per SMS
+        const cost = count * costPerSMS * recipients.length;
 
-const smsInfo = getSMSInfo();
+        return { count, chars: length, cost };
+    };
 
-return (
-    <PermissionGuard permission="send_notifications">
-        <div className="space-y-4">
-            {/* Compact Header */}
-            <div>
-                <h1 className="text-xl font-bold text-foreground tracking-tight">SMS Console</h1>
-                <p className="text-sm text-muted-foreground">Send SMS messages to customers</p>
-            </div>
+    const smsInfo = getSMSInfo();
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Card className="shadow-sm border">
-                    <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Sent Today</p>
-                                <p className="text-2xl font-bold text-foreground mt-1">{stats?.sent_today || 0}</p>
-                            </div>
-                            <TrendingUp className="h-8 w-8 text-green-500 opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="shadow-sm border">
-                    <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Scheduled</p>
-                                <p className="text-2xl font-bold text-primary mt-1">{stats?.scheduled || 0}</p>
-                            </div>
-                            <Clock className="h-8 w-8 text-primary opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="shadow-sm border">
-                    <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Failed Today</p>
-                                <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats?.failed_today || 0}</p>
-                            </div>
-                            <AlertCircle className="h-8 w-8 text-red-500 opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="shadow-sm border">
-                    <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Balance</p>
-                                <p className="text-2xl font-bold text-foreground mt-1">
-                                    {balance?.success ? `${balance.currency} ${balance.balance.toFixed(2)}` : 'N/A'}
-                                </p>
-                            </div>
-                            <DollarSign className="h-8 w-8 text-muted-foreground opacity-20" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+    return (
+        <PermissionGuard permission="send_notifications">
+            <div className="space-y-4">
+                {/* Compact Header */}
+                <div>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">SMS Console</h1>
+                    <p className="text-sm text-muted-foreground">Send SMS messages to customers</p>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Left Column: Composer */}
-                <Card className="md:col-span-2">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Compose Message</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <div>
-                            <Label htmlFor="message" className="text-sm">Message</Label>
-                            <Textarea
-                                id="message"
-                                placeholder="Type your message here..."
-                                className="h-28 mt-1.5 text-sm"
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
-                                maxLength={612} // 4 SMS segments max
-                            />
-                            {/* Enhanced Character Counter */}
-                            <div className="flex items-center justify-between mt-2 text-xs">
-                                <div className="flex items-center gap-3">
-                                    <span className={`font-medium ${smsInfo.count === 1 ? 'text-success' :
-                                        smsInfo.count === 2 ? 'text-yellow-600 dark:text-yellow-400' :
-                                            'text-primary'
-                                        }`}>
-                                        {smsInfo.chars} chars
-                                    </span>
-                                    <span className="text-muted-foreground">•</span>
-                                    <span className="text-muted-foreground">
-                                        {smsInfo.count} SMS {smsInfo.count > 1 ? 'segments' : 'segment'}
-                                    </span>
-                                    {recipients.length > 0 && (
-                                        <>
-                                            <span className="text-muted-foreground">•</span>
-                                            <span className="text-muted-foreground">
-                                                Est. cost: GHS {smsInfo.cost.toFixed(2)}
-                                            </span>
-                                        </>
-                                    )}
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card className="shadow-sm border">
+                        <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Sent Today</p>
+                                    <p className="text-2xl font-bold text-foreground mt-1">{stats?.sent_today || 0}</p>
                                 </div>
-                                <span className="text-muted-foreground">{612 - smsInfo.chars} left</span>
+                                <TrendingUp className="h-8 w-8 text-green-500 opacity-20" />
                             </div>
-                        </div>
-
-                        <div className="flex gap-3 items-end">
-                            <div className="flex-1">
-                                <div className="flex justify-between items-center mb-1">
-                                    <Label htmlFor="template" className="text-sm">Use Template</Label>
-                                    <TemplateManager />
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border">
+                        <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Scheduled</p>
+                                    <p className="text-2xl font-bold text-primary mt-1">{stats?.scheduled || 0}</p>
                                 </div>
-                                <Select
-                                    value=""
-                                    onValueChange={(val) => setMessage(val)}
-                                >
-                                    <SelectTrigger className="w-full h-9 text-sm">
-                                        <SelectValue placeholder="Select a template..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        {(templates as any[])?.map((t: any) => (
-                                            <SelectItem key={t.id} value={t.sms_body}>{t.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Clock className="h-8 w-8 text-primary opacity-20" />
                             </div>
-                            <div className="flex-1">
-                                <Label htmlFor="schedule" className="mb-1 block text-sm">Schedule (Optional)</Label>
-                                <Input
-                                    type="datetime-local"
-                                    id="schedule"
-                                    value={scheduledFor}
-                                    onChange={(e) => setScheduledFor(e.target.value)}
-                                    min={new Date().toISOString().slice(0, 16)}
-                                    className="h-9 text-sm"
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border">
+                        <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Failed Today</p>
+                                    <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats?.failed_today || 0}</p>
+                                </div>
+                                <AlertCircle className="h-8 w-8 text-red-500 opacity-20" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border">
+                        <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Balance</p>
+                                    <p className="text-2xl font-bold text-foreground mt-1">
+                                        {balance?.success ? `${balance.currency} ${balance.balance.toFixed(2)}` : 'N/A'}
+                                    </p>
+                                </div>
+                                <DollarSign className="h-8 w-8 text-muted-foreground opacity-20" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Left Column: Composer */}
+                    <Card className="md:col-span-2">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Compose Message</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div>
+                                <Label htmlFor="message" className="text-sm">Message</Label>
+                                <Textarea
+                                    id="message"
+                                    placeholder="Type your message here..."
+                                    className="h-28 mt-1.5 text-sm"
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    maxLength={612} // 4 SMS segments max
                                 />
-                            </div>
-                        </div>
-
-                        <div className="pt-2 flex justify-end">
-                            <Button onClick={handleSend} disabled={isSending || recipients.length === 0 || !message} size="sm" className="h-9">
-                                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (scheduledFor ? <Clock className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />)}
-                                {scheduledFor ? 'Schedule' : 'Send'} Message ({recipients.length})
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Right Column: Recipients */}
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Recipients</CardTitle>
-                        <CardDescription className="text-xs">Add recipients manually or from customers.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {/* Unified Recipient Selector */}
-                        <div className="space-y-1">
-                            <RecipientSelector
-                                customers={customers}
-                                onSelect={handleAddRecipient}
-                                placeholder="Search Customer or Type Phone..."
-                            />
-                        </div>
-
-                        <Separator className="my-2" />
-
-                        {/* Add Customer Button (Legacy/Bulk) */}
-
-                        {/* Add Customer Button */}
-                        <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" className="w-full">
-                                    <UserPlus className="mr-2 h-4 w-4" /> Select Customers
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
-                                <DialogHeader>
-                                    <DialogTitle>Select Customers</DialogTitle>
-                                </DialogHeader>
-                                <div className="px-6 pb-4">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                                        <Input
-                                            type="text"
-                                            placeholder="Search customers by name, email, or phone..."
-                                            value={customerSearch}
-                                            onChange={(e) => setCustomerSearch(e.target.value)}
-                                            className="pl-10"
-                                        />
+                                {/* Enhanced Character Counter */}
+                                <div className="flex items-center justify-between mt-2 text-xs">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`font-medium ${smsInfo.count === 1 ? 'text-success' :
+                                            smsInfo.count === 2 ? 'text-yellow-600 dark:text-yellow-400' :
+                                                'text-primary'
+                                            }`}>
+                                            {smsInfo.chars} chars
+                                        </span>
+                                        <span className="text-muted-foreground">•</span>
+                                        <span className="text-muted-foreground">
+                                            {smsInfo.count} SMS {smsInfo.count > 1 ? 'segments' : 'segment'}
+                                        </span>
+                                        {recipients.length > 0 && (
+                                            <>
+                                                <span className="text-muted-foreground">•</span>
+                                                <span className="text-muted-foreground">
+                                                    Est. cost: GHS {smsInfo.cost.toFixed(2)}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
+                                    <span className="text-muted-foreground">{612 - smsInfo.chars} left</span>
                                 </div>
-                                <div className="flex-1 overflow-auto px-6">
-                                    <DataTable
-                                        columns={customerColumns}
-                                        data={customers.filter((c: Customer) => {
-                                            if (!customerSearch) return true;
-                                            const search = customerSearch.toLowerCase();
-                                            return (
-                                                c.first_name?.toLowerCase().includes(search) ||
-                                                c.last_name?.toLowerCase().includes(search) ||
-                                                c.company_name?.toLowerCase().includes(search) ||
-                                                c.email?.toLowerCase().includes(search) ||
-                                                c.phone?.toLowerCase().includes(search)
-                                            );
-                                        })}
+                            </div>
+
+                            <div className="flex gap-3 items-end">
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <Label htmlFor="template" className="text-sm">Use Template</Label>
+                                        <TemplateManager />
+                                    </div>
+                                    <Select
+                                        value=""
+                                        onValueChange={(val) => setMessage(val)}
+                                    >
+                                        <SelectTrigger className="w-full h-9 text-sm">
+                                            <SelectValue placeholder="Select a template..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+
+                                            {(templates as any[])?.map((t: any) => (
+                                                <SelectItem key={t.id} value={t.sms_body}>{t.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex-1">
+                                    <Label htmlFor="schedule" className="mb-1 block text-sm">Schedule (Optional)</Label>
+                                    <Input
+                                        type="datetime-local"
+                                        id="schedule"
+                                        value={scheduledFor}
+                                        onChange={(e) => setScheduledFor(e.target.value)}
+                                        min={new Date().toISOString().slice(0, 16)}
+                                        className="h-9 text-sm"
                                     />
                                 </div>
-                                <DialogFooter className="flex justify-between items-center">
-                                    <div className="text-sm text-muted-foreground">
-                                        {selectedCustomerIds.length > 0 && `${selectedCustomerIds.length} selected`}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {selectedCustomerIds.length > 0 && (
-                                            <Button onClick={handleAddSelectedCustomers} variant="default">
-                                                Add Selected ({selectedCustomerIds.length})
-                                            </Button>
-                                        )}
-                                        <Button onClick={() => { setIsCustomerDialogOpen(false); setSelectedCustomerIds([]); }} variant="outline">Close</Button>
-                                    </div>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                        <Separator />
-
-                        {/* List */}
-                        <div className="relative">
-                            <div className="absolute top-0 right-0">
-                                <Badge variant="secondary">{recipients.length}</Badge>
                             </div>
-                            <h4 className="text-sm font-medium mb-2">Recipients List</h4>
-                            <ScrollArea className="h-[300px] border rounded-md p-2">
-                                {recipients.length === 0 ? (
-                                    <div className="text-center text-muted-foreground text-sm py-8">
-                                        No recipients added.
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {recipients.map((r, i) => (
-                                            <div key={i} className="flex justify-between items-center bg-muted/50 p-2 rounded text-sm">
-                                                <div className="flex items-center gap-2 overflow-hidden">
-                                                    {r.type === 'user' ? <Users className="h-3 w-3 text-primary shrink-0" /> : <Phone className="h-3 w-3 text-green-500 shrink-0" />}
-                                                    <span className="truncate" title={r.name}>{r.name}</span>
-                                                </div>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRemoveRecipient(i)}>
-                                                    <X className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </ScrollArea>
-                            {recipients.length > 0 && (
-                                <Button variant="link" size="sm" className="w-full mt-1 text-red-500 h-auto p-0" onClick={() => setRecipients([])}>
-                                    Clear All
+
+                            <div className="pt-2 flex justify-end">
+                                <Button onClick={handleSend} disabled={isSending || recipients.length === 0 || !message} size="sm" className="h-9">
+                                    {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (scheduledFor ? <Clock className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />)}
+                                    {scheduledFor ? 'Schedule' : 'Send'} Message ({recipients.length})
                                 </Button>
-                            )}
-                        </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Right Column: Recipients */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Recipients</CardTitle>
+                            <CardDescription className="text-xs">Add recipients manually or from customers.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {/* Unified Recipient Selector */}
+                            <div className="space-y-1">
+                                <RecipientSelector
+                                    customers={customers}
+                                    onSelect={handleAddRecipient}
+                                    placeholder="Search Customer or Type Phone..."
+                                />
+                            </div>
+
+                            <Separator className="my-2" />
+
+                            {/* Add Customer Button (Legacy/Bulk) */}
+
+                            {/* Add Customer Button */}
+                            <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full">
+                                        <UserPlus className="mr-2 h-4 w-4" /> Select Customers
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+                                    <DialogHeader>
+                                        <DialogTitle>Select Customers</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="px-6 pb-4">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                                            <Input
+                                                type="text"
+                                                placeholder="Search customers by name, email, or phone..."
+                                                value={customerSearch}
+                                                onChange={(e) => setCustomerSearch(e.target.value)}
+                                                className="pl-10"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-auto px-6">
+                                        <DataTable
+                                            columns={customerColumns}
+                                            data={customers.filter((c: Customer) => {
+                                                if (!customerSearch) return true;
+                                                const search = customerSearch.toLowerCase();
+                                                return (
+                                                    c.first_name?.toLowerCase().includes(search) ||
+                                                    c.last_name?.toLowerCase().includes(search) ||
+                                                    c.company_name?.toLowerCase().includes(search) ||
+                                                    c.email?.toLowerCase().includes(search) ||
+                                                    c.phone?.toLowerCase().includes(search)
+                                                );
+                                            })}
+                                        />
+                                    </div>
+                                    <DialogFooter className="flex justify-between items-center">
+                                        <div className="text-sm text-muted-foreground">
+                                            {selectedCustomerIds.length > 0 && `${selectedCustomerIds.length} selected`}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {selectedCustomerIds.length > 0 && (
+                                                <Button onClick={handleAddSelectedCustomers} variant="default">
+                                                    Add Selected ({selectedCustomerIds.length})
+                                                </Button>
+                                            )}
+                                            <Button onClick={() => { setIsCustomerDialogOpen(false); setSelectedCustomerIds([]); }} variant="outline">Close</Button>
+                                        </div>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+
+                            <Separator />
+
+                            {/* List */}
+                            <div className="relative">
+                                <div className="absolute top-0 right-0">
+                                    <Badge variant="secondary">{recipients.length}</Badge>
+                                </div>
+                                <h4 className="text-sm font-medium mb-2">Recipients List</h4>
+                                <ScrollArea className="h-[300px] border rounded-md p-2">
+                                    {recipients.length === 0 ? (
+                                        <div className="text-center text-muted-foreground text-sm py-8">
+                                            No recipients added.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {recipients.map((r, i) => (
+                                                <div key={i} className="flex justify-between items-center bg-muted/50 p-2 rounded text-sm">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        {r.type === 'user' ? <Users className="h-3 w-3 text-primary shrink-0" /> : <Phone className="h-3 w-3 text-green-500 shrink-0" />}
+                                                        <span className="truncate" title={r.name}>{r.name}</span>
+                                                    </div>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRemoveRecipient(i)}>
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                                {recipients.length > 0 && (
+                                    <Button variant="link" size="sm" className="w-full mt-1 text-red-500 h-auto p-0" onClick={() => setRecipients([])}>
+                                        Clear All
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* History Section */}
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <History className="h-4 w-4" /> Recent History
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        <DataTable
+                            columns={historyColumns}
+                            data={history || []}
+                        />
                     </CardContent>
                 </Card>
             </div>
-
-            {/* History Section */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                        <History className="h-4 w-4" /> Recent History
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                    <DataTable
-                        columns={historyColumns}
-                        data={history || []}
-                    />
-                </CardContent>
-            </Card>
-        </div>
-    </PermissionGuard>
-);
+        </PermissionGuard>
+    );
 }

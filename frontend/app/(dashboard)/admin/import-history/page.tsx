@@ -235,7 +235,7 @@ export default function ImportHistoryPage() {
                                 {log.user_name || log.user_email || "Unknown"}
                               </TableCell>
                               <TableCell className="px-4 py-2.5">
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                 <Badge variant={getModelBadgeVariant(log.model_name) as any} className="text-[10px] h-5 px-2 font-medium border-border">
                                   {log.model_name || "N/A"}
                                 </Badge>

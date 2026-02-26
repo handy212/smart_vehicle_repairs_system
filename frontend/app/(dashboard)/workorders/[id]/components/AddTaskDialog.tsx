@@ -109,7 +109,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
               </label>
               <Select
                 value={watch("task_type")}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 onValueChange={(val) => setValue("task_type", val as any)}
               >
                 <SelectTrigger id="task_type" className="w-full">

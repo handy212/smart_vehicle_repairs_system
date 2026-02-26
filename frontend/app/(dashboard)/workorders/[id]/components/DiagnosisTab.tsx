@@ -33,9 +33,9 @@ import { format } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 interface DiagnosisTabProps {
   workOrderId: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-workOrder ?: any;
-onRefresh ?: () => void;
+
+  workOrder?: any;
+  onRefresh?: () => void;
 }
 
 export default function DiagnosisTab({

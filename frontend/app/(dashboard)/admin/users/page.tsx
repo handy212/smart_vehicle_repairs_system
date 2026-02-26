@@ -65,7 +65,7 @@ export default function UsersManagementPage() {
         description: "User deleted successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -85,7 +85,7 @@ export default function UsersManagementPage() {
         description: "User status updated successfully",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -283,7 +283,7 @@ export default function UsersManagementPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                         <Badge variant={getRoleVariant(user.role) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {getRoleLabel(user.role)}
                         </Badge>

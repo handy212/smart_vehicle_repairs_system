@@ -126,7 +126,7 @@ export default function RoadsideDetailPage() {
             toast({ title: "Updated", description: "Request details updated successfully" });
             setIsEditDialogOpen(false);
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Update Failed",
@@ -147,7 +147,7 @@ export default function RoadsideDetailPage() {
                 default: throw new Error("Invalid action");
             }
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onSuccess: (data: any, action) => {
             queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
 
@@ -180,7 +180,7 @@ export default function RoadsideDetailPage() {
             setSmsMessage("");
             setEmailSubject("");
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any, variables) => {
             toast({
                 title: variables.method === "email" ? "Email Failed" : "SMS Failed",
@@ -271,7 +271,7 @@ export default function RoadsideDetailPage() {
                             <h1 className="text-2xl font-bold tracking-tight text-foreground">
                                 {request.service_type_display}
                             </h1>
-                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                             <Badge variant={getStatusVariant(request.status) as any} className="text-[10px] px-2 py-0.5 uppercase tracking-wider font-bold">
                                 {request.status_display}
                             </Badge>
@@ -808,7 +808,7 @@ export default function RoadsideDetailPage() {
                             Send a message to {request.customer_name}
                         </DialogDescription>
                     </DialogHeader>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     <Tabs value={communicationMethod} onValueChange={(v) => setCommunicationMethod(v as any)} className="w-full">
                         <TabsList className="grid w-full grid-cols-2 mb-4">
                             <TabsTrigger value="sms" className="flex items-center gap-2">

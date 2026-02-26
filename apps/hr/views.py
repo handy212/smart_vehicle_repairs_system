@@ -86,7 +86,13 @@ def resolve_branch_for_user(request, specified_branch=None):
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_departments'))
+        else:
+            permission_classes.append(HasPermission('manage_departments'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     filterset_fields = ['branch', 'is_active']
@@ -113,7 +119,13 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
 class PositionViewSet(viewsets.ModelViewSet):
     serializer_class = PositionSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_departments'))
+        else:
+            permission_classes.append(HasPermission('manage_departments'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
     filterset_fields = ['department', 'is_active']
@@ -132,7 +144,15 @@ class PositionViewSet(viewsets.ModelViewSet):
 # =============================================================================
 
 class EmployeeProfileViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['my_profile', 'org_chart', 'summary']:
+            pass
+        elif self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_staff'))
+        else:
+            permission_classes.append(HasPermission('manage_staff'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
         'user__first_name', 'user__last_name', 'user__email',
@@ -266,7 +286,13 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
 class LeaveTypeViewSet(viewsets.ModelViewSet):
     queryset = LeaveType.objects.all()
     serializer_class = LeaveTypeSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_leave'))
+        else:
+            permission_classes.append(HasPermission('manage_leave'))
+        return [permission() for permission in permission_classes]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
@@ -280,7 +306,13 @@ class LeaveBalanceFilter(DjangoFilterBackend):
 
 class LeaveBalanceViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveBalanceSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_leave'))
+        else:
+            permission_classes.append(HasPermission('manage_leave'))
+        return [permission() for permission in permission_classes]
     filter_backends = [LeaveBalanceFilter, DjangoFilterBackend]
     filterset_fields = ['employee', 'leave_type', 'year']
 
@@ -314,7 +346,17 @@ class LeaveRequestFilter(DjangoFilterBackend):
 
 class LeaveRequestViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['my_requests', 'create', 'cancel']:
+            pass
+        elif self.action in ['list', 'retrieve', 'pending']:
+            permission_classes.append(HasPermission('view_leave'))
+        elif self.action in ['approve', 'reject']:
+            permission_classes.append(HasPermission('approve_leave'))
+        else:
+            permission_classes.append(HasPermission('manage_leave'))
+        return [permission() for permission in permission_classes]
     filter_backends = [LeaveRequestFilter, DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['employee', 'leave_type', 'status']
     ordering_fields = ['created_at', 'start_date']
@@ -439,7 +481,13 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
 class AttendancePolicyViewSet(viewsets.ModelViewSet):
     serializer_class = AttendancePolicySerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_attendance'))
+        else:
+            permission_classes.append(HasPermission('manage_attendance'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['branch', 'is_active', 'is_default']
 
@@ -465,7 +513,15 @@ class AttendanceFilter(DjangoFilterBackend):
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     serializer_class = AttendanceSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['clock_in', 'clock_out', 'my_attendance', 'status']:
+            pass
+        elif self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_attendance'))
+        else:
+            permission_classes.append(HasPermission('manage_attendance'))
+        return [permission() for permission in permission_classes]
     filter_backends = [AttendanceFilter, DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['employee', 'date', 'status', 'branch']
     search_fields = ['employee__user__first_name', 'employee__user__last_name']
@@ -646,7 +702,13 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 class SalaryComponentViewSet(viewsets.ModelViewSet):
     queryset = SalaryComponent.objects.all()
     serializer_class = SalaryComponentSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_payroll'))
+        else:
+            permission_classes.append(HasPermission('manage_payroll'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['component_type', 'is_active']
     search_fields = ['name']
@@ -655,7 +717,13 @@ class SalaryComponentViewSet(viewsets.ModelViewSet):
 class EmployeeSalaryComponentViewSet(viewsets.ModelViewSet):
     queryset = EmployeeSalaryComponent.objects.all().select_related('employee', 'component')
     serializer_class = EmployeeSalaryComponentSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_payroll'))
+        else:
+            permission_classes.append(HasPermission('manage_payroll'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['employee', 'component', 'is_active']
     search_fields = ['employee__user__first_name', 'employee__user__last_name', 'component__name']
@@ -664,14 +732,26 @@ class EmployeeSalaryComponentViewSet(viewsets.ModelViewSet):
 class TaxRuleViewSet(viewsets.ModelViewSet):
     queryset = TaxRule.objects.all().order_by('min_income')
     serializer_class = TaxRuleSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_payroll'))
+        else:
+            permission_classes.append(HasPermission('manage_payroll'))
+        return [permission() for permission in permission_classes]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
 
 class PayrollPeriodViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollPeriodSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_payroll'))
+        else:
+            permission_classes.append(HasPermission('manage_payroll'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['branch', 'status']
     ordering_fields = ['start_date', 'created_at']
@@ -780,7 +860,15 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
 
 class PaySlipViewSet(viewsets.ModelViewSet):
     serializer_class = PaySlipSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['my_slips', 'my_summary', 'download_pdf']:
+            pass
+        elif self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_payroll'))
+        else:
+            permission_classes.append(HasPermission('manage_payroll'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['payroll_period', 'employee', 'status']
     ordering = ['-payroll_period__start_date']
@@ -827,7 +915,13 @@ class PaySlipViewSet(viewsets.ModelViewSet):
 
 class JobOpeningViewSet(viewsets.ModelViewSet):
     serializer_class = JobOpeningSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_recruitment'))
+        else:
+            permission_classes.append(HasPermission('manage_recruitment'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
     filterset_fields = ['department', 'status', 'employment_type', 'branch']
@@ -870,7 +964,13 @@ class JobOpeningViewSet(viewsets.ModelViewSet):
 
 class ApplicantViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicantSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_recruitment'))
+        else:
+            permission_classes.append(HasPermission('manage_recruitment'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['first_name', 'last_name', 'email']
     filterset_fields = ['job_opening', 'status', 'source']
@@ -922,7 +1022,13 @@ class ApplicantViewSet(viewsets.ModelViewSet):
 
 class InterviewViewSet(viewsets.ModelViewSet):
     serializer_class = InterviewSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_recruitment'))
+        else:
+            permission_classes.append(HasPermission('manage_recruitment'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['applicant', 'interviewer', 'status', 'interview_type']
     ordering = ['-scheduled_at']
@@ -950,7 +1056,13 @@ class PerformanceReviewFilter(DjangoFilterBackend):
 
 class PerformanceReviewViewSet(viewsets.ModelViewSet):
     serializer_class = PerformanceReviewSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_performance'))
+        else:
+            permission_classes.append(HasPermission('manage_performance'))
+        return [permission() for permission in permission_classes]
     filter_backends = [PerformanceReviewFilter, DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['employee', 'status']
     ordering = ['-review_period_end']
@@ -988,7 +1100,13 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
 
 class TrainingProgramViewSet(viewsets.ModelViewSet):
     serializer_class = TrainingProgramSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_training'))
+        else:
+            permission_classes.append(HasPermission('manage_training'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['name', 'description']
     filterset_fields = ['department', 'is_mandatory', 'is_active']
@@ -1033,7 +1151,13 @@ class EmployeeTrainingFilter(DjangoFilterBackend):
 
 class EmployeeTrainingViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeTrainingSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_training'))
+        else:
+            permission_classes.append(HasPermission('manage_training'))
+        return [permission() for permission in permission_classes]
     filter_backends = [EmployeeTrainingFilter, DjangoFilterBackend]
     filterset_fields = ['employee', 'training', 'status']
 
@@ -1048,7 +1172,13 @@ class EmployeeTrainingViewSet(viewsets.ModelViewSet):
 
 class ComplianceDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = ComplianceDocumentSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.action in ['list', 'retrieve']:
+            permission_classes.append(HasPermission('view_compliance'))
+        else:
+            permission_classes.append(HasPermission('manage_compliance'))
+        return [permission() for permission in permission_classes]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'document_number']
     filterset_fields = ['employee', 'document_type', 'status']

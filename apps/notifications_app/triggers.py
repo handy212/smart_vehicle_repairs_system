@@ -92,7 +92,7 @@ class NotificationTriggers:
     Date: {appointment.appointment_date}
     Time: {appointment.appointment_time}
     Vehicle: {vehicle_display}
-    Service: {appointment.service_description or "General Service"}
+    Service: {appointment.customer_concerns or "General Service"}
     
     Please review and confirm.''',
                     data={
@@ -145,7 +145,8 @@ class NotificationTriggers:
         template = self._get_template('appointment_confirmation', 'email')
         customer_name = self._build_customer_name(appointment.customer)
         vehicle_display = self._build_vehicle_display(appointment.vehicle)
-        technician_name = appointment.assigned_technician.get_full_name() if appointment.assigned_technician else "TBD"
+        technician = appointment.assigned_technicians.first()
+        technician_name = technician.get_full_name() if technician else "TBD"
         
         # Build context
         context = self._get_default_context()
@@ -156,7 +157,7 @@ class NotificationTriggers:
             'appointment_time': str(appointment.appointment_time),
             'vehicle': vehicle_display,
             'vehicle_display': vehicle_display,
-            'service_description': appointment.service_description or "General Service",
+            'service_description': appointment.customer_concerns or "General Service",
             'technician_name': technician_name,
         })
         
@@ -167,7 +168,7 @@ class NotificationTriggers:
         message = f'''Your appointment has been confirmed for {appointment.appointment_date} at {appointment.appointment_time}.
 
 Vehicle: {vehicle_display}
-Service: {appointment.service_description or "General Service"}
+Service: {appointment.customer_concerns or "General Service"}
 Technician: {technician_name}
 
 Please arrive 10 minutes early.'''
@@ -247,7 +248,8 @@ Please contact us to reschedule.'''
         template = self._get_template('appointment_reminder', 'email')
         customer_name = self._build_customer_name(appointment.customer)
         vehicle_display = self._build_vehicle_display(appointment.vehicle)
-        technician_name = appointment.assigned_technician.get_full_name() if appointment.assigned_technician else "TBD"
+        technician = appointment.assigned_technicians.first()
+        technician_name = technician.get_full_name() if technician else "TBD"
         
         # Build context
         context = self._get_default_context()
@@ -1931,6 +1933,85 @@ Invoice sent. Thank you! - {self._get_company_name()}'''
                     channel='sms',
                     priority='normal',
                     title=f'Service Complete - {roadside_request.request_number}',
+                    message=sms_message,
+                    data={
+                        'request_id': roadside_request.id,
+                        'request_number': roadside_request.request_number,
+                    },
+                    related_object_type='roadside',
+                    related_object_id=roadside_request.id
+                )
+                self.service.send_notification(sms_notification)
+    
+    def roadside_cancelled(self, roadside_request):
+        """Notify customer when roadside service is cancelled"""
+        customer_name = self._build_customer_name(roadside_request.customer)
+        vehicle_display = self._build_vehicle_display(roadside_request.vehicle)
+        
+        if roadside_request.customer.user:
+            prefs = getattr(roadside_request.customer.user, 'notification_preferences', None)
+            
+            # --- EMAIL ---
+            send_email = not prefs or prefs.email_enabled
+            
+            if send_email:
+                template = self._get_template('roadside_cancelled', 'email')
+                
+                title = f'Roadside Service Cancelled - {roadside_request.request_number}'
+                if template and template.subject:
+                    title = self.service._render_template(template.subject, {
+                        'request_number': roadside_request.request_number,
+                    })
+                
+                message = f'''Your roadside assistance service has been cancelled.
+
+Request: {roadside_request.request_number}
+Service: {roadside_request.get_service_type_display()}
+Vehicle: {vehicle_display}
+
+If you did not request this cancellation or need to reschedule, please contact us.'''
+                if template and template.body:
+                    message = self.service._render_template(template.body, {
+                        'customer_name': customer_name,
+                        'request_number': roadside_request.request_number,
+                        'service_type': roadside_request.get_service_type_display(),
+                        'vehicle_display': vehicle_display,
+                    })
+                
+                notification = Notification.objects.create(
+                    recipient=roadside_request.customer.user,
+                    notification_type='roadside',
+                    channel='email',
+                    priority='normal',
+                    template=template,
+                    title=title,
+                    message=message,
+                    data={
+                        'request_id': roadside_request.id,
+                        'request_number': roadside_request.request_number,
+                    },
+                    related_object_type='roadside',
+                    related_object_id=roadside_request.id
+                )
+                self.service.send_notification(notification)
+
+            # --- SMS ---
+            has_phone = (prefs and prefs.phone_number) or (roadside_request.customer.user.phone)
+            sms_enabled = not prefs or prefs.sms_enabled
+            
+            if sms_enabled and has_phone:
+                sms_message = f'''Service cancelled - {roadside_request.request_number}
+
+{roadside_request.get_service_type_display()}
+
+Contact us to reschedule. - {self._get_company_name()}'''
+                
+                sms_notification = Notification.objects.create(
+                    recipient=roadside_request.customer.user,
+                    notification_type='roadside',
+                    channel='sms',
+                    priority='normal',
+                    title=f'Service Cancelled - {roadside_request.request_number}',
                     message=sms_message,
                     data={
                         'request_id': roadside_request.id,

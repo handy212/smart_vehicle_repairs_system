@@ -7,12 +7,12 @@ import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt, FileCheck, Plus, CreditCard, Wrench, Clock, StickyNote, FileText, MessageSquare, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -25,7 +25,7 @@ import { AllocationHistory } from "@/components/billing/AllocationHistory";
 import { InvoiceNotes } from "./components/InvoiceNotes";
 import { InvoiceReminders } from "./components/InvoiceReminders";
 import { InvoiceActivityLog } from "./components/InvoiceActivityLog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useBranchStore } from "@/store/branchStore";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
@@ -47,7 +47,7 @@ export default function InvoiceDetailPage() {
       setShowPaymentDialog(true);
     }
   }, [searchParams]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [selectedPaymentForRefund, setSelectedPaymentForRefund] = useState<any | null>(null);
   // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [selectedPaymentForAllocation, setSelectedPaymentForAllocation] = useState<any | null>(null);
@@ -86,7 +86,7 @@ export default function InvoiceDetailPage() {
   });
 
   // Get all payment allocations for this invoice to show allocation history
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const { data: invoiceAllocations } = useQuery({
     queryKey: ["payment-allocations", "invoice", invoiceId],
     queryFn: () => billingApi.paymentAllocations.list({ invoice: invoiceId }),
@@ -105,7 +105,7 @@ export default function InvoiceDetailPage() {
       const previousInvoice = queryClient.getQueryData(["invoice", invoiceId]);
 
       // Optimistically update
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       queryClient.setQueryData(["invoice", invoiceId], (old: any) => ({
         ...old,
         status: newStatus,
@@ -118,7 +118,7 @@ export default function InvoiceDetailPage() {
       // Rollback on error
       if (context?.previousInvoice) {
         queryClient.setQueryData(["invoice", invoiceId], context.previousInvoice);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         setLocalStatus((context.previousInvoice as any)?.status || invoice?.status || null);
       }
     },
@@ -153,752 +153,752 @@ export default function InvoiceDetailPage() {
         description: `Proforma converted to invoice ${data.invoice_number} successfully`,
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
-    toast({
-      title: "Error",
-      description: error.response?.data?.error || "Failed to convert proforma. Please try again.",
-      variant: "destructive",
-    });
-  },
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to convert proforma. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
-const sendMessageMutation = useMutation({
-  mutationFn: (data: { method: "sms" | "email", message: string, subject?: string }) => {
-    if (data.method === "email") {
-      return billingApi.invoices.sendEmail(invoiceId, data.subject || "", data.message);
-    }
-    return billingApi.invoices.sendSms(invoiceId, data.message);
-  },
-  onSuccess: (data, variables) => {
-    toast({
-      title: "Success",
-      description: variables.method === "email" ? "Email sent to customer successfully" : "SMS sent to customer successfully"
-    });
-    setIsMessageDialogOpen(false);
-    setMessageBody("");
-    setMessageSubject("");
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sendMessageMutation = useMutation({
+    mutationFn: (data: { method: "sms" | "email", message: string, subject?: string }) => {
+      if (data.method === "email") {
+        return billingApi.invoices.sendEmail(invoiceId, data.subject || "", data.message);
+      }
+      return billingApi.invoices.sendSms(invoiceId, data.message);
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Success",
+        description: variables.method === "email" ? "Email sent to customer successfully" : "SMS sent to customer successfully"
+      });
+      setIsMessageDialogOpen(false);
+      setMessageBody("");
+      setMessageSubject("");
+    },
+
     onError: (error: any, variables) => {
-  toast({
-    title: variables.method === "email" ? "Email Failed" : "SMS Failed",
-    description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
-    variant: "destructive"
-  });
-}
-  });
-
-const fetchSuggestion = async (method: "sms" | "email") => {
-  setIsFetchingSuggestion(true);
-  try {
-    const suggestion = await billingApi.invoices.getSuggestedMessage(invoiceId, method);
-    if (method === "email") {
-      setMessageSubject(suggestion.subject);
+      toast({
+        title: variables.method === "email" ? "Email Failed" : "SMS Failed",
+        description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
+        variant: "destructive"
+      });
     }
-    setMessageBody(suggestion.message);
-  } catch (error) {
-    console.error("Failed to fetch suggestion", error);
-    toast({
-      title: "Suggestion Failed",
-      description: "Could not fetch AI suggestion. Please try again.",
-      variant: "destructive"
-    });
-  } finally {
-    setIsFetchingSuggestion(false);
+  });
+
+  const fetchSuggestion = async (method: "sms" | "email") => {
+    setIsFetchingSuggestion(true);
+    try {
+      const suggestion = await billingApi.invoices.getSuggestedMessage(invoiceId, method);
+      if (method === "email") {
+        setMessageSubject(suggestion.subject);
+      }
+      setMessageBody(suggestion.message);
+    } catch (error) {
+      console.error("Failed to fetch suggestion", error);
+      toast({
+        title: "Suggestion Failed",
+        description: "Could not fetch AI suggestion. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFetchingSuggestion(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isMessageDialogOpen && !messageBody.trim() && !isFetchingSuggestion) {
+      fetchSuggestion(communicationMethod);
+    }
+  }, [isMessageDialogOpen, communicationMethod]);
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars 
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value;
+    if (newStatus && newStatus !== localStatus) {
+      statusChangeMutation.mutate(newStatus);
+    }
+  };
+
+  const handlePrint = () => {
+    openPrintWindow({ documentType: 'invoice', documentId: invoiceId });
+  };
+
+  // Handle invalid invoice ID
+  if (!isValidId) {
+    return (
+      <div className="space-y-4">
+        <Button variant="secondary" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-red-800">Invalid Invoice ID</p>
+            <p className="text-sm text-red-700 mt-1">The invoice ID in the URL is invalid.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
-};
 
-useEffect(() => {
-  if (isMessageDialogOpen && !messageBody.trim() && !isFetchingSuggestion) {
-    fetchSuggestion(communicationMethod);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
-}, [isMessageDialogOpen, communicationMethod]);
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-  const newStatus = e.target.value;
-  if (newStatus && newStatus !== localStatus) {
-    statusChangeMutation.mutate(newStatus);
+  if (error || !invoice) {
+    return (
+      <div className="space-y-4">
+        <Button variant="secondary" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-red-600">Error loading invoice. Please try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
-};
 
-const handlePrint = () => {
-  openPrintWindow({ documentType: 'invoice', documentId: invoiceId });
-};
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "paid":
+        return "success";
+      case "sent":
+      case "viewed":
+        return "info";
+      case "partial":
+        return "warning";
+      case "overdue":
+        return "danger";
+      default:
+        return "default";
+    }
+  };
 
-// Handle invalid invoice ID
-if (!isValidId) {
+  const parseAmount = (value?: string | number | null) => {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    const num = typeof value === "number" ? value : parseFloat(value);
+    return Number.isNaN(num) ? 0 : num;
+  };
+
+  const taxBreakdown = {
+    regime: invoice.tax_breakdown?.regime || invoice.tax_regime || "ghana_standard",
+    nhilAmount: parseAmount(invoice.tax_breakdown?.nhil_amount ?? invoice.tax_nhil_amount),
+    getfundAmount: parseAmount(invoice.tax_breakdown?.getfund_amount ?? invoice.tax_getfund_amount),
+    hrlAmount: parseAmount(invoice.tax_breakdown?.hrl_amount ?? invoice.tax_hrl_amount),
+    vatAmount: parseAmount(invoice.tax_breakdown?.vat_amount ?? invoice.tax_vat_amount),
+    totalTax: parseAmount(invoice.tax_breakdown?.total_tax ?? invoice.tax_amount),
+  };
+  const hasDetailedTax =
+    taxBreakdown.nhilAmount > 0 ||
+    taxBreakdown.getfundAmount > 0 ||
+    taxBreakdown.hrlAmount > 0 ||
+    taxBreakdown.vatAmount > 0;
+
   return (
-    <div className="space-y-4">
-      <Button variant="secondary" onClick={() => router.back()}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back
-      </Button>
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="pt-6">
-          <p className="text-sm font-medium text-red-800">Invalid Invoice ID</p>
-          <p className="text-sm text-red-700 mt-1">The invoice ID in the URL is invalid.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-if (isLoading) {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-    </div>
-  );
-}
-
-if (error || !invoice) {
-  return (
-    <div className="space-y-4">
-      <Button variant="secondary" onClick={() => router.back()}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back
-      </Button>
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-red-600">Error loading invoice. Please try again.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case "paid":
-      return "success";
-    case "sent":
-    case "viewed":
-      return "info";
-    case "partial":
-      return "warning";
-    case "overdue":
-      return "danger";
-    default:
-      return "default";
-  }
-};
-
-const parseAmount = (value?: string | number | null) => {
-  if (value === null || value === undefined) {
-    return 0;
-  }
-  const num = typeof value === "number" ? value : parseFloat(value);
-  return Number.isNaN(num) ? 0 : num;
-};
-
-const taxBreakdown = {
-  regime: invoice.tax_breakdown?.regime || invoice.tax_regime || "ghana_standard",
-  nhilAmount: parseAmount(invoice.tax_breakdown?.nhil_amount ?? invoice.tax_nhil_amount),
-  getfundAmount: parseAmount(invoice.tax_breakdown?.getfund_amount ?? invoice.tax_getfund_amount),
-  hrlAmount: parseAmount(invoice.tax_breakdown?.hrl_amount ?? invoice.tax_hrl_amount),
-  vatAmount: parseAmount(invoice.tax_breakdown?.vat_amount ?? invoice.tax_vat_amount),
-  totalTax: parseAmount(invoice.tax_breakdown?.total_tax ?? invoice.tax_amount),
-};
-const hasDetailedTax =
-  taxBreakdown.nhilAmount > 0 ||
-  taxBreakdown.getfundAmount > 0 ||
-  taxBreakdown.hrlAmount > 0 ||
-  taxBreakdown.vatAmount > 0;
-
-return (
-  <>
-    <style jsx global>{`
+    <>
+      <style jsx global>{`
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; padding: 20px; }
           .print-page { page-break-after: auto; }
         }
       `}</style>
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center space-x-4">
-          <Button variant="secondary" onClick={() => router.back()} className="no-print">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground bg-muted/50 border-border text-foreground">
-                Invoice #{invoice.invoice_number}
-              </span>
-              <Badge className={cn("capitalize px-3 py-1", getStatusVariant(localStatus || invoice.status))}>
-                {localStatus || invoice.status}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              {invoice.customer_name || "Customer"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 no-print">
-          <Button variant="outline" size="sm" onClick={handlePrint} disabled={isOpeningPrint}>
-            <Printer className="w-4 h-4 mr-2" />
-            {isOpeningPrint ? 'Opening...' : 'Print'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadPDF({
-            documentType: 'invoice',
-            documentId: invoiceId,
-            documentNumber: invoice.invoice_number
-          })} disabled={isDownloading}>
-            <Download className="w-4 h-4 mr-2" />
-            {isDownloading ? "Downloading..." : "PDF"}
-          </Button>
-          {invoice.status !== 'paid' && parseFloat(invoice.balance_due || "0") > 0 && (
-            <Button size="sm" onClick={() => setShowPaymentDialog(true)}>
-              <DollarSign className="w-4 h-4 mr-2" />
-              Record Payment
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center space-x-4">
+            <Button variant="secondary" onClick={() => router.back()} className="no-print">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
             </Button>
-          )}
-          <div className="relative">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="gap-2"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 bg-card rounded-md shadow-lg border border-border z-20">
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        if (confirm("Send this invoice to the customer via email?")) {
-                          sendEmailMutation.mutate();
-                        }
-                        setShowActionsMenu(false);
-                      }}
-                      disabled={sendEmailMutation.isPending}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Mail className="w-4 h-4" />
-                      {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
-                    </button>
-                    // Only show Convert to Invoice for proforma invoices
-                    {invoice.status === 'proforma' && (
-                      <>
-                        <div className="border-t border-border my-1" />
-                        <button
-                          onClick={() => {
-                            if (confirm("Convert this proforma to a standard invoice? This will assign a new invoice number.")) {
-                              convertToInvoiceMutation.mutate();
-                            }
-                            setShowActionsMenu(false);
-                          }}
-                          disabled={convertToInvoiceMutation.isPending}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <FileCheck className="w-4 h-4" />
-                          {convertToInvoiceMutation.isPending ? "Converting..." : "Convert to Invoice"}
-                        </button>
-                      </>
-                    )}
-                    <div className="border-t border-border my-1" />
-                    <Link href={`/billing/invoices/${invoiceId}/edit`}>
-                      <button
-                        onClick={() => setShowActionsMenu(false)}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </button>
-                    </Link>
-                    <div className="border-t border-border my-1" />
-                    <button
-                      onClick={() => {
-                        setIsMessageDialogOpen(true);
-                        setShowActionsMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      Message Customer
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <Tabs defaultValue="invoice" className="w-full">
-        <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 bg-muted/50 mb-6 flex-wrap">
-          <TabsTrigger value="invoice" className="gap-2">
-            <FileText className="w-4 h-4" /> Invoice
-          </TabsTrigger>
-          <TabsTrigger value="payments" className="gap-2">
-            <CreditCard className="w-4 h-4" /> Payments
-          </TabsTrigger>
-          <TabsTrigger value="workorder" className="gap-2">
-            <Wrench className="w-4 h-4" /> Work Order
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="gap-2">
-            <Calendar className="w-4 h-4" /> Activity Log
-          </TabsTrigger>
-          <TabsTrigger value="reminders" className="gap-2">
-            <Clock className="w-4 h-4" /> Reminders
-          </TabsTrigger>
-          <TabsTrigger value="notes" className="gap-2">
-            <StickyNote className="w-4 h-4" /> Notes
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="invoice" className="space-y-6">
-
-          {/* 1. Header Information (Bill To, Dates, etc.) - Full Width */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Bill To */}
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Bill To</h3>
-                  <Link href={`/customers/${invoice.customer}`} className="text-base font-semibold text-foreground hover:text-primary block">
-                    {invoice.customer_name}
-                  </Link>
-                  {invoice.customer_email && <p className="text-sm text-muted-foreground">{invoice.customer_email}</p>}
-                  {invoice.customer_phone && <p className="text-sm text-muted-foreground">{invoice.customer_phone}</p>}
-                  {invoice.customer_address && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{invoice.customer_address}</p>}
-                </div>
-
-                {/* Invoice Details */}
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Details</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between md:justify-start md:gap-8">
-                      <span className="text-sm text-muted-foreground w-24">Reference:</span>
-                      <span className="text-sm font-medium text-foreground">{invoice.reference_number || "N/A"}</span>
-                    </div>
-                    <div className="flex justify-between md:justify-start md:gap-8">
-                      <span className="text-sm text-muted-foreground w-24">Issued:</span>
-                      <span className="text-sm font-medium text-foreground">{format(new Date(invoice.invoice_date), "MMM dd, yyyy")}</span>
-                    </div>
-                    <div className="flex justify-between md:justify-start md:gap-8">
-                      <span className="text-sm text-muted-foreground w-24">Due:</span>
-                      <span className="text-sm font-medium text-red-600">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</span>
-                    </div>
-                    {invoice.sales_agent_name && (
-                      <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-muted-foreground w-24">Sales Agent:</span>
-                        <span className="text-sm font-medium text-foreground">{invoice.sales_agent_name}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Work Order / Status */}
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Related</h3>
-                  <div className="space-y-2">
-                    {invoice.work_order_number && (
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">Work Order</span>
-                        <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`} className="text-sm font-medium text-primary hover:underline">
-                          #{invoice.work_order_number}
-                        </Link>
-                      </div>
-                    )}
-
-                    {invoice.status && (
-                      <div className="flex flex-col mt-2">
-                        <span className="text-sm text-muted-foreground mb-1">Status</span>
-                        <Badge className={cn("w-fit capitalize", getStatusVariant(localStatus || invoice.status))}>
-                          {localStatus || invoice.status}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {(invoice.notes || invoice.terms) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t">
-                  {invoice.notes && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</h4>
-                      <p className="text-sm text-muted-foreground italic whitespace-pre-wrap">{invoice.notes}</p>
-                    </div>
-                  )}
-                  {invoice.terms && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Terms & Conditions</h4>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap text-xs">{invoice.terms}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 2. Line Items - Full Width */}
-          <Card>
-            <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-lg">Line Items</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow className="h-8">
-                      <TableHead className="w-[40%] py-2">Item / Description</TableHead>
-                      <TableHead className="text-right py-2">Qty</TableHead>
-                      <TableHead className="text-right py-2">Rate</TableHead>
-                      <TableHead className="text-right py-2">Tax</TableHead>
-                      <TableHead className="text-right py-2">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.line_items && invoice.line_items.length > 0 ? (
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        invoice.line_items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="align-top py-3">
-                        <div className="font-medium text-foreground">{item.description}</div>
-                        {(item.part_number || item.item_type === 'part') && (
-                          <div className="flex items-center gap-2 mt-1">
-                            {item.part_number && <Badge variant="outline" className="text-[10px] h-4 px-1">{item.part_number}</Badge>}
-                            <span className="text-xs text-muted-foreground capitalize">{item.item_type}</span>
-                          </div>
-                        )}
-                        {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
-                      </TableCell>
-                      <TableCell className="text-right align-top py-3">{item.quantity}</TableCell>
-                      <TableCell className="text-right align-top py-3">
-                        {item.unit_price ? formatCurrency(parseFloat(item.unit_price)) : "-"}
-                      </TableCell>
-                      <TableCell className="text-right align-top py-3">
-                        {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto" /> : <span className="text-gray-300">-</span>}
-                      </TableCell>
-                      <TableCell className="text-right font-medium align-top py-3">
-                        {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
-                      </TableCell>
-                    </TableRow>
-                    ))
-                    ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No line items found.
-                      </TableCell>
-                    </TableRow>
-                      )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 3. Financial Summary - Bottom Right */}
-          <div className="flex justify-end">
-            <div className="w-full md:w-1/3 min-w-[300px] space-y-2 px-4 md:px-0">
-              <div className="flex justify-between text-sm">
-                <span className="font-medium text-muted-foreground">Subtotal</span>
-                <span className="text-foreground font-medium">
-                  {formatCurrency(parseFloat(invoice.subtotal || "0"))}
-                </span>
-              </div>
-
-              {/* Discount */}
-              {parseFloat(invoice.discount_percentage || "0") > 0 && (
-                <div className="flex justify-between text-sm text-red-600">
-                  <span>
-                    Discount ({parseFloat(invoice.discount_percentage || "0").toFixed(1)}%)
-                    {invoice.discount_reason && <span className="text-xs ml-1">({invoice.discount_reason})</span>}
-                  </span>
-                  <span>
-                    -{formatCurrency(parseFloat(invoice.discount_amount || "0"))}
-                  </span>
-                </div>
-              )}
-
-              {/* Tax Breakdown */}
-              {hasDetailedTax ? (
-                <div className="space-y-1 pt-1 opacity-90">
-                  {taxBreakdown.nhilAmount > 0 && (
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>NHIL</span>
-                      <span>{formatCurrency(taxBreakdown.nhilAmount)}</span>
-                    </div>
-                  )}
-                  {taxBreakdown.getfundAmount > 0 && (
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>GETFund</span>
-                      <span>{formatCurrency(taxBreakdown.getfundAmount)}</span>
-                    </div>
-                  )}
-                  {taxBreakdown.hrlAmount > 0 && (
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>COVID-19 HRL</span>
-                      <span>{formatCurrency(taxBreakdown.hrlAmount)}</span>
-                    </div>
-                  )}
-                  {taxBreakdown.vatAmount > 0 && (
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>VAT</span>
-                      <span>{formatCurrency(taxBreakdown.vatAmount)}</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                parseAmount(invoice.tax_amount) > 0 && (
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Tax</span>
-                    <span>{formatCurrency(parseAmount(invoice.tax_amount))}</span>
-                  </div>
-                )
-              )}
-
-              <div className="flex justify-between text-lg font-bold border-t border-border pt-3 mt-2">
-                <span>Total</span>
-                <span className="text-foreground">{formatCurrency(parseFloat(invoice.total || "0"))}</span>
-              </div>
-
-              {/* Paid & Balance */}
-              <div className="space-y-1 pt-2 border-t border-dashed border-border">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Amount Paid</span>
-                  <span className="text-success font-medium">{formatCurrency(parseFloat(invoice.amount_paid || "0"))}</span>
-                </div>
-                <div className="flex justify-between text-base font-semibold">
-                  <span className="text-foreground">Balance Due</span>
-                  <span className={cn(parseFloat(invoice.balance_due || "0") > 0 ? "text-red-600" : "text-foreground")}>
-                    {formatCurrency(parseFloat(invoice.balance_due || "0"))}
-                  </span>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-        </TabsContent>
-
-        <TabsContent value="payments" className="space-y-6">
-          <div className="flex justify-between items-center bg-card p-4 rounded-lg border shadow-sm">
             <div>
-              <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
-              <p className="text-sm text-muted-foreground">Manage payments and allocations</p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground bg-muted/50 border-border text-foreground">
+                  Invoice #{invoice.invoice_number}
+                </span>
+                <Badge className={cn("capitalize px-3 py-1", getStatusVariant(localStatus || invoice.status))}>
+                  {localStatus || invoice.status}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {invoice.customer_name || "Customer"}
+              </p>
             </div>
-            {(localStatus || invoice.status) !== 'paid' && parseFloat(String(invoice.balance_due || 0)) > 0 && invoice.status !== 'void' && (
-              <Button onClick={() => setShowPaymentDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Record New Payment
+          </div>
+          <div className="flex items-center gap-2 no-print">
+            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isOpeningPrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              {isOpeningPrint ? 'Opening...' : 'Print'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => downloadPDF({
+              documentType: 'invoice',
+              documentId: invoiceId,
+              documentNumber: invoice.invoice_number
+            })} disabled={isDownloading}>
+              <Download className="w-4 h-4 mr-2" />
+              {isDownloading ? "Downloading..." : "PDF"}
+            </Button>
+            {invoice.status !== 'paid' && parseFloat(invoice.balance_due || "0") > 0 && (
+              <Button size="sm" onClick={() => setShowPaymentDialog(true)}>
+                <DollarSign className="w-4 h-4 mr-2" />
+                Record Payment
               </Button>
             )}
+            <div className="relative">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowActionsMenu(!showActionsMenu)}
+                className="gap-2"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+              {showActionsMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowActionsMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 bg-card rounded-md shadow-lg border border-border z-20">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          if (confirm("Send this invoice to the customer via email?")) {
+                            sendEmailMutation.mutate();
+                          }
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={sendEmailMutation.isPending}
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Mail className="w-4 h-4" />
+                        {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                      </button>
+                    // Only show Convert to Invoice for proforma invoices
+                      {invoice.status === 'proforma' && (
+                        <>
+                          <div className="border-t border-border my-1" />
+                          <button
+                            onClick={() => {
+                              if (confirm("Convert this proforma to a standard invoice? This will assign a new invoice number.")) {
+                                convertToInvoiceMutation.mutate();
+                              }
+                              setShowActionsMenu(false);
+                            }}
+                            disabled={convertToInvoiceMutation.isPending}
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <FileCheck className="w-4 h-4" />
+                            {convertToInvoiceMutation.isPending ? "Converting..." : "Convert to Invoice"}
+                          </button>
+                        </>
+                      )}
+                      <div className="border-t border-border my-1" />
+                      <Link href={`/billing/invoices/${invoiceId}/edit`}>
+                        <button
+                          onClick={() => setShowActionsMenu(false)}
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                      </Link>
+                      <div className="border-t border-border my-1" />
+                      <button
+                        onClick={() => {
+                          setIsMessageDialogOpen(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        Message Customer
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+        </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {payments && payments.length > 0 ? (
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  {payments.map((payment: any) => (
-                    <div key={payment.id} className="p-6 hover:bg-muted/50 transition-colors">
-                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-success">
-                            <DollarSign className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <div className="flex items-baseline gap-2">
-                              <p className="font-bold text-xl text-foreground">
-                                {formatCurrency(parseFloat(payment.amount || "0"))}
-                              </p>
-                              {payment.refund_amount && parseFloat(payment.refund_amount) > 0 && (
-                                <Badge variant="danger" className="text-xs">
-                                  Refunded: {formatCurrency(parseFloat(payment.refund_amount))}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                              <span className="font-medium text-foreground">{format(new Date(payment.payment_date), "MMM dd, yyyy")}</span>
-                              <span>•</span>
-                              <span className="capitalize">{payment.payment_method?.replace(/_/g, " ")}</span>
-                            </div>
-                          </div>
+        <Tabs defaultValue="invoice" className="w-full">
+          <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 bg-muted/50 mb-6 flex-wrap">
+            <TabsTrigger value="invoice" className="gap-2">
+              <FileText className="w-4 h-4" /> Invoice
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="gap-2">
+              <CreditCard className="w-4 h-4" /> Payments
+            </TabsTrigger>
+            <TabsTrigger value="workorder" className="gap-2">
+              <Wrench className="w-4 h-4" /> Work Order
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-2">
+              <Calendar className="w-4 h-4" /> Activity Log
+            </TabsTrigger>
+            <TabsTrigger value="reminders" className="gap-2">
+              <Clock className="w-4 h-4" /> Reminders
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="gap-2">
+              <StickyNote className="w-4 h-4" /> Notes
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="invoice" className="space-y-6">
+
+            {/* 1. Header Information (Bill To, Dates, etc.) - Full Width */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Bill To */}
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Bill To</h3>
+                    <Link href={`/customers/${invoice.customer}`} className="text-base font-semibold text-foreground hover:text-primary block">
+                      {invoice.customer_name}
+                    </Link>
+                    {invoice.customer_email && <p className="text-sm text-muted-foreground">{invoice.customer_email}</p>}
+                    {invoice.customer_phone && <p className="text-sm text-muted-foreground">{invoice.customer_phone}</p>}
+                    {invoice.customer_address && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{invoice.customer_address}</p>}
+                  </div>
+
+                  {/* Invoice Details */}
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Details</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between md:justify-start md:gap-8">
+                        <span className="text-sm text-muted-foreground w-24">Reference:</span>
+                        <span className="text-sm font-medium text-foreground">{invoice.reference_number || "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between md:justify-start md:gap-8">
+                        <span className="text-sm text-muted-foreground w-24">Issued:</span>
+                        <span className="text-sm font-medium text-foreground">{format(new Date(invoice.invoice_date), "MMM dd, yyyy")}</span>
+                      </div>
+                      <div className="flex justify-between md:justify-start md:gap-8">
+                        <span className="text-sm text-muted-foreground w-24">Due:</span>
+                        <span className="text-sm font-medium text-red-600">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</span>
+                      </div>
+                      {invoice.sales_agent_name && (
+                        <div className="flex justify-between md:justify-start md:gap-8">
+                          <span className="text-sm text-muted-foreground w-24">Sales Agent:</span>
+                          <span className="text-sm font-medium text-foreground">{invoice.sales_agent_name}</span>
                         </div>
+                      )}
+                    </div>
+                  </div>
 
-                        <div className="flex items-center gap-3 self-start">
-                          <Badge variant={payment.status === "completed" ? "success" : payment.status === "pending" ? "warning" : "danger"}>
-                            {payment.status?.charAt(0).toUpperCase() + payment.status?.slice(1) || "Unknown"}
+                  {/* Work Order / Status */}
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Related</h3>
+                    <div className="space-y-2">
+                      {invoice.work_order_number && (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Work Order</span>
+                          <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`} className="text-sm font-medium text-primary hover:underline">
+                            #{invoice.work_order_number}
+                          </Link>
+                        </div>
+                      )}
+
+                      {invoice.status && (
+                        <div className="flex flex-col mt-2">
+                          <span className="text-sm text-muted-foreground mb-1">Status</span>
+                          <Badge className={cn("w-fit capitalize", getStatusVariant(localStatus || invoice.status))}>
+                            {localStatus || invoice.status}
                           </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-                          {payment.status === 'completed' && (
-                            <div className="flex items-center border rounded-md overflow-hidden bg-card shadow-sm">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 px-3 text-muted-foreground hover:text-primary hover:bg-primary/10 border-r rounded-none"
-                                onClick={() => downloadPDF({
-                                  documentType: 'receipt',
-                                  documentId: payment.id,
-                                  documentNumber: payment.payment_number
-                                })}
-                              >
-                                <Printer className="w-4 h-4 mr-2" /> Receipt
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10 rounded-none border-r"
-                                onClick={() => setSelectedPaymentForAllocation(payment)}
-                              >
-                                <DollarSign className="w-4 h-4 mr-2" /> Allocate
-                              </Button>
-                              {(parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")) > 0 && (
+                {(invoice.notes || invoice.terms) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t">
+                    {invoice.notes && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</h4>
+                        <p className="text-sm text-muted-foreground italic whitespace-pre-wrap">{invoice.notes}</p>
+                      </div>
+                    )}
+                    {invoice.terms && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Terms & Conditions</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap text-xs">{invoice.terms}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 2. Line Items - Full Width */}
+            <Card>
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-lg">Line Items</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow className="h-8">
+                        <TableHead className="w-[40%] py-2">Item / Description</TableHead>
+                        <TableHead className="text-right py-2">Qty</TableHead>
+                        <TableHead className="text-right py-2">Rate</TableHead>
+                        <TableHead className="text-right py-2">Tax</TableHead>
+                        <TableHead className="text-right py-2">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoice.line_items && invoice.line_items.length > 0 ? (
+
+                        invoice.line_items.map((item: any) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="align-top py-3">
+                              <div className="font-medium text-foreground">{item.description}</div>
+                              {(item.part_number || item.item_type === 'part') && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  {item.part_number && <Badge variant="outline" className="text-[10px] h-4 px-1">{item.part_number}</Badge>}
+                                  <span className="text-xs text-muted-foreground capitalize">{item.item_type}</span>
+                                </div>
+                              )}
+                              {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
+                            </TableCell>
+                            <TableCell className="text-right align-top py-3">{item.quantity}</TableCell>
+                            <TableCell className="text-right align-top py-3">
+                              {item.unit_price ? formatCurrency(parseFloat(item.unit_price)) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right align-top py-3">
+                              {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto" /> : <span className="text-gray-300">-</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-medium align-top py-3">
+                              {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No line items found.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3. Financial Summary - Bottom Right */}
+            <div className="flex justify-end">
+              <div className="w-full md:w-1/3 min-w-[300px] space-y-2 px-4 md:px-0">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">Subtotal</span>
+                  <span className="text-foreground font-medium">
+                    {formatCurrency(parseFloat(invoice.subtotal || "0"))}
+                  </span>
+                </div>
+
+                {/* Discount */}
+                {parseFloat(invoice.discount_percentage || "0") > 0 && (
+                  <div className="flex justify-between text-sm text-red-600">
+                    <span>
+                      Discount ({parseFloat(invoice.discount_percentage || "0").toFixed(1)}%)
+                      {invoice.discount_reason && <span className="text-xs ml-1">({invoice.discount_reason})</span>}
+                    </span>
+                    <span>
+                      -{formatCurrency(parseFloat(invoice.discount_amount || "0"))}
+                    </span>
+                  </div>
+                )}
+
+                {/* Tax Breakdown */}
+                {hasDetailedTax ? (
+                  <div className="space-y-1 pt-1 opacity-90">
+                    {taxBreakdown.nhilAmount > 0 && (
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>NHIL</span>
+                        <span>{formatCurrency(taxBreakdown.nhilAmount)}</span>
+                      </div>
+                    )}
+                    {taxBreakdown.getfundAmount > 0 && (
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>GETFund</span>
+                        <span>{formatCurrency(taxBreakdown.getfundAmount)}</span>
+                      </div>
+                    )}
+                    {taxBreakdown.hrlAmount > 0 && (
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>COVID-19 HRL</span>
+                        <span>{formatCurrency(taxBreakdown.hrlAmount)}</span>
+                      </div>
+                    )}
+                    {taxBreakdown.vatAmount > 0 && (
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>VAT</span>
+                        <span>{formatCurrency(taxBreakdown.vatAmount)}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  parseAmount(invoice.tax_amount) > 0 && (
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Tax</span>
+                      <span>{formatCurrency(parseAmount(invoice.tax_amount))}</span>
+                    </div>
+                  )
+                )}
+
+                <div className="flex justify-between text-lg font-bold border-t border-border pt-3 mt-2">
+                  <span>Total</span>
+                  <span className="text-foreground">{formatCurrency(parseFloat(invoice.total || "0"))}</span>
+                </div>
+
+                {/* Paid & Balance */}
+                <div className="space-y-1 pt-2 border-t border-dashed border-border">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Amount Paid</span>
+                    <span className="text-success font-medium">{formatCurrency(parseFloat(invoice.amount_paid || "0"))}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold">
+                    <span className="text-foreground">Balance Due</span>
+                    <span className={cn(parseFloat(invoice.balance_due || "0") > 0 ? "text-red-600" : "text-foreground")}>
+                      {formatCurrency(parseFloat(invoice.balance_due || "0"))}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </TabsContent>
+
+          <TabsContent value="payments" className="space-y-6">
+            <div className="flex justify-between items-center bg-card p-4 rounded-lg border shadow-sm">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
+                <p className="text-sm text-muted-foreground">Manage payments and allocations</p>
+              </div>
+              {(localStatus || invoice.status) !== 'paid' && parseFloat(String(invoice.balance_due || 0)) > 0 && invoice.status !== 'void' && (
+                <Button onClick={() => setShowPaymentDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Record New Payment
+                </Button>
+              )}
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {payments && payments.length > 0 ? (
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+
+                    {payments.map((payment: any) => (
+                      <div key={payment.id} className="p-6 hover:bg-muted/50 transition-colors">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-success">
+                              <DollarSign className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <div className="flex items-baseline gap-2">
+                                <p className="font-bold text-xl text-foreground">
+                                  {formatCurrency(parseFloat(payment.amount || "0"))}
+                                </p>
+                                {payment.refund_amount && parseFloat(payment.refund_amount) > 0 && (
+                                  <Badge variant="danger" className="text-xs">
+                                    Refunded: {formatCurrency(parseFloat(payment.refund_amount))}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                                <span className="font-medium text-foreground">{format(new Date(payment.payment_date), "MMM dd, yyyy")}</span>
+                                <span>•</span>
+                                <span className="capitalize">{payment.payment_method?.replace(/_/g, " ")}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 self-start">
+                            <Badge variant={payment.status === "completed" ? "success" : payment.status === "pending" ? "warning" : "danger"}>
+                              {payment.status?.charAt(0).toUpperCase() + payment.status?.slice(1) || "Unknown"}
+                            </Badge>
+
+                            {payment.status === 'completed' && (
+                              <div className="flex items-center border rounded-md overflow-hidden bg-card shadow-sm">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-none"
-                                  onClick={() => setSelectedPaymentForRefund(payment)}
+                                  className="h-9 px-3 text-muted-foreground hover:text-primary hover:bg-primary/10 border-r rounded-none"
+                                  onClick={() => downloadPDF({
+                                    documentType: 'receipt',
+                                    documentId: payment.id,
+                                    documentNumber: payment.payment_number
+                                  })}
                                 >
-                                  <Undo2 className="w-4 h-4 mr-2" /> Refund
+                                  <Printer className="w-4 h-4 mr-2" /> Receipt
                                 </Button>
-                              )}
-                            </div>
-                          )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10 rounded-none border-r"
+                                  onClick={() => setSelectedPaymentForAllocation(payment)}
+                                >
+                                  <DollarSign className="w-4 h-4 mr-2" /> Allocate
+                                </Button>
+                                {(parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")) > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-none"
+                                    onClick={() => setSelectedPaymentForRefund(payment)}
+                                  >
+                                    <Undo2 className="w-4 h-4 mr-2" /> Refund
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
                       // Allocation History Component
-                      < div className="pl-0 md:pl-16 mt-4" >
-                        <AllocationHistory paymentId={payment.id} />
+                        < div className="pl-0 md:pl-16 mt-4" >
+                          <AllocationHistory paymentId={payment.id} />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16 px-4">
-                  <div className="bg-muted h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground">
-                    <CreditCard className="w-10 h-10" />
+                    ))}
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">No payments recorded</h3>
-                  <p className="text-muted-foreground mb-8 max-w-sm mx-auto">This invoice has not received any payments yet. Record a payment to settle the balance.</p>
-                  <Button size="lg" onClick={() => setShowPaymentDialog(true)}>
-                    <DollarSign className="w-5 h-5 mr-2" /> Record First Payment
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="workorder" className="space-y-6">
-          <Card className="bg-muted/50 border-dashed min-h-[400px]">
-            <CardContent className="flex flex-col items-center justify-center h-full py-16 text-center">
-              <div className="bg-card p-6 rounded-full shadow-sm mb-6">
-                <Wrench className="w-12 h-12 text-orange-500" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Work Order Details</h3>
-              {invoice.work_order ? (
-                <div className="space-y-4">
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    This invoice is linked to Work Order <span className="font-medium text-foreground">#{invoice.work_order_number}</span>.
-                  </p>
-                  <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`}>
-                    <Button variant="outline" className="mt-2">
-                      View Work Order
-                      <ExternalLink className="w-4 h-4 ml-2" />
+                ) : (
+                  <div className="text-center py-16 px-4">
+                    <div className="bg-muted h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 text-muted-foreground">
+                      <CreditCard className="w-10 h-10" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-2">No payments recorded</h3>
+                    <p className="text-muted-foreground mb-8 max-w-sm mx-auto">This invoice has not received any payments yet. Record a payment to settle the balance.</p>
+                    <Button size="lg" onClick={() => setShowPaymentDialog(true)}>
+                      <DollarSign className="w-5 h-5 mr-2" /> Record First Payment
                     </Button>
-                  </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="workorder" className="space-y-6">
+            <Card className="bg-muted/50 border-dashed min-h-[400px]">
+              <CardContent className="flex flex-col items-center justify-center h-full py-16 text-center">
+                <div className="bg-card p-6 rounded-full shadow-sm mb-6">
+                  <Wrench className="w-12 h-12 text-orange-500" />
                 </div>
-              ) : (
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  This invoice is not directly linked to a specific work order.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Work Order Details</h3>
+                {invoice.work_order ? (
+                  <div className="space-y-4">
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      This invoice is linked to Work Order <span className="font-medium text-foreground">#{invoice.work_order_number}</span>.
+                    </p>
+                    <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`}>
+                      <Button variant="outline" className="mt-2">
+                        View Work Order
+                        <ExternalLink className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    This invoice is not directly linked to a specific work order.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="activity">
-          <InvoiceActivityLog invoiceId={invoiceId} />
-        </TabsContent>
+          <TabsContent value="activity">
+            <InvoiceActivityLog invoiceId={invoiceId} />
+          </TabsContent>
 
-        <TabsContent value="reminders">
-          {user ? (
-            <InvoiceReminders invoice={invoice} currentUser={user} />
-          ) : (
-            <div>Loading user data...</div>
-          )}
-        </TabsContent>
+          <TabsContent value="reminders">
+            {user ? (
+              <InvoiceReminders invoice={invoice} currentUser={user} />
+            ) : (
+              <div>Loading user data...</div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="notes">
-          <InvoiceNotes invoice={invoice} />
-        </TabsContent>
+          <TabsContent value="notes">
+            <InvoiceNotes invoice={invoice} />
+          </TabsContent>
 
-      </Tabs >
-    </div >
-    {showPaymentDialog && invoice && (
-      <RecordPaymentDialog
-        invoice={invoice}
-        open={showPaymentDialog}
-        onClose={() => setShowPaymentDialog(false)}
-        onSuccess={() => {
-          setShowPaymentDialog(false);
-          // Data will be refreshed automatically via query invalidation
-        }}
-      />
-    )
-    }
-
-    {
-      selectedPaymentForRefund && (
-        <ProcessRefundDialog
-          payment={selectedPaymentForRefund}
-          open={!!selectedPaymentForRefund}
-          onClose={() => setSelectedPaymentForRefund(null)}
+        </Tabs >
+      </div >
+      {showPaymentDialog && invoice && (
+        <RecordPaymentDialog
+          invoice={invoice}
+          open={showPaymentDialog}
+          onClose={() => setShowPaymentDialog(false)}
           onSuccess={() => {
-            setSelectedPaymentForRefund(null);
+            setShowPaymentDialog(false);
+            // Data will be refreshed automatically via query invalidation
           }}
         />
       )
-    }
+      }
 
-    {
-      selectedPaymentForAllocation && (
-        <PaymentAllocationModal
-          paymentId={selectedPaymentForAllocation.id}
-          paymentAmount={selectedPaymentForAllocation.amount}
-          customerId={invoice?.customer || selectedPaymentForAllocation.customer}
-          open={!!selectedPaymentForAllocation}
-          onClose={() => setSelectedPaymentForAllocation(null)}
-        />
-      )
-    }
+      {
+        selectedPaymentForRefund && (
+          <ProcessRefundDialog
+            payment={selectedPaymentForRefund}
+            open={!!selectedPaymentForRefund}
+            onClose={() => setSelectedPaymentForRefund(null)}
+            onSuccess={() => {
+              setSelectedPaymentForRefund(null);
+            }}
+          />
+        )
+      }
 
-    {/* Message Dialog */}
-    <MessageCustomerDialog
-      open={isMessageDialogOpen}
-      onOpenChange={setIsMessageDialogOpen}
-      method={communicationMethod}
-      onMethodChange={setCommunicationMethod}
-      subject={messageSubject}
-      onSubjectChange={setMessageSubject}
-      message={messageBody}
-      onMessageChange={setMessageBody}
-      isSending={sendMessageMutation.isPending}
-      isFetching={isFetchingSuggestion}
-      onRefresh={() => fetchSuggestion(communicationMethod)}
-      onSend={() => sendMessageMutation.mutate({
-        method: communicationMethod,
-        message: messageBody,
-        subject: messageSubject
-      })}
-    />
-  </>
-);
+      {
+        selectedPaymentForAllocation && (
+          <PaymentAllocationModal
+            paymentId={selectedPaymentForAllocation.id}
+            paymentAmount={selectedPaymentForAllocation.amount}
+            customerId={invoice?.customer || selectedPaymentForAllocation.customer}
+            open={!!selectedPaymentForAllocation}
+            onClose={() => setSelectedPaymentForAllocation(null)}
+          />
+        )
+      }
+
+      {/* Message Dialog */}
+      <MessageCustomerDialog
+        open={isMessageDialogOpen}
+        onOpenChange={setIsMessageDialogOpen}
+        method={communicationMethod}
+        onMethodChange={setCommunicationMethod}
+        subject={messageSubject}
+        onSubjectChange={setMessageSubject}
+        message={messageBody}
+        onMessageChange={setMessageBody}
+        isSending={sendMessageMutation.isPending}
+        isFetching={isFetchingSuggestion}
+        onRefresh={() => fetchSuggestion(communicationMethod)}
+        onSend={() => sendMessageMutation.mutate({
+          method: communicationMethod,
+          message: messageBody,
+          subject: messageSubject
+        })}
+      />
+    </>
+  );
 }
 
 // Sub-component for the Messaging Dialog

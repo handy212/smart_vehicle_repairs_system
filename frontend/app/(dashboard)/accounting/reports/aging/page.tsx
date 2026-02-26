@@ -2,14 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { accountingApi } from "@/lib/api/accounting";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Download, Loader2, ArrowLeft } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
@@ -40,7 +40,7 @@ export default function AgingReportPage() {
     const handleExportCSV = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
         rows.push([`${activeTab.toUpperCase()} Aging Report`]);
         rows.push([`As of: ${date}`]);
@@ -58,7 +58,7 @@ export default function AgingReportPage() {
 
         // Details
         rows.push(['Details']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.details.forEach((item: any) => {
             rows.push([item.number, item.entity, item.date, item.due_date || 'N/A', item.bucket, item.amount]);
         });
@@ -70,7 +70,7 @@ export default function AgingReportPage() {
     const handleExportExcel = () => {
         if (!report) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const rows: any[][] = [];
 
         // Summary section
@@ -87,7 +87,7 @@ export default function AgingReportPage() {
         // Details section
         rows.push(['DETAILS', '', '', '', '', '']);
         rows.push(['Number', 'Entity', 'Date', 'Due Date', 'Bucket', 'Amount']);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         report.details.forEach((item: any) => {
             rows.push([item.number, item.entity, item.date, item.due_date || 'N/A', item.bucket, item.amount]);
         });
@@ -155,7 +155,6 @@ export default function AgingReportPage() {
                         <div className="p-4 text-red-500">Error loading report</div>
                     ) : (
                         <>
-                            // Summary Cards
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                 <Card className="bg-muted border-border">
                                     <CardHeader className="pb-2">
@@ -232,27 +231,27 @@ export default function AgingReportPage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                                 report.details.map((item: any) => (
-                                            <TableRow key={item.id}>
-                                                <TableCell className="font-medium">{item.number}</TableCell>
-                                                <TableCell>{item.entity}</TableCell>
-                                                <TableCell>{item.date}</TableCell>
-                                                <TableCell>{item.due_date || 'N/A'}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={
-                                                        item.bucket === 'current' ? 'outline' :
-                                                            item.bucket === '1-30' ? 'secondary' :
-                                                                'danger'
-                                                    }>
-                                                        {item.bucket}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right font-medium">
-                                                    {formatCurrency(item.amount)}
-                                                </TableCell>
-                                            </TableRow>
-                                            ))
+                                                    <TableRow key={item.id}>
+                                                        <TableCell className="font-medium">{item.number}</TableCell>
+                                                        <TableCell>{item.entity}</TableCell>
+                                                        <TableCell>{item.date}</TableCell>
+                                                        <TableCell>{item.due_date || 'N/A'}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={
+                                                                item.bucket === 'current' ? 'outline' :
+                                                                    item.bucket === '1-30' ? 'secondary' :
+                                                                        'danger'
+                                                            }>
+                                                                {item.bucket}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-medium">
+                                                            {formatCurrency(item.amount)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
                                             )}
                                         </TableBody>
                                     </Table>

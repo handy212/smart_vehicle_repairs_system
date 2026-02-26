@@ -32,7 +32,7 @@ apiClient.interceptors.request.use(
           queued: true,
           message: "Request queued for offline sync",
           config,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } as any);
       }
 
@@ -40,9 +40,9 @@ apiClient.interceptors.request.use(
       if (config.data instanceof FormData && config.headers) {
         // Axios v1.x uses AxiosHeaders which requires .delete()
         // But we check for method existence to be safe
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         if (typeof (config.headers as any).delete === 'function') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           (config.headers as any).delete('Content-Type');
         } else {
           delete config.headers['Content-Type'];
@@ -81,10 +81,10 @@ apiClient.interceptors.request.use(
 // Flag to track if token refresh is in progress
 let isRefreshing = false;
 // Queue of failed requests waiting for token refresh
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 let failedQueue: any[] = [];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -100,7 +100,7 @@ const processQueue = (error: any, token: string | null = null) => {
 // Response interceptor for token refresh and offline handling
 apiClient.interceptors.response.use(
   (response) => response,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   async (error: AxiosError | any) => {
     // Handle offline queued requests
     if (error?.isOffline && error?.queued) {

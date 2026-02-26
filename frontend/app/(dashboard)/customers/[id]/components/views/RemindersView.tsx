@@ -32,7 +32,7 @@ export function RemindersView({ customerId }: RemindersViewProps) {
     });
 
     const createMutation = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         mutationFn: (data: any) => customersApi.reminders.create({ ...data, customer: customerId }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["customer-reminders", customerId] });
@@ -44,12 +44,12 @@ export function RemindersView({ customerId }: RemindersViewProps) {
 
     const columns = [
         { header: "Title", accessorKey: "title" },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Due Date", accessorKey: "due_date", cell: (item: any) => format(new Date(item.due_date), "MMM dd, yyyy HH:mm") },
         {
             header: "Status",
             accessorKey: "status",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => (
                 <Badge variant={item.status === 'completed' ? 'success' : item.status === 'cancelled' ? 'danger' : 'default'}>
                     {item.status}
@@ -68,7 +68,7 @@ export function RemindersView({ customerId }: RemindersViewProps) {
                 </Button>
             </div>
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             <DataTable data={reminders} columns={columns as any} isLoading={isLoading} />
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

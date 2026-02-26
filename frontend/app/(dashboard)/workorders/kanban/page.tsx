@@ -116,8 +116,8 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
 
   const customerName =
     workOrder.customer_name ||
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (typeof workOrder.customer === "object" && workOrder.customer !== null ? (workOrder.customer as any).full_name : null) ||
+
+    (typeof workOrder.customer === "object" && workOrder.customer !== null ? (workOrder.customer as any).full_name : null) ||
     "Customer";
 
   const vehicleInfo = workOrder.vehicle_info || "-";
@@ -137,7 +137,7 @@ function WorkOrderCardUI({ workOrder, isOverlay }: WorkOrderCardProps) {
           {workOrder.work_order_number}
         </Link>
         <div className="flex flex-col items-end gap-1">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
           <Badge variant={getPriorityVariant(workOrder.priority) as any} className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight">
             {workOrder.priority}
           </Badge>
@@ -309,282 +309,282 @@ export default function WorkOrderKanbanPage() {
         description: "Work order status updated",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
-    let errorMessage = "Failed to update status";
-    const errorData = error.response?.data;
+      let errorMessage = "Failed to update status";
+      const errorData = error.response?.data;
 
-    if (errorData) {
-      if (typeof errorData === 'string') {
-        errorMessage = errorData;
-      } else if (Array.isArray(errorData)) {
-        errorMessage = errorData[0];
-      } else if (errorData.detail) {
-        errorMessage = typeof errorData.detail === 'string' ? errorData.detail : (Array.isArray(errorData.detail) ? errorData.detail[0] : JSON.stringify(errorData.detail));
-      } else if (errorData.non_field_errors) {
-        errorMessage = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
-      } else {
-        // Flatten any other object errors
-        const firstKey = Object.keys(errorData)[0];
-        if (firstKey) {
-          const firstError = errorData[firstKey];
-          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      if (errorData) {
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (Array.isArray(errorData)) {
+          errorMessage = errorData[0];
+        } else if (errorData.detail) {
+          errorMessage = typeof errorData.detail === 'string' ? errorData.detail : (Array.isArray(errorData.detail) ? errorData.detail[0] : JSON.stringify(errorData.detail));
+        } else if (errorData.non_field_errors) {
+          errorMessage = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
+        } else {
+          // Flatten any other object errors
+          const firstKey = Object.keys(errorData)[0];
+          if (firstKey) {
+            const firstError = errorData[firstKey];
+            errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          }
         }
       }
-    }
 
-    toast({
-      title: "Transition Failed",
-      description: errorMessage,
-      variant: "destructive",
+      toast({
+        title: "Transition Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Group work orders by status
+  const workOrdersByStatus = useMemo(() => {
+    const grouped: Record<string, WorkOrder[]> = {};
+    WORK_ORDER_STATUSES.forEach((status) => {
+      grouped[status.value] = [];
     });
-  },
-  });
 
-// Group work orders by status
-const workOrdersByStatus = useMemo(() => {
-  const grouped: Record<string, WorkOrder[]> = {};
-  WORK_ORDER_STATUSES.forEach((status) => {
-    grouped[status.value] = [];
-  });
-
-  workOrdersData?.pages.forEach((page) => {
-    page.results?.forEach((wo) => {
-      if (grouped[wo.status]) {
-        grouped[wo.status].push(wo);
-      } else {
-        // Handle unknown statuses
-        if (!grouped["other"]) {
-          grouped["other"] = [];
+    workOrdersData?.pages.forEach((page) => {
+      page.results?.forEach((wo) => {
+        if (grouped[wo.status]) {
+          grouped[wo.status].push(wo);
+        } else {
+          // Handle unknown statuses
+          if (!grouped["other"]) {
+            grouped["other"] = [];
+          }
+          grouped["other"].push(wo);
         }
-        grouped["other"].push(wo);
-      }
+      });
     });
-  });
 
-  return grouped;
-}, [workOrdersData]);
+    return grouped;
+  }, [workOrdersData]);
 
-// Find active work order for overlay
-const activeWorkOrder = useMemo(() => {
-  if (!activeId) return null;
-  const workOrderId = parseInt(activeId);
-  for (const page of workOrdersData?.pages || []) {
-    const found = page.results?.find((wo) => wo.id === workOrderId);
-    if (found) return found;
-  }
-  return null;
-}, [activeId, workOrdersData]);
-
-const handleDragStart = (event: DragStartEvent) => {
-  setActiveId(event.active.id as string);
-};
-
-const handleDragEnd = (event: DragEndEvent) => {
-  const { active, over } = event;
-  setActiveId(null);
-
-  if (!over) return;
-
-  const workOrderId = parseInt(active.id as string);
-  const newStatus = over.id as string;
-
-  // Find the work order
-  let workOrder: WorkOrder | undefined;
-  if (workOrdersData?.pages) {
-    for (const page of workOrdersData.pages) {
+  // Find active work order for overlay
+  const activeWorkOrder = useMemo(() => {
+    if (!activeId) return null;
+    const workOrderId = parseInt(activeId);
+    for (const page of workOrdersData?.pages || []) {
       const found = page.results?.find((wo) => wo.id === workOrderId);
-      if (found) {
-        workOrder = found;
-        break;
+      if (found) return found;
+    }
+    return null;
+  }, [activeId, workOrdersData]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const workOrderId = parseInt(active.id as string);
+    const newStatus = over.id as string;
+
+    // Find the work order
+    let workOrder: WorkOrder | undefined;
+    if (workOrdersData?.pages) {
+      for (const page of workOrdersData.pages) {
+        const found = page.results?.find((wo) => wo.id === workOrderId);
+        if (found) {
+          workOrder = found;
+          break;
+        }
       }
     }
+    if (!workOrder) return;
+
+    // Don't update if status hasn't changed
+    if (workOrder.status === newStatus) return;
+
+    // Optimistically update instantly
+    updateStatusMutation.mutate({ id: workOrderId, status: newStatus });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 pb-12">
+        <div className="flex flex-col space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="flex items-center space-x-2 text-sm mb-1">
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <Skeleton className="h-8 w-48" />
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "70vh" }}>
+          {WORK_ORDER_STATUSES.map((status) => (
+            <div key={status.value} className="min-w-[280px] max-w-[280px] bg-muted/50 rounded-lg p-2.5 border border-border flex flex-col">
+              <div className="flex justify-between items-center mb-3 p-2 bg-card rounded border border-border shadow-sm">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-5 w-8 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-28 w-full rounded" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
-  if (!workOrder) return;
 
-  // Don't update if status hasn't changed
-  if (workOrder.status === newStatus) return;
-
-  // Optimistically update instantly
-  updateStatusMutation.mutate({ id: workOrderId, status: newStatus });
-};
-
-if (isLoading) {
   return (
     <div className="space-y-6 pb-12">
+      {/* Header */}
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center">
           <div>
-            <div className="flex items-center space-x-2 text-sm mb-1">
-              <Skeleton className="h-4 w-40" />
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+              <span>/</span>
+              <Link href="/workorders" className="hover:text-primary transition-colors">Work Orders</Link>
+              <span>/</span>
+              <span className="text-foreground font-medium">Kanban Board</span>
             </div>
-            <Skeleton className="h-8 w-48" />
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Work Order Flow
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/workorders">
+              <Button variant="outline" size="sm" className="h-9 border-border text-xs font-semibold">
+                <PremiumIcons.ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+                List View
+              </Button>
+            </Link>
+            <Link href="/workorders/new">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm text-xs font-bold uppercase tracking-wider">
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                New Work Order
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "70vh" }}>
-        {WORK_ORDER_STATUSES.map((status) => (
-          <div key={status.value} className="min-w-[280px] max-w-[280px] bg-muted/50 rounded-lg p-2.5 border border-border flex flex-col">
-            <div className="flex justify-between items-center mb-3 p-2 bg-card rounded border border-border shadow-sm">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-5 w-8 rounded-full" />
+
+      {/* Filters */}
+      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex items-center space-x-2 border-r border-border pr-6 mr-2">
+              <Switch
+                id="my-tasks"
+                checked={myTasksOnly}
+                onCheckedChange={setMyTasksOnly}
+              />
+              <Label htmlFor="my-tasks" className="font-medium">My Orders Only</Label>
             </div>
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-28 w-full rounded" />
-              ))}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-2">
+                  Technician
+                </label>
+                <Select
+                  value={technicianFilter}
+                  onValueChange={(val) => setTechnicianFilter(val)}
+                  disabled={myTasksOnly}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Technicians" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Technicians</SelectItem>
+                    {technicians?.map((tech: User) => (
+                      <SelectItem key={tech.id} value={tech.id.toString()}>
+                        {tech.first_name} {tech.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-2">
+                  Priority
+                </label>
+                <Select
+                  value={priorityFilter}
+                  onValueChange={(val) => setPriorityFilter(val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Priorities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-end">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setTechnicianFilter("");
+                    setPriorityFilter("");
+                    setMyTasksOnly(false);
+                  }}
+                >
+                  <PremiumIcons.RefreshCw className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </Button>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Kanban Board */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        modifiers={[restrictToWindowEdges, snapCenterToCursor]}
+      >
+        <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "70vh" }}>
+          {WORK_ORDER_STATUSES.map((status) => (
+            <KanbanColumn
+              key={status.value}
+              status={status}
+              workOrders={workOrdersByStatus[status.value] || []}
+            />
+          ))}
+        </div>
+
+        {hasNextPage && (
+          <div ref={observerRef} className="h-10 w-full flex items-center justify-center mt-4">
+            {isFetchingNextPage && <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>}
+          </div>
+        )}
+
+        <DragOverlay>
+          {activeWorkOrder ? (
+            <div className="opacity-90 scale-105 rotate-3 transition-transform cursor-grabbing overflow-hidden">
+              <WorkOrderCardUI workOrder={activeWorkOrder} isOverlay={true} />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
-}
-
-return (
-  <div className="space-y-6 pb-12">
-    {/* Header */}
-    <div className="flex flex-col space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
-            <span>/</span>
-            <Link href="/workorders" className="hover:text-primary transition-colors">Work Orders</Link>
-            <span>/</span>
-            <span className="text-foreground font-medium">Kanban Board</span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Work Order Flow
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/workorders">
-            <Button variant="outline" size="sm" className="h-9 border-border text-xs font-semibold">
-              <PremiumIcons.ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
-              List View
-            </Button>
-          </Link>
-          <Link href="/workorders/new">
-            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm text-xs font-bold uppercase tracking-wider">
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
-              New Work Order
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </div>
-
-    {/* Filters */}
-    <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-      <CardContent className="pt-6">
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="flex items-center space-x-2 border-r border-border pr-6 mr-2">
-            <Switch
-              id="my-tasks"
-              checked={myTasksOnly}
-              onCheckedChange={setMyTasksOnly}
-            />
-            <Label htmlFor="my-tasks" className="font-medium">My Orders Only</Label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-2">
-                Technician
-              </label>
-              <Select
-                value={technicianFilter}
-                onValueChange={(val) => setTechnicianFilter(val)}
-                disabled={myTasksOnly}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Technicians" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Technicians</SelectItem>
-                  {technicians?.map((tech: User) => (
-                    <SelectItem key={tech.id} value={tech.id.toString()}>
-                      {tech.first_name} {tech.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-2">
-                Priority
-              </label>
-              <Select
-                value={priorityFilter}
-                onValueChange={(val) => setPriorityFilter(val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Priorities" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-end">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setTechnicianFilter("");
-                  setPriorityFilter("");
-                  setMyTasksOnly(false);
-                }}
-              >
-                <PremiumIcons.RefreshCw className="w-4 h-4 mr-2" />
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Kanban Board */}
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      modifiers={[restrictToWindowEdges, snapCenterToCursor]}
-    >
-      <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: "70vh" }}>
-        {WORK_ORDER_STATUSES.map((status) => (
-          <KanbanColumn
-            key={status.value}
-            status={status}
-            workOrders={workOrdersByStatus[status.value] || []}
-          />
-        ))}
-      </div>
-
-      {hasNextPage && (
-        <div ref={observerRef} className="h-10 w-full flex items-center justify-center mt-4">
-          {isFetchingNextPage && <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>}
-        </div>
-      )}
-
-      <DragOverlay>
-        {activeWorkOrder ? (
-          <div className="opacity-90 scale-105 rotate-3 transition-transform cursor-grabbing overflow-hidden">
-            <WorkOrderCardUI workOrder={activeWorkOrder} isOverlay={true} />
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
-  </div>
-);
 }
 

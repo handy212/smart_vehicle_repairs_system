@@ -103,7 +103,7 @@ export default function ServicesDuePage() {
         return servicesApi.sendBulkReminders(scheduleIds, channel as "email" | "sms" | "call");
       }
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["services-due"] });
       if (data.sent !== undefined) {
@@ -119,7 +119,7 @@ export default function ServicesDuePage() {
       setSendReminderDialog(false);
       setSelectedSchedules([]);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -381,7 +381,7 @@ export default function ServicesDuePage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Notification Channel</Label>
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
               <Select value={reminderChannel} onValueChange={(v: any) => setReminderChannel(v)}>
                 <SelectTrigger>
                   <SelectValue />

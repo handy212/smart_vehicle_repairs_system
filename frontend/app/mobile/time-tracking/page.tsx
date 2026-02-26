@@ -56,7 +56,7 @@ export default function TimeTrackingPage() {
           setActiveLog(active);
         }
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } catch (error: any) {
       // 404 is expected when no active time log exists - silently ignore
       if (error?.response?.status !== 404) {

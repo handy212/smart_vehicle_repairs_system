@@ -50,7 +50,7 @@ export default function ServiceHistoryPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filteredWorkOrders = vehicleFilter === "all"
     ? workOrders
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     : workOrders.filter((wo: any) => {
       // We match by checking if vehicle name contains the selected vehicle string or if we had ID
       // The API returns vehicle_name. Ideally we'd have vehicle_id in response.
@@ -61,7 +61,7 @@ export default function ServiceHistoryPage() {
       // For MVP, I will fuzzy match or skip filtering if critical?
       // Let's update Serializer later to be robust. 
       // For now, let's rely on matching name string parts or finding the vehicle in vehicles list which matches name.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const v = vehicles.find((v: any) => v.id === parseInt(vehicleFilter));
       return v && wo.vehicle_name.includes(v.model); // Weak match
     });
@@ -140,7 +140,7 @@ export default function ServiceHistoryPage() {
                 className="flex h-10 w-64 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
               >
                 <option value="all">All Vehicles</option>
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 {vehicles.map((vehicle: any) => (
                   <option key={vehicle.id} value={vehicle.id}>
                     {vehicle.year} {vehicle.make} {vehicle.model} ({vehicle.license_plate})
@@ -170,99 +170,99 @@ export default function ServiceHistoryPage() {
           {/* Work Orders Tab */}
           <TabsContent value="workorders" className="space-y-4">
             {workOrders.length > 0 ? (
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
               workOrders.map((wo: any) => (
-            <Card key={wo.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <Wrench className="w-5 h-5 text-primary" />
-                      <h3 className="text-lg font-semibold text-foreground">
-                        Work Order #{wo.work_order_number}
-                      </h3>
+                <Card key={wo.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <Wrench className="w-5 h-5 text-primary" />
+                          <h3 className="text-lg font-semibold text-foreground">
+                            Work Order #{wo.work_order_number}
+                          </h3>
+                        </div>
+                        <div className="ml-8 space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            Date: {format(new Date(wo.created_at), "MMM d, yyyy")}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Vehicle: {wo.vehicle_name || "N/A"}
+                          </p>
+                          {wo.total_amount && (
+                            <p className="text-sm font-medium text-foreground mt-2">
+                              Total: {formatCurrency(wo.total_amount)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={getStatusVariant(wo.status)}>
+                        {wo.status.replace(/_/g, " ")}
+                      </Badge>
                     </div>
-                    <div className="ml-8 space-y-1">
-                      <p className="text-sm text-muted-foreground">
-                        Date: {format(new Date(wo.created_at), "MMM d, yyyy")}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Vehicle: {wo.vehicle_name || "N/A"}
-                      </p>
-                      {wo.total_amount && (
-                        <p className="text-sm font-medium text-foreground mt-2">
-                          Total: {formatCurrency(wo.total_amount)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant={getStatusVariant(wo.status)}>
-                    {wo.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))
             ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No work orders found</p>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No work orders found</p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
           {/* Inspections Tab */}
           <TabsContent value="inspections" className="space-y-4">
             {inspections.length > 0 ? (
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
               inspections.map((inspection: any) => (
-            <Card key={inspection.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <Search className="w-5 h-5 text-green-500" />
-                      <h3 className="text-lg font-semibold text-foreground">
-                        Inspection #{inspection.inspection_number}
-                      </h3>
+                <Card key={inspection.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <Search className="w-5 h-5 text-green-500" />
+                          <h3 className="text-lg font-semibold text-foreground">
+                            Inspection #{inspection.inspection_number}
+                          </h3>
+                        </div>
+                        <div className="ml-8 space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            Date: {format(new Date(inspection.inspection_date), "MMM d, yyyy")}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Vehicle: {inspection.vehicle_name || "N/A"}
+                          </p>
+                          {inspection.template_name && (
+                            <p className="text-sm text-muted-foreground">
+                              Type: {inspection.template_name}
+                            </p>
+                          )}
+                          {inspection.overall_result && (
+                            <p className="text-sm font-medium text-foreground mt-2">
+                              Result: {inspection.overall_result.replace(/_/g, " ")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={getStatusVariant(inspection.overall_result || inspection.status)}>
+                        {inspection.overall_result
+                          ? inspection.overall_result.replace(/_/g, " ")
+                          : inspection.status.replace(/_/g, " ")}
+                      </Badge>
                     </div>
-                    <div className="ml-8 space-y-1">
-                      <p className="text-sm text-muted-foreground">
-                        Date: {format(new Date(inspection.inspection_date), "MMM d, yyyy")}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Vehicle: {inspection.vehicle_name || "N/A"}
-                      </p>
-                      {inspection.template_name && (
-                        <p className="text-sm text-muted-foreground">
-                          Type: {inspection.template_name}
-                        </p>
-                      )}
-                      {inspection.overall_result && (
-                        <p className="text-sm font-medium text-foreground mt-2">
-                          Result: {inspection.overall_result.replace(/_/g, " ")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant={getStatusVariant(inspection.overall_result || inspection.status)}>
-                    {inspection.overall_result
-                      ? inspection.overall_result.replace(/_/g, " ")
-                      : inspection.status.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-            ))
+                  </CardContent>
+                </Card>
+              ))
             ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No inspections found</p>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No inspections found</p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>

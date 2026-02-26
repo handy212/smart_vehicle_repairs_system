@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Trash2, Download, Mail, Edit, MoreVertical, ChevronDown, Eye, X, Printer, DollarSign, Ban, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useState, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -44,13 +44,13 @@ import {
 export default function InvoicesPage() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
 
@@ -62,7 +62,7 @@ export default function InvoicesPage() {
     const { toast } = useToast();
     const router = useRouter();
     const { formatCurrency } = useCurrency();
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
     const { hasPermission } = usePermissions();
 
@@ -164,7 +164,7 @@ export default function InvoicesPage() {
             bulkSelection.clearSelection();
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Error Sending Invoices",
@@ -188,7 +188,7 @@ export default function InvoicesPage() {
             setBulkStatus("");
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
             toast({
                 title: "Error Updating Status",
@@ -344,13 +344,13 @@ export default function InvoicesPage() {
     };
 
     // Calculate summary stats
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const totalInvoices = data?.count || 0;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const totalAmount = data?.results?.reduce((sum, inv) => sum + parseFloat(inv.total || "0"), 0) || 0;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const totalDue = data?.results?.reduce((sum, inv) => sum + parseFloat(inv.balance_due || inv.total || "0"), 0) || 0;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const overdueCount = data?.results?.filter((inv) => inv.status === "overdue").length || 0;
 
     return (
@@ -643,7 +643,7 @@ export default function InvoicesPage() {
                 </CardContent>
             </Card>
 
-        {/* Bulk Action Toolbar */}
+            {/* Bulk Action Toolbar */}
             <BulkActionToolbar
                 selectedCount={bulkSelection.selectedCount}
                 onClearSelection={bulkSelection.clearSelection}
@@ -654,7 +654,7 @@ export default function InvoicesPage() {
                 onBulkStatusUpdate={hasPermission("edit_invoices") ? handleBulkStatusUpdate : undefined}
             />
 
-        {/* Invoices Table */}
+            {/* Invoices Table */}
             <Card className="border-t shadow-sm">
                 <CardHeader className="py-3 px-4 border-b bg-muted/30">
                     <CardTitle className="text-sm font-semibold text-card-foreground">
@@ -728,7 +728,7 @@ export default function InvoicesPage() {
                                                 {formatCurrency(parseFloat(invoice.balance_due || invoice.total || "0"))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                                 <Badge variant={getStatusVariant(invoice.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                                                     <span className="flex items-center gap-1.5">
                                                         {getStatusIcon(invoice.status)}
@@ -813,7 +813,7 @@ export default function InvoicesPage() {
                 </CardContent>
             </Card>
 
-        {/* Pagination */}
+            {/* Pagination */}
             {data && data.count > 20 && (
                 <div className="flex items-center justify-between px-2">
                     <div className="text-sm text-muted-foreground">
@@ -840,7 +840,7 @@ export default function InvoicesPage() {
                 </div>
             )}
 
-        {/* Status Update Dialog */}
+            {/* Status Update Dialog */}
             <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>

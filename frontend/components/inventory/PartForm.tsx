@@ -177,7 +177,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                                 )}
                                             >
                                                 <option value="">Select Category</option>
-                                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                                 {categories.map((cat: any) => (
                                                     <option key={cat.id} value={cat.id}>{cat.full_path || cat.name}</option>
                                                 ))}
@@ -203,7 +203,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 <option value="">Any Branch</option>
-                                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                                 {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
                                             </select>
                                         </div>
@@ -358,7 +358,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="">None</option>
-                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                                 {suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name} ({s.supplier_code})</option>)}
                             </select>
                         </CardContent>

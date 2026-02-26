@@ -61,163 +61,163 @@ export default function ChangePasswordPage() {
             reset();
             router.push("/portal/profile");
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
-        toast({
-            title: "Password Change Failed",
-            description:
-                error.response?.data?.detail ||
-                error.response?.data?.current_password?.[0] ||
-                "Failed to change password. Please check your current password and try again.",
-            variant: "destructive",
+            toast({
+                title: "Password Change Failed",
+                description:
+                    error.response?.data?.detail ||
+                    error.response?.data?.current_password?.[0] ||
+                    "Failed to change password. Please check your current password and try again.",
+                variant: "destructive",
+            });
+        },
+    });
+
+    const onSubmit = (data: PasswordFormData) => {
+        changePasswordMutation.mutate({
+            current_password: data.current_password,
+            new_password: data.new_password,
         });
-    },
-    });
+    };
 
-const onSubmit = (data: PasswordFormData) => {
-    changePasswordMutation.mutate({
-        current_password: data.current_password,
-        new_password: data.new_password,
-    });
-};
+    return (
+        <div className="space-y-6">
+            <div>
+                <Link href="/portal/profile">
+                    <Button variant="ghost" className="mb-2 -ml-2">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Profile
+                    </Button>
+                </Link>
+                <h1 className="text-3xl font-bold text-foreground">Change Password</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    Update your account password
+                </p>
+            </div>
 
-return (
-    <div className="space-y-6">
-        <div>
-            <Link href="/portal/profile">
-                <Button variant="ghost" className="mb-2 -ml-2">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Profile
-                </Button>
-            </Link>
-            <h1 className="text-3xl font-bold text-foreground">Change Password</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-                Update your account password
-            </p>
+            <div className="max-w-2xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                            <Lock className="w-5 h-5" />
+                            <span>Change Password</span>
+                        </CardTitle>
+                        <CardDescription>
+                            Enter your current password and choose a new secure password
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="current_password">
+                                    Current Password <span className="text-red-500">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <Input
+                                        id="current_password"
+                                        type={showCurrentPassword ? "text" : "password"}
+                                        {...register("current_password")}
+                                        className={`pr-10 ${errors.current_password ? "border-red-500" : ""}`}
+                                        placeholder="Enter your current password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
+                                    >
+                                        {showCurrentPassword ? (
+                                            <EyeOff className="w-4 h-4" />
+                                        ) : (
+                                            <Eye className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                </div>
+                                {errors.current_password && (
+                                    <p className="text-sm text-red-600">{errors.current_password.message}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="new_password">
+                                    New Password <span className="text-red-500">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <Input
+                                        id="new_password"
+                                        type={showNewPassword ? "text" : "password"}
+                                        {...register("new_password")}
+                                        className={`pr-10 ${errors.new_password ? "border-red-500" : ""}`}
+                                        placeholder="Enter your new password (min. 8 characters)"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
+                                    >
+                                        {showNewPassword ? (
+                                            <EyeOff className="w-4 h-4" />
+                                        ) : (
+                                            <Eye className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                </div>
+                                {errors.new_password && (
+                                    <p className="text-sm text-red-600">{errors.new_password.message}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Password must be at least 8 characters long
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="confirm_password">
+                                    Confirm New Password <span className="text-red-500">*</span>
+                                </Label>
+                                <div className="relative">
+                                    <Input
+                                        id="confirm_password"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        {...register("confirm_password")}
+                                        className={`pr-10 ${errors.confirm_password ? "border-red-500" : ""}`}
+                                        placeholder="Confirm your new password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeOff className="w-4 h-4" />
+                                        ) : (
+                                            <Eye className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                </div>
+                                {errors.confirm_password && (
+                                    <p className="text-sm text-red-600">{errors.confirm_password.message}</p>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => router.back()}
+                                    disabled={isSubmitting || changePasswordMutation.isPending}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isSubmitting || changePasswordMutation.isPending}>
+                                    {isSubmitting || changePasswordMutation.isPending
+                                        ? "Changing Password..."
+                                        : "Change Password"}
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-
-        <div className="max-w-2xl">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                        <Lock className="w-5 h-5" />
-                        <span>Change Password</span>
-                    </CardTitle>
-                    <CardDescription>
-                        Enter your current password and choose a new secure password
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="current_password">
-                                Current Password <span className="text-red-500">*</span>
-                            </Label>
-                            <div className="relative">
-                                <Input
-                                    id="current_password"
-                                    type={showCurrentPassword ? "text" : "password"}
-                                    {...register("current_password")}
-                                    className={`pr-10 ${errors.current_password ? "border-red-500" : ""}`}
-                                    placeholder="Enter your current password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
-                                >
-                                    {showCurrentPassword ? (
-                                        <EyeOff className="w-4 h-4" />
-                                    ) : (
-                                        <Eye className="w-4 h-4" />
-                                    )}
-                                </button>
-                            </div>
-                            {errors.current_password && (
-                                <p className="text-sm text-red-600">{errors.current_password.message}</p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="new_password">
-                                New Password <span className="text-red-500">*</span>
-                            </Label>
-                            <div className="relative">
-                                <Input
-                                    id="new_password"
-                                    type={showNewPassword ? "text" : "password"}
-                                    {...register("new_password")}
-                                    className={`pr-10 ${errors.new_password ? "border-red-500" : ""}`}
-                                    placeholder="Enter your new password (min. 8 characters)"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewPassword(!showNewPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
-                                >
-                                    {showNewPassword ? (
-                                        <EyeOff className="w-4 h-4" />
-                                    ) : (
-                                        <Eye className="w-4 h-4" />
-                                    )}
-                                </button>
-                            </div>
-                            {errors.new_password && (
-                                <p className="text-sm text-red-600">{errors.new_password.message}</p>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                                Password must be at least 8 characters long
-                            </p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="confirm_password">
-                                Confirm New Password <span className="text-red-500">*</span>
-                            </Label>
-                            <div className="relative">
-                                <Input
-                                    id="confirm_password"
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    {...register("confirm_password")}
-                                    className={`pr-10 ${errors.confirm_password ? "border-red-500" : ""}`}
-                                    placeholder="Confirm your new password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-muted-foreground "
-                                >
-                                    {showConfirmPassword ? (
-                                        <EyeOff className="w-4 h-4" />
-                                    ) : (
-                                        <Eye className="w-4 h-4" />
-                                    )}
-                                </button>
-                            </div>
-                            {errors.confirm_password && (
-                                <p className="text-sm text-red-600">{errors.confirm_password.message}</p>
-                            )}
-                        </div>
-
-                        <div className="flex items-center justify-end space-x-4 pt-4 border-t border-border">
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={() => router.back()}
-                                disabled={isSubmitting || changePasswordMutation.isPending}
-                            >
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={isSubmitting || changePasswordMutation.isPending}>
-                                {isSubmitting || changePasswordMutation.isPending
-                                    ? "Changing Password..."
-                                    : "Change Password"}
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
-    </div>
-);
+    );
 }

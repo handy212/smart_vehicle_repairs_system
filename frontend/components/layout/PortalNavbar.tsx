@@ -22,8 +22,8 @@ interface PortalNavbarProps {
   isSidebarOpen?: boolean;
   onToggleCollapse?: () => void;
   isSidebarCollapsed?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-user ?: any;
+
+  user?: any;
 }
 
 export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSidebarCollapsed, user }: PortalNavbarProps) {

@@ -1661,6 +1661,14 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
     queryset = PurchaseOrderItem.objects.select_related('purchase_order', 'part')
     serializer_class = PurchaseOrderItemSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'receive']:
+            return [IsAuthenticated(), HasPermission('manage_inventory')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['purchase_order', 'part']
     ordering = ['id']

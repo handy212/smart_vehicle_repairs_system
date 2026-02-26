@@ -203,7 +203,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                                     <label className="text-sm font-medium">Service Type</label>
                                     <Select
                                         value={watch("service_type") || ""}
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                         onValueChange={(val: any) => setValue("service_type", val, { shouldValidate: true })}
                                     >
                                         <SelectTrigger>
@@ -221,7 +221,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                                     <label className="text-sm font-medium">Priority</label>
                                     <Select
                                         value={watch("priority") || ""}
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                         onValueChange={(val: any) => setValue("priority", val, { shouldValidate: true })}
                                     >
                                         <SelectTrigger>

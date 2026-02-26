@@ -23,9 +23,9 @@ import { useMemo } from "react";
 interface NavigationItem {
   name: string;
   href: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-icon: any; // Allow any component
-badge ?: boolean;
+
+  icon: any; // Allow any component
+  badge?: boolean;
 }
 
 interface NavigationGroup {

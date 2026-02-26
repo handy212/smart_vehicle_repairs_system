@@ -81,7 +81,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
   // Get workflow phase description and icon
   const getWorkflowTaskInfo = (task: ServiceTask) => {
     const phase = task.workflow_phase;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const descriptions: Record<string, { description: string; icon: any; actionHint?: string }> = {
       'inspection': {
         description: 'Initial vehicle inspection to assess condition and identify issues',
@@ -184,7 +184,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           </div>
         </TableCell>
         <TableCell>
-          <span className="text-sm capitalize">{task.task_type?.replace("_", " ")}</span>
+          <span className="text-sm capitalize">{task.task_type?.replace(/_/g, " ")}</span>
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-1">
@@ -197,9 +197,9 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           </div>
         </TableCell>
         <TableCell>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
           <Badge variant={getStatusVariant(task.status) as any}>
-            {task.status?.replace("_", " ")}
+            {task.status?.replace(/_/g, " ")}
           </Badge>
         </TableCell>
         <TableCell>

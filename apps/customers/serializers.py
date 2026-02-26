@@ -255,7 +255,7 @@ class CustomerNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerNote
         fields = [
-            'id', 'customer', 'note_type', 'subject', 'content',
+            'id', 'customer', 'note_type', 'subject', 'note', 'content',
             'is_important', 'created_by', 'created_by_name', 'created_at'
         ]
         read_only_fields = ['id', 'created_by', 'created_at']

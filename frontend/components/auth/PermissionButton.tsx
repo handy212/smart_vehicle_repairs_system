@@ -31,7 +31,7 @@ export function PermissionButton({
   const { user } = useAuthStore();
 
   // Admin bypass — consistent with PermissionGuard
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const isAdmin = user?.role === 'admin' || (user as any)?.is_superuser;
 
   let hasAccess = true;

@@ -130,7 +130,7 @@ export default function CustomerDetailPage() {
               { header: "VIN", accessorKey: "vin" },
             ]}
             emptyMessage="No vehicles found"
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             onRowDoubleClick={(item: any) => router.push(`/vehicles/${item.id}`)}
           />
         );
@@ -139,13 +139,13 @@ export default function CustomerDetailPage() {
           <DataTable
             data={workOrders}
             columns={[
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
               { header: "WO #", accessorKey: "work_order_number", cell: (item: any) => <Link href={`/workorders/${item.id}`} className="text-primary hover:underline">{item.work_order_number}</Link> },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
               { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> },
               { header: "Vehicle", accessorKey: "vehicle_info" },
               { header: "Technician", accessorKey: "primary_technician_name" },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             ] as any}
             emptyMessage="No work orders found"
           />
@@ -164,11 +164,11 @@ export default function CustomerDetailPage() {
             data={subscriptions}
             columns={[
               { header: "Plan", accessorKey: "plan_name" },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
               { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> },
               { header: "Start Date", accessorKey: "start_date" },
               { header: "End Date", accessorKey: "end_date" },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             ] as any}
             emptyMessage="No subscriptions found"
           />

@@ -86,6 +86,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     is_approved = serializers.BooleanField(read_only=True)
     cost_variance = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     cost_variance_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
+    has_completed_inspection = serializers.SerializerMethodField()
     
     # Created by info
     created_by_name = serializers.SerializerMethodField()
@@ -118,8 +119,12 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'related_work_order_detail', 'rework_work_orders', 'warranty_reason',
             'maintenance_type', 'service_type', 'service_bundle',
             'is_overdue', 'days_in_shop', 'is_approved',
-            'cost_variance', 'cost_variance_percentage'
+            'cost_variance', 'cost_variance_percentage', 'has_completed_inspection'
         ]
+
+    def get_has_completed_inspection(self, obj):
+        return obj.inspections.filter(status__in=['completed', 'approved']).exists()
+
 
     def get_customer_name(self, obj):
         """Get customer name from user"""
@@ -285,13 +290,13 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         
         # Check for repeat visits (non-blocking - stored in context for frontend)
         from django.conf import settings
-        if settings.REPEAT_VISIT_ENABLED and data.get('customer_concerns'):
+        if getattr(settings, 'REPEAT_VISIT_ENABLED', False) and data.get('customer_concerns'):
             from .utils import detect_repeat_visit
             matches = detect_repeat_visit(
                 vehicle=data['vehicle'],
                 customer_concerns=data['customer_concerns'],
-                days=settings.REPEAT_VISIT_DAYS,
-                similarity_threshold=settings.REPEAT_VISIT_SIMILARITY_THRESHOLD
+                days=getattr(settings, 'REPEAT_VISIT_DAYS', 30),
+                similarity_threshold=getattr(settings, 'REPEAT_VISIT_SIMILARITY_THRESHOLD', 0.3)
             )
             if matches:
                 # Store in context for use in create method
@@ -428,7 +433,6 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'estimated_labor_hours', 'estimated_labor_cost', 'estimated_parts_cost',
             'odometer_out',
             'quality_check_required', 'quality_check_completed',
-            'quality_check_by', 'quality_check_notes', 'quality_check_passed',
             'quality_check_by', 'quality_check_notes', 'quality_check_passed',
             'is_customer_waiting',
             'maintenance_type', 'service_type'
@@ -582,8 +586,6 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
     purchase_order_number = serializers.SerializerMethodField()
     
     work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
-    customer_name = serializers.SerializerMethodField()
-    vehicle_info = serializers.SerializerMethodField() 
     
     def get_customer_name(self, obj):
         if obj.work_order.customer and obj.work_order.customer.user:
@@ -897,6 +899,6 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
     def get_timeline_status(self, obj):
         return {
             'current_status': obj.status,
-            'last_updated': obj.created_at.isoformat(), # simplistic fallback
+            'last_updated': obj.updated_at.isoformat(),
             'estimated_completion': obj.estimated_completion
         }

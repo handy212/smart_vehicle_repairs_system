@@ -52,7 +52,7 @@ export async function syncAll(): Promise<SyncResult> {
         }
         await workOrdersDB.markSynced(workOrder.id || workOrder.tempId);
         synced.workOrders++;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } catch (error: any) {
         errors.push(`Work Order ${workOrder.id}: ${error.message}`);
       }
@@ -69,7 +69,7 @@ export async function syncAll(): Promise<SyncResult> {
         }
         await inspectionsDB.markSynced(inspection.id || inspection.tempId);
         synced.inspections++;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } catch (error: any) {
         errors.push(`Inspection ${inspection.id}: ${error.message}`);
       }
@@ -86,7 +86,7 @@ export async function syncAll(): Promise<SyncResult> {
         }
         await timeLogsDB.markSynced(timeLog.id || timeLog.tempId);
         synced.timeLogs++;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } catch (error: any) {
         errors.push(`Time Log ${timeLog.id}: ${error.message}`);
       }
@@ -108,7 +108,7 @@ export async function syncAll(): Promise<SyncResult> {
         await apiClient.post('/workorders/photos/', formData);
         await photosDB.markSynced(photo.id);
         synced.photos++;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } catch (error: any) {
         errors.push(`Photo ${photo.id}: ${error.message}`);
       }
@@ -123,7 +123,7 @@ export async function syncAll(): Promise<SyncResult> {
       queue: queueResult,
       errors,
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   } catch (error: any) {
     errors.push(`Sync failed: ${error.message}`);
     return {

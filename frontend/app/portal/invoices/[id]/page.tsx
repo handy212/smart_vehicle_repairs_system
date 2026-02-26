@@ -35,7 +35,7 @@ export default function InvoiceDetailPage() {
     enabled: !!invoiceId,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const payments = (paymentsData || []) as any[];
 
   const handlePrint = () => {
@@ -203,7 +203,7 @@ export default function InvoiceDetailPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       {invoice.line_items.map((item: any, index: number) => (
                         <tr key={index} className="hover:bg-muted hover:bg-muted">
                           <td className="px-4 py-3 text-sm text-foreground">
@@ -255,7 +255,7 @@ export default function InvoiceDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       {payments.map((payment: any) => (
                         <TableRow key={payment.id}>
                           <TableCell className="text-sm text-muted-foreground">

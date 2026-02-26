@@ -1,6 +1,8 @@
 """
 Views for appointments app
 """
+import logging
+
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,6 +12,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count
 from django.utils import timezone
 from datetime import datetime, timedelta, time
+
+logger = logging.getLogger(__name__)
 
 # Notification triggers
 from apps.notifications_app.triggers import notification_triggers
@@ -353,19 +357,84 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             appointment=appointment,
             reminder_type=reminder_type,
             scheduled_send_time=timezone.now(),
-            status='sent',
-            sent_at=timezone.now()
+            status='scheduled',
         )
         
-        # Mark appointment reminder as sent
-        appointment.reminder_sent = True
-        appointment.reminder_sent_at = timezone.now()
-        appointment.save()
-        
-        return Response({
-            'message': 'Reminder sent successfully',
-            'reminder_type': reminder_type
-        })
+        # Actually send the reminder via NotificationService
+        try:
+            from apps.notifications_app.models import Notification
+            from apps.notifications_app.services import NotificationService
+            
+            customer_user = appointment.customer.user if appointment.customer else None
+            if not customer_user:
+                reminder.status = 'failed'
+                reminder.error_message = 'No customer user found'
+                reminder.save(update_fields=['status', 'error_message'])
+                return Response(
+                    {'error': 'Customer user not found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Build reminder message
+            message = (
+                f"Reminder: You have an appointment ({appointment.appointment_number}) "
+                f"scheduled for {appointment.appointment_date} at {appointment.appointment_time}."
+            )
+            if appointment.customer_concerns:
+                message += f" Service: {appointment.customer_concerns[:100]}"
+            
+            # Determine channel based on reminder type
+            channel = 'email' if reminder_type in ['email', 'push'] else reminder_type
+            
+            notification = Notification.objects.create(
+                recipient=customer_user,
+                notification_type='reminder',
+                channel=channel,
+                priority='normal',
+                title=f'Appointment Reminder - {appointment.appointment_number}',
+                message=message,
+                data={
+                    'appointment_id': appointment.id,
+                    'appointment_number': appointment.appointment_number,
+                    'appointment_date': str(appointment.appointment_date),
+                    'appointment_time': str(appointment.appointment_time),
+                },
+                related_object_type='appointment',
+                related_object_id=appointment.id
+            )
+            success = NotificationService().send_notification(notification)
+            
+            if success:
+                reminder.status = 'sent'
+                reminder.sent_at = timezone.now()
+                reminder.save(update_fields=['status', 'sent_at'])
+                
+                # Mark appointment reminder as sent
+                appointment.reminder_sent = True
+                appointment.reminder_sent_at = timezone.now()
+                appointment.save(update_fields=['reminder_sent', 'reminder_sent_at'])
+                
+                return Response({
+                    'message': 'Reminder sent successfully',
+                    'reminder_type': reminder_type
+                })
+            else:
+                reminder.status = 'failed'
+                reminder.error_message = 'NotificationService returned failure'
+                reminder.save(update_fields=['status', 'error_message'])
+                return Response(
+                    {'error': 'Failed to send reminder. Please check notification logs.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        except Exception as e:
+            logger.error(f"Error sending appointment reminder: {e}", exc_info=True)
+            reminder.status = 'failed'
+            reminder.error_message = str(e)
+            reminder.save(update_fields=['status', 'error_message'])
+            return Response(
+                {'error': f'An error occurred: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'])
     def suggested_message(self, request, pk=None):
@@ -477,7 +546,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 'date': current_date,
                 'appointments': AppointmentListSerializer(day_appointments, many=True).data,
                 'total_appointments': day_appointments.count(),
-                'available_slots': 10 - day_appointments.count()  # Assuming 10 slots per day
+                'available_slots': max(0, ServiceBay.objects.filter(is_active=True, status='available').count() - day_appointments.count())
             })
             current_date += timedelta(days=1)
         
@@ -515,13 +584,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         """Get overdue appointments (no-shows)"""
         now = timezone.now()
         appointments = self.get_queryset().filter(
-            Q(status='pending') | Q(status='confirmed')
+            Q(status='pending') | Q(status='confirmed'),
         ).filter(
-            appointment_date__lt=now.date()
-        ) | self.get_queryset().filter(
-            appointment_date=now.date(),
-            appointment_time__lt=now.time(),
-            status__in=['pending', 'confirmed']
+            Q(appointment_date__lt=now.date()) |
+            Q(appointment_date=now.date(), appointment_time__lt=now.time())
         )
         
         serializer = AppointmentListSerializer(appointments, many=True)

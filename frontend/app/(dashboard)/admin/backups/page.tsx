@@ -51,7 +51,7 @@ export default function BackupsPage() {
       toast({ title: "Success", description: "Backup process started successfully" });
       setIsCreateDialogOpen(false);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -67,7 +67,7 @@ export default function BackupsPage() {
       queryClient.invalidateQueries({ queryKey: ["backups"] });
       toast({ title: "Success", description: "Backup deleted successfully" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -90,7 +90,7 @@ export default function BackupsPage() {
         description: `Backup file downloading...`,
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -108,7 +108,7 @@ export default function BackupsPage() {
         description: "The system is being restored. You may be logged out.",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Error",
@@ -271,7 +271,7 @@ export default function BackupsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="px-4 py-2.5">
-                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                           <Badge variant={getStatusVariant(backup.status) as any} className="text-[10px] h-5 px-2 rounded-full font-medium">
                             {backup.status.replace("_", " ")}
                           </Badge>

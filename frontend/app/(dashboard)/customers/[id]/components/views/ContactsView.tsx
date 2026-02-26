@@ -34,7 +34,7 @@ type ContactFormData = z.infer<typeof contactSchema>;
 
 export function ContactsView({ customerId }: ContactsViewProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const [editingContact, setEditingContact] = useState<any>(null);
     const queryClient = useQueryClient();
     const { toast } = useToast();
@@ -89,7 +89,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const handleEdit = (contact: any) => {
         setEditingContact(contact);
         setValue("first_name", contact.first_name);
@@ -103,9 +103,9 @@ export function ContactsView({ customerId }: ContactsViewProps) {
     };
 
     const columns = [
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Name", accessorKey: "first_name", cell: (item: any) => <span className="font-medium text-foreground">{item.first_name} {item.last_name}</span> },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         { header: "Email", accessorKey: "email", cell: (item: any) => <span className="text-muted-foreground">{item.email}</span> },
         { header: "Position", accessorKey: "job_title" },
         { header: "Phone", accessorKey: "phone" },
@@ -122,7 +122,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
         {
             header: "Roles",
             accessorKey: "roles",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => (
                 <div className="flex gap-1">
                     {item.is_primary && <Badge variant="default" className="text-[10px]">Primary</Badge>}
@@ -133,7 +133,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
         {
             header: "Actions",
             accessorKey: "actions",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             cell: (item: any) => (
                 <div className="flex gap-2 justify-end">
                     <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }}>Edit</Button>
@@ -155,7 +155,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
 
             <DataTable
                 data={contacts}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                 columns={columns as any}
                 isLoading={isLoading}
                 onRowClick={handleEdit}

@@ -157,7 +157,7 @@ export function DocumentList({ customerId, vehicleId }: DocumentListProps) {
     );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function UploadDocumentDialog({ open, onOpenChange, customerId, vehicleId, onSuccess }: any) {
     const [file, setFile] = useState<File | null>(null);
     const [title, setTitle] = useState("");
@@ -173,80 +173,80 @@ function UploadDocumentDialog({ open, onOpenChange, customerId, vehicleId, onSuc
             setDescription("");
             onSuccess();
         },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         onError: (error: any) => {
-        toast({
-            title: "Error",
-            description: error?.response?.data?.detail || "Failed to upload document",
-            variant: "destructive"
-        });
-    }
+            toast({
+                title: "Error",
+                description: error?.response?.data?.detail || "Failed to upload document",
+                variant: "destructive"
+            });
+        }
     });
 
-const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file || !title) return;
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!file || !title) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("title", title);
-    formData.append("description", description);
-    if (customerId) formData.append("customer", customerId.toString());
-    if (vehicleId) formData.append("vehicle", vehicleId.toString());
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("title", title);
+        formData.append("description", description);
+        if (customerId) formData.append("customer", customerId.toString());
+        if (vehicleId) formData.append("vehicle", vehicleId.toString());
 
-    uploadMutation.mutate(formData);
-};
+        uploadMutation.mutate(formData);
+    };
 
-return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Upload Document</DialogTitle>
-                <DialogDescription>Upload a file related to this record.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="e.g., Insurance Policy"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                        id="description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Optional notes about this file"
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="file">File *</Label>
-                    <Input
-                        id="file"
-                        type="file"
-                        onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) {
-                                setFile(f);
-                                if (!title) setTitle(f.name);
-                            }
-                        }}
-                        required
-                    />
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button type="submit" disabled={uploadMutation.isPending || !file}>
-                        {uploadMutation.isPending ? "Uploading..." : "Upload"}
-                    </Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-    </Dialog>
-);
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Upload Document</DialogTitle>
+                    <DialogDescription>Upload a file related to this record.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <Label htmlFor="title">Title *</Label>
+                        <Input
+                            id="title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="e.g., Insurance Policy"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Optional notes about this file"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="file">File *</Label>
+                        <Input
+                            id="file"
+                            type="file"
+                            onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) {
+                                    setFile(f);
+                                    if (!title) setTitle(f.name);
+                                }
+                            }}
+                            required
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                        <Button type="submit" disabled={uploadMutation.isPending || !file}>
+                            {uploadMutation.isPending ? "Uploading..." : "Upload"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
 }

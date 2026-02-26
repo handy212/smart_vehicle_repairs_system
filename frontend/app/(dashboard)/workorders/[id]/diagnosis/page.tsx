@@ -111,7 +111,7 @@ export default function DiagnosisPage() {
               work_order: workOrderId,
               customer_complaint: workOrder.customer_concerns || "",
             });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           } catch (error: any) {
             console.error("Failed to create diagnosis:", error);
             console.error("Error details:", error.response?.data || error.message);
@@ -125,14 +125,14 @@ export default function DiagnosisPage() {
             existing = await diagnosisApi.update(existing.id, {
               customer_complaint: workOrder.customer_concerns,
             });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           } catch (error: any) {
             console.error("Failed to update customer complaint:", error);
           }
         }
 
         return existing;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       } catch (error: any) {
         console.error("Error in diagnosis query:", error);
         console.error("Error response:", error.response?.data);
@@ -160,7 +160,7 @@ export default function DiagnosisPage() {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
       toast({ title: "Diagnosis updated", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to update diagnosis",
@@ -184,7 +184,7 @@ export default function DiagnosisPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to start diagnosis",
@@ -207,7 +207,7 @@ export default function DiagnosisPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to pause diagnosis",
@@ -230,7 +230,7 @@ export default function DiagnosisPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to resume diagnosis",
@@ -246,7 +246,7 @@ export default function DiagnosisPage() {
       // Pass requires_approval from diagnosis if available
       return diagnosisApi.complete(diagnosis.id, diagnosis.requires_approval);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       const workOrderUpdate = response.work_order;
       let message = "Diagnosis completed successfully.";
 
@@ -258,11 +258,19 @@ export default function DiagnosisPage() {
         }
       }
 
-      toast({
-        title: "Diagnosis completed",
-        description: message,
-        variant: "default"
-      });
+      if (response.prediction) {
+        toast({
+          title: "Diagnosis Completed & AI Route Predicted",
+          description: `Next projected service: ${response.prediction.predicted_date}. ${response.prediction.recommendation}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Diagnosis completed",
+          description: message,
+          variant: "default"
+        });
+      }
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -272,7 +280,7 @@ export default function DiagnosisPage() {
       // Redirect to work order page to see updated status
       router.push(`/workorders/${workOrderId}`);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to complete diagnosis",
@@ -318,7 +326,7 @@ export default function DiagnosisPage() {
             <div className="space-y-2">
               <p className="text-red-600 font-semibold">Error loading diagnosis</p>
               <p className="text-sm text-muted-foreground">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                 {(diagnosisError as any)?.response?.data?.detail ||
                   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
                   (diagnosisError as any)?.message ||
@@ -838,7 +846,7 @@ function RecommendationsTab({
 }: {
   diagnosis: Diagnosis;
   workOrderId: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   workOrder?: any;
   onRefresh: () => void;
   isDisabled?: boolean;
@@ -848,11 +856,11 @@ function RecommendationsTab({
   const queryClient = useQueryClient();
   const router = useRouter();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
+
   const [editingRecommendation, setEditingRecommendation] = useState<any>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
   const [showAiDialog, setShowAiDialog] = useState(false);
-  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */ }
+
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
 
   // AI Suggestion mutation
@@ -863,7 +871,7 @@ function RecommendationsTab({
       setShowAiDialog(true);
       toast({ title: "AI suggestions generated", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "AI analysis failed",
@@ -874,7 +882,7 @@ function RecommendationsTab({
   });
 
   // Load line items from localStorage to check for linked items
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [lineItems, setLineItems] = React.useState<any[]>([]);
   React.useEffect(() => {
     const loadLineItems = () => {
@@ -899,7 +907,7 @@ function RecommendationsTab({
   }, [diagnosis.id]);
 
   const createMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     mutationFn: (data: any) => diagnosisApi.addRecommendation(diagnosis.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -908,7 +916,7 @@ function RecommendationsTab({
       setEditingRecommendation(null);
       toast({ title: "Recommendation added", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to add recommendation",
@@ -919,7 +927,7 @@ function RecommendationsTab({
   });
 
   const updateMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     mutationFn: ({ id, data }: { id: number; data: any }) => diagnosisApi.updateRecommendation(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -928,7 +936,7 @@ function RecommendationsTab({
       setEditingRecommendation(null);
       toast({ title: "Recommendation updated", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to update recommendation",
@@ -945,7 +953,7 @@ function RecommendationsTab({
       onRefresh();
       toast({ title: "Recommendation deleted", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to delete recommendation",
@@ -970,7 +978,7 @@ function RecommendationsTab({
         variant: "default",
       });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to update recommendations",
@@ -999,7 +1007,7 @@ function RecommendationsTab({
       // Navigate to work order tasks
       router.push(`/workorders/${workOrderId}`);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to convert recommendations",
@@ -1010,7 +1018,7 @@ function RecommendationsTab({
   });
 
   const recommendations = diagnosis.repair_recommendations || [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const approvedRecommendations = recommendations.filter((r: any) => r.customer_approved);
 
   // Inventory parts for part line items (active parts)
@@ -1019,9 +1027,9 @@ function RecommendationsTab({
     queryKey: ["inventory", "parts", "active"],
     queryFn: () => inventoryApi.list({ is_active: true }),
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const unapprovedRecommendations = recommendations.filter((r: any) => !r.customer_approved);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const convertedRecommendations = recommendations.filter((r: any) => r.converted_to_task_id);
 
   // Check if work order is in a status that allows printing recommendations
@@ -1054,7 +1062,7 @@ function RecommendationsTab({
         const printUrl = `${baseUrl}/workorders/${workOrderId}/print-recommendations/${token ? `?token=${token}` : ''}`;
         window.open(printUrl, "_blank");
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1078,7 +1086,7 @@ function RecommendationsTab({
     if (selectedRecommendations.size === unapprovedRecommendations.length) {
       setSelectedRecommendations(new Set());
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       setSelectedRecommendations(new Set(unapprovedRecommendations.map((r: any) => r.id)));
     }
   };
@@ -1191,7 +1199,7 @@ function RecommendationsTab({
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     {unapprovedRecommendations.map((rec: any) => (
                       <div
                         key={rec.id}
@@ -1226,22 +1234,22 @@ function RecommendationsTab({
                             {/* Parts and Labor Details */}
                             {(() => {
                               // Check for linked line items from Estimate tab
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               const linkedItems = lineItems.filter((item: any) => item.recommendation_id === rec.id);
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               const linkedParts = linkedItems.filter((item: any) => item.item_type === 'part');
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               const linkedLabor = linkedItems.filter((item: any) => item.item_type === 'labor');
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               const linkedPartsTotal = linkedParts.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               const linkedLaborTotal = linkedLabor.reduce((sum: number, item: any) => {
                                 if (item.labor_hours && item.labor_rate) {
                                   return sum + (item.labor_hours * item.labor_rate);
                                 }
                                 return sum + ((item.quantity || 0) * (item.unit_price || 0));
                               }, 0);
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                               const linkedLaborHours = linkedLabor.reduce((sum: number, item: any) => sum + (item.labor_hours || item.quantity || 0), 0);
 
                               const hasOldData = (rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) ||
@@ -1325,19 +1333,34 @@ function RecommendationsTab({
                 </div>
               )}
 
-              {/* Approved but not converted */}
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    Approved - Ready to Convert ({approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length})
-                  </h3>
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <h3 className="font-semibold text-sm text-foreground">
+                      Approved - Ready to Convert ({approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length})
+                    </h3>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (confirm('Convert all approved recommendations to Service Tasks?')) {
+                          convertToTasksMutation.mutate(
+                            approvedRecommendations
+                              .filter((r: any) => !r.converted_to_task_id)
+                              .map((r: any) => r.id)
+                          );
+                        }
+                      }}
+                      disabled={convertToTasksMutation.isPending || isDisabled}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs px-3"
+                    >
+                      {convertToTasksMutation.isPending ? "Converting..." : "Convert All to Tasks"}
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {approvedRecommendations
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       .filter((r: any) => !r.converted_to_task_id)
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                       .map((rec: any) => (
                         <div key={rec.id} className="p-4 bg-success/10/30 border border-green-100 dark:border-green-900/30 rounded-lg space-y-3">
                           <div className="flex items-start justify-between mb-2">
@@ -1410,7 +1433,7 @@ function RecommendationsTab({
                     Converted to Tasks ({convertedRecommendations.length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+
                     {convertedRecommendations.map((rec: any) => (
                       <div key={rec.id} className="p-4 bg-muted border border-border bg-muted border-border rounded-lg space-y-3 opacity-75">
                         <div className="flex items-start justify-between mb-2">
@@ -1574,7 +1597,7 @@ function PhotosTab({
       onRefresh();
       toast({ title: "Photo deleted", variant: "default" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to delete photo",
@@ -1753,7 +1776,7 @@ function PhotoUploadDialog({
       onSuccess();
       handleClose();
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     onError: (error: any) => {
       toast({
         title: "Failed to upload photo",
@@ -1916,7 +1939,7 @@ function PhotoUploadDialog({
                 <Label htmlFor="photo_type" className="text-sm font-medium text-card-foreground">Photo Type <span className="text-red-500">*</span></Label>
                 <Select
                   value={formData.photo_type}
-                  onValueChange={(val) => // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onValueChange={(val) =>
                     setFormData({ ...formData, photo_type: val as any })
                   }
                   required
@@ -1966,9 +1989,9 @@ function SummaryTab({
   isDisabled = false,
 }: {
   diagnosis: Diagnosis;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   workOrder: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   onUpdate: (data: any) => void;
   isUpdating: boolean;
   isDisabled?: boolean;
@@ -1994,7 +2017,7 @@ function SummaryTab({
 
     // Calculate total active time: sum periods from "started" or "resumed" to "paused" or "completed"
     // Sort logs by started_at to process chronologically
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const sortedLogs = [...diagnosis.time_logs].sort((a: any, b: any) =>
       new Date(a.started_at).getTime() - new Date(b.started_at).getTime()
     );

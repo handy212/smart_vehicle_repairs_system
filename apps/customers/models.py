@@ -63,7 +63,6 @@ class Customer(models.Model):
     customer_number = models.CharField(
         max_length=20,
         unique=True,
-        db_index=True,
         help_text="Unique customer identification number"
     )
     
@@ -232,19 +231,26 @@ class Customer(models.Model):
     def save(self, *args, **kwargs):
         # Auto-generate customer number if not set
         if not self.customer_number:
-            last_customer = Customer.objects.order_by('-id').first()
-            if last_customer and last_customer.customer_number.startswith('CUST'):
-                try:
-                    # Handle both formats: CUST-00006 and CUST000001
-                    number_part = last_customer.customer_number.replace('CUST-', '').replace('CUST', '')
-                    last_number = int(number_part)
-                    self.customer_number = f"CUST-{last_number + 1:05d}"
-                except ValueError:
-                    # Fallback to ID-based numbering
-                    next_id = Customer.objects.count() + 1
-                    self.customer_number = f"CUST-{next_id:05d}"
-            else:
-                self.customer_number = "CUST-00001"
+            from django.db import transaction
+            with transaction.atomic():
+                last_customer = (
+                    Customer.objects
+                    .select_for_update()
+                    .order_by('-id')
+                    .first()
+                )
+                if last_customer and last_customer.customer_number.startswith('CUST'):
+                    try:
+                        # Handle both formats: CUST-00006 and CUST000001
+                        number_part = last_customer.customer_number.replace('CUST-', '').replace('CUST', '')
+                        last_number = int(number_part)
+                        self.customer_number = f"CUST-{last_number + 1:05d}"
+                    except ValueError:
+                        # Fallback to ID-based numbering
+                        next_id = Customer.objects.count() + 1
+                        self.customer_number = f"CUST-{next_id:05d}"
+                else:
+                    self.customer_number = "CUST-00001"
         super().save(*args, **kwargs)
     
     @property
@@ -481,7 +487,7 @@ class CustomerDocument(models.Model):
     def size(self):
         try:
             return self.file.size
-        except:
+        except (FileNotFoundError, OSError, Exception):
             return 0
             
     @property

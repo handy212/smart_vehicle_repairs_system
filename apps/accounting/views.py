@@ -131,7 +131,15 @@ class BankStatementViewSet(viewsets.ModelViewSet):
     """ViewSet for bank statements"""
     queryset = BankStatement.objects.all()
     serializer_class = BankStatementSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_banking'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_banking'))
+        else:
+            permission_classes.append(HasPermission('manage_banking'))
+        return [permission() for permission in permission_classes]
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -221,7 +229,15 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
     """ViewSet for bank statement lines"""
     queryset = BankStatementLine.objects.all()
     serializer_class = BankStatementLineSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_banking'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_banking'))
+        else:
+            permission_classes.append(HasPermission('manage_banking'))
+        return [permission() for permission in permission_classes]
     filterset_fields = ['bank_statement', 'matched']
     
     @action(detail=True, methods=['post'])
@@ -264,7 +280,15 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
 
 class UnreconciledTransactionsView(ListAPIView):
     """Fetch transactions for a bank account that are not yet matched"""
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_banking'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_banking'))
+        else:
+            permission_classes.append(HasPermission('manage_banking'))
+        return [permission() for permission in permission_classes]
     serializer_class = TransactionSerializer # This now includes date
     
     def get_queryset(self):
@@ -292,7 +316,15 @@ class FundTransferViewSet(viewsets.ModelViewSet):
     """ViewSet for fund transfers"""
     queryset = FundTransfer.objects.all()
     serializer_class = FundTransferSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_banking'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_banking'))
+        else:
+            permission_classes.append(HasPermission('manage_banking'))
+        return [permission() for permission in permission_classes]
     filterset_fields = ['status', 'from_account', 'to_account']
     
     def perform_create(self, serializer):
@@ -330,7 +362,15 @@ class FundTransferViewSet(viewsets.ModelViewSet):
 
 class JobProfitabilityView(APIView):
     """Job profitability analysis"""
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_financial_reports'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_financial_reports'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     
     def get(self, request):
         work_order_id = request.query_params.get('work_order_id')
@@ -361,7 +401,15 @@ class BudgetViewSet(viewsets.ModelViewSet):
     """ViewSet for budgets"""
     queryset = Budget.objects.all()
     serializer_class = BudgetSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_budgets'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_budgets'))
+        else:
+            permission_classes.append(HasPermission('manage_budgets'))
+        return [permission() for permission in permission_classes]
     filterset_fields = ['fiscal_year', 'status', 'branch']
     
     def perform_create(self, serializer):
@@ -398,13 +446,29 @@ class BudgetLineViewSet(viewsets.ModelViewSet):
     """ViewSet for budget lines"""
     queryset = BudgetLine.objects.all()
     serializer_class = BudgetLineSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_budgets'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_budgets'))
+        else:
+            permission_classes.append(HasPermission('manage_budgets'))
+        return [permission() for permission in permission_classes]
     filterset_fields = ['budget', 'account', 'period']
 
 
 class BudgetVsActualView(APIView):
     """Budget vs Actual variance analysis"""
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_budgets'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_budgets'))
+        else:
+            permission_classes.append(HasPermission('manage_budgets'))
+        return [permission() for permission in permission_classes]
     
     def get(self, request):
         budget_id = request.query_params.get('budget_id')
@@ -422,7 +486,15 @@ class BudgetVsActualView(APIView):
 
 
 class AccountingControlView(RetrieveUpdateAPIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     serializer_class = AccountingControlSerializer
     
     def get_object(self):
@@ -432,7 +504,15 @@ class AccountingControlView(RetrieveUpdateAPIView):
         serializer.save(updated_by=self.request.user)
 
 class AuditLogView(ListAPIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     serializer_class = AuditLogSerializer
     queryset = AuditLog.objects.all()
     filterset_fields = ['action', 'resource_type', 'user']
@@ -440,7 +520,15 @@ class AuditLogView(ListAPIView):
 
 
 class JournalEntryListView(ListAPIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     serializer_class = JournalEntrySerializer
     queryset = JournalEntry.objects.all().order_by('-date', '-created_at')
     # pagination_class = StandardResultsSetPagination # Assuming default pagination is set in settings
@@ -462,19 +550,43 @@ class JournalEntryListView(ListAPIView):
         return qs
 
 class JournalEntryDetailView(RetrieveUpdateAPIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     serializer_class = JournalEntrySerializer
     queryset = JournalEntry.objects.all()
 
 
 class JournalEntryCreateView(CreateAPIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     serializer_class = JournalEntryCreateSerializer
     queryset = JournalEntry.objects.all()
 
 
 class AccountListView(ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     queryset = Account.objects.all().order_by('code')
     pagination_class = None
     
@@ -495,7 +607,15 @@ class AccountListView(ListCreateAPIView):
 
 class AccountDetailView(RetrieveUpdateAPIView):
     """View for retrieving, updating, and deleting individual accounts"""
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     queryset = Account.objects.all()
     
     def get_serializer_class(self):
@@ -514,7 +634,15 @@ class AccountDetailView(RetrieveUpdateAPIView):
 
 class ManagementDashboardView(APIView):
     """Executive Management Dashboard Metrics"""
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_financial_reports'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_financial_reports'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
@@ -558,7 +686,15 @@ from .accruals import AccrualService
 class AccrualViewSet(viewsets.ModelViewSet):
     queryset = Accrual.objects.all().select_related('account', 'created_by')
     serializer_class = AccrualSerializer
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_accounting'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_accounting'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     filterset_fields = ['status', 'accrual_type']
     
     @action(detail=False, methods=['get'])
@@ -607,7 +743,7 @@ class AccrualViewSet(viewsets.ModelViewSet):
         Reverse an existing accrual.
         """
         try:
-            accrual = AccrualService.reverse_accrual(pk, request.user)
+            accrual = AccrualService.reverse_accrual(request.user, self.get_object())
             if not accrual:
                 return Response({'error': 'Accrual already reversed or not found'}, status=status.HTTP_400_BAD_REQUEST)
             serializer = self.get_serializer(accrual)
@@ -647,7 +783,15 @@ class AccrualViewSet(viewsets.ModelViewSet):
 
 
 class AnalyticsDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
+            permission_classes.append(HasPermission('view_financial_reports'))
+        elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
+            permission_classes.append(HasPermission('view_financial_reports'))
+        else:
+            permission_classes.append(HasPermission('manage_accounting'))
+        return [permission() for permission in permission_classes]
     
     def get(self, request):
         start_date_str = request.query_params.get('start_date')

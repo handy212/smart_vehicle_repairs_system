@@ -102,17 +102,17 @@ export const customersApi = {
     return response.data;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-vehicles: async (id: number): Promise<any[]> => {
-  const response = await apiClient.get(`/customers/customers/${id}/vehicles/`);
-  return response.data;
-},
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-history: async (id: number): Promise<any> => {
-  const response = await apiClient.get(`/customers/customers/${id}/history/`);
-  return response.data;
-},
+  vehicles: async (id: number): Promise<any[]> => {
+    const response = await apiClient.get(`/customers/customers/${id}/vehicles/`);
+    return response.data;
+  },
+
+
+  history: async (id: number): Promise<any> => {
+    const response = await apiClient.get(`/customers/customers/${id}/history/`);
+    return response.data;
+  },
 
   stats: async (id: number): Promise<{
     total_spent: number;
@@ -125,161 +125,161 @@ history: async (id: number): Promise<any> => {
     return response.data;
   },
 
-    notes: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  list: async (id: number): Promise<any[]> => {
-    const response = await apiClient.get(`/customers/customer-notes/`, {
-      params: { customer: id }
-    });
-    return response.data.results || response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create: async (customerId: number, data: { customer?: number; content: string; note_type: string; is_important?: boolean; }): Promise<any> => {
-    const response = await apiClient.post(`/customers/customer-notes/`, {
-      ...data,
-      customer: customerId
-    });
-    return response.data;
-  },
+  notes: {
+
+    list: async (id: number): Promise<any[]> => {
+      const response = await apiClient.get(`/customers/customer-notes/`, {
+        params: { customer: id }
+      });
+      return response.data.results || response.data;
+    },
+
+    create: async (customerId: number, data: { customer?: number; content: string; note_type: string; is_important?: boolean; }): Promise<any> => {
+      const response = await apiClient.post(`/customers/customer-notes/`, {
+        ...data,
+        customer: customerId
+      });
+      return response.data;
+    },
     update: async (customerId: number, noteId: number, data: {
       content: string;
       note_type: string;
       is_important?: boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     }): Promise<any> => {
-  const response = await apiClient.patch(`/customers/customer-notes/${noteId}/`, data);
-  return response.data;
-},
-delete: async (customerId: number, noteId: number): Promise<void> => {
-  await apiClient.delete(`/customers/customer-notes/${noteId}/`);
-},
+      const response = await apiClient.patch(`/customers/customer-notes/${noteId}/`, data);
+      return response.data;
+    },
+    delete: async (customerId: number, noteId: number): Promise<void> => {
+      await apiClient.delete(`/customers/customer-notes/${noteId}/`);
+    },
   },
 
-resetPassword: async (id: number, newPassword: string, sendEmail: boolean = false): Promise<{ detail: string; email_sent: boolean }> => {
-  const response = await apiClient.post(`/customers/customers/${id}/reset_password/`, {
-    new_password: newPassword,
-    send_email: sendEmail,
-  });
-  return response.data;
-},
+  resetPassword: async (id: number, newPassword: string, sendEmail: boolean = false): Promise<{ detail: string; email_sent: boolean }> => {
+    const response = await apiClient.post(`/customers/customers/${id}/reset_password/`, {
+      new_password: newPassword,
+      send_email: sendEmail,
+    });
+    return response.data;
+  },
 
   sendPasswordResetLink: async (id: number): Promise<{ detail: string }> => {
     const response = await apiClient.post(`/customers/customers/${id}/send_password_reset_link/`);
     return response.data;
   },
 
-    grantPortalAccess: async (id: number, password?: string, sendEmail: boolean = false): Promise<{ detail: string; email_sent: boolean; password?: string }> => {
-      const response = await apiClient.post(`/customers/customers/${id}/grant_portal_access/`, {
-        password,
-        send_email: sendEmail,
+  grantPortalAccess: async (id: number, password?: string, sendEmail: boolean = false): Promise<{ detail: string; email_sent: boolean; password?: string }> => {
+    const response = await apiClient.post(`/customers/customers/${id}/grant_portal_access/`, {
+      password,
+      send_email: sendEmail,
+    });
+    return response.data;
+  },
+
+  revokePortalAccess: async (id: number): Promise<{ detail: string }> => {
+    const response = await apiClient.post(`/customers/customers/${id}/revoke_portal_access/`);
+    return response.data;
+  },
+
+  checkEmail: async (email: string, customerId?: number): Promise<{
+    success: boolean;
+    exists?: boolean;
+    user_id?: number;
+    customer_id?: number;
+    customer?: Customer;
+    user?: {
+      id: number;
+      email: string;
+      first_name: string;
+      last_name: string;
+      role: string;
+    };
+    message?: string;
+    error?: string;
+  }> => {
+    const response = await apiClient.post("/customers/customers/check_email/", {
+      email: email,
+      customer_id: customerId
+    });
+    return response.data;
+  },
+  contacts: {
+
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-contacts/", {
+        params: { customer: customerId }
       });
+      return response.data.results || response.data;
+    },
+
+    create: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-contacts/", data);
       return response.data;
     },
 
-      revokePortalAccess: async (id: number): Promise<{ detail: string }> => {
-        const response = await apiClient.post(`/customers/customers/${id}/revoke_portal_access/`);
-        return response.data;
-      },
-
-        checkEmail: async (email: string, customerId?: number): Promise<{
-          success: boolean;
-          exists?: boolean;
-          user_id?: number;
-          customer_id?: number;
-          customer?: Customer;
-          user?: {
-            id: number;
-            email: string;
-            first_name: string;
-            last_name: string;
-            role: string;
-          };
-          message?: string;
-          error?: string;
-        }> => {
-          const response = await apiClient.post("/customers/customers/check_email/", {
-            email: email,
-            customer_id: customerId
-          });
-          return response.data;
-        },
-          contacts: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  list: async (customerId: number): Promise<any[]> => {
-    const response = await apiClient.get("/customers/customer-contacts/", {
-      params: { customer: customerId }
-    });
-    return response.data.results || response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create: async (data: any): Promise<any> => {
-    const response = await apiClient.post("/customers/customer-contacts/", data);
-    return response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  update: async (id: number, data: any): Promise<any> => {
-    const response = await apiClient.put(`/customers/customer-contacts/${id}/`, data);
-    return response.data;
-  },
+    update: async (id: number, data: any): Promise<any> => {
+      const response = await apiClient.put(`/customers/customer-contacts/${id}/`, data);
+      return response.data;
+    },
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/customers/customer-contacts/${id}/`);
     },
   },
 
-reminders: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  list: async (customerId: number): Promise<any[]> => {
-    const response = await apiClient.get("/customers/customer-reminders/", {
-      params: { customer: customerId }
-    });
-    return response.data.results || response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create: async (data: any): Promise<any> => {
-    const response = await apiClient.post("/customers/customer-reminders/", data);
-    return response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  update: async (id: number, data: any): Promise<any> => {
-    const response = await apiClient.put(`/customers/customer-reminders/${id}/`, data);
-    return response.data;
-  },
+  reminders: {
+
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-reminders/", {
+        params: { customer: customerId }
+      });
+      return response.data.results || response.data;
+    },
+
+    create: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-reminders/", data);
+      return response.data;
+    },
+
+    update: async (id: number, data: any): Promise<any> => {
+      const response = await apiClient.put(`/customers/customer-reminders/${id}/`, data);
+      return response.data;
+    },
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/customers/customer-reminders/${id}/`);
     },
   },
-documents: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  list: async (customerId: number): Promise<any[]> => {
-    const response = await apiClient.get("/customers/customer-documents/", {
-      params: { customer: customerId }
-    });
-    return response.data.results || response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create: async (data: FormData): Promise<any> => {
-    const response = await apiClient.post("/customers/customer-documents/", data, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
-    return response.data;
-  },
+  documents: {
+
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-documents/", {
+        params: { customer: customerId }
+      });
+      return response.data.results || response.data;
+    },
+
+    create: async (data: FormData): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-documents/", data, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      return response.data;
+    },
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/customers/customer-documents/${id}/`);
     },
   },
-contracts: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  list: async (customerId: number): Promise<any[]> => {
-    const response = await apiClient.get("/customers/customer-contracts/", {
-      params: { customer: customerId }
-    });
-    return response.data.results || response.data;
-  },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create: async (data: any): Promise<any> => {
-    const response = await apiClient.post("/customers/customer-contracts/", data);
-    return response.data;
-  },
+  contracts: {
+
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-contracts/", {
+        params: { customer: customerId }
+      });
+      return response.data.results || response.data;
+    },
+
+    create: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-contracts/", data);
+      return response.data;
+    },
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/customers/customer-contracts/${id}/`);
     },

@@ -157,7 +157,6 @@ export default function DashboardPage() {
   // Memoize chart data preparation
   const revenueChartData = useMemo(
     () =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       revenueData?.revenue_by_period?.slice(-7).map((item: { period: string | number | Date; revenue: any; }) => ({
         period: item.period,
         date: format(new Date(item.period), "MMM d"),

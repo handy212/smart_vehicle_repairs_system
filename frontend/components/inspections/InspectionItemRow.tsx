@@ -24,14 +24,14 @@ import { useRef, useState } from "react";
 interface InspectionItemRowProps {
     item: InspectionItem;
     result: Partial<InspectionResult>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-onUpdate: (field: string, value: any) => void;
-onAddPhoto ?: (itemId: number, file: File, resultId?: number) => void;
-onDeletePhoto ?: (photoId: number) => void;
-showNotes: boolean;
-onToggleNotes: () => void;
-isCriticalRemaining: boolean;
-isLast ?: boolean;
+
+    onUpdate: (field: string, value: any) => void;
+    onAddPhoto?: (itemId: number, file: File, resultId?: number) => void;
+    onDeletePhoto?: (photoId: number) => void;
+    showNotes: boolean;
+    onToggleNotes: () => void;
+    isCriticalRemaining: boolean;
+    isLast?: boolean;
 }
 
 export function InspectionItemRow({

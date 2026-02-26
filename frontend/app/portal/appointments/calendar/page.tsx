@@ -58,14 +58,14 @@ export default function AppointmentCalendarPage() {
 
   // Transform calendar data to FullCalendar events
   const events = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const eventList: any[] = [];
 
     if (Array.isArray(calendarData)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       calendarData.forEach((day: any) => {
         if (day.appointments && Array.isArray(day.appointments)) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           day.appointments.forEach((apt: any) => {
             const appointmentDate = new Date(apt.appointment_date);
             const timeParts = apt.appointment_time ? apt.appointment_time.split(":") : ["09", "00"];
@@ -103,14 +103,14 @@ export default function AppointmentCalendarPage() {
     return eventList;
   }, [calendarData]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleDateClick = (arg: any) => {
     // Navigate to book appointment page with pre-filled date
     const clickedDate = format(arg.date, "yyyy-MM-dd");
     window.location.href = `/portal/book?date=${clickedDate}`;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleEventClick = (arg: any) => {
     // Navigate to appointment detail
     if (arg.event.url) {
@@ -119,7 +119,7 @@ export default function AppointmentCalendarPage() {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const handleDatesSet = (arg: any) => {
     setCurrentDate(arg.start);
   };

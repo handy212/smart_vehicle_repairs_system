@@ -30,6 +30,26 @@ class InspectionPhotoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = InspectionPhotoSerializer
     
+    def get_queryset(self):
+        """Filter photos by active branch from session"""
+        queryset = super().get_queryset()
+        
+        # If user is a customer, only show photos for their vehicles
+        user = self.request.user
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            queryset = queryset.filter(result__inspection__vehicle__owner=user.customer_profile)
+            return queryset
+        
+        # Check if user wants to see all branches
+        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+        return filter_queryset_for_user_branches(
+            queryset, 
+            self.request.user, 
+            request=self.request, 
+            use_active_branch=not show_all,
+            branch_lookup='result__inspection__branch'
+        )
+    
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), HasPermission('edit_inspections')]
@@ -737,6 +757,32 @@ Thank you for choosing our service.'''
             'new_result': new_result,
             'inspection': VehicleInspectionDetailSerializer(inspection).data
         })
+
+    @action(detail=True, methods=['post'])
+    def generate_summary(self, request, pk=None):
+        """AI-powered auto-generation of inspection notes and recommendations"""
+        inspection = self.get_object()
+        
+        # Guard clause
+        if inspection.status not in ['completed', 'approved', 'rejected', 'in_progress']:
+            return Response(
+                {"error": "Perform the inspection before generating an AI summary"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        from apps.core.services.ai_service import AIService
+        ai_data = AIService.analyze_inspection_results(inspection)
+        
+        inspection.notes = ai_data["notes"]
+        inspection.recommendations = ai_data["recommendations"]
+        inspection.save(update_fields=['notes', 'recommendations'])
+        
+        return Response({
+            "message": "AI summary generated successfully",
+            "notes": inspection.notes,
+            "recommendations": inspection.recommendations,
+        })
+    
     
     @action(detail=False, methods=['get'])
     def by_vehicle(self, request):

@@ -11,65 +11,65 @@ interface VehicleRepairsDB extends DBSchema {
     key: number;
     value: {
       id: number;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-data: any;
-synced: 0 | 1;
-lastModified: number;
-version: number;
+
+      data: any;
+      synced: 0 | 1;
+      lastModified: number;
+      version: number;
     };
-indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
+    indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
   };
-inspections: {
-  key: number;
-  value: {
-    id: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: any;
-    synced: 0 | 1;
-    lastModified: number;
-    version: number;
+  inspections: {
+    key: number;
+    value: {
+      id: number;
+
+      data: any;
+      synced: 0 | 1;
+      lastModified: number;
+      version: number;
+    };
+    indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
   };
-  indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
-};
-timeLogs: {
-  key: number;
-  value: {
-    id: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: any;
-    synced: 0 | 1;
-    lastModified: number;
-    version: number;
+  timeLogs: {
+    key: number;
+    value: {
+      id: number;
+
+      data: any;
+      synced: 0 | 1;
+      lastModified: number;
+      version: number;
+    };
+    indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
   };
-  indexes: { 'by-synced': 0 | 1; 'by-lastModified': number };
-};
-syncQueue: {
-  key: number;
-  value: {
-    id: number;
-    action: 'create' | 'update' | 'delete';
-    endpoint: string;
-    method: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload: any;
-    timestamp: number;
-    retries: number;
-    lastError ?: string;
+  syncQueue: {
+    key: number;
+    value: {
+      id: number;
+      action: 'create' | 'update' | 'delete';
+      endpoint: string;
+      method: string;
+
+      payload: any;
+      timestamp: number;
+      retries: number;
+      lastError?: string;
+    };
+    indexes: { 'by-timestamp': number; 'by-retries': number };
   };
-  indexes: { 'by-timestamp': number; 'by-retries': number };
-};
-photos: {
-  key: string;
-  value: {
-    id: string;
-    blob: Blob;
-    workOrderId ?: number;
-    inspectionId ?: number;
-    synced: 0 | 1;
-    timestamp: number;
+  photos: {
+    key: string;
+    value: {
+      id: string;
+      blob: Blob;
+      workOrderId?: number;
+      inspectionId?: number;
+      synced: 0 | 1;
+      timestamp: number;
+    };
+    indexes: { 'by-synced': 0 | 1; 'by-workOrderId': number; 'by-inspectionId': number };
   };
-  indexes: { 'by-synced': 0 | 1; 'by-workOrderId': number; 'by-inspectionId': number };
-};
 }
 
 const DB_NAME = 'vehicle-repairs-db';
@@ -78,13 +78,13 @@ const DB_VERSION = 3;
 let dbInstance: IDBPDatabase<VehicleRepairsDB> | null = null;
 
 // Helper to safely create an index
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 function safeCreateIndex(store: any, name: string, keyPath: string | string[]) {
   try {
     if (!store.indexNames.contains(name)) {
       store.createIndex(name, keyPath);
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   } catch (error: any) {
     // Catch ALL errors to ensure DB opens even if index creation fails
     console.warn(`[OfflineDB] Failed to create index '${name}' on '${store.name}':`, error);
@@ -198,51 +198,51 @@ async function safeGetAll<T extends StoreName>(
  * Work Orders operations
  */
 export const workOrdersDB = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getAll(): Promise < any[] > {
-  const items = await safeGetAll('workOrders');
-  return items.map((item) => item.data);
-},
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async get(id: number): Promise < any | null > {
-  const db = await getDB();
-  const item = await db.get('workOrders', id);
-  return item?.data || null;
-},
+  async getAll(): Promise<any[]> {
+    const items = await safeGetAll('workOrders');
+    return items.map((item) => item.data);
+  },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async set(id: number, data: any, synced: boolean = false): Promise < void> {
-  const db = await getDB();
-  await db.put('workOrders', {
-    id,
-    data,
-    synced: synced ? 1 : 0,
-    lastModified: Date.now(),
-    version: 1,
-  });
-},
 
-  async delete (id: number): Promise < void> {
+  async get(id: number): Promise<any | null> {
+    const db = await getDB();
+    const item = await db.get('workOrders', id);
+    return item?.data || null;
+  },
+
+
+  async set(id: number, data: any, synced: boolean = false): Promise<void> {
+    const db = await getDB();
+    await db.put('workOrders', {
+      id,
+      data,
+      synced: synced ? 1 : 0,
+      lastModified: Date.now(),
+      version: 1,
+    });
+  },
+
+  async delete(id: number): Promise<void> {
     const db = await getDB();
     await db.delete('workOrders', id);
   },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getUnsynced(): Promise < any[] > {
-  try {
-    const items = await safeGetAll('workOrders');
-    return items.filter((item) => item.synced === 0).map((item) => item.data);
-  } catch(error) {
-    console.error('[OfflineDB] getUnsynced workOrders failed:', error);
-    return [];
-  }
-},
 
-  async markSynced(id: number): Promise < void> {
+  async getUnsynced(): Promise<any[]> {
+    try {
+      const items = await safeGetAll('workOrders');
+      return items.filter((item) => item.synced === 0).map((item) => item.data);
+    } catch (error) {
+      console.error('[OfflineDB] getUnsynced workOrders failed:', error);
+      return [];
+    }
+  },
+
+  async markSynced(id: number): Promise<void> {
     const db = await getDB();
     const item = await db.get('workOrders', id);
-    if(item) {
+    if (item) {
       await db.put('workOrders', { ...item, synced: 1 });
     }
   },
@@ -252,51 +252,51 @@ export const workOrdersDB = {
  * Inspections operations
  */
 export const inspectionsDB = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getAll(): Promise < any[] > {
-  const items = await safeGetAll('inspections');
-  return items.map((item) => item.data);
-},
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async get(id: number): Promise < any | null > {
-  const db = await getDB();
-  const item = await db.get('inspections', id);
-  return item?.data || null;
-},
+  async getAll(): Promise<any[]> {
+    const items = await safeGetAll('inspections');
+    return items.map((item) => item.data);
+  },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async set(id: number, data: any, synced: boolean = false): Promise < void> {
-  const db = await getDB();
-  await db.put('inspections', {
-    id,
-    data,
-    synced: synced ? 1 : 0,
-    lastModified: Date.now(),
-    version: 1,
-  });
-},
 
-  async delete (id: number): Promise < void> {
+  async get(id: number): Promise<any | null> {
+    const db = await getDB();
+    const item = await db.get('inspections', id);
+    return item?.data || null;
+  },
+
+
+  async set(id: number, data: any, synced: boolean = false): Promise<void> {
+    const db = await getDB();
+    await db.put('inspections', {
+      id,
+      data,
+      synced: synced ? 1 : 0,
+      lastModified: Date.now(),
+      version: 1,
+    });
+  },
+
+  async delete(id: number): Promise<void> {
     const db = await getDB();
     await db.delete('inspections', id);
   },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getUnsynced(): Promise < any[] > {
-  try {
-    const items = await safeGetAll('inspections');
-    return items.filter((item) => item.synced === 0).map((item) => item.data);
-  } catch(error) {
-    console.error('[OfflineDB] getUnsynced inspections failed:', error);
-    return [];
-  }
-},
 
-  async markSynced(id: number): Promise < void> {
+  async getUnsynced(): Promise<any[]> {
+    try {
+      const items = await safeGetAll('inspections');
+      return items.filter((item) => item.synced === 0).map((item) => item.data);
+    } catch (error) {
+      console.error('[OfflineDB] getUnsynced inspections failed:', error);
+      return [];
+    }
+  },
+
+  async markSynced(id: number): Promise<void> {
     const db = await getDB();
     const item = await db.get('inspections', id);
-    if(item) {
+    if (item) {
       await db.put('inspections', { ...item, synced: 1 });
     }
   },
@@ -306,51 +306,51 @@ export const inspectionsDB = {
  * Time Logs operations
  */
 export const timeLogsDB = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getAll(): Promise < any[] > {
-  const items = await safeGetAll('timeLogs');
-  return items.map((item) => item.data);
-},
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async get(id: number): Promise < any | null > {
-  const db = await getDB();
-  const item = await db.get('timeLogs', id);
-  return item?.data || null;
-},
+  async getAll(): Promise<any[]> {
+    const items = await safeGetAll('timeLogs');
+    return items.map((item) => item.data);
+  },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async set(id: number, data: any, synced: boolean = false): Promise < void> {
-  const db = await getDB();
-  await db.put('timeLogs', {
-    id,
-    data,
-    synced: synced ? 1 : 0,
-    lastModified: Date.now(),
-    version: 1,
-  });
-},
 
-  async delete (id: number): Promise < void> {
+  async get(id: number): Promise<any | null> {
+    const db = await getDB();
+    const item = await db.get('timeLogs', id);
+    return item?.data || null;
+  },
+
+
+  async set(id: number, data: any, synced: boolean = false): Promise<void> {
+    const db = await getDB();
+    await db.put('timeLogs', {
+      id,
+      data,
+      synced: synced ? 1 : 0,
+      lastModified: Date.now(),
+      version: 1,
+    });
+  },
+
+  async delete(id: number): Promise<void> {
     const db = await getDB();
     await db.delete('timeLogs', id);
   },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getUnsynced(): Promise < any[] > {
-  try {
-    const items = await safeGetAll('timeLogs');
-    return items.filter((item) => item.synced === 0).map((item) => item.data);
-  } catch(error) {
-    console.error('[OfflineDB] getUnsynced timeLogs failed:', error);
-    return [];
-  }
-},
 
-  async markSynced(id: number): Promise < void> {
+  async getUnsynced(): Promise<any[]> {
+    try {
+      const items = await safeGetAll('timeLogs');
+      return items.filter((item) => item.synced === 0).map((item) => item.data);
+    } catch (error) {
+      console.error('[OfflineDB] getUnsynced timeLogs failed:', error);
+      return [];
+    }
+  },
+
+  async markSynced(id: number): Promise<void> {
     const db = await getDB();
     const item = await db.get('timeLogs', id);
-    if(item) {
+    if (item) {
       await db.put('timeLogs', { ...item, synced: 1 });
     }
   },
@@ -364,7 +364,7 @@ export const syncQueueDB = {
     action: 'create' | 'update' | 'delete',
     endpoint: string,
     method: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     payload: any
   ): Promise<number> {
     const db = await getDB();

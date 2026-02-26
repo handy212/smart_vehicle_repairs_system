@@ -123,7 +123,6 @@ class Appointment(models.Model):
     appointment_number = models.CharField(
         max_length=20,
         unique=True,
-        db_index=True,
         help_text="Unique appointment number"
     )
     
@@ -302,7 +301,6 @@ class Appointment(models.Model):
         verbose_name = 'Appointment'
         verbose_name_plural = 'Appointments'
         indexes = [
-            models.Index(fields=['appointment_number']),
             models.Index(fields=['appointment_date', 'appointment_time']),
             models.Index(fields=['status', 'appointment_date']),
             models.Index(fields=['customer', 'appointment_date']),
@@ -322,15 +320,23 @@ class Appointment(models.Model):
     def save(self, *args, **kwargs):
         # Auto-generate appointment number if not set
         if not self.appointment_number:
-            last_appointment = Appointment.objects.order_by('-id').first()
-            if last_appointment and last_appointment.appointment_number.startswith('APT'):
-                try:
-                    last_number = int(last_appointment.appointment_number.replace('APT', ''))
-                    self.appointment_number = f"APT{last_number + 1:06d}"
-                except ValueError:
-                    self.appointment_number = f"APT{self.id or 1:06d}"
-            else:
-                self.appointment_number = "APT000001"
+            from django.db import transaction
+            with transaction.atomic():
+                last_appointment = (
+                    Appointment.objects
+                    .select_for_update()
+                    .order_by('-id')
+                    .first()
+                )
+                if last_appointment and last_appointment.appointment_number.startswith('APT'):
+                    try:
+                        last_number = int(last_appointment.appointment_number.replace('APT', ''))
+                        self.appointment_number = f"APT{last_number + 1:06d}"
+                    except ValueError:
+                        next_id = Appointment.objects.count() + 1
+                        self.appointment_number = f"APT{next_id:06d}"
+                else:
+                    self.appointment_number = "APT000001"
         super().save(*args, **kwargs)
     
     @property

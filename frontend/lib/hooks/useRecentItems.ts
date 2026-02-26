@@ -10,8 +10,8 @@ export interface RecentItem {
     type: RecentItemType;
     href: string;
     timestamp: number;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-metadata ?: Record<string, any>;
+
+    metadata?: Record<string, any>;
 }
 
 const MAX_RECENT_ITEMS = 10;
