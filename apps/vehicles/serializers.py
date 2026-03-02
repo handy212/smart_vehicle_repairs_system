@@ -471,7 +471,7 @@ class ServiceTypeListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ServiceType
-        fields = ['id', 'name', 'description', 'default_interval_months', 'default_interval_miles', 'is_predefined', 'has_bundle']
+        fields = ['id', 'name', 'description', 'default_interval_months', 'default_interval_miles', 'is_predefined', 'is_active', 'has_bundle']
 
     def get_has_bundle(self, obj):
         return hasattr(obj, 'service_bundle')

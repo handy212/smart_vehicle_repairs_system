@@ -267,6 +267,23 @@ class WorkOrderStateTransitionMixin:
         work_order.quality_check_passed = passed
         work_order.quality_check_signature = request.data.get('signature')
         
+        # Handle odometer_out if provided
+        odometer_out = request.data.get('odometer_out')
+        if odometer_out:
+            try:
+                work_order.odometer_out = int(odometer_out)
+                # Update vehicle mileage
+                if work_order.vehicle:
+                    work_order.vehicle.update_mileage(
+                        mileage=work_order.odometer_out,
+                        user=request.user,
+                        notes=f"Recorded at Quality Check for Work Order {work_order.work_order_number}"
+                    )
+                logger.info(f"Set odometer_out={odometer_out} for WO {work_order.work_order_number}")
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid odometer_out value provided: {odometer_out}")
+
+        
         logger.info(f"Quality check performed for WO {work_order.work_order_number} by {request.user.username}: {'PASSED' if passed else 'FAILED'}")
         
         # Determine next status

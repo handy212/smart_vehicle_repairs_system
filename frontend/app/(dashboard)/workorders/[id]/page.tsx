@@ -303,34 +303,22 @@ export default function WorkOrderDetailPage() {
     queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
   };
 
-  const handlePrintRecommendations = async (format: "html" | "pdf" = "pdf") => {
+  const handlePrintRecommendations = async () => {
     try {
-      if (format === "pdf") {
-        // Download PDF
-        const blob = await workordersApi.downloadRecommendationsPDF(workOrderId);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `recommendations_${workOrder.work_order_number}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        toast({
-          title: "Success",
-          description: "Recommendations PDF downloaded successfully",
-        });
-      } else {
-        // Open HTML print page on Django backend
-        // Use the API URL and construct the Django frontend URL
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-        const baseUrl = apiUrl.replace("/api", "");
-        const token = localStorage.getItem("access_token");
-        // Pass token as query param for authentication
-        const printUrl = `${baseUrl}/workorders/${workOrderId}/print-recommendations/${token ? `?token=${token}` : ''}`;
-        window.open(printUrl, "_blank");
-      }
-
+      // Download PDF
+      const blob = await workordersApi.downloadRecommendationsPDF(workOrderId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `recommendations_${workOrder.work_order_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({
+        title: "Success",
+        description: "Recommendations PDF downloaded successfully",
+      });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -435,21 +423,11 @@ export default function WorkOrderDetailPage() {
                           className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
                           onClick={() => {
                             setShowPrintMenu(false);
-                            handlePrintRecommendations("pdf");
+                            handlePrintRecommendations();
                           }}
                         >
                           <AlertCircle className="w-4 h-4 inline mr-2" />
                           Print Recommendations (PDF)
-                        </div>
-                        <div
-                          className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
-                          onClick={() => {
-                            setShowPrintMenu(false);
-                            handlePrintRecommendations("html");
-                          }}
-                        >
-                          <AlertCircle className="w-4 h-4 inline mr-2" />
-                          Print Recommendations (HTML)
                         </div>
                       </>
                     )}
@@ -600,7 +578,7 @@ function UnapprovedRecommendationsDialog({
   workOrderId: number;
 
   workOrder: any;
-  onPrintRecommendations: (format: "html" | "pdf") => void;
+  onPrintRecommendations: () => void;
 }) {
   const { formatCurrency } = useCurrency();
 
@@ -682,25 +660,13 @@ function UnapprovedRecommendationsDialog({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  onPrintRecommendations("pdf");
+                  onPrintRecommendations();
                   onOpenChange(false);
                 }}
                 className="flex-1"
               >
                 <Printer className="w-3.5 h-3.5 mr-1.5" />
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onPrintRecommendations("html");
-                  onOpenChange(false);
-                }}
-                className="flex-1"
-              >
-                <Printer className="w-3.5 h-3.5 mr-1.5" />
-                HTML
+                Print Recommendations (PDF)
               </Button>
             </div>
           </DialogFooter>

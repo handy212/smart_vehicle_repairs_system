@@ -56,12 +56,9 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
         queryFn: () => vehiclesApi.getServiceTypes(),
     });
 
-    // Strictly filter service types to ONLY those specified by the user.
-    const BUNDLE_SERVICE_NAMES = ["minor service", "medium service", "major service"];
-
     const serviceTypes = (serviceTypesResponse?.results || []).filter((type: any) => {
-        // Must be one of the three specific names (case-insensitive)
-        return BUNDLE_SERVICE_NAMES.includes(type.name.toLowerCase());
+        // Show all active service types
+        return type.is_active !== false;
     });
 
     const { data: partsResponse } = useQuery({

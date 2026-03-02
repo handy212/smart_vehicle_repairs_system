@@ -346,9 +346,6 @@ export default function VehiclesPage() {
       <div className="space-y-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Vehicles</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your fleet and customer vehicles.
-          </p>
         </div>
 
         <StatsGrid />

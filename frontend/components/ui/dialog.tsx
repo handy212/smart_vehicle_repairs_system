@@ -47,7 +47,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       <div
         ref={ref}
         className={cn(
-          "relative bg-card rounded-lg shadow-lg max-w-lg w-full mx-4 border border-border",
+          "relative bg-card rounded-lg shadow-lg max-w-lg w-full mx-4 border border-border max-h-[90vh] overflow-hidden flex flex-col",
           className
         )}
         {...props}

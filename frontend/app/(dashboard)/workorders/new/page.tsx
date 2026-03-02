@@ -970,7 +970,7 @@ export default function NewWorkOrderPage() {
                           <SelectValue placeholder="Select service type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {serviceTypesData?.results?.filter(type => type.has_bundle).map((type) => (
+                          {serviceTypesData?.results?.filter(type => type.is_active !== false).map((type) => (
                             <SelectItem key={type.id} value={type.id.toString()}>
                               {type.name}
                             </SelectItem>

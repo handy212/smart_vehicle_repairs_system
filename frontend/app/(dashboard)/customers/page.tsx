@@ -576,7 +576,6 @@ export default function CustomersPage() {
       <div className="space-y-4">
         <div>
           <h1 className="text-xl font-bold text-foreground tracking-tight">Customers</h1>
-          <p className="text-sm text-muted-foreground">Manage your customer database</p>
         </div>
 
         {/* Stats Grid - Small Cards */}

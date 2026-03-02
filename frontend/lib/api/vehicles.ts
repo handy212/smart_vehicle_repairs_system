@@ -216,6 +216,7 @@ export const vehiclesApi = {
       description?: string;
       interval_months?: number;
       interval_miles?: number;
+      is_active?: boolean;
       has_bundle?: boolean;
     }>;
   }> => {

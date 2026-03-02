@@ -278,6 +278,9 @@ export const workordersApi = {
     data: {
       passed: boolean;
       notes?: string;
+      checklist?: any;
+      signature?: string | null;
+      odometer_out?: number;
     }
   ): Promise<WorkOrder> => {
     const response = await apiClient.post(`/workorders/work-orders/${id}/quality_check/`, data);
