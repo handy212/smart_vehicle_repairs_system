@@ -17,16 +17,10 @@ export interface SearchResponse {
   query: string;
 }
 
-// Create a separate axios instance for search since it's not under /api/
-// Extract base URL without /api suffix
-const getBaseURL = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-  // Remove /api or /api/ from the end
-  return apiUrl.replace(/\/api\/?$/, '') || "http://localhost:8000";
-};
-
+// Use the standard API base URL so requests route through /api/ prefix
+// which the production proxy correctly routes to Django
 const searchClient = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -61,8 +55,8 @@ export const searchApi = {
     const trimmedQuery = query.trim();
 
     try {
-      // The endpoint is at /mobile/api/search/ (not under /api/)
-      const response = await searchClient.get("/mobile/api/search/", {
+      // The endpoint is at /api/search/ (using standard API routing)
+      const response = await searchClient.get("/search/", {
         params: {
           q: trimmedQuery,
           type: type || "all",

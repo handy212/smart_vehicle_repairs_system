@@ -13,6 +13,7 @@ from .views import (
     api_root, HomePageView, test_fcm_view, firebase_messaging_sw, 
     dashboard_view, logout_view, search_view, staff_register_view, profile_view
 )
+from apps.mobile_views import mobile_search_api
 # Import customer auth views
 from apps.customers import auth_views as customer_auth_views
 
@@ -36,6 +37,9 @@ urlpatterns = [
     
     # API Root
     path('api/', api_root, name='api-root'),
+    
+    # Global Search API (accessible via /api/search/ for frontend proxy routing)
+    path('api/search/', mobile_search_api, name='api-search'),
     
     # Admin
     path('admin/', admin.site.urls),
