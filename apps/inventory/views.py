@@ -232,7 +232,7 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
         'category', 'is_active', 'manufacturer', 'preferred_supplier', 'is_taxable', 'is_core'
     ]
     search_fields = [
-        'part_number', 'name', 'description', 'manufacturer',
+        'part_number', 'barcode', 'name', 'description', 'manufacturer',
         'manufacturer_part_number', 'bin_location', 'compatible_makes'
     ]
     ordering_fields = [

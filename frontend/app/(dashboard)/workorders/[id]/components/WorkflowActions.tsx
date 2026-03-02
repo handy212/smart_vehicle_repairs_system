@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { diagnosisApi } from "@/lib/api/diagnosis";
+import { VehicleDamageMarker } from "@/components/inspections/VehicleDamageMarker";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,7 +35,16 @@ import {
   Eye,
   AlertTriangle,
   User,
+  Sparkles,
+  Info,
+  CheckCircle2,
+  ListChecks,
 } from "lucide-react";
+import { SignaturePad } from "@/components/inspections/SignaturePad";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 interface WorkflowActionsProps {
   workOrderId: number;
@@ -64,6 +74,7 @@ export default function WorkflowActions({
   const [showInspectionDialog, setShowInspectionDialog] = useState(false);
   const [showStartDiagnosisDialog, setShowStartDiagnosisDialog] = useState(false);
   const [showAssignServiceCoordinatorDialog, setShowAssignServiceCoordinatorDialog] = useState(false);
+  const [inspectionFieldErrors, setInspectionFieldErrors] = useState<Record<string, string>>({});
 
   // Fetch work order data if not provided
   const { data: workOrderData } = useQuery({
@@ -112,8 +123,8 @@ export default function WorkflowActions({
 
   // Create Inspection
   const createInspectionMutation = useMutation({
-
     mutationFn: async (data: any) => {
+      setInspectionFieldErrors({});
       try {
         const response = await inspectionsApi.create(data);
 
@@ -127,7 +138,12 @@ export default function WorkflowActions({
 
       } catch (error: any) {
         if (process.env.NODE_ENV === 'development') {
-          console.error("Inspection creation error:", error?.response?.data ?? error);
+          console.error("Inspection creation mutation error:", {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            stack: error.stack
+          });
         }
         throw error;
       }
@@ -204,15 +220,48 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      console.error("Inspection creation error:", error);
-      console.error("Error response:", error.response);
-      console.error("Error response data:", error.response?.data);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Inspection creation onError caught:", {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data ? JSON.parse(JSON.stringify(error.response.data)) : null
+        });
+      }
 
       let errorMessage = "Failed to create inspection";
 
       if (error.response?.data) {
         const data = error.response.data;
-        if (typeof data === 'string') {
+
+        // Handle field-level errors
+        const newFieldErrors: Record<string, string> = {};
+        let hasFieldErrors = false;
+
+        // Ensure data is an object before iterating
+        if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+          Object.keys(data).forEach((field) => {
+            if (field !== 'non_field_errors' && field !== 'detail' && field !== 'error' && field !== 'message') {
+              const fieldData = data[field];
+              let fieldError = "";
+
+              if (Array.isArray(fieldData)) {
+                // If it's an array of strings or objects, get the first one
+                const first = fieldData[0];
+                fieldError = typeof first === 'object' ? (first.message || JSON.stringify(first)) : String(first);
+              } else {
+                fieldError = typeof fieldData === 'object' ? (fieldData.message || JSON.stringify(fieldData)) : String(fieldData);
+              }
+
+              newFieldErrors[field] = fieldError;
+              hasFieldErrors = true;
+            }
+          });
+        }
+
+        if (hasFieldErrors) {
+          setInspectionFieldErrors(newFieldErrors);
+          errorMessage = "Please correct the errors in the form below.";
+        } else if (typeof data === 'string' && data.length > 0) {
           errorMessage = data;
         } else if (data.error) {
           errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
@@ -220,14 +269,10 @@ export default function WorkflowActions({
           errorMessage = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
         } else if (data.message) {
           errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
-        } else if (Array.isArray(data)) {
+        } else if (Array.isArray(data) && data.length > 0) {
           errorMessage = data.join(', ');
-        } else {
-          // Handle field-level errors
-          const fieldErrors = Object.entries(data)
-            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
-            .join('; ');
-          errorMessage = fieldErrors || JSON.stringify(data);
+        } else if (Object.keys(data).length > 0) {
+          errorMessage = JSON.stringify(data);
         }
       } else if (error.message) {
         errorMessage = error.message;
@@ -678,7 +723,22 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || error.message || "Failed to mark as invoiced";
+      let errorMessage = "Failed to mark as invoiced";
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (data.odometer_out) {
+          errorMessage = Array.isArray(data.odometer_out) ? data.odometer_out[0] : data.odometer_out;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (data.detail) {
+          errorMessage = data.detail;
+        } else {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       console.error("Mark invoiced error:", error.response?.data || error);
       toast({
         title: "Error",
@@ -1563,6 +1623,7 @@ export default function WorkflowActions({
             onSubmit={(data) => createInspectionMutation.mutate(data)}
             onCancel={() => setShowInspectionDialog(false)}
             isSubmitting={createInspectionMutation.isPending}
+            fieldErrors={inspectionFieldErrors}
           />
         </DialogContent>
       </Dialog>
@@ -1888,11 +1949,26 @@ function QualityCheckForm({
     testDrivePassed: false,
     customerSatisfied: false,
   });
+  const [signature, setSignature] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Fetch work order data to verify tasks and parts
   const { data: workOrder } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(workOrderId!),
+    enabled: !!workOrderId,
+  });
+
+  // Fetch initial inspection for comparison
+  const { data: initialInspection } = useQuery({
+    queryKey: ["initial-inspection", workOrderId],
+    queryFn: async () => {
+      const response = await inspectionsApi.list({
+        work_order: workOrderId,
+        ordering: 'created_at'
+      });
+      return response.results[0] || null;
+    },
     enabled: !!workOrderId,
   });
 
@@ -1939,169 +2015,337 @@ function QualityCheckForm({
       passed: finalPassed,
       notes,
       checklist: checklist,
+      signature: signature,
     });
+  };
+
+  const handleSuggestNotes = async () => {
+    if (!workOrderId) return;
+    setIsAiLoading(true);
+    try {
+      const response = await workordersApi.suggestQCNotes(workOrderId);
+      setNotes(response.notes);
+      toast({
+        title: "AI Suggestion Generated",
+        description: "Review and edit the suggested quality check notes below.",
+      });
+    } catch (error) {
+      toast({
+        title: "AI Suggestion Failed",
+        description: "Could not generate suggested notes. Please try again or write manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="px-6 pb-6">
+      <form onSubmit={handleSubmit} className="px-1 pb-6">
         <div className="space-y-6">
+          {/* Initial Vehicle State Comparison */}
+          {initialInspection && (
+            <Card className="border-border/50 bg-muted/20 shadow-none overflow-hidden">
+              <CardHeader className="py-3 px-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <Info className="w-4 h-4 text-primary" />
+                    Intake State Reference
+                  </CardTitle>
+                  <Badge variant="outline" className="text-[10px] h-5 bg-background font-mono">
+                    {new Date(initialInspection.created_at).toLocaleDateString()}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-6 pb-2">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                      Intake Mileage
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {initialInspection.odometer_reading ? initialInspection.odometer_reading.toLocaleString() : "N/A"} km
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                      Initial Condition
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {initialInspection.overall_result_display || initialInspection.overall_result || "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                {initialInspection.vehicle_damage && initialInspection.vehicle_damage.length > 0 && (
+                  <>
+                    <Separator className="bg-border/50" />
+                    <div className="space-y-3">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                        Initial Damage Markers
+                      </p>
+                      <div className="border border-border/40 rounded-lg overflow-hidden bg-background/50 ring-1 ring-border/5">
+                        <VehicleDamageMarker
+                          damage={initialInspection.vehicle_damage}
+                          onChange={() => { }}
+                          disabled={true}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground italic leading-tight">
+                        Reference the damages marked during intake to ensure no new damage occurred.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Quality Check Checklist */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold text-foreground">
-              Quality Check Checklist
-            </Label>
-            <div className="space-y-2 border rounded-lg p-4 border-border">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="allTasksCompleted"
-                  checked={checklist.allTasksCompleted}
-                  onChange={() => handleChecklistChange('allTasksCompleted')}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-muted border-border"
-                />
-                <Label htmlFor="allTasksCompleted" className="cursor-pointer text-foreground text-sm">
-                  {(workOrder as any)?.tasks && (
-                    <span className="text-muted-foreground ml-1">
-
-                      ({(workOrder as any).tasks.filter((t: any) => t.status === 'completed').length}/{(workOrder as any).tasks.length})
-                    </span>
-                  )}
-                </Label>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <div className="bg-primary/10 p-1.5 rounded-md">
+                  <ListChecks className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="text-base font-bold text-foreground">Verification Checklist</h3>
               </div>
+              {allChecksPassed ? (
+                <Badge className="bg-green-500/10 text-green-600 border-green-200/50 hover:bg-green-500/10 gap-1.5 px-2 py-0.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  All Verified
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-muted-foreground border-border/50 font-medium">
+                  {Object.values(checklist).filter((v) => v).length} / {Object.values(checklist).length} Tasks
+                </Badge>
+              )}
+            </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="allPartsInstalled"
-                  checked={checklist.allPartsInstalled}
-                  onChange={() => handleChecklistChange('allPartsInstalled')}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-muted border-border"
-                />
-                <Label htmlFor="allPartsInstalled" className="cursor-pointer text-foreground text-sm">
-                  {(workOrder as any)?.parts && (
-                    <span className="text-muted-foreground ml-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Category: Execution */}
+              <Card className="border-border/50 shadow-none bg-background/50">
+                <CardHeader className="py-3 px-4 border-b border-border/30">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="w-3.5 h-3.5 text-primary" />
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Execution</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="allTasksCompleted"
+                      checked={checklist.allTasksCompleted}
+                      onCheckedChange={() => handleChecklistChange("allTasksCompleted")}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1 leading-none cursor-pointer" onClick={() => handleChecklistChange("allTasksCompleted")}>
+                      <Label htmlFor="allTasksCompleted" className="text-sm font-semibold cursor-pointer">
+                        Performance Tasks
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        {(workOrder as any)?.tasks?.filter((t: any) => t.status === "completed" || t.status === "skipped").length || 0}/
+                        {(workOrder as any)?.tasks?.length || 0} tasks completed
+                      </p>
+                    </div>
+                  </div>
 
-                      ({(workOrder as any).parts.filter((p: any) => p.status === 'installed' || p.status === 'returned').length}/{(workOrder as any).parts.length})
-                    </span>
-                  )}
-                </Label>
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="allPartsInstalled"
+                      checked={checklist.allPartsInstalled}
+                      onCheckedChange={() => handleChecklistChange("allPartsInstalled")}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1 leading-none cursor-pointer" onClick={() => handleChecklistChange("allPartsInstalled")}>
+                      <Label htmlFor="allPartsInstalled" className="text-sm font-semibold cursor-pointer">
+                        Components Verified
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        {(workOrder as any)?.parts?.filter((p: any) => p.status === "installed" || p.status === "returned").length || 0}/
+                        {(workOrder as any)?.parts?.length || 0} parts verified
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="testDrivePassed"
+                      checked={checklist.testDrivePassed}
+                      onCheckedChange={() => handleChecklistChange("testDrivePassed")}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1 leading-none cursor-pointer" onClick={() => handleChecklistChange("testDrivePassed")}>
+                      <Label htmlFor="testDrivePassed" className="text-sm font-semibold cursor-pointer">
+                        Test Drive Passed
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">Functional verification complete</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Category: Quality & Care */}
+              <Card className="border-border/50 shadow-none bg-background/50">
+                <CardHeader className="py-3 px-4 border-b border-border/30">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-3.5 h-3.5 text-primary" />
+                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quality & Care</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="noDamage"
+                      checked={checklist.noDamage}
+                      onCheckedChange={() => handleChecklistChange("noDamage")}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1 leading-none cursor-pointer" onClick={() => handleChecklistChange("noDamage")}>
+                      <Label htmlFor="noDamage" className="text-sm font-semibold cursor-pointer">
+                        No New Damage
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">Verified against intake state</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="vehicleClean"
+                      checked={checklist.vehicleClean}
+                      onCheckedChange={() => handleChecklistChange("vehicleClean")}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1 leading-none cursor-pointer" onClick={() => handleChecklistChange("vehicleClean")}>
+                      <Label htmlFor="vehicleClean" className="text-sm font-semibold cursor-pointer">
+                        Vehicle Cleanliness
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">Cleaned and delivery ready</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="customerSatisfied"
+                      checked={checklist.customerSatisfied}
+                      onCheckedChange={() => handleChecklistChange("customerSatisfied")}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1 leading-none cursor-pointer" onClick={() => handleChecklistChange("customerSatisfied")}>
+                      <Label htmlFor="customerSatisfied" className="text-sm font-semibold cursor-pointer">
+                        Verification Complete
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">Internal QA standards met</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <Separator className="bg-border/60" />
+
+          {/* Overall Result & Notes */}
+          <div className="space-y-5 px-1">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold">Overall Result</Label>
+                <p className="text-[11px] text-muted-foreground italic">Determine final status</p>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="vehicleClean"
-                  checked={checklist.vehicleClean}
-                  onChange={() => handleChecklistChange('vehicleClean')}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-muted border-border"
-                />
-                <Label htmlFor="vehicleClean" className="cursor-pointer text-foreground text-sm">
-                  Vehicle cleaned and presentable
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="noDamage"
-                  checked={checklist.noDamage}
-                  onChange={() => handleChecklistChange('noDamage')}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-muted border-border"
-                />
-                <Label htmlFor="noDamage" className="cursor-pointer text-foreground text-sm">
-                  No new damage or scratches
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="testDrivePassed"
-                  checked={checklist.testDrivePassed}
-                  onChange={() => handleChecklistChange('testDrivePassed')}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-muted border-border"
-                />
-                <Label htmlFor="testDrivePassed" className="cursor-pointer text-foreground text-sm">
-                  Test drive passed (if applicable)
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="customerSatisfied"
-                  checked={checklist.customerSatisfied}
-                  onChange={() => handleChecklistChange('customerSatisfied')}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-muted border-border"
-                />
-                <Label htmlFor="customerSatisfied" className="cursor-pointer text-foreground text-sm">
-                  Customer satisfaction confirmed
-                </Label>
+              <div className="flex items-center bg-muted/40 p-1 rounded-lg border border-border/50">
+                <Button
+                  type="button"
+                  variant={passed ? "default" : "ghost"}
+                  size="sm"
+                  className={passed ? "h-8 px-4 font-bold shadow-sm" : "h-8 px-4 text-muted-foreground"}
+                  onClick={() => setPassed(true)}
+                >
+                  Pass
+                </Button>
+                <Button
+                  type="button"
+                  variant={!passed ? "destructive" : "ghost"}
+                  size="sm"
+                  className={!passed ? "h-8 px-4 font-bold shadow-sm" : "h-8 px-4 text-muted-foreground"}
+                  onClick={() => setPassed(false)}
+                >
+                  Fail
+                </Button>
               </div>
             </div>
 
-            {/* {!allChecksPassed && (
-              <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
-                <p className="text-sm text-yellow-800 dark:text-yellow-400">
-                  <AlertCircle className="w-4 h-4 inline mr-1" />
-                  Not all checklist items are completed. Review and complete all items before passing.
-                </p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="notes" className="text-sm font-bold">
+                  Quality Control Notes
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-[10px] font-bold text-primary hover:text-primary hover:bg-primary/5 uppercase"
+                  onClick={handleSuggestNotes}
+                  disabled={isAiLoading || !workOrderId}
+                >
+                  {isAiLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3 h-3 animate-pulse" />
+                      Analyzing...
+                    </div>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 mr-1.5" />
+                      Suggest with AI
+                    </>
+                  )}
+                </Button>
               </div>
-            )} */}
-          </div>
-
-          {/* Overall Result */}
-          <div className="space-y-2">
-            <Label className="text-base font-semibold text-foreground">
-              Overall Quality Check Result
-            </Label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="passed"
-                checked={passed}
-                onChange={(e) => setPassed(e.target.checked)}
-                className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-muted border-border"
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                placeholder="Detailed observations or required fixes..."
+                className="resize-none bg-muted/20 border-border/50 focus:border-primary/50 text-sm leading-relaxed"
               />
-              <Label htmlFor="passed" className="cursor-pointer text-foreground">
-                Quality Check Passed
-              </Label>
             </div>
-            {passed && !allChecksPassed && (
-              <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                Warning: Some checklist items are not completed, but you're marking this as passed.
-              </p>
-            )}
-          </div>
 
-          {/* Notes */}
-          <div>
-            <Label htmlFor="notes" className="block mb-2 text-foreground">
-              Quality Check Notes <span className="text-muted-foreground">(Optional)</span>
-            </Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={4}
-              placeholder="Add any notes, observations, or issues found during quality check..."
-              className="w-full bg-muted border-border text-foreground"
-            />
+            <div className="space-y-3">
+              <Label className="text-sm font-bold">Technician Authorization</Label>
+              <div className="bg-background rounded-xl border border-border/50 p-1 shadow-inner ring-1 ring-border/5">
+                <SignaturePad
+                  value={signature || undefined}
+                  onChange={(val) => setSignature(val)}
+                  label="Digital Signature Required"
+                  required={true}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </form>
-      <DialogFooter>
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+
+      <DialogFooter className="bg-muted/30 px-6 py-4 border-t border-border/50 gap-2">
+        <Button variant="outline" onClick={onCancel} disabled={isSubmitting} className="h-10 border-border/50 font-medium">
           Cancel
         </Button>
         <Button
           type="button"
           onClick={handleSubmit}
-          disabled={isSubmitting}
-          variant={passed ? "default" : "destructive"}
+          disabled={isSubmitting || !allChecksPassed || !signature}
+          className={`h-10 px-8 font-bold transition-all ${passed ? 'bg-primary hover:bg-primary/90' : 'bg-destructive hover:bg-destructive/90'}`}
         >
-          {isSubmitting ? "Submitting..." : passed ? "Pass Quality Check" : "Fail Quality Check"}
+          {isSubmitting ? (
+            "Processing..."
+          ) : passed ? (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Completed & Verified
+            </div>
+          ) : (
+            "Flag for Rework"
+          )}
         </Button>
       </DialogFooter>
     </>
@@ -2519,6 +2763,32 @@ function AssignServiceCoordinatorForm({
 }) {
   const [serviceCoordinatorId, setServiceCoordinatorId] = useState<string>("");
   const [initialObservations, setInitialObservations] = useState<string>("");
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const { toast } = useToast();
+
+  const handleGenerateAI = async () => {
+    if (!workOrder?.id) return;
+
+    setIsGeneratingAI(true);
+    try {
+      const data = await workordersApi.suggestObservations(workOrder.id);
+      setInitialObservations(data.observations);
+      toast({
+        title: "AI Generated",
+        description: "Initial observations have been drafted based on customer concerns.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Failed to generate AI observations:", error);
+      toast({
+        title: "AI Generation Failed",
+        description: "Could not generate observations automatically.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
 
   // Fetch service coordinators
   const { data: serviceCoordinators } = useQuery({
@@ -2570,16 +2840,29 @@ function AssignServiceCoordinatorForm({
           </div>
 
           <div>
-            <Label htmlFor="initial_observations" className="block mb-2 text-foreground">
-              Initial Observations (Optional)
-            </Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="initial_observations" className="text-foreground">
+                Initial Observations (Optional)
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateAI}
+                disabled={isGeneratingAI}
+                className="h-7 text-[11px] gap-1.5 px-2.5 border-primary/30 hover:border-primary/50 hover:bg-primary/5 font-medium transition-all"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAI ? 'animate-pulse' : ''} text-primary`} />
+                {isGeneratingAI ? 'Generating...' : 'Generate with AI'}
+              </Button>
+            </div>
             <Textarea
               id="initial_observations"
               value={initialObservations}
               onChange={(e) => setInitialObservations(e.target.value)}
               placeholder="Quick notes or initial observations before detailed testing..."
-              rows={3}
-              className="w-full bg-muted border-border text-foreground"
+              rows={4}
+              className="w-full bg-muted border-border text-foreground focus-visible:ring-primary/30"
             />
           </div>
         </div>
@@ -2605,16 +2888,17 @@ function CreateInspectionForm({
   onSubmit,
   onCancel,
   isSubmitting,
+  fieldErrors,
 }: {
-
   workOrder?: any;
-
   onSubmit: (data: any) => void;
   onCancel: () => void;
   isSubmitting: boolean;
+  fieldErrors?: Record<string, string>;
 }) {
   const [templateId, setTemplateId] = useState<number | "">("");
   const [inspectionDate] = useState(new Date().toISOString().slice(0, 16));
+  const [odometerReading, setOdometerReading] = useState("");
 
   // Fetch templates
   const { data: templatesData } = useQuery({
@@ -2634,13 +2918,16 @@ function CreateInspectionForm({
       return;
     }
 
-
     const data: any = {
       vehicle: vehicleId,
       template: templateId,
       work_order: workOrder?.id,
       inspection_date: inspectionDate,
     };
+
+    if (odometerReading) {
+      data.odometer_reading = parseFloat(odometerReading);
+    }
 
     onSubmit(data);
   };
@@ -2689,6 +2976,32 @@ function CreateInspectionForm({
             />
           </div>
 
+          <div>
+            <Label htmlFor="inspection_odometer_reading" className="block mb-2 text-foreground">
+              Odometer Reading <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="inspection_odometer_reading"
+              type="number"
+              value={odometerReading}
+              onChange={(e) => setOdometerReading(e.target.value)}
+              placeholder="Enter odometer reading"
+              min={0}
+              required
+              className={`w-full bg-muted border-border text-foreground ${fieldErrors?.odometer_reading ? "border-red-500" : ""}`}
+            />
+            {fieldErrors?.odometer_reading && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {fieldErrors.odometer_reading}
+              </p>
+            )}
+            {workOrder?.vehicle && typeof workOrder.vehicle === 'object' && workOrder.vehicle.current_mileage > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Current Mileage: {workOrder.vehicle.current_mileage.toLocaleString()}
+              </p>
+            )}
+          </div>
+
           {!vehicleId && (
             <div className="bg-warning/10 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
               <p className="text-sm text-yellow-800 dark:text-yellow-400">
@@ -2706,7 +3019,7 @@ function CreateInspectionForm({
         <Button
           type="button"
           onClick={handleSubmit}
-          disabled={isSubmitting || !templateId || !vehicleId || templates.length === 0}
+          disabled={isSubmitting || !templateId || !vehicleId || !odometerReading || templates.length === 0}
         >
           {isSubmitting ? "Creating..." : "Create Inspection"}
         </Button>

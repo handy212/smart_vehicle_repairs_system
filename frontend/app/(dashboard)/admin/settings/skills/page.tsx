@@ -171,7 +171,6 @@ export default function SkillsManagementPage() {
                         <span className="text-foreground font-medium">Skills</span>
                     </div>
                     <h1 className="text-xl font-bold text-foreground tracking-tight">Skills & Certifications</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Manage technician skills and expertise areas</p>
                 </div>
                 <PermissionGuard permission="manage_settings">
                     <Button size="sm" onClick={() => handleOpenDialog()} className="h-8">

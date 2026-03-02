@@ -245,8 +245,8 @@ export function InspectionItemRow({
 
             {/* Expanded Content */}
             {isExpanded && (
-                <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border bg-muted/50 bg-background/50">
-                    // Text Input
+                <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border bg-muted/50 transition-all">
+                    {/* Text Input */}
                     {item.item_type === "text" && (
                         <div className="pt-2">
                             <Textarea
@@ -258,7 +258,7 @@ export function InspectionItemRow({
                         </div>
                     )}
 
-                    // Notes
+                    {/* Notes */}
                     {(showNotes || result.notes) && (
                         <div>
                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 block">
@@ -268,12 +268,12 @@ export function InspectionItemRow({
                                 placeholder="Additional findings or technician notes..."
                                 value={result.notes || ""}
                                 onChange={(e) => onUpdate("notes", e.target.value)}
-                                className="text-sm min-h-[60px] bg-card bg-background"
+                                className="text-sm min-h-[60px] bg-card"
                             />
                         </div>
                     )}
 
-                    // Photos
+                    {/* Photos */}
                     {result.photos && result.photos.length > 0 && (
                         <div>
                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 block">
@@ -301,7 +301,7 @@ export function InspectionItemRow({
                         </div>
                     )}
 
-                    // Needs Attention
+                    {/* Needs Attention */}
                     <div className="pt-2 border-t border-border">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input

@@ -178,7 +178,6 @@ export default function AuditLogPage() {
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-foreground">Audit Log</h1>
-              <p className="text-sm text-muted-foreground mt-1">View system activity and audit trail</p>
             </div>
           </div>
         </div>
@@ -444,14 +443,12 @@ export default function AuditLogPage() {
                 <DialogTitle className="text-xl">Audit Log Details</DialogTitle>
                 <Badge variant="secondary" className="font-mono">#{selectedLog?.id}</Badge>
               </div>
-              <DialogDescription>
-                View complete details of this system transaction
-              </DialogDescription>
+
             </DialogHeader>
 
             {selectedLog && (
               <div className="flex-1 overflow-y-auto">
-              // Top Meta Section
+              {/* // Top Meta Section */}
                 <div className="grid grid-cols-2 gap-px bg-muted border-b">
                   <div className="bg-card bg-background p-6">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User / Actor</h4>
@@ -482,7 +479,7 @@ export default function AuditLogPage() {
                 </div>
 
                 <div className="p-6">
-                // Entity Info
+                {/* // Entity Info */}
                   <div className="mb-8">
                     <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
                       <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
@@ -508,7 +505,7 @@ export default function AuditLogPage() {
                     </div>
                   </div>
 
-                // Changes Table
+                {/* // Changes Table */}
                   <div>
                     <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center">
                       <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>

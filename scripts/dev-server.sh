@@ -195,7 +195,7 @@ echo -e "${YELLOW}Configuring frontend env: $FRONTEND_ENV_FILE${NC}"
 GOOGLE_CLIENT_ID=$(grep "^GOOGLE_OAUTH_CLIENT_ID=" "$PROJECT_DIR/.env" | cut -d '=' -f2- | tr -d '\r')
 
 cat > "$FRONTEND_ENV_FILE" << EOF
-NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api
+NEXT_PUBLIC_API_URL=http://${DJANGO_HOST:-localhost}:$DJANGO_PORT/api
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 EOF
 echo -e "${GREEN}✓ Frontend API URL set to http://localhost:$DJANGO_PORT/api${NC}"
@@ -305,7 +305,7 @@ echo -e "${GREEN}Starting Django backend on port $DJANGO_PORT...${NC}"
 cd "$BACKEND_DIR"
 export DJANGO_SETTINGS_MODULE=config.settings.development
 source "$VENV_DIR/bin/activate"
-python manage.py runserver $DJANGO_PORT > /tmp/django-dev.log 2>&1 &
+python manage.py runserver ${DJANGO_BIND_ADDRESS:-127.0.0.1}:$DJANGO_PORT > /tmp/django-dev.log 2>&1 &
 DJANGO_PID=$!
 
 # Wait a moment for Django to start

@@ -101,7 +101,7 @@ class PartListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Part
         fields = [
-            'id', 'part_number', 'name', 'category', 'category_name', 'category_path',
+            'id', 'part_number', 'barcode', 'name', 'category', 'category_name', 'category_path',
             'manufacturer', 'quantity_in_stock', 'available_quantity', 'quantity_reserved',
             'quantity_on_order', 'reorder_point', 'unit', 'cost_price', 'selling_price',
             'markup_percentage', 'profit_margin', 'bin_location', 'preferred_supplier',
@@ -228,7 +228,7 @@ class PartUpdateSerializer(serializers.ModelSerializer):
         model = Part
         fields = [
             'name', 'description', 'category', 'branch', 'manufacturer',
-            'manufacturer_part_number', 'suppliers', 'preferred_supplier',
+            'manufacturer_part_number', 'barcode', 'suppliers', 'preferred_supplier',
             'reorder_point', 'reorder_quantity', 'minimum_stock', 'maximum_stock',
             'unit', 'cost_price', 'selling_price', 'markup_percentage', 'list_price',
             'bin_location', 'shelf', 'weight', 'dimensions', 'compatible_makes',

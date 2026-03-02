@@ -107,6 +107,7 @@ export interface Part {
   branch_name?: string;
   manufacturer?: string;
   manufacturer_part_number?: string;
+  barcode?: string;
   suppliers?: number[] | Supplier[];
   preferred_supplier?: number | Supplier;
   preferred_supplier_name?: string;

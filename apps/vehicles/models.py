@@ -281,6 +281,51 @@ class Vehicle(models.Model):
         from django.utils import timezone
         return self.warranty_expiry_date > timezone.now().date()
 
+    def update_mileage(self, mileage, user=None, notes=""):
+        """Update vehicle mileage, create history record, and check service schedules"""
+        if mileage is None:
+            return False
+            
+        old_mileage = self.current_mileage or 0
+        
+        # Prevent decreasing mileage
+        if mileage < old_mileage:
+            raise ValueError(f"New mileage ({mileage}) cannot be less than current mileage ({old_mileage})")
+            
+        # Only update if mileage actually changed
+        if old_mileage != mileage:
+            self.current_mileage = mileage
+            self.save(update_fields=['current_mileage'])
+            
+            from django.utils import timezone
+            # Create history record
+            self.mileage_history.create(
+                mileage=mileage,
+                recorded_date=timezone.now().date(),
+                recorded_by=user,
+                notes=notes
+            )
+            
+            # Check for due services
+            self.check_service_schedules_due()
+            return True
+            
+        return False
+        
+    def check_service_schedules_due(self):
+        """Check all active schedules and trigger notifications if they are due"""
+        try:
+            from apps.notifications_app.triggers import NotificationTriggers
+            triggers = NotificationTriggers()
+            
+            for schedule in self.service_schedules.filter(is_active=True):
+                if schedule.is_due:
+                    triggers.service_due(schedule)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to check service schedules due for vehicle {self.id}: {str(e)}")
+
 
 class VehicleMileageHistory(models.Model):
     """

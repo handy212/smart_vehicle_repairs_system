@@ -323,6 +323,16 @@ export const workordersApi = {
     return response.data;
   },
 
+  suggestObservations: async (id: number): Promise<{ observations: string }> => {
+    const response = await apiClient.get(`/workorders/work-orders/${id}/suggest_observations/`);
+    return response.data;
+  },
+
+  suggestQCNotes: async (id: number): Promise<{ notes: string }> => {
+    const response = await apiClient.get(`/workorders/work-orders/${id}/suggest_qc_notes/`);
+    return response.data;
+  },
+
   checkReadiness: async (id: number): Promise<{
     can_start: boolean;
     errors: string[];

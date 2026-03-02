@@ -83,6 +83,10 @@ class User(AbstractUser):
     email_notifications = models.BooleanField(_('email notifications'), default=True)
     sms_notifications = models.BooleanField(_('SMS notifications'), default=False)
     
+    # 2FA
+    two_factor_enabled = models.BooleanField(_('2FA enabled'), default=False)
+    two_factor_secret = models.CharField(_('2FA secret'), max_length=32, blank=True)
+    
     # Metadata
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)

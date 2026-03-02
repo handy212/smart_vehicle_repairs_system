@@ -69,8 +69,12 @@ def validate_period_lock(sender, instance, **kwargs):
     if not settings.period_lock_date:
         return
 
-    # Check instance date
+    # Check if instance date is within locked period
     if instance.date and instance.date <= settings.period_lock_date:
+        # Check for a temporary bypass flag (used during branch hard deletions)
+        if getattr(instance, '_bypass_period_lock', False):
+            return
+            
         raise ValidationError(f"Accounting period is locked up to {settings.period_lock_date}. Cannot modify entries dated {instance.date}.")
 
 @receiver(post_save, sender=JournalEntry)

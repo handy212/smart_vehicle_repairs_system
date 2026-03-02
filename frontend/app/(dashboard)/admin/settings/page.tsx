@@ -515,22 +515,6 @@ export default function SystemSettingsPage() {
 
       <div className="px-4">
         {selectedCategory === "tax" && <TaxInfoBanner />}
-
-        {/* Info Banner for Company Settings */}
-        {selectedCategory === "company" && (
-          <Card className="mb-4 border-orange-100 bg-primary/5 dark:bg-orange-900/10 dark:border-orange-800/30 shadow-none">
-            <CardContent className="p-3">
-              <div className="flex items-start space-x-2">
-                <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-orange-800 dark:text-orange-200 leading-relaxed">
-                  <strong>Company Information:</strong> These settings are used throughout the application, including in emails, invoices, and notifications.
-                  Make sure to keep this information up to date. Changes take effect immediately.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Settings List */}
         <Card className="shadow-sm border border-border">
           <CardHeader className="py-3 px-4 border-b bg-muted/30">
@@ -1156,7 +1140,6 @@ export default function SystemSettingsPage() {
   );
 
   function TaxInfoBanner() {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data, isLoading } = useQuery({
       queryKey: ["admin", "tax-config"],
       queryFn: () => billingApi.taxes.config(),
@@ -1165,15 +1148,5 @@ export default function SystemSettingsPage() {
     if (isLoading) {
       return null;
     }
-
-    return (
-      <Card className="mb-4 border-orange-200 bg-primary/5 shadow-none">
-        <CardContent className="p-3">
-          <p className="text-xs text-orange-800">
-            Tax configuration is managed in the Tax & Compliance section. Configure VAT rates, tax exemptions, and compliance settings here.
-          </p>
-        </CardContent>
-      </Card>
-    );
   }
 }

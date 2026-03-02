@@ -261,6 +261,14 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                         f"work order has been closed at the branch where it was opened."
                     )
         
+        # Validate odometer reading
+        odometer_in = data.get('odometer_in')
+        if vehicle and odometer_in is not None:
+            if vehicle.current_mileage and odometer_in < vehicle.current_mileage:
+                raise serializers.ValidationError({
+                    'odometer_in': f"Odometer reading ({odometer_in}) cannot be less than the vehicle's current mileage ({vehicle.current_mileage})."
+                })
+        
         # Validate warranty rework fields
         is_warranty_rework = data.get('is_warranty_rework', False)
         related_work_order = data.get('related_work_order')
@@ -462,6 +470,17 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             )
         
         return user
+        
+    def validate(self, data):
+        # Validate odometer reading
+        odometer_out = data.get('odometer_out')
+        if odometer_out is not None and self.instance and self.instance.vehicle:
+            vehicle = self.instance.vehicle
+            if vehicle.current_mileage and odometer_out < vehicle.current_mileage:
+                raise serializers.ValidationError({
+                    'odometer_out': f"Odometer reading ({odometer_out}) cannot be less than the vehicle's current mileage ({vehicle.current_mileage})."
+                })
+        return data
     
     def update(self, instance, validated_data):
         """

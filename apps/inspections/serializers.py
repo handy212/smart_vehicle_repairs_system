@@ -411,6 +411,14 @@ class VehicleInspectionCreateSerializer(serializers.ModelSerializer):
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Error during work order validation: {str(e)}")
         
+        # Validate odometer reading
+        odometer_reading = data.get('odometer_reading')
+        if vehicle and odometer_reading is not None:
+            if vehicle.current_mileage and odometer_reading < vehicle.current_mileage:
+                raise serializers.ValidationError({
+                    'odometer_reading': f"Odometer reading ({odometer_reading}) cannot be less than the vehicle's current mileage ({vehicle.current_mileage})."
+                })
+
         return data
     
     def create(self, validated_data):
@@ -428,6 +436,16 @@ class VehicleInspectionUpdateSerializer(serializers.ModelSerializer):
             'technician_signature', 'customer_signature', 'notes', 'recommendations',
             'vehicle_damage'
         ]
+
+    def validate(self, data):
+        odometer_reading = data.get('odometer_reading')
+        if odometer_reading is not None and self.instance and self.instance.vehicle:
+            vehicle = self.instance.vehicle
+            if vehicle.current_mileage and odometer_reading < vehicle.current_mileage:
+                raise serializers.ValidationError({
+                    'odometer_reading': f"Odometer reading ({odometer_reading}) cannot be less than the vehicle's current mileage ({vehicle.current_mileage})."
+                })
+        return data
 
 
 class InspectionSummarySerializer(serializers.Serializer):

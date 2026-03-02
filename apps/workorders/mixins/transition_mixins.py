@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import timedelta
 from apps.notifications_app import triggers as notification_triggers
 from apps.workorders.models import WorkOrder, WorkOrderNote
 
@@ -264,6 +265,7 @@ class WorkOrderStateTransitionMixin:
         work_order.quality_check_at = timezone.now()
         work_order.quality_check_notes = full_notes
         work_order.quality_check_passed = passed
+        work_order.quality_check_signature = request.data.get('signature')
         
         logger.info(f"Quality check performed for WO {work_order.work_order_number} by {request.user.username}: {'PASSED' if passed else 'FAILED'}")
         

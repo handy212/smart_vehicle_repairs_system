@@ -25,7 +25,7 @@ export const inspectionSchema = z.object({
     template: z.number().min(1, "Template is required"),
     work_order: z.number().optional(),
     inspection_date: z.string().min(1, "Inspection date is required"),
-    odometer_reading: z.number().min(0).optional(),
+    odometer_reading: z.number().min(0, "Odometer reading is required"),
     notes: z.string().optional(),
 });
 
@@ -42,6 +42,7 @@ interface InspectionFormProps {
     setShowActiveWorkOrderDialog?: (show: boolean) => void;
 
     workOrderData?: any;
+    fieldErrors?: Record<string, string>;
 }
 
 export function InspectionForm({
@@ -53,7 +54,8 @@ export function InspectionForm({
     activeWorkOrderBranch,
     showActiveWorkOrderDialog,
     setShowActiveWorkOrderDialog,
-    workOrderData
+    workOrderData,
+    fieldErrors
 }: InspectionFormProps) {
 
     // Fetch templates
@@ -76,6 +78,7 @@ export function InspectionForm({
         handleSubmit,
         formState: { errors },
         setValue,
+        setError,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         watch,
     } = useForm<InspectionFormData>({
@@ -95,6 +98,15 @@ export function InspectionForm({
             }
         }
     }, [templates, initialData, setValue]);
+
+    // Effect to map server field errors to the form
+    useEffect(() => {
+        if (fieldErrors) {
+            Object.entries(fieldErrors).forEach(([field, message]) => {
+                setError(field as any, { type: "server", message });
+            });
+        }
+    }, [fieldErrors, setError]);
 
     return (
         <div className="space-y-6">
@@ -229,13 +241,14 @@ export function InspectionForm({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label htmlFor="odometer_reading">Odometer Reading</Label>
+                                <Label htmlFor="odometer_reading">Odometer Reading <span className="text-red-500">*</span></Label>
                                 <Input
                                     id="odometer_reading"
                                     type="number"
                                     {...register("odometer_reading", { valueAsNumber: true })}
                                     placeholder="Current mileage"
                                     min={0}
+                                    required
                                 />
                                 {errors.odometer_reading && (
                                     <p className="text-red-500 text-xs mt-1">{errors.odometer_reading.message}</p>

@@ -18,7 +18,18 @@ import {
   MoreVertical,
   Eye,
   Filter,
+  AlertCircle
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
@@ -69,6 +80,12 @@ export default function BranchesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
+
+  // State for the strong delete warning
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
+
   const debouncedSearch = useDebounce(search, 500);
 
   const { data: branchesData, isLoading } = useQuery({
@@ -108,14 +125,31 @@ export default function BranchesPage() {
     },
   });
 
+  const forceDeleteMutation = useMutation({
+    mutationFn: (id: number) => branchesApi.forceDelete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["branches"] });
+      toast({
+        title: "Success",
+        description: "Branch and all associated data permanently deleted",
+      });
+      setDeleteDialogOpen(false);
+      setBranchToDelete(null);
+      setDeleteConfirmationName("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete branch",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDelete = (branch: Branch) => {
-    if (
-      confirm(
-        `Are you sure you want to delete branch "${branch.name}"? This will set it as inactive.`
-      )
-    ) {
-      deleteMutation.mutate(branch.id);
-    }
+    setBranchToDelete(branch);
+    setDeleteConfirmationName("");
+    setDeleteDialogOpen(true);
   };
 
   // Statistics
@@ -410,6 +444,60 @@ export default function BranchesPage() {
           }}
         />
       )}
+
+      {/* Strict Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="border-destructive">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Permanently Delete Branch?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild className="text-base text-foreground mt-4">
+              <div>
+                <p className="font-semibold mb-2">
+                  This action cannot be undone. This will permanently delete:
+                </p>
+                <ul className="list-disc pl-6 space-y-1 mb-4 text-muted-foreground">
+                  <li>The <strong className="text-foreground">{branchToDelete?.name}</strong> branch itself</li>
+                  <li>All <strong className="text-foreground">Work Orders, Estimates, and Invoices</strong> created under this branch</li>
+                  <li>All <strong className="text-foreground">Inventory and Stock</strong> associated with this branch</li>
+                  <li>All <strong className="text-foreground">Appointments and Inspections</strong></li>
+                </ul>
+                <p className="mb-2">
+                  Users assigned to this branch will <span className="underline">not</span> be deleted, but they will be unassigned.
+                </p>
+              </div>
+            </AlertDialogDescription>
+
+            <div className="mt-6 space-y-2">
+              <label className="text-sm font-medium">
+                Please type <strong className="text-foreground select-all">{branchToDelete?.name}</strong> to confirm.
+              </label>
+              <Input
+                value={deleteConfirmationName}
+                onChange={(e) => setDeleteConfirmationName(e.target.value)}
+                placeholder="Type branch name..."
+                className="border-destructive/30 focus-visible:ring-destructive"
+              />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel disabled={forceDeleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (branchToDelete) {
+                  forceDeleteMutation.mutate(branchToDelete.id);
+                }
+              }}
+              disabled={deleteConfirmationName !== branchToDelete?.name || forceDeleteMutation.isPending}
+            >
+              {forceDeleteMutation.isPending ? "Deleting..." : "Permanently Delete Branch"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -12,11 +12,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Loader2, User, Mail, Phone, Save, Shield, KeyRound, BadgeCheck, Upload, Briefcase } from "lucide-react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
+import Link from "next/link";
 
 const profileSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -177,181 +177,183 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_2fr] px-4 pb-8">
+      <div className="grid gap-6 lg:grid-cols-3 px-4 pb-8 items-start">
         {/* Profile Information */}
-        <Card className="border border-border shadow-sm">
-          <CardHeader className="pb-3 border-b border-border bg-muted/50">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
-                <User className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-sm font-semibold text-foreground">Personal Information</CardTitle>
-                <CardDescription className="text-xs">Update your personal details</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="first_name" className="text-xs font-semibold text-foreground">First Name</Label>
-                  <Input
-                    id="first_name"
-                    {...register("first_name")}
-                    placeholder="John"
-                    disabled={!isAdmin}
-                    className={`h-8 text-sm ${errors.first_name ? "border-red-500" : ""}`}
-                  />
-                  {errors.first_name && (
-                    <p className="text-[10px] text-red-500">{errors.first_name.message}</p>
-                  )}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-3 border-b border-border bg-muted/50">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                  <User className="w-4 h-4 text-primary" />
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="last_name" className="text-xs font-semibold text-foreground">Last Name</Label>
-                  <Input
-                    id="last_name"
-                    {...register("last_name")}
-                    placeholder="Doe"
-                    disabled={!isAdmin}
-                    className={`h-8 text-sm ${errors.last_name ? "border-red-500" : ""}`}
-                  />
-                  {errors.last_name && (
-                    <p className="text-[10px] text-red-500">{errors.last_name.message}</p>
-                  )}
+                <div>
+                  <CardTitle className="text-sm font-semibold text-foreground">Personal Information</CardTitle>
+                  <CardDescription className="text-xs">Update your personal details</CardDescription>
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5" />
-                  Email Address
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...register("email")}
-                  placeholder="john.doe@example.com"
-                  disabled={!isAdmin}
-                  className={`h-8 text-sm ${errors.email ? "border-red-500" : ""}`}
-                />
-                {errors.email && (
-                  <p className="text-[10px] text-red-500">{errors.email.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" />
-                  Phone Number
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  {...register("phone")}
-                  placeholder="+1 (555) 123-4567"
-                  disabled={!isAdmin}
-                  className={`h-8 text-sm ${errors.phone ? "border-red-500" : ""}`}
-                />
-                {errors.phone && (
-                  <p className="text-[10px] text-red-500">{errors.phone.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="date_of_birth" className="text-xs font-semibold text-foreground">Date of Birth</Label>
-                <Input
-                  id="date_of_birth"
-                  type="date"
-                  {...register("date_of_birth")}
-                  disabled={!isAdmin}
-                  className="h-8 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="address" className="text-xs font-semibold text-foreground">Street Address</Label>
-                <Input
-                  id="address"
-                  {...register("address")}
-                  placeholder="123 Main Street"
-                  disabled={!isAdmin}
-                  className="h-8 text-sm"
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="city" className="text-xs font-semibold text-foreground">City</Label>
-                  <Input
-                    id="city"
-                    {...register("city")}
-                    placeholder="New York"
-                    disabled={!isAdmin}
-                    className="h-8 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="state" className="text-xs font-semibold text-foreground">State</Label>
-                  <Input
-                    id="state"
-                    {...register("state")}
-                    placeholder="NY"
-                    disabled={!isAdmin}
-                    className="h-8 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="zip_code" className="text-xs font-semibold text-foreground">Zip Code</Label>
-                  <Input
-                    id="zip_code"
-                    {...register("zip_code")}
-                    placeholder="10001"
-                    disabled={!isAdmin}
-                    className="h-8 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="country" className="text-xs font-semibold text-foreground">Country</Label>
-                  <Input
-                    id="country"
-                    {...register("country")}
-                    placeholder="USA"
-                    disabled={!isAdmin}
-                    className="h-8 text-sm"
-                  />
-                </div>
-              </div>
-
-              {isAdmin && (
-                <div className="pt-2">
-                  <Button type="submit" disabled={isSubmitting} size="sm" className="bg-primary hover:bg-primary/90 text-white h-8 text-xs px-4">
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-3.5 h-3.5 mr-1.5" />
-                        Save Changes
-                      </>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="first_name" className="text-xs font-semibold text-foreground">First Name</Label>
+                    <Input
+                      id="first_name"
+                      {...register("first_name")}
+                      placeholder="John"
+                      disabled={!isAdmin}
+                      className={`h-8 text-sm ${errors.first_name ? "border-red-500" : ""}`}
+                    />
+                    {errors.first_name && (
+                      <p className="text-[10px] text-red-500">{errors.first_name.message}</p>
                     )}
-                  </Button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="last_name" className="text-xs font-semibold text-foreground">Last Name</Label>
+                    <Input
+                      id="last_name"
+                      {...register("last_name")}
+                      placeholder="Doe"
+                      disabled={!isAdmin}
+                      className={`h-8 text-sm ${errors.last_name ? "border-red-500" : ""}`}
+                    />
+                    {errors.last_name && (
+                      <p className="text-[10px] text-red-500">{errors.last_name.message}</p>
+                    )}
+                  </div>
                 </div>
-              )}
-            </form>
-          </CardContent>
-        </Card>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5" />
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register("email")}
+                    placeholder="john.doe@example.com"
+                    disabled={!isAdmin}
+                    className={`h-8 text-sm ${errors.email ? "border-red-500" : ""}`}
+                  />
+                  {errors.email && (
+                    <p className="text-[10px] text-red-500">{errors.email.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    {...register("phone")}
+                    placeholder="+1 (555) 123-4567"
+                    disabled={!isAdmin}
+                    className={`h-8 text-sm ${errors.phone ? "border-red-500" : ""}`}
+                  />
+                  {errors.phone && (
+                    <p className="text-[10px] text-red-500">{errors.phone.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="date_of_birth" className="text-xs font-semibold text-foreground">Date of Birth</Label>
+                  <Input
+                    id="date_of_birth"
+                    type="date"
+                    {...register("date_of_birth")}
+                    disabled={!isAdmin}
+                    className="h-8 text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="address" className="text-xs font-semibold text-foreground">Street Address</Label>
+                  <Input
+                    id="address"
+                    {...register("address")}
+                    placeholder="123 Main Street"
+                    disabled={!isAdmin}
+                    className="h-8 text-sm"
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="city" className="text-xs font-semibold text-foreground">City</Label>
+                    <Input
+                      id="city"
+                      {...register("city")}
+                      placeholder="New York"
+                      disabled={!isAdmin}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="state" className="text-xs font-semibold text-foreground">State</Label>
+                    <Input
+                      id="state"
+                      {...register("state")}
+                      placeholder="NY"
+                      disabled={!isAdmin}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="zip_code" className="text-xs font-semibold text-foreground">Zip Code</Label>
+                    <Input
+                      id="zip_code"
+                      {...register("zip_code")}
+                      placeholder="10001"
+                      disabled={!isAdmin}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="country" className="text-xs font-semibold text-foreground">Country</Label>
+                    <Input
+                      id="country"
+                      {...register("country")}
+                      placeholder="USA"
+                      disabled={!isAdmin}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {isAdmin && (
+                  <div className="pt-2">
+                    <Button type="submit" disabled={isSubmitting} size="sm" className="bg-primary hover:bg-primary/90 text-white h-8 text-xs px-4">
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-3.5 h-3.5 mr-1.5" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </form>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Sidebar */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Profile Picture */}
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3 border-b border-border bg-muted/50">
@@ -455,11 +457,15 @@ export default function ProfilePage() {
               </div>
             </CardHeader>
             <CardContent className="pt-4">
-              <Button variant="outline" size="sm" className="w-full h-8 text-xs bg-card text-foreground border-border hover:bg-muted">
-                Change Password
-              </Button>
+              <Link href="/admin/profile/password" className="w-full">
+                <Button variant="outline" size="sm" className="w-full h-8 text-xs bg-card text-foreground border-border hover:bg-muted">
+                  Change Password
+                </Button>
+              </Link>
             </CardContent>
           </Card>
+
+          <TwoFactorSettings />
         </div>
       </div>
     </div >

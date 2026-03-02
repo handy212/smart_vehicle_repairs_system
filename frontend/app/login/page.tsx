@@ -38,6 +38,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
+  // 2FA state
+  const [twoFactorData, setTwoFactorData] = useState<{ temp_token: string; user_id: number } | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+
   // Partial registration state
 
   const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
@@ -130,8 +134,16 @@ export default function LoginPage() {
     try {
       const authData = await authApi.login(data);
 
+      if (authData.requires_2fa) {
+        setTwoFactorData({
+          temp_token: authData.temp_token!,
+          user_id: authData.user_id!
+        });
+        return;
+      }
+
       // Store tokens (localStorage + cookie for middleware)
-      setTokens(authData.access, authData.refresh);
+      setTokens(authData.access!, authData.refresh!);
 
       // Update global state
       const user = await authApi.getCurrentUser();
@@ -163,6 +175,45 @@ export default function LoginPage() {
       } else {
         setError("Unable to connect. Please check your internet and try again.");
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!twoFactorData || twoFactorCode.length < 6) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const authData = await authApi.verify2FALogin(twoFactorData.temp_token, twoFactorCode);
+
+      // Store tokens
+      setTokens(authData.access!, authData.refresh!);
+
+      // Update global state
+      setUser(authData.user || await authApi.getCurrentUser());
+
+      // Redirect based on role
+      const role = authData.user?.role || (await authApi.getCurrentUser()).role;
+      if (role === "customer") {
+        router.push("/portal");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      console.error("2FA error:", err);
+      const axiosError = err as { response?: { data?: Record<string, unknown> } };
+      const data = axiosError?.response?.data;
+
+      const message =
+        (typeof data?.detail === "string" && data.detail) ||
+        (Array.isArray(data?.code) && data?.code[0]) ||
+        "Invalid 2FA code.";
+
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -270,6 +321,61 @@ export default function LoginPage() {
                     }}
                     onCancel={() => setRegData(null)}
                   />
+                ) : twoFactorData ? (
+                  <form onSubmit={onTwoFactorSubmit} className="space-y-4 lg:space-y-5">
+                    {error && (
+                      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
+                        {error}
+                      </div>
+                    )}
+
+                    <div className="space-y-2 text-center pb-2">
+                      <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: branding.primary_color }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                      </div>
+                      <h3 className="text-xl font-semibold">Two-Factor Authentication</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Enter the 6-digit code from your authenticator app.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 flex flex-col items-center">
+                      <Input
+                        type="text"
+                        value={twoFactorCode}
+                        onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="h-12 w-48 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border-border bg-card focus:bg-card focus:ring-2 focus:ring-offset-0 transition-all font-bold"
+                        style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
+                        disabled={isLoading}
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full h-10 lg:h-11 rounded-xl font-medium"
+                        onClick={() => {
+                          setTwoFactorData(null);
+                          setTwoFactorCode("");
+                          setError(null);
+                        }}
+                        disabled={isLoading}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90 active:scale-95"
+                        style={{ backgroundColor: branding.primary_color }}
+                        disabled={isLoading || twoFactorCode.length !== 6}
+                      >
+                        {isLoading ? "Verifying..." : "Verify Code"}
+                      </Button>
+                    </div>
+                  </form>
                 ) : (
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 lg:space-y-5">
                     {error && (

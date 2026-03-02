@@ -1,6 +1,4 @@
-"""
-Views for branches app
-"""
+import logging
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count, Sum, Avg, F
 from django.utils import timezone
 from datetime import timedelta
+from django.db import transaction
 
 from .models import Branch
 from .serializers import (
@@ -19,6 +18,10 @@ from .serializers import (
 )
 from apps.accounts.models import User
 from apps.accounts.permissions import HasPermission, HasAnyPermission
+
+
+
+logger = logging.getLogger(__name__)
 
 
 class BranchViewSet(viewsets.ModelViewSet):
@@ -115,6 +118,165 @@ class BranchViewSet(viewsets.ModelViewSet):
         # Soft delete by setting is_active=False instead of actually deleting
         instance.is_active = False
         instance.save()
+    
+    @action(detail=True, methods=['delete'])
+    def force_delete(self, request, pk=None):
+        """
+        Hard delete a branch and cascade delete all its related data.
+        WARNING: This is permanent and destructive.
+        """
+        if request.user.role != 'admin':
+            return Response(
+                {'detail': 'Only administrators can permanently delete branches.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        instance = self.get_object()
+        
+        # Check if it's the headquarters or the last active branch
+        if instance.is_headquarters:
+            return Response(
+                {'detail': 'The headquarters branch cannot be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
+        if not active_branches.exists() and instance.is_active:
+            return Response(
+                {'detail': 'Cannot delete the last active branch. Please activate another branch first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            with transaction.atomic():
+                branch_id = instance.id
+                
+                # 1. Accounts/Users: Detach from branch
+                from apps.accounts.models import User
+                for user in User.objects.filter(branch=instance):
+                    user.branch = None
+                    user.save(update_fields=['branch'])
+                instance.managers.clear()  # Clear M2M
+                
+                # 2. Inventory - Leaf nodes and Decoupling
+                try:
+                    from apps.inventory.models import (
+                        StockItem, Part, PurchaseOrder, InventoryTransaction, 
+                        Transfer, PhysicalCountSession, StockAlert
+                    )
+                    
+                    # Pre-identify objects
+                    branch_part_ids = list(Part.objects.filter(branch=instance).values_list('id', flat=True))
+                    branch_stock_ids = list(StockItem.objects.filter(branch=instance).values_list('id', flat=True))
+                    
+                    # 2a. Purge all InventoryTransactions that reference the branch or parts/stock being deleted
+                    it_to_purge_qs = InventoryTransaction.objects.filter(
+                        Q(branch=instance) | 
+                        Q(part_id__in=branch_part_ids) |
+                        Q(work_order__branch=instance)
+                    )
+                    it_ids = list(it_to_purge_qs.values_list('id', flat=True))
+                    
+                    # Force update branch to None first to break the PROTECT link immediately
+                    InventoryTransaction.objects.filter(id__in=it_ids).update(branch=None)
+                    InventoryTransaction.objects.filter(id__in=it_ids).delete()
+                    
+                    # 2b. Detach Parts from branch
+                    Part.objects.filter(branch=instance).update(branch=None)
+                    
+                except ImportError:
+                    pass
+
+                # 3. Accounting & Billing
+                try:
+                    from apps.accounting.models import JournalEntry, Budget
+                    from apps.billing.models import (
+                        Invoice, Estimate, Bill, CreditNote, Payment, 
+                        BillPayment, Refund, PaymentAllocation
+                    )
+                    
+                    # 3a. Leaf nodes for Billing
+                    # Refund depends on Payment and Invoice (PROTECT)
+                    Refund.objects.filter(Q(invoice__branch=instance) | Q(customer__user__branch=instance)).delete()
+                    PaymentAllocation.objects.filter(invoice__branch=instance).delete()
+                    
+                    # 3b. Payments
+                    Payment.objects.filter(invoice__branch=instance).delete()
+                    BillPayment.objects.filter(bill__branch=instance).delete()
+                    
+                    # 3c. Main Billing Documents
+                    Invoice.objects.filter(branch=instance).delete()
+                    Bill.objects.filter(branch=instance).delete()
+                    Estimate.objects.filter(branch=instance).delete()
+                    CreditNote.objects.filter(branch=instance).delete()
+
+                    # 3d. Accounting
+                    # Bypass period locks for JournalEntries
+                    jes_to_delete = JournalEntry.objects.filter(branch=instance)
+                    for je in jes_to_delete:
+                        je._bypass_period_lock = True
+                        je.delete()
+                    
+                    Budget.objects.filter(branch=instance).delete()
+                except ImportError:
+                    pass
+
+                # 4. Operational Data (WorkOrders, Inspections, GatePass, etc.)
+                try:
+                    from apps.workorders.models import WorkOrder
+                    from apps.inspections.models import VehicleInspection
+                    from apps.gatepass.models import GatePass
+                    from apps.appointments.models import Appointment
+                    from apps.roadside.models import RoadsideRequest
+                    
+                    # GatePass depends on WorkOrder
+                    GatePass.objects.filter(branch=instance).delete()
+                    RoadsideRequest.objects.filter(branch=instance).delete()
+                    VehicleInspection.objects.filter(branch=instance).delete()
+                    WorkOrder.objects.filter(branch=instance).delete()
+                    Appointment.objects.filter(branch=instance).delete()
+                except ImportError:
+                    pass
+                
+                # 5. Inventory (Root objects after IT cleanup)
+                try:
+                    from apps.inventory.models import (
+                        StockItem, Part, PurchaseOrder, InventoryTransaction, 
+                        Transfer, PhysicalCountSession, StockAlert
+                    )
+                    PurchaseOrder.objects.filter(branch=instance).delete()
+                    Transfer.objects.filter(Q(source_branch=instance) | Q(destination_branch=instance)).delete()
+                    PhysicalCountSession.objects.filter(branch=instance).delete()
+                    StockAlert.objects.filter(branch=instance).delete()
+                    
+                    StockItem.objects.filter(branch=instance).delete()
+                    # Delete parts that were originally branch-specific
+                    # (they were detached in step 2)
+                    Part.objects.filter(id__in=branch_part_ids).delete()
+                except ImportError:
+                    pass
+
+                # 6. Fixed Assets
+                try:
+                    from apps.fixed_assets.models import FixedAsset
+                    FixedAsset.objects.filter(branch=instance).delete()
+                except ImportError:
+                    pass
+                
+                # 7. Delete the branch itself
+                branch_name = instance.name
+                instance.delete()
+                
+                return Response(
+                    {'detail': f'Branch "{branch_name}" and all related data have been permanently deleted.'},
+                    status=status.HTTP_200_OK
+                )
+        except Exception as e:
+            logger.error(f"Failed to hard delete branch {pk}: {str(e)}", exc_info=True)
+            return Response(
+                {'detail': f'Failed to delete branch due to protected relationships: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     @action(detail=True, methods=['get'])
     def staff(self, request, pk=None):

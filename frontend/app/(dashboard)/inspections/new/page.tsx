@@ -20,6 +20,7 @@ export default function NewInspectionPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showActiveWorkOrderDialog, setShowActiveWorkOrderDialog] = useState(false);
   const [activeWorkOrderBranch, setActiveWorkOrderBranch] = useState<string | null>(null);
 
@@ -41,7 +42,15 @@ export default function NewInspectionPage() {
       });
       router.push(`/inspections/${inspection.id}`);
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("New inspection creation onError caught:", {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data ? JSON.parse(JSON.stringify(error.response.data)) : null
+        });
+      }
+
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
 
@@ -58,7 +67,7 @@ export default function NewInspectionPage() {
         }
 
         // Check if this is the active work order error
-        if (errorMessage && errorMessage.includes('has an active work order') && errorMessage.includes('at')) {
+        if (errorMessage && typeof errorMessage === 'string' && errorMessage.includes('has an active work order') && errorMessage.includes('at')) {
           const branchMatch = errorMessage.match(/at ([^.]+)\./);
           const branchName = branchMatch ? branchMatch[1].trim() : 'another branch';
           setActiveWorkOrderBranch(branchName);
@@ -66,19 +75,40 @@ export default function NewInspectionPage() {
           return;
         }
 
-        if (errorMessage) {
-          setServerError(errorMessage);
+        // Handle field-level errors
+        const newFieldErrors: Record<string, string> = {};
+        Object.keys(errorData).forEach((field) => {
+          if (field !== 'non_field_errors' && field !== 'detail') {
+            const fieldData = errorData[field];
+            let fieldError = "";
+
+            if (Array.isArray(fieldData)) {
+              const first = fieldData[0];
+              fieldError = typeof first === 'object' ? (first.message || JSON.stringify(first)) : String(first);
+            } else {
+              fieldError = typeof fieldData === 'object' ? (fieldData.message || JSON.stringify(fieldData)) : String(fieldData);
+            }
+            newFieldErrors[field] = fieldError;
+          }
+        });
+
+        if (Object.keys(newFieldErrors).length > 0) {
+          setFieldErrors(newFieldErrors);
+          setServerError("Please correct the errors in the form below.");
+        } else if (errorMessage) {
+          setServerError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
         } else {
           setServerError("An error occurred. Check the form for details.");
         }
       } else {
-        setServerError("An unexpected error occurred. Please try again.");
+        setServerError(error.message || "An unexpected error occurred. Please try again.");
       }
     },
   });
 
   const onSubmit = async (data: InspectionFormData) => {
     setServerError(null);
+    setFieldErrors({});
     await createMutation.mutateAsync(data);
   };
 
@@ -116,6 +146,7 @@ export default function NewInspectionPage() {
         showActiveWorkOrderDialog={showActiveWorkOrderDialog}
         setShowActiveWorkOrderDialog={setShowActiveWorkOrderDialog}
         workOrderData={workOrder}
+        fieldErrors={fieldErrors}
       />
     </div>
   );

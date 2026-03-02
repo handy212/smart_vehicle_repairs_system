@@ -140,7 +140,7 @@ export default function InspectionDetailPage() {
   const allPhotos = inspection.results?.flatMap(r => r.photos || []).filter(Boolean) || [];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
@@ -505,9 +505,17 @@ export default function InspectionDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-4">
+                <div className="text-center py-4 space-y-3">
                   <p className="text-sm text-muted-foreground">No work order linked</p>
-                {/* // Could add a 'Create Work Order' button here if needed */}
+                  {(inspection.status === 'completed' || inspection.status === 'approved') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/workorders/new?vehicle_id=${typeof inspection.vehicle === 'object' ? inspection.vehicle?.id : inspection.vehicle}&inspection_id=${inspection.id}`)}
+                    >
+                      Create Work Order
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

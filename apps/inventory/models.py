@@ -140,6 +140,7 @@ class Part(models.Model):
     # Manufacturer info
     manufacturer = models.CharField(max_length=200, blank=True)
     manufacturer_part_number = models.CharField(max_length=100, blank=True)
+    barcode = models.CharField(max_length=100, blank=True, null=True, unique=True, db_index=True, help_text='UPC/EAN or internal barcode sequence')
     
     # Supplier info
     suppliers = models.ManyToManyField(Supplier, related_name='parts', blank=True)

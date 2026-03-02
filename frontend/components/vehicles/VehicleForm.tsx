@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { AlertCircle, X, Image as ImageIcon, CheckCircle2 } from "lucide-react";
+import { AlertCircle, X, Image as ImageIcon, CheckCircle2, ScanBarcode } from "lucide-react";
 import { useState, useEffect } from "react";
+import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
 import { VINDecoderButton } from "@/components/ui/vin-decoder-button";
 import { vehiclesApi } from "@/lib/api/vehicles";
@@ -55,6 +57,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
 
+    const [showScanner, setShowScanner] = useState(false);
     const [vinOtherInfo, setVinOtherInfo] = useState<any | null>(null);
 
     const { data: customersData } = useQuery({
@@ -255,11 +258,21 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 <div className="flex gap-2">
                                     <Input
                                         {...register("vin")}
+                                        id="vin-input"
                                         className={`font-mono uppercase ${errors.vin ? "border-red-500" : ""}`}
                                         placeholder="17-Digit VIN"
                                         maxLength={17}
                                         onChange={(e) => setValue("vin", e.target.value.toUpperCase())}
                                     />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setShowScanner(true)}
+                                        className="shrink-0"
+                                        title="Scan VIN from Camera"
+                                    >
+                                        <ScanBarcode className="w-4 h-4" />
+                                    </Button>
                                     <VINDecoderButton
                                         vin={vinValue || ""}
                                         onDecode={handleVinDecode}
@@ -267,6 +280,46 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                     />
                                 </div>
                                 {errors.vin && <p className="text-xs text-red-500">{errors.vin.message}</p>}
+                                <Dialog open={showScanner} onOpenChange={setShowScanner}>
+                                    <DialogContent className="sm:max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle className="flex items-center gap-2">
+                                                <ScanBarcode className="w-5 h-5" />
+                                                Scan Vehicle VIN
+                                            </DialogTitle>
+                                            {/* <DialogDescription>
+                                                Point your camera at the 17-digit VIN barcode (usually located on the driver-side door jamb or dashboard).
+                                            </DialogDescription> */}
+                                        </DialogHeader>
+                                        <div className="mt-4">
+                                            {showScanner && (
+                                                <BarcodeScanner
+                                                    onScan={(result) => {
+                                                        // VIN barcodes often have an extra character at the start (I, S, etc.)
+                                                        // Standard VIN regex: [A-HJ-NPR-Z0-9]{17}
+                                                        const vinMatch = result.toUpperCase().match(/[A-HJ-NPR-Z0-9]{17}/);
+                                                        const cleanedVin = vinMatch ? vinMatch[0] : result.trim().toUpperCase();
+
+                                                        setValue("vin", cleanedVin, { shouldDirty: true, shouldValidate: true });
+
+                                                        // Force update for the UI input element specifically if needed
+                                                        const input = document.getElementById("vin-input") as HTMLInputElement;
+                                                        if (input) {
+                                                            input.value = cleanedVin;
+                                                        }
+
+                                                        setShowScanner(false);
+                                                        toast({
+                                                            title: "VIN Scanned",
+                                                            description: cleanedVin.length === 17 ? "Valid 17-digit VIN captured." : `Captured: ${cleanedVin}`,
+                                                        });
+                                                    }}
+                                                    onClose={() => setShowScanner(false)}
+                                                />
+                                            )}
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
                             </div>
 
                             <div className="space-y-2">

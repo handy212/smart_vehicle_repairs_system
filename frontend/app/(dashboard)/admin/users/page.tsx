@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, Plus, Edit, Trash2, UserCheck, UserX, Building2, Users, Filter, MoreVertical, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, UserCheck, UserX, Building2, Users, Filter, MoreVertical, Eye, ShieldCheck, ShieldAlert, ShieldOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -90,6 +90,24 @@ export default function UsersManagementPage() {
       toast({
         title: "Error",
         description: error.response?.data?.detail || "Failed to update user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reset2FAMutation = useMutation({
+    mutationFn: (id: number) => adminApi.users.reset2FA(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast({
+        title: "Success",
+        description: "2FA has been disabled for the user",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to reset 2FA",
         variant: "destructive",
       });
     },
@@ -262,6 +280,7 @@ export default function UsersManagementPage() {
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Role</TableHead>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">2FA</TableHead>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Created</TableHead>
                     <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Actions</TableHead>
                   </TableRow>
@@ -314,6 +333,19 @@ export default function UsersManagementPage() {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell className="px-4 py-2 whitespace-nowrap">
+                        {user.two_factor_enabled ? (
+                          <div className="flex items-center space-x-1.5" title="2FA is enabled">
+                            <ShieldCheck className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                            <span className="text-xs text-green-700 dark:text-green-400 font-medium">Enabled</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1.5" title="2FA is disabled">
+                            <ShieldAlert className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Disabled</span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap text-xs text-muted-foreground">
                         {format(new Date(user.created_at), "MMM dd, yyyy")}
                       </TableCell>
@@ -345,6 +377,20 @@ export default function UsersManagementPage() {
                                 <DropdownMenuItem onClick={() => handleToggleActive(user)}>
                                   {user.is_active ? <UserX className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
                                   {user.is_active ? 'Deactivate' : 'Activate'}
+                                </DropdownMenuItem>
+                              </PermissionGuard>
+                              <PermissionGuard permission="edit_users">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to reset and disable 2FA for "${user.full_name || user.email}"?`)) {
+                                      reset2FAMutation.mutate(user.id);
+                                    }
+                                  }}
+                                  disabled={!user.two_factor_enabled}
+                                >
+                                  <ShieldOff className="w-4 h-4 mr-2" />
+                                  Reset 2FA
                                 </DropdownMenuItem>
                               </PermissionGuard>
                               <PermissionGuard permission="delete_users">

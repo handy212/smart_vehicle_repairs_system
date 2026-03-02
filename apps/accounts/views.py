@@ -313,6 +313,25 @@ class UserViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['post'])
+    def reset_2fa(self, request, pk=None):
+        """
+        Admin action: Reset/disable 2FA for a user
+        """
+        user = self.get_object()
+        
+        # Check permissions
+        if not request.user.has_perm('accounts.edit_users') and not request.user.is_superuser:
+             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        user.two_factor_enabled = False
+        user.two_factor_secret = ''
+        user.save()
+        
+        return Response({
+            'detail': f'Two-factor authentication has been disabled for {user.email}'
+        }, status=status.HTTP_200_OK)
+    
     def _send_password_reset_email(self, user, new_password, request):
         """
         Send password reset notification to user.

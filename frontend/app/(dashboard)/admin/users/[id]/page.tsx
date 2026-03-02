@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Edit, AlertCircle, Building2, Save, X, Info, RefreshCw, Copy, Eye, EyeOff, Mail, KeyRound, UserCheck, UserX } from "lucide-react";
+import { ArrowLeft, Edit, AlertCircle, Building2, Save, X, Info, RefreshCw, Copy, Eye, EyeOff, Mail, KeyRound, UserCheck, UserX, ShieldCheck, ShieldAlert, ShieldOff } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -235,6 +235,25 @@ export default function UserDetailPage() {
       toast({
         title: "Error",
         description: error.response?.data?.detail || "Failed to send password reset link",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reset2FAMutation = useMutation({
+    mutationFn: (id: number) => adminApi.users.reset2FA(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast({
+        title: "Success",
+        description: "2FA has been disabled for the user",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to reset 2FA",
         variant: "destructive",
       });
     },
@@ -996,7 +1015,7 @@ export default function UserDetailPage() {
               </CardContent>
             </Card>
 
-          {/* // Account Details */}
+            {/* // Account Details */}
             <Card className="bg-muted border-border">
               <CardHeader>
                 <CardTitle className="text-foreground text-lg font-semibold">Account Details</CardTitle>
@@ -1037,7 +1056,7 @@ export default function UserDetailPage() {
             </Card>
           </div>
 
-        {/* // Branch & Employment Information */}
+          {/* // Branch & Employment Information */}
           <Card className="bg-muted border-border border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
@@ -1250,6 +1269,62 @@ export default function UserDetailPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Two-Factor Authentication Section */}
+          <Card className="bg-muted border-border border-l-4 border-l-primary">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
+                {user.two_factor_enabled ? (
+                  <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
+                ) : (
+                  <ShieldAlert className="w-5 h-5 text-muted-foreground" />
+                )}
+                Two-Factor Authentication
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-card-foreground">Status:</span>
+                    {user.two_factor_enabled ? (
+                      <span className="text-sm text-green-700 dark:text-green-400 font-medium">Enabled</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Disabled</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {user.two_factor_enabled
+                      ? "This user is currently required to use an authenticator app to log in."
+                      : "This user does not have two-factor authentication enabled."}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to reset and disable 2FA for "${user.full_name || user.email}"?`)) {
+                      reset2FAMutation.mutate(userId);
+                    }
+                  }}
+                  disabled={!user.two_factor_enabled || reset2FAMutation.isPending}
+                  className="w-full sm:w-auto"
+                >
+                  {reset2FAMutation.isPending ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Resetting...
+                    </span>
+                  ) : (
+                    <>
+                      <ShieldOff className="w-4 h-4 mr-2" />
+                      Force Reset 2FA
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

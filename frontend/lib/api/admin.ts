@@ -28,6 +28,7 @@ export interface User {
   employee_id?: string;
   hire_date?: string;
   hourly_rate?: string;
+  two_factor_enabled?: boolean;
 }
 
 export interface UserCreate {
@@ -296,6 +297,11 @@ export const adminApi = {
       return response.data;
     },
 
+    reset2FA: async (id: number): Promise<{ detail: string }> => {
+      const response = await apiClient.post(`/accounts/users/${id}/reset_2fa/`);
+      return response.data;
+    },
+
     staffList: async (): Promise<User[]> => {
       const response = await apiClient.get("/accounts/users/staff_list/");
       return response.data;
@@ -346,9 +352,8 @@ export const adminApi = {
     },
 
     delete: async (id: number): Promise<void> => {
-      await apiClient.delete(`/accounts/admin/settings/${id}/`);
+      await apiClient.delete(`/branches/branches/${id}/`);
     },
-
     byCategory: async (category?: string): Promise<SystemSetting[]> => {
       const response = await apiClient.get("/accounts/admin/settings/by_category/", {
         params: category ? { category } : {},

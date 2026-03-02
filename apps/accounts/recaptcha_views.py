@@ -56,7 +56,23 @@ class RecaptchaTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'recaptcha_token': 'reCAPTCHA verification failed. Please try again.'
                 })
 
-        return super().validate(attrs)
+        data = super().validate(attrs)
+
+        user = self.user
+        if getattr(user, 'two_factor_enabled', False):
+            # Generate a temporary token that expires soon
+            from django.core.signing import TimestampSigner
+            signer = TimestampSigner()
+            temp_token = signer.sign_object({'user_id': user.id})
+            
+            # Return partial response requiring 2FA
+            return {
+                'requires_2fa': True,
+                'temp_token': temp_token,
+                'user_id': user.id,
+            }
+
+        return data
 
     @staticmethod
     def _verify_recaptcha(token, secret_key):

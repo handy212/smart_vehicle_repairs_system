@@ -490,3 +490,62 @@ class AIService:
             "notes": notes,
             "recommendations": recommendations,
         }
+
+    @staticmethod
+    def suggest_initial_observations(work_order):
+        """
+        Generates professional initial observations based on work order data.
+        """
+        concerns = work_order.customer_concerns or "General vehicle checkup"
+        vehicle = work_order.vehicle
+        mileage = f" at {work_order.odometer_in:,} miles" if work_order.odometer_in else ""
+        
+        # Professional opening
+        observations = f"Initial assessment for {vehicle.year} {vehicle.make} {vehicle.model}{mileage}.\n\n"
+        
+        # Address customer concerns
+        observations += f"Primary Consideration: The customer has reported the following concerns: '{concerns}'.\n\n"
+        
+        # Intelligence-based suggestions (Heuristics for now, simulating AI)
+        concerns_lower = concerns.lower()
+        if any(word in concerns_lower for word in ['noise', 'sound', 'squeak', 'rattle', 'clunk']):
+            observations += "Preliminary investigation will focus on identifying the source of reported noise. System checks for suspension components, wheel bearings, and brake hardware are recommended.\n"
+        elif any(word in concerns_lower for word in ['leak', 'drip', 'fluid', 'oil']):
+            observations += "Fluid system integrity check required. Will perform visual inspection of engine bay and undercarriage to locate potential leakage source and verify fluid levels.\n"
+        elif any(word in concerns_lower for word in ['light', 'check engine', 'warning', 'dash']):
+            observations += "Diagnostic system scan required to retrieve stored fault codes. Will analyze live data stream to verify sensor readings related to the reported warning light.\n"
+        elif any(word in concerns_lower for word in ['vibration', 'shaking', 'steering']):
+            observations += "Vehicle stability and drivetrain alignment check recommended. Will inspect tire condition, wheel balancing, and steering linkage for play or damage.\n"
+        else:
+            observations += "Will perform a standard multi-point inspection to assess overall vehicle condition and verify reported performance. Check of all major systems including fluids, filters, and safety components is scheduled.\n"
+            
+        return observations
+    @staticmethod
+    def suggest_qc_notes(work_order):
+        """
+        Generates professional Quality Check notes based on completed work.
+        """
+        tasks = work_order.tasks.filter(status='completed')
+        parts = work_order.parts.filter(status='installed')
+        
+        vehicle = work_order.vehicle
+        
+        notes = f"Quality Check Assessment for {vehicle.year} {vehicle.make} {vehicle.model}.\n\n"
+        
+        if tasks.exists():
+            notes += "Work Performed Verification:\n"
+            for task in tasks:
+                notes += f"  • {task.description}: Completed and verified.\n"
+            notes += "\n"
+        
+        if parts.exists():
+            notes += "Components Installed & Tested:\n"
+            for part in parts:
+                notes += f"  • {part.part_name}: Installed, fitment and operation confirmed.\n"
+            notes += "\n"
+            
+        notes += "Final Inspection Summary: All systems related to the reported concerns have been tested. "
+        notes += "Vehicle has been cleaned and is ready for customer delivery. "
+        notes += "No new defects or damage observed during the post-repair inspection."
+        
+        return notes

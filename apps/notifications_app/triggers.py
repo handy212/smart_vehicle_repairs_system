@@ -776,6 +776,72 @@ Please review the work order and coordinate the diagnosis process.''',
         )
         self.service.send_notification(email_notification)
 
+    # ==================== VEHICLE/SERVICE NOTIFICATIONS ====================
+
+    def service_due(self, schedule):
+        """Notify customer when a vehicle service is due based on schedule"""
+        if not schedule.vehicle.owner.user:
+            return
+            
+        template = self._get_template('service_due', 'email')
+        customer_name = self._build_customer_name(schedule.vehicle.owner)
+        vehicle_display = self._build_vehicle_display(schedule.vehicle)
+        
+        # Build context
+        context = self._get_default_context()
+        
+        service_name = schedule.service_type.name if schedule.service_type else "Scheduled Service"
+        due_date_str = str(schedule.next_service_due_date) if schedule.next_service_due_date else "soon"
+        due_mileage_str = f"{schedule.next_service_due_mileage} {schedule.vehicle.mileage_unit}" if schedule.next_service_due_mileage else ""
+        
+        due_text = due_date_str
+        if due_mileage_str:
+            due_text += f" or at {due_mileage_str}"
+            
+        context.update({
+            'customer_name': customer_name,
+            'vehicle': vehicle_display,
+            'vehicle_display': vehicle_display,
+            'service_name': service_name,
+            'due_text': due_text,
+            'current_mileage': str(schedule.vehicle.current_mileage),
+        })
+        
+        title = f'Service Due: {service_name} for {vehicle_display}'
+        message = f'''It's time for service for your vehicle!
+        
+Vehicle: {vehicle_display}
+Service: {service_name}
+Due: {due_text}
+
+Please contact us to schedule an appointment or book online.'''
+
+        if template and template.subject:
+            try:
+                title = self.service._render_template(template.subject, context)
+            except:
+                pass
+                
+        if template and template.body:
+            try:
+                message = self.service._render_template(template.body, context)
+            except:
+                pass
+                
+        notification = Notification.objects.create(
+            recipient=schedule.vehicle.owner.user,
+            notification_type='marketing', # Or 'vehicle' depending on categories
+            channel='email',
+            priority='normal',
+            template=template,
+            title=title,
+            message=message,
+            data=context,
+            related_object_type='vehicle',
+            related_object_id=schedule.vehicle.id
+        )
+        self.service.send_notification(notification)
+
     def parts_estimate_requested(self, work_order, diagnosis, requested_by):
         """Notify Parts Managers that a parts estimate is requested"""
         from apps.accounts.models import User

@@ -122,6 +122,8 @@ pytest==8.4.2
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-decouple==3.8
+pyotp==2.9.0
+qrcode==7.4.2
 pywebpush==2.2.0
 pytz==2025.2
 PyYAML==6.0.3

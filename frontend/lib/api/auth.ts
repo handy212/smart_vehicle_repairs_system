@@ -7,8 +7,12 @@ export interface LoginCredentials {
 }
 
 export interface AuthResponse {
-  access: string;
-  refresh: string;
+  access?: string;
+  refresh?: string;
+  requires_2fa?: boolean;
+  user_id?: number;
+  temp_token?: string;
+  user?: User;
 }
 
 export interface User {
@@ -53,6 +57,29 @@ export interface UpdateProfileData {
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await apiClient.post("/auth/token/", credentials);
+    return response.data;
+  },
+
+  verify2FALogin: async (tempToken: string, code: string): Promise<AuthResponse> => {
+    const response = await apiClient.post("/auth/2fa/verify_login/", {
+      temp_token: tempToken,
+      code,
+    });
+    return response.data;
+  },
+
+  setup2FA: async (): Promise<{ secret: string; qr_code: string }> => {
+    const response = await apiClient.post("/auth/2fa/setup/");
+    return response.data;
+  },
+
+  verify2FASetup: async (code: string): Promise<{ detail: string; user: User }> => {
+    const response = await apiClient.post("/auth/2fa/verify_setup/", { code });
+    return response.data;
+  },
+
+  disable2FA: async (password: string): Promise<{ detail: string; user: User }> => {
+    const response = await apiClient.post("/auth/2fa/disable/", { password });
     return response.data;
   },
 

@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { CheckCircle2, Image as ImageIcon, X, Package } from "lucide-react";
+import { CheckCircle2, Image as ImageIcon, X, Package, ScanBarcode } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -22,9 +22,12 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
 
 export const partSchema = z.object({
     part_number: z.string().min(1, "Part number is required"),
+    barcode: z.string().optional(),
     name: z.string().min(1, "Name is required"),
     description: z.string().optional(),
     category: z.number().min(1, "Category is required"),
@@ -73,6 +76,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
     const [activeTab, setActiveTab] = useState("basic");
+    const [showScanner, setShowScanner] = useState(false);
 
     const { data: categories = [] } = useQuery({
         queryKey: ["part-categories"],
@@ -101,6 +105,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
     } = useForm<PartFormData>({
         resolver: zodResolver(partSchema),
         defaultValues: {
+            barcode: "",
             // quantity_in_stock removed - stock is managed via StockItem per branch
             reorder_point: 10,
             reorder_quantity: 20,
@@ -144,6 +149,32 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
 
     return (
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+            <Dialog open={showScanner} onOpenChange={setShowScanner}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Scan Barcode</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                        {showScanner && (
+                            <BarcodeScanner
+                                onScan={(result) => {
+                                    register("barcode").onChange({ target: { value: result, name: "barcode" } });
+                                    // Hack to force react-hook-form to update value immediately for the UI without submitting
+                                    const event = new Event("input", { bubbles: true });
+                                    const input = document.getElementById("barcode") as HTMLInputElement;
+                                    if (input) {
+                                        input.value = result;
+                                        input.dispatchEvent(event);
+                                    }
+                                    setShowScanner(false);
+                                }}
+                                onClose={() => setShowScanner(false)}
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Main Form */}
                 <div className="lg:col-span-3 space-y-6">
@@ -167,6 +198,17 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                             <Input id="part_number" {...register("part_number")} className={errors.part_number ? "border-red-500" : ""} placeholder="PART-001" />
                                             {errors.part_number && <p className="text-xs text-red-500">{errors.part_number.message}</p>}
                                         </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="barcode">Barcode (UPC/EAN)</Label>
+                                            <div className="flex gap-2">
+                                                <Input id="barcode" {...register("barcode")} placeholder="Scan or enter barcode" />
+                                                <Button type="button" variant="outline" onClick={() => setShowScanner(true)}>
+                                                    <ScanBarcode className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <select
                                                 id="category"

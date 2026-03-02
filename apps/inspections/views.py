@@ -357,6 +357,16 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         # Create inspection with branch
         inspection = serializer.save(branch=branch)
         
+        # Update vehicle mileage if provided
+        odometer_reading = serializer.validated_data.get('odometer_reading')
+        if odometer_reading is not None and inspection.vehicle:
+            # We already validated it's >= current_mileage in the serializer
+            inspection.vehicle.update_mileage(
+                mileage=odometer_reading,
+                user=request.user,
+                notes=f"Recorded during Inspection {inspection.inspection_number}"
+            )
+        
         # Return with detail serializer to include ID and all fields
         headers = self.get_success_headers(serializer.data)
         detail_serializer = VehicleInspectionDetailSerializer(inspection)
@@ -388,7 +398,32 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             
             raise ValidationError({'branch': error_msg})
         
-        serializer.save(branch=branch)
+        
+        inspection = serializer.save(branch=branch)
+        
+        # Update vehicle mileage if provided
+        odometer_reading = serializer.validated_data.get('odometer_reading')
+        if odometer_reading is not None and inspection.vehicle:
+            # We already validated it's >= current_mileage in the serializer
+            inspection.vehicle.update_mileage(
+                mileage=odometer_reading,
+                user=request.user,
+                notes=f"Recorded during Inspection {inspection.inspection_number}"
+            )
+            
+    def perform_update(self, serializer):
+        """Update inspection and conditionally update vehicle mileage"""
+        inspection = serializer.save()
+        
+        # Update vehicle mileage if provided
+        odometer_reading = serializer.validated_data.get('odometer_reading')
+        if odometer_reading is not None and inspection.vehicle:
+            # We already validated it's >= current_mileage in the serializer
+            inspection.vehicle.update_mileage(
+                mileage=odometer_reading,
+                user=self.request.user,
+                notes=f"Updated during Inspection {inspection.inspection_number}"
+            )
     
     def get_serializer_class(self):
         if self.action == 'list':

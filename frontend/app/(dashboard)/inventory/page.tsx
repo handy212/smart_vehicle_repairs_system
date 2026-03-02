@@ -608,7 +608,7 @@ export default function InventoryPage() {
                   setShowScanner(false);
                   toast({ title: "Barcode Scanned", description: `Searched for ${data}` });
                 }}
-                onCancel={() => setShowScanner(false)}
+                onClose={() => setShowScanner(false)}
               />
             )}
           </div>

@@ -248,6 +248,11 @@ class WorkOrder(models.Model):
     quality_check_at = models.DateTimeField(null=True, blank=True)
     quality_check_notes = models.TextField(blank=True)
     quality_check_passed = models.BooleanField(default=False)
+    quality_check_signature = models.TextField(
+        null=True, 
+        blank=True,
+        help_text="Base64 encoded signature of the technician who performed the quality check"
+    )
     
     # Tracking
     created_by = models.ForeignKey(
@@ -1207,10 +1212,16 @@ class ServiceTask(models.Model):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Track original status to detect changes without extra DB query
-        self._original_status = self.status if self.pk else None
-        self._original_labor_cost = self.labor_cost if self.pk else None
-        self._original_actual_hours = self.actual_hours if self.pk else None
+        # Track original status to detect changes safely without triggering DB refresh for deferred fields
+        if self.pk:
+            # Use __dict__.get() to avoid triggering DeferredAttribute descriptors
+            self._original_status = self.__dict__.get('status')
+            self._original_labor_cost = self.__dict__.get('labor_cost')
+            self._original_actual_hours = self.__dict__.get('actual_hours')
+        else:
+            self._original_status = None
+            self._original_labor_cost = None
+            self._original_actual_hours = None
 
     def save(self, *args, **kwargs):
         # Calculate labor cost from hours and rate

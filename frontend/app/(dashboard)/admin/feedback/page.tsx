@@ -179,9 +179,7 @@ export default function AdminFeedbackPage() {
             <PageHeader
                 title="Customer Feedback"
             >
-                <p className="text-sm text-muted-foreground -mt-2">
-                    View and manage suggestions and complaints from the digital suggestion box.
-                </p>
+
             </PageHeader>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -234,13 +232,9 @@ export default function AdminFeedbackPage() {
                                 <QrCode className="h-5 w-5" />
                                 Generate Links
                             </CardTitle>
-                            <CardDescription>
-                                Copy links for each branch to generate QR codes.
-                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <p className="text-sm font-medium">General Link</p>
                                 <div className="flex items-center gap-2">
                                     <Input
                                         readOnly

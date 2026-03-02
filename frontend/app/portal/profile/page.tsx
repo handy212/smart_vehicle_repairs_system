@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { PortalPageHeader } from "../components/PortalPageHeader";
+import { TwoFactorSettings } from "@/components/auth/TwoFactorSettings";
 
 export default function ProfilePage() {
     const { data: user, isLoading } = useQuery({
@@ -132,6 +133,8 @@ export default function ProfilePage() {
                             </Link>
                         </CardContent>
                     </Card>
+
+                    <TwoFactorSettings />
                 </div>
             </div>
         </div>

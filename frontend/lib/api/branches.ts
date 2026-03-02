@@ -91,6 +91,11 @@ export const branchesApi = {
     await apiClient.delete(`/branches/${id}/`);
   },
 
+  forceDelete: async (id: number): Promise<{ detail: string }> => {
+    const response = await apiClient.delete(`/branches/${id}/force_delete/`);
+    return response.data;
+  },
+
   getStats: async (id: number): Promise<BranchStats> => {
     const response = await apiClient.get(`/branches/${id}/stats/`);
     return response.data;

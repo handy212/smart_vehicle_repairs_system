@@ -31,9 +31,10 @@ class UserSerializer(serializers.ModelSerializer):
             'email_notifications', 'sms_notifications',
             'is_active', 'created_at', 'updated_at', 'customer_profile',
             'branch', 'managed_branches', 'branch_name', 'managed_branches_names',
-            'employee_id', 'hire_date', 'hourly_rate', 'permissions'
+            'employee_id', 'hire_date', 'hourly_rate', 'permissions',
+            'two_factor_enabled'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'two_factor_enabled']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -322,14 +323,34 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'first_name', 'last_name', 'phone', 'profile_picture',
             'date_of_birth', 'address', 'city', 'state', 'zip_code', 'country',
             'email_notifications', 'sms_notifications', 'role', 'is_active',
-            'branch', 'managed_branches', 'employee_id', 'hire_date', 'hourly_rate'
+            'branch', 'managed_branches', 'employee_id', 'hire_date', 'hourly_rate',
+            'two_factor_enabled'
         ]
+        read_only_fields = ['two_factor_enabled']
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Set queryset for branch fields dynamically
         from apps.branches.models import Branch
+        from django.db.models import Q
+        
+        # Base queryset: only active branches
         branch_queryset = Branch.objects.filter(is_active=True)
+        
+        # If we have an instance, also allow currently assigned branch(es) even if inactive
+        if self.instance:
+            current_branch_ids = []
+            if self.instance.branch_id:
+                current_branch_ids.append(self.instance.branch_id)
+            
+            # Use .values_list for efficiency if there are many managed branches
+            managed_ids = list(self.instance.managed_branches.values_list('id', flat=True))
+            current_branch_ids.extend(managed_ids)
+            
+            if current_branch_ids:
+                branch_queryset = Branch.objects.filter(
+                    Q(is_active=True) | Q(id__in=current_branch_ids)
+                )
         
         # Add branch field with queryset
         self.fields['branch'] = serializers.PrimaryKeyRelatedField(

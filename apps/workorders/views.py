@@ -157,9 +157,31 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
 
         work_order = serializer.save(branch=branch)
         
+        # Update vehicle mileage if provided
+        odometer_in = serializer.validated_data.get('odometer_in')
+        if odometer_in is not None and work_order.vehicle:
+            # We already validated it's >= current_mileage in the serializer
+            work_order.vehicle.update_mileage(
+                mileage=odometer_in,
+                user=request.user,
+                notes=f"Recorded at Work Order {work_order.work_order_number} creation"
+            )
+        
         # Note: Subscription deductions are handled in the roadside assistance module
         # Work orders are for regular workshop services, not roadside breakdown assistance
     
+    def perform_update(self, serializer):
+        work_order = serializer.save()
+        
+        # Update vehicle mileage if provided
+        odometer_out = serializer.validated_data.get('odometer_out')
+        if odometer_out is not None and work_order.vehicle:
+            work_order.vehicle.update_mileage(
+                mileage=odometer_out,
+                user=self.request.user,
+                notes=f"Recorded at Work Order {work_order.work_order_number} update"
+            )
+            
     def update(self, request, *args, **kwargs):
         """Override update to add better error logging"""
         import logging
@@ -677,6 +699,22 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             )
             
         return Response(prediction)
+
+    @action(detail=True, methods=['get'])
+    def suggest_observations(self, request, pk=None):
+        """Generate AI-powered initial observations for a work order"""
+        work_order = self.get_object()
+        from apps.core.services.ai_service import AIService
+        observations = AIService.suggest_initial_observations(work_order)
+        return Response({'observations': observations})
+
+    @action(detail=True, methods=['get'])
+    def suggest_qc_notes(self, request, pk=None):
+        """Generate AI-powered quality check observations for a work order"""
+        work_order = self.get_object()
+        from apps.core.services.ai_service import AIService
+        notes = AIService.suggest_qc_notes(work_order)
+        return Response({'notes': notes})
     
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, HasPermission('manage_workorders')])
     def check_overdue(self, request):

@@ -348,9 +348,7 @@ export default function AppointmentsPage() {
               Appointments
             </h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your service schedule and bookings
-          </p>
+          
         </div>
         <div className="flex items-center space-x-2">
           <DropdownMenu>

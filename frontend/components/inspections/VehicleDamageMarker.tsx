@@ -58,6 +58,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
   const [newMarkData, setNewMarkData] = useState<Partial<DamageMark>>({ type: "scratch", severity: "minor", description: "" });
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [hoveredMarkId, setHoveredMarkId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -148,8 +149,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
         <div
           ref={canvasRef}
           onClick={handleCanvasClick}
-          className="relative w-full h-[400px] border-2 border-border rounded-lg bg-card cursor-crosshair overflow-hidden"
-          style={{ position: "relative" }}
+          className="relative w-full aspect-video md:aspect-[21/9] border-2 border-border rounded-lg bg-card cursor-crosshair overflow-hidden"
         >
           {/* Loading Skeleton */}
           {imageLoading && !imageError && (
@@ -190,90 +190,105 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
           />
 
           {/* Damage Marks */}
-          <TooltipProvider>
-            {damage.map((mark, index) => (
-              <div
-                key={mark.id}
-                className="absolute group"
-                style={{
-                  left: `${mark.x}%`,
-                  top: `${mark.y}%`,
-                  transform: "translate(-50%, -50%)",
-                  zIndex: 10,
-                }}
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
+          <TooltipProvider delayDuration={150}>
+            {damage.map((mark, index) => {
+              const isHovered = hoveredMarkId === mark.id;
+
+              return (
+                <div
+                  key={mark.id}
+                  className="absolute group"
+                  style={{
+                    left: `${mark.x}%`,
+                    top: `${mark.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    zIndex: isHovered ? 20 : 10,
+                  }}
+                  onMouseEnter={() => setHoveredMarkId(mark.id)}
+                  onMouseLeave={() => setHoveredMarkId(null)}
+                >
+                  <Tooltip open={isHovered}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!disabled) setEditingMark(mark);
+                        }}
+                        className={`relative ${severitySizes[mark.severity]} ${damageTypeColors[mark.type]} ${severityColors[mark.severity]} 
+                          rounded-full cursor-pointer transition-all duration-200 shadow-md flex items-center justify-center group/button
+                           ring-offset-background
+                          ${isHovered ? 'scale-125 ring-2 ring-primary ring-offset-2 z-20' : 'hover:scale-110'}
+                        `}
+                      >
+                        {/* Number Badge */}
+                        <span className="text-white font-bold text-[10px] z-10 drop-shadow-md">
+                          {index + 1}
+                        </span>
+                        {/* Pulse animation for major severity */}
+                        {mark.severity === "major" && !isHovered && (
+                          <span className="absolute inset-0 rounded-full animate-ping opacity-75 bg-red-600"></span>
+                        )}
+                        {isHovered && (
+                          <span className="absolute inset-0 rounded-full animate-ping opacity-40 bg-primary"></span>
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="p-3 max-w-[200px] border shadow-xl bg-card z-50">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold underline capitalize">{mark.type}</span>
+                          <Badge
+                            variant={mark.severity === "major" ? "danger" : mark.severity === "moderate" ? "secondary" : "outline"}
+                            className="h-4 text-[10px] px-1"
+                          >
+                            {mark.severity}
+                          </Badge>
+                        </div>
+                        {mark.description ? (
+                          <p className="text-[11px] leading-relaxed italic text-muted-foreground border-l-2 border-primary/20 pl-2">
+                            {mark.description}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground italic">Click to edit details</p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {!disabled && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!disabled) setEditingMark(mark);
+                        if (confirm(`Delete ${mark.type} mark?`)) {
+                          handleDeleteMark(mark.id);
+                        }
                       }}
-                      className={`relative ${severitySizes[mark.severity]} ${damageTypeColors[mark.type]} ${severityColors[mark.severity]} rounded-full cursor-pointer hover:scale-110 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center group/button`}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center shadow-lg hover:scale-110 z-30"
+                      title="Delete mark"
                     >
-                      // Number Badge
-                      <span className="text-white font-bold text-[10px] z-10 drop-shadow-lg">
-                        {index + 1}
-                      </span>
-                      // Pulse animation for major severity
-                      {mark.severity === "major" && (
-                        <span className="absolute inset-0 rounded-full animate-ping opacity-75 bg-red-600"></span>
-                      )}
+                      <X className="w-3.5 h-3.5" />
                     </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="p-3 max-w-[200px] border shadow-xl bg-card">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold underline capitalize">{mark.type}</span>
-                        <Badge
-                          variant={mark.severity === "major" ? "danger" : mark.severity === "moderate" ? "secondary" : "outline"}
-                          className="h-4 text-[10px] px-1"
-                        >
-                          {mark.severity}
-                        </Badge>
-                      </div>
-                      {mark.description && (
-                        <p className="text-[11px] leading-relaxed italic text-muted-foreground border-l-2 border-primary/20 pl-2">
-                          {mark.description}
-                        </p>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-
-                {!disabled && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Delete ${mark.type} mark?`)) {
-                        handleDeleteMark(mark.id);
-                      }
-                    }}
-                    className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center shadow-lg hover:scale-110 z-20"
-                    title="Delete mark"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </TooltipProvider>
 
           {/* Temporary mark position indicator */}
           {tempMark && (
             <div
-              className="absolute w-12 h-12 border-4 border-primary border-dashed rounded-full bg-orange-100/30 animate-pulse"
+              className="absolute w-12 h-12 border-4 border-primary border-dashed rounded-full bg-primary/20 animate-pulse pointer-events-none"
               style={{
                 left: `${tempMark.x}%`,
                 top: `${tempMark.y}%`,
                 transform: "translate(-50%, -50%)",
-                zIndex: 5,
+                zIndex: 15,
               }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full shadow-lg"></div>
               </div>
             </div>
           )}
@@ -290,67 +305,82 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
                 {damage.filter(m => m.severity === "minor").length > 0 && `, ${damage.filter(m => m.severity === "minor").length} Minor`}
               </Badge>
             </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {damage.map((mark, index) => (
-                <div
-                  key={mark.id}
-                  className="flex items-center justify-between p-3 bg-card rounded-lg border border-border hover:border-border hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className={`relative ${severitySizes[mark.severity]} ${damageTypeColors[mark.type]} ${severityColors[mark.severity]} rounded-full flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-white font-bold text-xs drop-shadow">
-                        {index + 1}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold capitalize">
-                          {mark.type}
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {damage.map((mark, index) => {
+                const isHovered = hoveredMarkId === mark.id;
+
+                return (
+                  <div
+                    key={mark.id}
+                    className={`flex items-center justify-between p-3 bg-card rounded-lg border transition-all duration-200 ease-in-out cursor-pointer
+                      ${isHovered ? 'border-primary ring-1 ring-primary/50 shadow-md bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50'}
+                    `}
+                    onMouseEnter={() => setHoveredMarkId(mark.id)}
+                    onMouseLeave={() => setHoveredMarkId(null)}
+                    onClick={() => !disabled && setEditingMark(mark)}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`relative ${severitySizes[mark.severity]} ${damageTypeColors[mark.type]} ${severityColors[mark.severity]} rounded-full flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                        <span className="text-white font-bold text-xs drop-shadow">
+                          {index + 1}
                         </span>
-                        <Badge
-                          variant={mark.severity === "major" ? "danger" : mark.severity === "moderate" ? "warning" : "success"}
-                          className="text-xs capitalize"
-                        >
-                          {mark.severity}
-                        </Badge>
                       </div>
-                      {mark.description && (
-                        <div className="text-xs text-muted-foreground mt-1 truncate" title={mark.description}>
-                          {mark.description}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-sm font-semibold capitalize tracking-tight">
+                            {mark.type}
+                          </span>
+                          <Badge
+                            variant={mark.severity === "major" ? "danger" : mark.severity === "moderate" ? "warning" : "success"}
+                            className="text-[10px] px-1.5 py-0 capitalize h-4 leading-none"
+                          >
+                            {mark.severity}
+                          </Badge>
                         </div>
-                      )}
+                        {mark.description ? (
+                          <div className="text-xs text-muted-foreground truncate" title={mark.description}>
+                            {mark.description}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-muted-foreground/60 italic">No description</div>
+                        )}
+                      </div>
                     </div>
+                    {!disabled && (
+                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ opacity: isHovered ? 1 : undefined }}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingMark(mark);
+                          }}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                          title="Edit mark"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete ${mark.type} mark?`)) {
+                              handleDeleteMark(mark.id);
+                            }
+                          }}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                          title="Delete mark"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  {!disabled && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingMark(mark)}
-                        className="h-8 w-8 p-0"
-                        title="Edit mark"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm(`Delete ${mark.type} mark?`)) {
-                            handleDeleteMark(mark.id);
-                          }
-                        }}
-                        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                        title="Delete mark"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
