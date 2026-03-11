@@ -340,7 +340,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         appointment.appointment_date = new_date
         appointment.appointment_time = new_time
         appointment.status = 'rescheduled'
-        appointment.save()
+        
+        from django.db import IntegrityError
+        try:
+            appointment.save()
+        except IntegrityError:
+            return Response(
+                {'error': 'Service bay is already booked for this new time slot'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         serializer = AppointmentDetailSerializer(appointment)
         return Response(serializer.data)

@@ -693,79 +693,12 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         
         # Send notification to customer with portal link
         try:
-            notification_triggers = NotificationTriggers()
-            
             # Build portal link - use portal route from Django URLs
             frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3001')
             # Portal inspection detail route: /portal/inspections/<id>/ (plural)
             portal_link = f"{frontend_url}/portal/inspections/{inspection.id}/"
             
-            # Create and send notification
-            template = notification_triggers._get_template('inspection_completed', 'email')
-            customer_name = notification_triggers._build_customer_name(inspection.vehicle.owner)
-            vehicle_display = notification_triggers._build_vehicle_display(inspection.vehicle)
-            
-            # Prepare context data for template rendering
-            context_data = {
-                'customer_name': customer_name,
-                'inspection_number': inspection.inspection_number,
-                'vehicle_display': vehicle_display,
-                'inspection_date': str(inspection.inspection_date.date()) if inspection.inspection_date else "N/A",
-                'inspection_link': portal_link,
-                'portal_link': portal_link,
-                'company_name': notification_triggers._get_company_name(),
-            }
-            
-            # Render subject
-            title = f'Inspection Completed - {inspection.inspection_number}'
-            if template and template.subject:
-                title = notification_triggers.service._render_template(template.subject, context_data)
-            
-            # Render message body
-            message = f'''Your vehicle inspection is complete and ready for review.
-
-Inspection: {inspection.inspection_number}
-Vehicle: {vehicle_display}
-
-Please review and approve the inspection report by clicking the link below:
-{portal_link}
-
-Thank you for choosing our service.'''
-            
-            if template and template.body:
-                message = notification_triggers.service._render_template(template.body, context_data)
-            
-            from apps.notifications_app.models import Notification
-            
-            # Create email notification
-            email_notification = Notification.objects.create(
-                recipient=inspection.vehicle.owner.user,
-                notification_type='inspection',
-                channel='email',
-                priority='normal',
-                template=template,
-                title=title,
-                message=message,
-                data=context_data,
-                related_object_type='inspection',
-                related_object_id=inspection.id
-            )
-            notification_triggers.service.send_notification(email_notification)
-            
-            # Create in-app notification
-            in_app_notification = Notification.objects.create(
-                recipient=inspection.vehicle.owner.user,
-                notification_type='inspection',
-                channel='in_app',
-                priority='normal',
-                template=None,  # In-app notifications don't use email templates
-                title=title,
-                message=message,
-                data=context_data,
-                related_object_type='inspection',
-                related_object_id=inspection.id
-            )
-            notification_triggers.service.send_notification(in_app_notification)
+            notification_triggers.inspection_completed(inspection, portal_link=portal_link)
             
         except Exception as e:
             import logging
