@@ -60,6 +60,9 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     parts_count = serializers.SerializerMethodField()
     total_po_count = serializers.SerializerMethodField()
+    
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
 
     class Meta:
         model = Supplier
@@ -73,6 +76,26 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
 
     def get_total_po_count(self, obj):
         return obj.purchase_orders.count()
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
+
+    def get_qbo_sync_status(self, obj):
+        mapping = self._get_qbo_mapping(obj)
+        return mapping.status if mapping else 'un-synced'
+
+    def get_qbo_sync_error(self, obj):
+        mapping = self._get_qbo_mapping(obj)
+        return mapping.error_message if mapping else ''
 
 
 class SupplierCreateSerializer(serializers.ModelSerializer):
@@ -312,6 +335,9 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     received_quantity = serializers.ReadOnlyField()
     is_fully_received = serializers.ReadOnlyField()
     is_partially_received = serializers.ReadOnlyField()
+    
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrder
@@ -331,6 +357,26 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
 
     def get_assigned_approver_name(self, obj):
         return obj.assigned_approver.get_full_name() if obj.assigned_approver else None
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
+
+    def get_qbo_sync_status(self, obj):
+        mapping = self._get_qbo_mapping(obj)
+        return mapping.status if mapping else 'un-synced'
+
+    def get_qbo_sync_error(self, obj):
+        mapping = self._get_qbo_mapping(obj)
+        return mapping.error_message if mapping else ''
 
 
 class PurchaseOrderCreateSerializer(serializers.ModelSerializer):

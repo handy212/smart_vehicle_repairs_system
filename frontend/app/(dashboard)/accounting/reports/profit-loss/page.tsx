@@ -186,7 +186,7 @@ export default function ProfitLossPage() {
                 </div>
             ) : (
                 <>
-                    // Income Section - Compact
+                    {/* // Income Section - Compact */}
                     <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
                         <CardHeader className="pb-3 border-b border-border bg-success/10 dark:bg-green-900/10">
                             <CardTitle className="text-base text-green-700 dark:text-green-400">Income</CardTitle>
@@ -224,7 +224,7 @@ export default function ProfitLossPage() {
                         </CardContent>
                     </Card>
 
-                    // Expenses Section - Compact
+                    {/* // Expenses Section - Compact */}
                     <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
                         <CardHeader className="pb-3 border-b border-border bg-red-50/50 dark:bg-red-900/10">
                             <CardTitle className="text-base text-red-700 dark:text-red-400">Expenses</CardTitle>
@@ -262,7 +262,7 @@ export default function ProfitLossPage() {
                         </CardContent>
                     </Card>
 
-                    // Net Income Summary - Compact
+                    {/* // Net Income Summary - Compact */}
                     <Card className={`border-2 ${netIncome >= 0 ? 'border-green-200 bg-success/10 dark:bg-green-900/20' : 'border-red-200 bg-red-50 dark:bg-red-900/20'}`}>
                         <CardContent className="p-4">
                             <div className="flex justify-between items-center">

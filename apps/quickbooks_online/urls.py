@@ -8,4 +8,5 @@ urlpatterns = [
     path('callback/', views.QBOCallbackView.as_view(), name='callback'),
     path('refresh/', views.QBORefreshView.as_view(), name='refresh'),
     path('disconnect/', views.QBODisconnectView.as_view(), name='disconnect'),
+    path('sync-inbound/', views.QBOInboundSyncView.as_view(), name='sync_inbound'),
 ]

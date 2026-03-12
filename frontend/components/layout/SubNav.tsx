@@ -122,99 +122,56 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     onToggle?.(newState);
   };
 
+  // Shared logic: compute active item using longest-match strategy
+  const getIsActive = (item: SubNavItem) => {
+    const matchingItems = items.filter(i =>
+      pathname === i.href || pathname?.startsWith(i.href + "/")
+    );
+    const longestMatch = matchingItems.reduce((prev, curr) =>
+      curr.href.length > prev.href.length ? curr : prev,
+      { href: "" }
+    );
+    return item.href === longestMatch.href;
+  };
+
+  const isDark = resolvedTheme === "dark";
+  const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;
+
   return (
-    <aside
-      className={cn(
-        "fixed top-16 bottom-0 z-10 transition-all duration-300",
-        "bg-card/80 bg-background/80 backdrop-blur-xl border-r border-border/60 border-border/60 shadow-lg", // Premium glass effect
-        isCollapsed ? "w-12" : "w-52" // Tightened width
-      )}
-      style={{ left: `${sidebarLeft}px` }}
-    >
-      <div className={cn("p-3", isCollapsed && "px-2")}>
-        <div className={cn("flex items-center mb-3", isCollapsed ? "justify-center" : "justify-between")}>
-          {!isCollapsed && (
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {title}
-            </h2>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("h-6 w-6", !isCollapsed && "ml-auto")}
-            onClick={handleToggle}
-            title={isCollapsed ? "Expand" : "Collapse"}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-        <nav className="space-y-1">
+    <>
+      {/* Mobile: Horizontal scrollable tab bar */}
+      <div
+        className="fixed top-16 left-0 right-0 z-20 lg:hidden bg-background/90 backdrop-blur-xl border-b border-border/60 shadow-sm"
+      >
+        <nav className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-none">
           {items.map((item) => {
-            // Longest match strategy: Only highlight the item with the longest href that matches the current pathname.
-            // This prevents parent routes like /inventory from being highlighted when a more specific sibling like /inventory/bundles is active.
-            const matchingItems = items.filter(i =>
-              pathname === i.href || pathname?.startsWith(i.href + "/")
-            );
-
-            const longestMatch = matchingItems.reduce((prev, curr) =>
-              curr.href.length > prev.href.length ? curr : prev,
-              { href: "" }
-            );
-
-            const isActive = item.href === longestMatch.href;
-            const isDark = resolvedTheme === "dark";
-            const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;
+            const isActive = getIsActive(item);
 
             const navItem = (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
+                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200 whitespace-nowrap shrink-0 relative overflow-hidden",
                   isActive
                     ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                    : "text-muted-foreground hover:bg-card/60 hover:bg-muted/50 hover:text-foreground ",
-                  isCollapsed && "justify-center"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}
                 style={isActive ? {
-                  backgroundColor: `${visiblePrimary}15`, // 10% opacity hex
+                  backgroundColor: `${visiblePrimary}15`,
                   color: visiblePrimary,
                 } : undefined}
-                title={isCollapsed ? item.name : undefined}
               >
-                {/* Active indicator background effect */}
-                {isActive && (
-                  <div
-                    className="absolute inset-0 opacity-5"
-                    style={{ backgroundColor: visiblePrimary }}
-                  />
-                )}
-
                 {item.icon && (
-                  <item.icon className={cn(
-                    "h-4 w-4 shrink-0 transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground",
-                    !isCollapsed && "mr-3"
-                  )}
+                  <item.icon
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0 transition-colors",
+                      isActive ? "" : "text-muted-foreground"
+                    )}
                     style={isActive ? { color: visiblePrimary } : undefined}
                   />
                 )}
-
-                {!isCollapsed && (
-                  <>
-                    <span className="relative z-10">{item.name}</span>
-                    {isActive && (
-                      <div
-                        className="w-1 h-1 rounded-full ml-auto absolute right-2 top-1/2 -translate-y-1/2"
-                        style={{ backgroundColor: branding.primary_color }}
-                      />
-                    )}
-                  </>
-                )}
+                <span>{item.name}</span>
               </Link>
             );
 
@@ -230,7 +187,104 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
           })}
         </nav>
       </div>
-    </aside>
+
+      {/* Desktop: Vertical sidebar (unchanged) */}
+      <aside
+        className={cn(
+          "fixed top-16 bottom-0 z-10 transition-all duration-300",
+          "hidden lg:block",
+          "bg-card/80 bg-background/80 backdrop-blur-xl border-r border-border/60 border-border/60 shadow-lg",
+          isCollapsed ? "w-12" : "w-52"
+        )}
+        style={{ left: `${sidebarLeft}px` }}
+      >
+        <div className={cn("p-3", isCollapsed && "px-2")}>
+          <div className={cn("flex items-center mb-3", isCollapsed ? "justify-center" : "justify-between")}>
+            {!isCollapsed && (
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {title}
+              </h2>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-6 w-6", !isCollapsed && "ml-auto")}
+              onClick={handleToggle}
+              title={isCollapsed ? "Expand" : "Collapse"}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <nav className="space-y-1">
+            {items.map((item) => {
+              const isActive = getIsActive(item);
+
+              const navItem = (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
+                    isActive
+                      ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      : "text-muted-foreground hover:bg-card/60 hover:bg-muted/50 hover:text-foreground ",
+                    isCollapsed && "justify-center"
+                  )}
+                  style={isActive ? {
+                    backgroundColor: `${visiblePrimary}15`,
+                    color: visiblePrimary,
+                  } : undefined}
+                  title={isCollapsed ? item.name : undefined}
+                >
+                  {isActive && (
+                    <div
+                      className="absolute inset-0 opacity-5"
+                      style={{ backgroundColor: visiblePrimary }}
+                    />
+                  )}
+
+                  {item.icon && (
+                    <item.icon className={cn(
+                      "h-4 w-4 shrink-0 transition-colors",
+                      isActive ? "text-primary" : "text-muted-foreground",
+                      !isCollapsed && "mr-3"
+                    )}
+                      style={isActive ? { color: visiblePrimary } : undefined}
+                    />
+                  )}
+
+                  {!isCollapsed && (
+                    <>
+                      <span className="relative z-10">{item.name}</span>
+                      {isActive && (
+                        <div
+                          className="w-1 h-1 rounded-full ml-auto absolute right-2 top-1/2 -translate-y-1/2"
+                          style={{ backgroundColor: branding.primary_color }}
+                        />
+                      )}
+                    </>
+                  )}
+                </Link>
+              );
+
+              if (item.permission) {
+                return (
+                  <PermissionGuard key={item.name} permission={item.permission}>
+                    {navItem}
+                  </PermissionGuard>
+                );
+              }
+
+              return navItem;
+            })}
+          </nav>
+        </div>
+      </aside>
+    </>
   );
 }
 

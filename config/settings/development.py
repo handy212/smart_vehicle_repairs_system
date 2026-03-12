@@ -19,6 +19,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3001",
     "http://127.0.0.1:8001",
 ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
 # Allow all methods and headers in development
 CORS_ALLOW_METHODS = [
     'DELETE',

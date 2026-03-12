@@ -83,6 +83,8 @@ export interface Invoice {
   // Django Ledger integration
   ledger_invoice?: string; // UUID of DL InvoiceModel
   ledger_invoice_url?: string; // URL to view in Django Ledger
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface InvoiceListResponse {

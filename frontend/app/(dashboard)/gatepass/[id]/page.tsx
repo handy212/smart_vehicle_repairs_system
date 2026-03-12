@@ -48,6 +48,7 @@ export default function GatePassDetailPage() {
   const { data: gatePass, isLoading, error } = useQuery({
     queryKey: ["gatepass", gatePassId],
     queryFn: () => gatepassApi.get(gatePassId),
+    enabled: !isNaN(gatePassId),
   });
 
   const issueMutation = useMutation({
@@ -234,7 +235,7 @@ export default function GatePassDetailPage() {
                 <User className="w-5 h-5 text-muted-foreground" />
                 Pickup Information
               </CardTitle>
-              <CardDescription>Details about who picked up the vehicle</CardDescription>
+              {/* <CardDescription>Details about who picked up the vehicle</CardDescription> */}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

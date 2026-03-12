@@ -51,7 +51,7 @@ urlpatterns = [
 
     # Accounting API
     path('api/accounting/', include('apps.accounting.urls')),
-    path('quickbooks/', include('apps.quickbooks_online.urls')),
+    path('api/quickbooks/', include('apps.quickbooks_online.urls')),
     
     # Authentication - Convenient shortcuts
     path('login/', RedirectView.as_view(pattern_name='login', permanent=False)),

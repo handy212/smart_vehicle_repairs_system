@@ -424,7 +424,7 @@ class WorkOrder(models.Model):
         'additional_work_found': ['awaiting_approval', 'in_progress'],
         'paused': ['in_progress'],
         'quality_check': ['completed', 'in_progress'],
-        'completed': ['invoiced', 'closed'],
+        'completed': ['invoiced', 'closed', 'in_progress'],
         'invoiced': ['closed'],
         'closed': ['invoiced', 'completed', 'in_progress'],  # Allow reopen transitions
     }
@@ -475,15 +475,15 @@ class WorkOrder(models.Model):
                     return False, "At least one technician must be assigned before starting work"
         
         if new_status == 'quality_check':
-            if not self.tasks.exists():
-                return False, "At least one task must exist before quality check"
-            completed_tasks = self.tasks.filter(status='completed').count()
+            if not self.tasks.filter(is_workflow_task=False).exists():
+                return False, "At least one mechanical task must exist before quality check"
+            completed_tasks = self.tasks.filter(is_workflow_task=False, status='completed').count()
             if completed_tasks == 0:
-                return False, "At least one task must be completed before quality check"
+                return False, "At least one mechanical task must be completed before quality check"
         
         if new_status == 'completed':
-            if not self.tasks.exists():
-                return False, "At least one task must exist before completing"
+            if not self.tasks.filter(is_workflow_task=False).exists():
+                return False, "At least one mechanical task must exist before completing"
             if self.quality_check_required and not self.quality_check_completed:
                 return False, "Quality check must be completed first"
             # Check if all parts are installed, returned, or ready (ready parts will be consumed during transition)
@@ -1578,6 +1578,15 @@ class TechnicianTimeLog(models.Model):
 
         super().save(*args, **kwargs)
         
+        # Roll up actual hours to the related Service Task
+        if self.task_id:
+            from django.db.models import Sum
+            total_hours = self.task.time_logs.filter(clock_out__isnull=False).aggregate(
+                total=Sum('duration_hours')
+            )['total'] or Decimal('0.00')
+            self.task.actual_hours = total_hours
+            self.task.save()
+            
         # Update Technician Status
         self._update_technician_status()
 

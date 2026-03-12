@@ -12,8 +12,11 @@ from quickbooks.objects.payment import Payment as QBPayment, PaymentLine
 from quickbooks.objects.base import Ref, LinkedTxn
 from quickbooks.objects.detailline import DetailLine, SalesItemLineDetail
 from quickbooks.objects.department import Department as QBDepartment
+from quickbooks.objects.vendor import Vendor as QBVendor
+from quickbooks.objects.bill import Bill as QBBill
+from quickbooks.objects.detailline import ItemBasedExpenseLineDetail
 from django.contrib.contenttypes.models import ContentType
-from .models import QBOConfig, QBOToken, QBOMapping
+from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +43,7 @@ class QuickBooksService:
             client_id=config.client_id,
             client_secret=config.client_secret,
             environment='sandbox' if config.is_sandbox else 'production',
-            redirect_uri=f"{settings.SITE_URL}/quickbooks/callback/",
+            redirect_uri=f"{settings.SITE_URL}/api/quickbooks/callback/",
         )
 
     @classmethod
@@ -49,40 +52,44 @@ class QuickBooksService:
         Get an authenticated QuickBooks client.
         Automatically refreshes token if expired.
         """
-        config = cls.get_config()
-        if not config:
-            logger.warning("No active QBO configuration found.")
+        try:
+            config = cls.get_config()
+            if not config:
+                logger.warning("No active QBO configuration found.")
+                return None
+                
+            if not hasattr(config, 'token'):
+                logger.warning("active QBO configuration has no token.")
+                return None
+                
+            token = config.token
+            
+            # Check if token needs refresh (expires in less than 5 minutes)
+            if token.expires_at <= timezone.now() + timedelta(minutes=5):
+                cls.refresh_token(config, token)
+                token.refresh_from_db()
+                
+            auth_client = cls.get_auth_client(config)
+            
+            client = QuickBooks(
+                auth_client=auth_client,
+                refresh_token=token.refresh_token,
+                company_id=config.realm_id,
+            )
+            
+            client.access_token = token.access_token
+            
+            return client
+        except Exception as e:
+            logger.error(f"Error initializing QBO client: {e}")
             return None
-            
-        if not hasattr(config, 'token'):
-            logger.warning("active QBO configuration has no token.")
-            return None
-            
-        token = config.token
-        
-        # Check if token needs refresh (expires in less than 5 minutes)
-        if token.expires_at <= timezone.now() + timedelta(minutes=5):
-            cls.refresh_token(config, token)
-            token.refresh_from_db()
-            
-        auth_client = cls.get_auth_client(config)
-        
-        client = QuickBooks(
-            auth_client=auth_client,
-            refresh_token=token.refresh_token,
-            company_id=config.realm_id,
-        )
-        
-        client.access_token = token.access_token
-        
-        return client
 
     @classmethod
     def refresh_token(cls, config, token):
         """Refresh the OAuth2 token."""
         try:
             auth_client = cls.get_auth_client(config)
-            auth_client.refresh_token(token.refresh_token)
+            auth_client.refresh(token.refresh_token)
             
             token.access_token = auth_client.access_token
             token.refresh_token = auth_client.refresh_token
@@ -121,6 +128,14 @@ class QuickBooksService:
         """
         client = self.get_client()
         if not client:
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_customer),
+                object_id=local_customer.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': 'QuickBooks not connected or unauthorized.'
+                }
+            )
             return None
             
         # Check for existing mapping
@@ -163,19 +178,32 @@ class QuickBooksService:
 
             
         # Save to QBO
-        qb_customer.save(qb=client)
-        
-        # Update/Create mapping
-        QBOMapping.objects.update_or_create(
-            content_type=ContentType.objects.get_for_model(local_customer),
-            object_id=local_customer.id,
-            defaults={
-                'qbo_id': qb_customer.Id,
-                'qbo_sync_token': qb_customer.SyncToken
-            }
-        )
-        
-        return qb_customer
+        try:
+            qb_customer.save(qb=client)
+            
+            # Update/Create mapping
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_customer),
+                object_id=local_customer.id,
+                defaults={
+                    'qbo_id': qb_customer.Id,
+                    'qbo_sync_token': qb_customer.SyncToken,
+                    'status': 'synced',
+                    'error_message': ''
+                }
+            )
+            return qb_customer
+        except Exception as e:
+            logger.error(f"QBO Customer Sync Error: {e}")
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_customer),
+                object_id=local_customer.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': str(e)
+                }
+            )
+            return None
 
     def sync_branch(self, local_branch):
         """
@@ -183,6 +211,14 @@ class QuickBooksService:
         """
         client = self.get_client()
         if not client:
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_branch),
+                object_id=local_branch.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': 'QuickBooks not connected or unauthorized.'
+                }
+            )
             return None
             
         # Check for existing mapping
@@ -212,12 +248,22 @@ class QuickBooksService:
                 object_id=local_branch.id,
                 defaults={
                     'qbo_id': qb_dept.Id,
-                    'qbo_sync_token': qb_dept.SyncToken
+                    'qbo_sync_token': qb_dept.SyncToken,
+                    'status': 'synced',
+                    'error_message': ''
                 }
             )
             return qb_dept
         except Exception as e:
             logger.error(f"QBO Branch Sync Error: {e}")
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_branch),
+                object_id=local_branch.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': str(e)
+                }
+            )
             return None
 
     def sync_invoice(self, local_invoice):
@@ -226,6 +272,14 @@ class QuickBooksService:
         """
         client = self.get_client()
         if not client:
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_invoice),
+                object_id=local_invoice.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': 'QuickBooks not connected or unauthorized.'
+                }
+            )
             return None
             
         # Ensure Customer is synced first
@@ -268,30 +322,21 @@ class QuickBooksService:
                 qb_invoice.DepartmentRef.value = qb_dept.Id
             
         # Map Line Items
-        # We assume strict mapping of one-to-one for simplicity, 
-        # but in reality we should diff lines. For now, we overwrite lines.
         qb_invoice.Line = []
         
-        # 1. Labor
-        if local_invoice.labor_subtotal > 0:
+        for item in local_invoice.line_items.all():
             line = DetailLine()
-            line.Amount = float(local_invoice.labor_subtotal)
+            line.Amount = float(item.total)
             line.DetailType = "SalesItemLineDetail"
-            line.SalesItemLineDetail = SalesItemLineDetail()
-            # Ideally map to a specific Service Item for Labor
-            # For now, we might need a default "Services" item ID or let QBO handle it?
-            # QBO requires an ItemRef. We should probably have a config or const for default items.
-            # Skipping ItemRef might fail or use default. Let's try to set description at least.
-            line.Description = "Labor Services"
-            qb_invoice.Line.append(line)
+            line.Description = item.description or f"{item.item_type.title()} Item"
             
-        # 2. Parts
-        if local_invoice.parts_subtotal > 0:
-            line = DetailLine()
-            line.Amount = float(local_invoice.parts_subtotal)
-            line.DetailType = "SalesItemLineDetail"
-            line.SalesItemLineDetail = SalesItemLineDetail()
-            line.Description = "Parts"
+            sales_item = SalesItemLineDetail()
+            # If QBO requires an ItemRef, we might still need to set it,
+            # but setting Qty and UnitPrice is a start
+            sales_item.Qty = float(item.quantity)
+            sales_item.UnitPrice = float(item.unit_price)
+            line.SalesItemLineDetail = sales_item
+            
             qb_invoice.Line.append(line)
             
         # Save
@@ -304,12 +349,23 @@ class QuickBooksService:
                 object_id=local_invoice.id,
                 defaults={
                     'qbo_id': qb_invoice.Id,
-                    'qbo_sync_token': qb_invoice.SyncToken
+                    'qbo_sync_token': qb_invoice.SyncToken,
+                    'status': 'synced',
+                    'error_message': ''
                 }
             )
             return qb_invoice
         except Exception as e:
             logger.error(f"QBO Invoice Sync Error: {e}")
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_invoice),
+                object_id=local_invoice.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': str(e)
+                }
+            )
+            return None
 
     def sync_payment(self, local_payment):
         """
@@ -317,6 +373,14 @@ class QuickBooksService:
         """
         client = self.get_client()
         if not client:
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_payment),
+                object_id=local_payment.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': 'QuickBooks not connected or unauthorized.'
+                }
+            )
             return None
             
         # Ensure Customer is synced
@@ -413,13 +477,434 @@ class QuickBooksService:
                 object_id=local_payment.id,
                 defaults={
                     'qbo_id': qb_payment.Id,
-                    'qbo_sync_token': qb_payment.SyncToken
+                    'qbo_sync_token': qb_payment.SyncToken,
+                    'status': 'synced',
+                    'error_message': ''
                 }
             )
             return qb_payment
             
         except Exception as e:
             logger.error(f"QBO Payment Sync Error: {e}")
-            logger.error(f"Validation Errors: {e.detail}")
-            raise e
+            if hasattr(e, 'detail'):
+                logger.error(f"Validation Errors: {e.detail}")
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_payment),
+                object_id=local_payment.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': str(e)
+                }
+            )
+            return None
 
+    def sync_supplier(self, local_supplier):
+        """
+        Sync a local Supplier to QBO Vendor.
+        """
+        client = self.get_client()
+        if not client:
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_supplier),
+                object_id=local_supplier.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': 'QuickBooks not connected or unauthorized.'
+                }
+            )
+            return None
+            
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(local_supplier),
+            object_id=local_supplier.id
+        ).first()
+        
+        qb_vendor = QBVendor()
+        if mapping:
+            try:
+                qb_vendor = QBVendor.get(int(mapping.qbo_id), qb=client)
+            except Exception:
+                mapping = None
+                qb_vendor = QBVendor()
+                
+        qb_vendor.DisplayName = f"{local_supplier.name} ({local_supplier.supplier_code})"
+        qb_vendor.CompanyName = local_supplier.name
+        
+        if local_supplier.email:
+            qb_vendor.PrimaryEmailAddr = {"Address": local_supplier.email}
+        if local_supplier.phone:
+            qb_vendor.PrimaryPhone = {"FreeFormNumber": local_supplier.phone}
+            
+        try:
+            qb_vendor.save(qb=client)
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_supplier),
+                object_id=local_supplier.id,
+                defaults={
+                    'qbo_id': qb_vendor.Id,
+                    'qbo_sync_token': qb_vendor.SyncToken,
+                    'status': 'synced',
+                    'error_message': ''
+                }
+            )
+            return qb_vendor
+        except Exception as e:
+            logger.error(f"QBO Supplier Sync Error: {e}")
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_supplier),
+                object_id=local_supplier.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': str(e)
+                }
+            )
+            return None
+
+    def sync_purchase_order(self, local_po):
+        """
+        Sync a local PurchaseOrder to QBO Bill.
+        """
+        client = self.get_client()
+        if not client:
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_po),
+                object_id=local_po.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': 'QuickBooks not connected or unauthorized.'
+                }
+            )
+            return None
+            
+        qb_vendor = self.sync_supplier(local_po.supplier)
+        if not qb_vendor:
+            logger.error(f"Cannot sync PO {local_po.po_number}: Supplier sync failed.")
+            return None
+            
+        mapping = QBOMapping.objects.filter(
+            content_type=ContentType.objects.get_for_model(local_po),
+            object_id=local_po.id
+        ).first()
+        
+        qb_bill = QBBill()
+        if mapping:
+            try:
+                qb_bill = QBBill.get(int(mapping.qbo_id), qb=client)
+            except Exception:
+                mapping = None
+                qb_bill = QBBill()
+                
+        qb_bill.VendorRef = Ref()
+        qb_bill.VendorRef.value = qb_vendor.Id
+        qb_bill.DocNumber = local_po.po_number
+        qb_bill.TxnDate = local_po.order_date.isoformat()
+        if local_po.expected_delivery_date:
+            qb_bill.DueDate = local_po.expected_delivery_date.isoformat()
+            
+        if local_po.notes:
+            qb_bill.PrivateNote = local_po.notes
+            
+        if local_po.branch:
+            qb_dept = self.sync_branch(local_po.branch)
+            if qb_dept:
+                qb_bill.DepartmentRef = Ref()
+                qb_bill.DepartmentRef.value = qb_dept.Id
+                
+        qb_bill.Line = []
+        for item in local_po.items.all():
+            line = DetailLine()
+            line.Amount = float(item.total)
+            line.DetailType = "ItemBasedExpenseLineDetail"
+            line.Description = item.part.name or "PO Item"
+            
+            exp_item = ItemBasedExpenseLineDetail()
+            # If QBO requires an ItemRef, we might still need to set it,
+            # but setting Qty and UnitPrice is a start
+            exp_item.Qty = float(item.quantity)
+            exp_item.UnitPrice = float(item.unit_cost)
+            line.ItemBasedExpenseLineDetail = exp_item
+            
+            qb_bill.Line.append(line)
+            
+        try:
+            qb_bill.save(qb=client)
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_po),
+                object_id=local_po.id,
+                defaults={
+                    'qbo_id': qb_bill.Id,
+                    'qbo_sync_token': qb_bill.SyncToken,
+                    'status': 'synced',
+                    'error_message': ''
+                }
+            )
+            return qb_bill
+        except Exception as e:
+            logger.error(f"QBO PO Sync Error: {e}")
+            QBOMapping.objects.update_or_create(
+                content_type=ContentType.objects.get_for_model(local_po),
+                object_id=local_po.id,
+                defaults={
+                    'status': 'failed',
+                    'error_message': str(e)
+                }
+            )
+            return None
+
+    # -------------------------------------------------------------------------
+    # INBOUND SYNC: Pull from QBO → our local system
+    # Design rules:
+    #   - Local is source of truth for business data (names, contact info, etc.)
+    #   - Only STATUS/FINANCIAL fields are pulled from QBO to keep local records current
+    #   - New Vendors in QBO are imported as local Suppliers
+    #   - Customers are managed locally only — no auto-create from QBO
+    # -------------------------------------------------------------------------
+
+    def pull_vendors(self, triggered_by=None):
+        """
+        Pull Vendors from QBO.
+        - Creates new local Suppliers for QBO Vendors that have no local match.
+        - Does NOT overwrite existing local Supplier business data.
+        - Updates QBOMapping for all matched/created records.
+        """
+        from apps.inventory.models import Supplier
+        from django.utils.text import slugify
+
+        log = QBOSyncLog.objects.create(entity_type='vendor', triggered_by=triggered_by)
+
+        client = self.get_client()
+        if not client:
+            log.status = 'failed'
+            log.error_message = 'QuickBooks not connected or unauthorized.'
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        try:
+            qb_vendors = QBVendor.all(qb=client)
+            log.records_pulled = len(qb_vendors)
+
+            supplier_ct = ContentType.objects.get_for_model(Supplier)
+
+            for vendor in qb_vendors:
+                # Find an existing local Supplier by QBOMapping.qbo_id
+                mapping = QBOMapping.objects.filter(
+                    content_type=supplier_ct,
+                    qbo_id=str(vendor.Id)
+                ).first()
+
+                if mapping:
+                    # Already mapped — keep local data as source of truth, just update sync meta
+                    mapping.status = 'synced'
+                    mapping.error_message = ''
+                    mapping.save()
+                    log.records_updated += 1
+                else:
+                    # New vendor in QBO with no local match — create it locally
+                    try:
+                        # Build a unique supplier_code from the vendor name
+                        base_code = slugify(vendor.DisplayName or vendor.CompanyName or f"QBO-{vendor.Id}")[:45].upper().replace('-', '')
+                        supplier_code = base_code[:50]
+                        counter = 1
+                        while Supplier.objects.filter(supplier_code=supplier_code).exists():
+                            suffix = str(counter)
+                            supplier_code = f"{base_code[:50 - len(suffix)]}{suffix}"
+                            counter += 1
+
+                        local_supplier = Supplier.objects.create(
+                            name=vendor.CompanyName or vendor.DisplayName or f"QBO Vendor {vendor.Id}",
+                            supplier_code=supplier_code,
+                            email=vendor.PrimaryEmailAddr.Address if vendor.PrimaryEmailAddr else '',
+                            phone=vendor.PrimaryPhone.FreeFormNumber if vendor.PrimaryPhone else '',
+                        )
+
+                        QBOMapping.objects.create(
+                            content_type=supplier_ct,
+                            object_id=local_supplier.id,
+                            qbo_id=str(vendor.Id),
+                            qbo_sync_token=vendor.SyncToken or '',
+                            status='synced',
+                        )
+                        log.records_created += 1
+                        logger.info(f"Created local Supplier '{local_supplier.name}' from QBO Vendor {vendor.Id}")
+                    except Exception as create_err:
+                        logger.error(f"Failed to create local Supplier for QBO Vendor {vendor.Id}: {create_err}")
+                        log.records_skipped += 1
+
+            log.status = 'success'
+        except Exception as e:
+            logger.error(f"QBO pull_vendors failed: {e}")
+            log.status = 'failed'
+            log.error_message = str(e)
+
+        log.finished_at = timezone.now()
+        log.save()
+        return log
+
+    def pull_invoices(self, triggered_by=None):
+        """
+        Pull Invoices from QBO and update STATUS/AMOUNTS of existing local invoices.
+        - Local is source of truth for all business data.
+        - Only updates: status (to 'paid' if QBO shows fully paid), amount_paid, amount_due.
+        - Does NOT create new invoices from QBO.
+        """
+        from apps.billing.models import Invoice
+        from decimal import Decimal
+
+        log = QBOSyncLog.objects.create(entity_type='invoice', triggered_by=triggered_by)
+
+        client = self.get_client()
+        if not client:
+            log.status = 'failed'
+            log.error_message = 'QuickBooks not connected or unauthorized.'
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        try:
+            qb_invoices = QBInvoice.all(qb=client)
+            log.records_pulled = len(qb_invoices)
+
+            invoice_ct = ContentType.objects.get_for_model(Invoice)
+
+            # QBO balance status mapping → local Invoice status
+            QBO_STATUS_MAP = {
+                'Paid': 'paid',
+                'Voided': 'void',
+            }
+
+            for qb_inv in qb_invoices:
+                mapping = QBOMapping.objects.filter(
+                    content_type=invoice_ct,
+                    qbo_id=str(qb_inv.Id)
+                ).first()
+
+                if not mapping:
+                    log.records_skipped += 1
+                    continue  # No local invoice for this QBO ID — skip (we don't create from QBO)
+
+                try:
+                    local_invoice = Invoice.objects.get(id=mapping.object_id)
+
+                    updated = False
+
+                    # Update payment amounts from QBO (these are financial facts from QBO)
+                    qbo_balance = Decimal(str(qb_inv.Balance or 0))
+                    qbo_total = Decimal(str(qb_inv.TotalAmt or 0))
+                    qbo_paid = qbo_total - qbo_balance
+
+                    if local_invoice.amount_paid != qbo_paid:
+                        local_invoice.amount_paid = qbo_paid
+                        local_invoice.amount_due = qbo_balance
+                        updated = True
+
+                    # Update status if QBO shows as paid
+                    qbo_status = getattr(qb_inv, 'EmailStatus', None)  # Not 'PaymentStatus'; check balance
+                    if qbo_balance == 0 and local_invoice.status not in ('paid', 'void', 'refunded'):
+                        local_invoice.status = 'paid'
+                        updated = True
+
+                    if updated:
+                        # Save without triggering the outbound QBO sync signal
+                        Invoice.objects.filter(id=local_invoice.id).update(
+                            amount_paid=local_invoice.amount_paid,
+                            amount_due=local_invoice.amount_due,
+                            status=local_invoice.status
+                        )
+                        log.records_updated += 1
+                        logger.info(f"Updated local Invoice {local_invoice.invoice_number} from QBO Invoice {qb_inv.Id}")
+                    else:
+                        log.records_skipped += 1
+
+                    # Keep sync meta current
+                    mapping.status = 'synced'
+                    mapping.qbo_sync_token = qb_inv.SyncToken or ''
+                    mapping.error_message = ''
+                    mapping.save()
+
+                except Invoice.DoesNotExist:
+                    logger.warning(f"QBOMapping points to Invoice id={mapping.object_id} which no longer exists.")
+                    log.records_skipped += 1
+
+            log.status = 'success'
+        except Exception as e:
+            logger.error(f"QBO pull_invoices failed: {e}")
+            log.status = 'failed'
+            log.error_message = str(e)
+
+        log.finished_at = timezone.now()
+        log.save()
+        return log
+
+    def pull_bills(self, triggered_by=None):
+        """
+        Pull Bills from QBO and update STATUS of existing local Purchase Orders.
+        - Local is source of truth for business data.
+        - Only updates: status (to 'received' if QBO Bill is paid/cleared).
+        - Does NOT create new POs from QBO.
+        """
+        from apps.inventory.models import PurchaseOrder
+        from decimal import Decimal
+
+        log = QBOSyncLog.objects.create(entity_type='bill', triggered_by=triggered_by)
+
+        client = self.get_client()
+        if not client:
+            log.status = 'failed'
+            log.error_message = 'QuickBooks not connected or unauthorized.'
+            log.finished_at = timezone.now()
+            log.save()
+            return log
+
+        try:
+            qb_bills = QBBill.all(qb=client)
+            log.records_pulled = len(qb_bills)
+
+            po_ct = ContentType.objects.get_for_model(PurchaseOrder)
+
+            for qb_bill in qb_bills:
+                mapping = QBOMapping.objects.filter(
+                    content_type=po_ct,
+                    qbo_id=str(qb_bill.Id)
+                ).first()
+
+                if not mapping:
+                    log.records_skipped += 1
+                    continue  # No local PO for this QBO Bill — skip
+
+                try:
+                    local_po = PurchaseOrder.objects.get(id=mapping.object_id)
+
+                    updated = False
+
+                    # If QBO Bill balance is 0, the bill is fully paid/received
+                    qbo_balance = Decimal(str(qb_bill.Balance or 0))
+                    if qbo_balance == Decimal('0') and local_po.status not in ('received', 'cancelled'):
+                        PurchaseOrder.objects.filter(id=local_po.id).update(status='received')
+                        updated = True
+                        logger.info(f"Updated PO {local_po.po_number} status to 'received' based on QBO Bill {qb_bill.Id}")
+
+                    if updated:
+                        log.records_updated += 1
+                    else:
+                        log.records_skipped += 1
+
+                    # Keep sync meta current
+                    mapping.status = 'synced'
+                    mapping.qbo_sync_token = qb_bill.SyncToken or ''
+                    mapping.error_message = ''
+                    mapping.save()
+
+                except PurchaseOrder.DoesNotExist:
+                    logger.warning(f"QBOMapping points to PurchaseOrder id={mapping.object_id} which no longer exists.")
+                    log.records_skipped += 1
+
+            log.status = 'success'
+        except Exception as e:
+            logger.error(f"QBO pull_bills failed: {e}")
+            log.status = 'failed'
+            log.error_message = str(e)
+
+        log.finished_at = timezone.now()
+        log.save()
+        return log

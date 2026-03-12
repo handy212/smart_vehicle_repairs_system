@@ -30,7 +30,8 @@ import { useBranchStore } from "@/store/branchStore";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useAuthStore } from "@/store/authStore";
-import { Undo2 } from "lucide-react";
+import { Undo2, Database } from "lucide-react";
+import { quickbooksApi } from "@/lib/api/quickbooks";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function InvoiceDetailPage() {
@@ -62,6 +63,28 @@ export default function InvoiceDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleQBOSync = async () => {
+    try {
+      setIsSyncing(true);
+      await quickbooksApi.syncInbound();
+      toast({
+        title: "QuickBooks Sync",
+        description: "Consistency check triggered. Status should update shortly.",
+      });
+      // Invalidate query to refresh UI
+      queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+    } catch (err) {
+      toast({
+        title: "Sync Failed",
+        description: "Failed to trigger QuickBooks synchronization.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Validate invoiceId to prevent NaN API calls
   const isValidId = !isNaN(invoiceId) && invoiceId > 0;
@@ -518,6 +541,34 @@ export default function InvoiceDetailPage() {
                           <Badge className={cn("w-fit capitalize", getStatusVariant(localStatus || invoice.status))}>
                             {localStatus || invoice.status}
                           </Badge>
+                        </div>
+                      )}
+
+                      {invoice.qbo_sync_status && (
+                        <div className="flex flex-col mt-2">
+                          <span className="text-sm text-muted-foreground mb-1">QuickBooks Sync</span>
+                          <div className="flex flex-col items-start gap-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={invoice.qbo_sync_status === 'synced' ? 'success' : invoice.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} className="w-fit capitalize">
+                                {invoice.qbo_sync_status}
+                              </Badge>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6" 
+                                onClick={handleQBOSync}
+                                disabled={isSyncing}
+                                title="Sync with QuickBooks"
+                              >
+                                <Database className={cn("h-3 w-3", isSyncing && "animate-spin")} />
+                              </Button>
+                            </div>
+                            {invoice.qbo_sync_status === 'failed' && invoice.qbo_sync_error && (
+                              <span className="text-xs text-red-600 line-clamp-2 max-w-[200px]" title={invoice.qbo_sync_error}>
+                                {invoice.qbo_sync_error}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

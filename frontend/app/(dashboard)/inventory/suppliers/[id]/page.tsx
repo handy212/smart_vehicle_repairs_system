@@ -6,9 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, Building2, Mail, Phone, MapPin, Globe } from "lucide-react";
+import { ArrowLeft, Edit, Building2, Mail, Phone, MapPin, Globe, Database } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState } from "react";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { useToast } from "@/lib/hooks/useToast";
+import { cn } from "@/lib/utils";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function SupplierDetailPage() {
@@ -16,10 +20,26 @@ export default function SupplierDetailPage() {
   const params = useParams();
   const id = parseInt(params.id as string);
 
-  const { data: supplier, isLoading } = useQuery({
+  const { data: supplier, isLoading, refetch } = useQuery({
     queryKey: ["supplier", id],
     queryFn: () => inventoryApi.getSupplier(id),
   });
+
+  const { success: toastSuccess, error: toastError } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleQBOSync = async () => {
+    try {
+      setIsSyncing(true);
+      await quickbooksApi.syncInbound();
+      toastSuccess("QuickBooks sync triggered successfully.");
+      refetch();
+    } catch (err) {
+      toastError("Failed to trigger QuickBooks sync");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -104,6 +124,31 @@ export default function SupplierDetailPage() {
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Parts Count</label>
                 <p className="text-lg">{supplier.parts_count}</p>
+              </div>
+            )}
+            {supplier.qbo_sync_status && (
+              <div className="col-span-1 md:col-span-2 mt-2">
+                <label className="text-sm font-medium text-muted-foreground">QuickBooks Sync</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant={supplier.qbo_sync_status === 'synced' ? 'success' : supplier.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} className="w-fit capitalize">
+                    {supplier.qbo_sync_status}
+                  </Badge>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6" 
+                    onClick={handleQBOSync}
+                    disabled={isSyncing}
+                    title="Sync with QuickBooks"
+                  >
+                    <Database className={cn("h-3 w-3", isSyncing && "animate-spin")} />
+                  </Button>
+                  {supplier.qbo_sync_status === 'failed' && supplier.qbo_sync_error && (
+                    <span className="text-xs text-red-600 truncate max-w-[200px]" title={supplier.qbo_sync_error}>
+                      {supplier.qbo_sync_error}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </CardContent>

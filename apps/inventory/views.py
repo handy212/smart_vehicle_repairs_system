@@ -1864,8 +1864,10 @@ class StockItemViewSet(viewsets.ModelViewSet):
             self.request,
                 branch_field='branch'
         )
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error filtering stock items by branch: {e}")
+            return queryset.none()
             
         return queryset
 
@@ -2003,8 +2005,11 @@ class TransferViewSet(viewsets.ModelViewSet):
         for k, v in items_received.items():
             try:
                 parsed_items[int(k)] = int(v)
-            except:
-                pass
+            except (ValueError, TypeError):
+                return Response(
+                    {'error': f"Invalid item data: key and value must be integers. Got key='{k}', value='{v}'"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
                 
         try:
             InventoryService.receive_transfer(transfer, parsed_items, user=request.user)

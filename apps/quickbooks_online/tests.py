@@ -1,3 +1,395 @@
 from django.test import TestCase
+from unittest.mock import patch, MagicMock
+from apps.customers.models import Customer
+from apps.inventory.models import Supplier, PurchaseOrder, PurchaseOrderItem, Part, PartCategory
+from apps.billing.models import Invoice, InvoiceLineItem
+from apps.branches.models import Branch
+from apps.quickbooks_online.services import QuickBooksService
+from apps.quickbooks_online.models import QBOMapping, QBOConfig, QBOToken
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
+from django.contrib.contenttypes.models import ContentType
+from apps.accounts.models import User
 
-# Create your tests here.
+class QuickBooksIntegrationTests(TestCase):
+    def setUp(self):
+        # Create necessary config
+        self.config = QBOConfig.objects.create(
+            client_id="test_id",
+            client_secret="test_secret",
+            realm_id="12345",
+            is_active=True
+        )
+        self.token = QBOToken.objects.create(
+            config=self.config,
+            access_token="access",
+            refresh_token="refresh",
+            expires_at=timezone.now() + timedelta(days=1),
+            refresh_token_expires_at=timezone.now() + timedelta(days=1)
+        )
+        
+        # Create test users
+        self.admin_user = User.objects.create_superuser(
+            email="admin@example.com",
+            username="admin",
+            password="password",
+            first_name="Admin",
+            last_name="User"
+        )
+        
+        self.customer_user = User.objects.create_user(
+            email="john@example.com",
+            username="john_doe",
+            password="password",
+            first_name="John",
+            last_name="Doe",
+            role='customer'
+        )
+        
+        # Create test data
+        self.branch = Branch.objects.create(
+            name="Main Branch", 
+            code="MAIN",
+            created_by=self.admin_user,
+            phone="1234567890",
+            address="123 Street",
+            city="City",
+            state="State",
+            zip_code="12345"
+        )
+        
+        self.customer = Customer.objects.create(
+            user=self.customer_user,
+            customer_number="CUST001"
+        )
+        self.supplier = Supplier.objects.create(
+            name="Test Supplier",
+            supplier_code="SUPP001",
+            email="supp@example.com"
+        )
+        self.category = PartCategory.objects.create(name="Test Category")
+        self.part = Part.objects.create(
+            name="Test Part",
+            part_number="PART001",
+            selling_price=Decimal("10.00"),
+            cost_price=Decimal("5.00"),
+            branch=self.branch,
+            category=self.category
+        )
+
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBCustomer')
+    def test_sync_customer_success(self, mock_qb_customer_class, mock_quickbooks_class):
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        mock_qb_customer = MagicMock()
+        mock_qb_customer.Id = "100"
+        mock_qb_customer.SyncToken = "0"
+        mock_qb_customer_class.return_value = mock_qb_customer
+        
+        service = QuickBooksService()
+        result = service.sync_customer(self.customer)
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(result.Id, "100")
+        
+        ct = ContentType.objects.get_for_model(self.customer)
+        mapping = QBOMapping.objects.get(content_type=ct, object_id=self.customer.id)
+        self.assertEqual(mapping.qbo_id, "100")
+        self.assertEqual(mapping.status, 'synced')
+
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBVendor')
+    def test_sync_supplier_success(self, mock_qb_vendor_class, mock_quickbooks_class):
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        mock_qb_vendor = MagicMock()
+        mock_qb_vendor.Id = "200"
+        mock_qb_vendor.SyncToken = "1"
+        mock_qb_vendor_class.return_value = mock_qb_vendor
+        
+        service = QuickBooksService()
+        result = service.sync_supplier(self.supplier)
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(result.Id, "200")
+        
+        ct = ContentType.objects.get_for_model(self.supplier)
+        mapping = QBOMapping.objects.get(content_type=ct, object_id=self.supplier.id)
+        self.assertEqual(mapping.qbo_id, "200")
+        self.assertEqual(mapping.status, 'synced')
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.sync_customer')
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBInvoice')
+    def test_sync_invoice_detailed_lines(self, mock_qb_invoice_class, mock_quickbooks_class, mock_sync_customer):
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        mock_qb_customer = MagicMock()
+        mock_qb_customer.Id = "100"
+        mock_sync_customer.return_value = mock_qb_customer
+        
+        mock_qb_invoice = MagicMock()
+        mock_qb_invoice.Id = "300"
+        mock_qb_invoice.SyncToken = "2"
+        mock_qb_invoice_class.return_value = mock_qb_invoice
+        
+        # Create Invoice
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV001",
+            invoice_date=timezone.now().date(),
+            total=Decimal("20.00"),
+            branch=self.branch,
+            created_by=self.admin_user
+        )
+        InvoiceLineItem.objects.create(
+            invoice=invoice,
+            item_type='part',
+            description="Part Item",
+            quantity=1,
+            unit_price=Decimal("10.00"),
+            total=Decimal("10.00")
+        )
+        InvoiceLineItem.objects.create(
+            invoice=invoice,
+            item_type='labor',
+            description="Labor Item",
+            quantity=1,
+            unit_price=Decimal("10.00"),
+            total=Decimal("10.00")
+        )
+        
+        service = QuickBooksService()
+        # Mock sync_branch to avoid complex mocking nested deeper
+        with patch.object(QuickBooksService, 'sync_branch', return_value=MagicMock(Id="50")):
+            result = service.sync_invoice(invoice)
+        
+        self.assertIsNotNone(result)
+        # Verify detailed lines
+        self.assertEqual(len(mock_qb_invoice.Line), 2)
+        # Filter for SalesItemLineDetail lines
+        sales_lines = [l for l in mock_qb_invoice.Line if hasattr(l, 'SalesItemLineDetail')]
+        self.assertEqual(len(sales_lines), 2)
+        
+        ct = ContentType.objects.get_for_model(invoice)
+        mapping = QBOMapping.objects.get(content_type=ct, object_id=invoice.id)
+        self.assertEqual(mapping.status, 'synced')
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.sync_supplier')
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBBill')
+    def test_sync_purchase_order_success(self, mock_qb_bill_class, mock_quickbooks_class, mock_sync_supplier):
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        mock_qb_vendor = MagicMock()
+        mock_qb_vendor.Id = "200"
+        mock_sync_supplier.return_value = mock_qb_vendor
+        
+        mock_qb_bill = MagicMock()
+        mock_qb_bill.Id = "400"
+        mock_qb_bill.SyncToken = "3"
+        mock_qb_bill_class.return_value = mock_qb_bill
+        
+        # Create Purchase Order
+        po = PurchaseOrder.objects.create(
+            supplier=self.supplier,
+            po_number="PO001",
+            order_date=timezone.now().date(),
+            total=Decimal("50.00"),
+            branch=self.branch,
+            created_by=self.admin_user
+        )
+        PurchaseOrderItem.objects.create(
+            purchase_order=po,
+            part=self.part,
+            quantity=5,
+            unit_cost=Decimal("10.00"),
+            total=Decimal("50.00")
+        )
+        
+        service = QuickBooksService()
+        with patch.object(QuickBooksService, 'sync_branch', return_value=MagicMock(Id="50")):
+            result = service.sync_purchase_order(po)
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(len(mock_qb_bill.Line), 1)
+        
+        ct = ContentType.objects.get_for_model(po)
+        mapping = QBOMapping.objects.get(content_type=ct, object_id=po.id)
+        self.assertEqual(mapping.qbo_id, "400")
+        self.assertEqual(mapping.status, 'synced')
+
+    @patch('apps.quickbooks_online.services.QuickBooksService.get_client', return_value=None)
+    def test_sync_failure_no_client(self, mock_get_client):
+        """Test that failure is recorded when QBO client cannot be retrieved."""
+        service = QuickBooksService()
+        
+        result = service.sync_supplier(self.supplier)
+        self.assertIsNone(result)
+        
+        ct = ContentType.objects.get_for_model(self.supplier)
+        mapping = QBOMapping.objects.get(content_type=ct, object_id=self.supplier.id)
+        self.assertEqual(mapping.status, 'failed')
+        self.assertIn("QuickBooks not connected", mapping.error_message)
+
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBVendor')
+    def test_sync_exception_handling(self, mock_qb_vendor_class, mock_quickbooks_class):
+        """Test that exceptions during save are caught and recorded."""
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        mock_qb_vendor = MagicMock()
+        mock_qb_vendor.save.side_effect = Exception("API Error")
+        mock_qb_vendor_class.return_value = mock_qb_vendor
+        
+        service = QuickBooksService()
+        result = service.sync_supplier(self.supplier)
+        
+        self.assertIsNone(result)
+        
+        ct = ContentType.objects.get_for_model(self.supplier)
+        mapping = QBOMapping.objects.get(content_type=ct, object_id=self.supplier.id)
+        self.assertEqual(mapping.status, 'failed')
+        self.assertEqual(mapping.error_message, "API Error")
+
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBVendor')
+    def test_pull_vendors_success(self, mock_qb_vendor_class, mock_quickbooks_class):
+        """Test pulling vendors from QBO create local suppliers."""
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        # Mock two vendors from QBO
+        v1 = MagicMock()
+        v1.Id = "1001"
+        v1.DisplayName = "New QBO Vendor"
+        v1.CompanyName = "New QBO Co"
+        v1.SyncToken = "0"
+        v1.PrimaryEmailAddr = MagicMock(Address="new@example.com")
+        v1.PrimaryPhone = MagicMock(FreeFormNumber="111222")
+        
+        v2 = MagicMock()
+        v2.Id = "200" # This matches an existing ID we'll map below
+        v2.DisplayName = "Existing Vendor"
+        v2.SyncToken = "5"
+        
+        mock_qb_vendor_class.all.return_value = [v1, v2]
+        
+        # Map v2 to our local supplier
+        ct = ContentType.objects.get_for_model(self.supplier)
+        QBOMapping.objects.create(
+            content_type=ct,
+            object_id=self.supplier.id,
+            qbo_id="200",
+            status='synced'
+        )
+        
+        service = QuickBooksService()
+        log = service.pull_vendors()
+        
+        self.assertEqual(log.status, 'success')
+        self.assertEqual(log.records_pulled, 2)
+        self.assertEqual(log.records_created, 1) # v1 created
+        self.assertEqual(log.records_updated, 1) # v2 updated mapping
+        
+        # Verify v1 supplier exists
+        new_supplier = Supplier.objects.get(name="New QBO Co")
+        self.assertEqual(new_supplier.email, "new@example.com")
+
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBInvoice')
+    def test_pull_invoices_status_update(self, mock_qb_invoice_class, mock_quickbooks_class):
+        """Test pulling invoices from QBO updates local invoice status."""
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        # Create local invoice
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-PULL",
+            invoice_date=timezone.now().date(),
+            total=Decimal("100.00"),
+            amount_paid=Decimal("0.00"),
+            amount_due=Decimal("100.00"),
+            status='sent',
+            branch=self.branch,
+            created_by=self.admin_user
+        )
+        
+        ct = ContentType.objects.get_for_model(invoice)
+        QBOMapping.objects.create(
+            content_type=ct,
+            object_id=invoice.id,
+            qbo_id="5000",
+            status='synced'
+        )
+        
+        # Mock QBO Invoice showing it's paid (Balance = 0)
+        qb_inv = MagicMock()
+        qb_inv.Id = "5000"
+        qb_inv.Balance = 0
+        qb_inv.TotalAmt = 100.00
+        qb_inv.SyncToken = "10"
+        
+        mock_qb_invoice_class.all.return_value = [qb_inv]
+        
+        service = QuickBooksService()
+        log = service.pull_invoices()
+        
+        self.assertEqual(log.status, 'success')
+        self.assertEqual(log.records_updated, 1)
+        
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, 'paid')
+        self.assertEqual(invoice.amount_paid, Decimal("100.00"))
+        self.assertEqual(invoice.amount_due, Decimal("0.00"))
+
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBBill')
+    def test_pull_bills_status_update(self, mock_qb_bill_class, mock_quickbooks_class):
+        """Test pulling bills from QBO updates local PO status."""
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        # Create local PO
+        po = PurchaseOrder.objects.create(
+            supplier=self.supplier,
+            po_number="PO-PULL",
+            order_date=timezone.now().date(),
+            total=Decimal("200.00"),
+            status='ordered',
+            branch=self.branch,
+            created_by=self.admin_user
+        )
+        
+        ct = ContentType.objects.get_for_model(po)
+        QBOMapping.objects.create(
+            content_type=ct,
+            object_id=po.id,
+            qbo_id="6000",
+            status='synced'
+        )
+        
+        # Mock QBO Bill showing it's paid (Balance = 0)
+        qb_bill = MagicMock()
+        qb_bill.Id = "6000"
+        qb_bill.Balance = 0
+        qb_bill.SyncToken = "20"
+        
+        mock_qb_bill_class.all.return_value = [qb_bill]
+        
+        service = QuickBooksService()
+        log = service.pull_bills()
+        
+        self.assertEqual(log.status, 'success')
+        self.assertEqual(log.records_updated, 1)
+        
+        po.refresh_from_db()
+        self.assertEqual(po.status, 'received')

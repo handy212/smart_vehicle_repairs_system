@@ -206,7 +206,7 @@ export default function AgingReportPage() {
                                 </Card>
                             </div>
 
-                            // Detailed Table
+                            {/* // Detailed Table */}
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Details</CardTitle>

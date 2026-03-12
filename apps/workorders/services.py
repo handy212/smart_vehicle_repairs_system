@@ -48,53 +48,7 @@ def apply_service_bundle(work_order):
             return False
     return False
 
-def update_vehicle_service_schedule(work_order):
-    """
-    Update the vehicle's service schedule when a routine maintenance work order is completed.
-    """
-    if work_order.status == 'completed' and work_order.maintenance_type == 'routine' and work_order.service_type:
-        try:
-            from apps.vehicles.models import VehicleServiceSchedule
-            
-            # Find or create the schedule for this service type
-            schedule, created = VehicleServiceSchedule.objects.get_or_create(
-                vehicle=work_order.vehicle,
-                service_type=work_order.service_type,
-                defaults={
-                    'is_active': True,
-                    'last_service_date': work_order.completed_at.date() if work_order.completed_at else timezone.now().date(),
-                    'last_service_mileage': work_order.odometer_out or work_order.odometer_in
-                }
-            )
-            
-            if not created:
-                schedule.last_service_date = work_order.completed_at.date() if work_order.completed_at else timezone.now().date()
-                if work_order.odometer_out:
-                    schedule.last_service_mileage = work_order.odometer_out
-                elif work_order.odometer_in:
-                    schedule.last_service_mileage = work_order.odometer_in
-                schedule.save()
-            
-            # Recalculate next due date/mileage
-            schedule.calculate_next_service_due()
-            
-            # Create a note on the work order
-            from .models import WorkOrderNote
-            WorkOrderNote.objects.create(
-                work_order=work_order,
-                note_type='internal',
-                note=f"Updated vehicle service schedule for {work_order.service_type.name}. "
-                     f"Next service due: {schedule.next_service_due_date} or {schedule.next_service_due_mileage} miles.",
-                is_important=False
-            )
-            
-            return True
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to update vehicle service schedule for WO {work_order.work_order_number}: {e}")
-            return False
-    return False
+
 
 def assign_technician_by_skill(work_order):
     """
@@ -151,16 +105,30 @@ def assign_technician_by_skill(work_order):
         logger.error(f"Error suggesting technicians for WO {work_order.id}: {e}")
         return []
 
-def get_workflow_task_config(status):
+def get_all_workflow_configs():
     """
-    Get configuration for workflow task based on status.
-    Returns dict with task_type, description, and sequence_order, or None if no task needed.
+    Get all workflow tasks configurations natively and from DB overrides.
+    Returns a dict mapped by status.
     """
+    WORKFLOW_TASK_CONFIG = {
+        'inspection': {'task_type': 'inspection', 'description': 'Initial Inspection', 'sequence_order': 1},
+        'intake': {'task_type': 'inspection', 'description': 'Customer Intake', 'sequence_order': 2},
+        'assigned': {'task_type': 'coordination', 'description': 'Service Coordinator Assigned - Ready for Diagnosis', 'sequence_order': 3},
+        'diagnosis': {'task_type': 'diagnostic', 'description': 'Perform Diagnosis', 'sequence_order': 4},
+        'awaiting_approval': {'task_type': 'other', 'description': 'Await Customer Approval', 'sequence_order': 5},
+        'approved': {'task_type': 'other', 'description': 'Customer Approval Received', 'sequence_order': 6},
+        'in_progress': {'task_type': 'repair', 'description': 'Repair Work', 'sequence_order': 7},
+        'quality_check': {'task_type': 'inspection', 'description': 'Perform Quality Check', 'sequence_order': 8},
+        'completed': {'task_type': 'other', 'description': 'Finalize Work Order', 'sequence_order': 9},
+        'invoiced': {'task_type': 'other', 'description': 'Generate Invoice', 'sequence_order': 10},
+        'closed': {'task_type': 'other', 'description': 'Close Work Order', 'sequence_order': 11},
+    }
+    
     try:
         from apps.workorders.models import WorkflowConfiguration
-        config = WorkflowConfiguration.objects.filter(status=status, is_active=True).first()
-        if config:
-            return {
+        configs = WorkflowConfiguration.objects.filter(is_active=True)
+        for config in configs:
+            WORKFLOW_TASK_CONFIG[config.status] = {
                 'task_type': config.task_type,
                 'description': config.description,
                 'sequence_order': config.sequence_order,
@@ -168,214 +136,117 @@ def get_workflow_task_config(status):
     except Exception:
         pass
         
-    WORKFLOW_TASK_CONFIG = {
-        'inspection': {
-            'task_type': 'inspection',
-            'description': 'Initial Inspection',
-            'sequence_order': 1,
-        },
-        'intake': {
-            'task_type': 'inspection',
-            'description': 'Customer Intake',
-            'sequence_order': 2,
-        },
-        'assigned': {
-            'task_type': 'coordination',
-            'description': 'Service Coordinator Assigned - Ready for Diagnosis',
-            'sequence_order': 3,
-        },
-        'diagnosis': {
-            'task_type': 'diagnostic',
-            'description': 'Perform Diagnosis',
-            'sequence_order': 4,
-        },
-        'awaiting_approval': {
-            'task_type': 'other',
-            'description': 'Await Customer Approval',
-            'sequence_order': 5,
-        },
-        'approved': {
-            'task_type': 'other',
-            'description': 'Customer Approval Received',
-            'sequence_order': 6,
-        },
-        'in_progress': {
-            'task_type': 'repair',
-            'description': 'Repair Work',
-            'sequence_order': 7,
-        },
-        'quality_check': {
-            'task_type': 'inspection',
-            'description': 'Perform Quality Check',
-            'sequence_order': 8,
-        },
-        'completed': {
-            'task_type': 'other',
-            'description': 'Finalize Work Order',
-            'sequence_order': 9,
-        },
-        'invoiced': {
-            'task_type': 'other',
-            'description': 'Generate Invoice',
-            'sequence_order': 10,
-        },
-        'closed': {
-            'task_type': 'other',
-            'description': 'Close Work Order',
-            'sequence_order': 11,
-        },
-    }
-    return WORKFLOW_TASK_CONFIG.get(status)
+    return WORKFLOW_TASK_CONFIG
+
+
+def get_workflow_task_config(status):
+    """
+    Get configuration for workflow task based on status.
+    Returns dict with task_type, description, and sequence_order, or None if no task needed.
+    """
+    return get_all_workflow_configs().get(status)
+
 
 def handle_workflow_tasks(work_order, old_status, new_status, user=None):
     """
-    Automatically create and complete workflow tasks based on status transitions.
+    Automatically synchronize workflow tasks based on the work order's current status.
+    Uses a declarative state model mathematically bound by sequence_order.
     """
     try:
         from django.utils import timezone
         from django.db import DatabaseError
+        from django.core.exceptions import FieldDoesNotExist
+        from django.db.models import Max
         
-        # Check if workflow task fields exist in the database
-        # If migration hasn't been run, fields won't exist and queries will fail
         try:
-            # Test if the fields exist by checking the model's meta
-            from django.db import connection
             fields = [f.name for f in work_order.tasks.model._meta.get_fields()]
             workflow_fields_exist = 'is_workflow_task' in fields and 'workflow_phase' in fields
         except (AttributeError, FieldDoesNotExist, Exception):
-            # Fields don't exist yet - migration not run, or error checking
             workflow_fields_exist = False
         
         if not workflow_fields_exist:
-            # Migration hasn't been run yet - skip workflow task creation
             return
+            
+        all_configs = get_all_workflow_configs()
+        new_config = all_configs.get(new_status)
         
-        # Complete the task for the old status if it exists
-        # BUT: Don't complete if transitioning to/from paused - just pause/resume the task
-        if old_status:
-            # Special handling for paused status - don't complete tasks when pausing/resuming
-            if new_status == 'paused' or old_status == 'paused':
-                # When pausing: just pause the workflow task, don't complete it
-                if new_status == 'paused' and old_status in ['in_progress']:
-                    try:
-                        old_task = work_order.tasks.filter(
-                            workflow_phase=old_status,
-                            is_workflow_task=True
-                        ).first()
-                        
-                        if old_task and old_task.status == 'in_progress':
-                            # Pause the task instead of completing it
-                            ServiceTask.objects.filter(pk=old_task.pk).update(
-                                status='pending',  # Set back to pending when paused
-                            )
-                    except (DatabaseError, AttributeError) as e:
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Failed to pause workflow task for phase {old_status}: {e}")
-                # When resuming: reactivate the existing workflow task
-                elif old_status == 'paused' and new_status == 'in_progress':
-                    try:
-                        # Find existing workflow task for in_progress
-                        existing_task = work_order.tasks.filter(
-                            workflow_phase='in_progress',
-                            is_workflow_task=True
-                        ).first()
-                        
-                        if existing_task:
-                            # Reactivate the task
-                            ServiceTask.objects.filter(pk=existing_task.pk).update(
-                                status='in_progress',
-                                started_at=timezone.now()
-                            )
-                            # Don't create a new task - we'll return early
-                            return
-                    except (DatabaseError, AttributeError) as e:
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Failed to resume workflow task: {e}")
-            else:
-                # Normal transition - complete the old task
-                try:
-                    old_task = work_order.tasks.filter(
-                        workflow_phase=old_status,
-                        is_workflow_task=True
-                    ).first()
-                    
-                    if old_task and old_task.status != 'completed':
-                        old_task.status = 'completed'
-                        old_task.completed_at = timezone.now()
-                        # Bypass save() recursion by using update()
-                        ServiceTask.objects.filter(pk=old_task.pk).update(
-                            status='completed',
-                            completed_at=timezone.now()
-                        )
-                        # Update totals after completion
-                        work_order.recalculate_totals()
-                except (DatabaseError, AttributeError) as e:
-                    # Log error but don't fail the status transition
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Failed to complete workflow task for phase {old_status}: {e}")
+        # 1. Handle Side States (No direct sequence assigned)
+        if not new_config or new_status in ['paused', 'additional_work_found']:
+            # Pause all active workflow tasks
+            active_tasks = work_order.tasks.filter(is_workflow_task=True, status='in_progress')
+            for task in active_tasks:
+                task.status = 'pending'
+                task.save(update_fields=['status'])
+            return
+
+        target_seq = new_config['sequence_order']
         
-        # Create task for new status if config exists and task doesn't already exist
-        # Skip creating workflow task for paused status (no config exists anyway)
-        if new_status == 'paused':
-            return  # Don't create a workflow task for paused status
+        # Determine phases by timing mathematically via sequence_order
+        past_phases = [k for k, v in all_configs.items() if v['sequence_order'] < target_seq]
+        future_phases = [k for k, v in all_configs.items() if v['sequence_order'] > target_seq]
+
+        # 2. Complete previous stages flawlessly
+        past_tasks = work_order.tasks.filter(
+            is_workflow_task=True,
+            workflow_phase__in=past_phases,
+        ).exclude(status='completed')
         
-        task_config = get_workflow_task_config(new_status)
-        if task_config:
-            try:
-                existing_task = work_order.tasks.filter(
-                    workflow_phase=new_status,
-                    is_workflow_task=True
-                ).first()
+        for task in past_tasks:
+            task.status = 'completed'
+            task.completed_at = timezone.now()
+            task.save(update_fields=['status', 'completed_at'])
+
+        # 3. Purge future stages if moving backward to avoid dirty orphaned data
+        work_order.tasks.filter(
+            is_workflow_task=True,
+            workflow_phase__in=future_phases
+        ).delete()
+        
+        # 4. Activate or Create Current Stage
+        current_task = work_order.tasks.filter(
+            is_workflow_task=True,
+            workflow_phase=new_status
+        ).first()
+        
+        auto_start_phases = ['inspection', 'intake', 'assigned', 'diagnosis', 'in_progress', 'quality_check']
+        initial_status = 'in_progress' if new_status in auto_start_phases else 'pending'
+        
+        if current_task:
+            if current_task.status != initial_status and current_task.status != 'completed':
+                current_task.status = initial_status
+                if initial_status == 'in_progress' and not current_task.started_at:
+                    current_task.started_at = timezone.now()
+                update_fields = ['status', 'started_at'] if initial_status == 'in_progress' else ['status']
+                current_task.save(update_fields=update_fields)
+        else:
+            max_manual_seq = work_order.tasks.filter(is_workflow_task=False).aggregate(
+                max_seq=Max('sequence_order')
+            )['max_seq'] or 0
+            
+            assigned_user = None
+            if new_status == 'assigned' and work_order.service_coordinator:
+                assigned_user = work_order.service_coordinator
+            elif work_order.primary_technician:
+                assigned_user = work_order.primary_technician
                 
-                # If resuming from paused, we already reactivated the task above, so skip creating new one
-                if old_status == 'paused' and new_status == 'in_progress' and existing_task:
-                    return
-                
-                if not existing_task:
-                    # Get max sequence order for non-workflow tasks to place workflow tasks appropriately
-                    max_manual_seq = work_order.tasks.filter(is_workflow_task=False).aggregate(
-                        max_seq=Max('sequence_order')
-                    )['max_seq'] or 0
-                    
-                    # Auto-start workflow tasks for certain phases
-                    auto_start_phases = ['inspection', 'intake', 'assigned', 'diagnosis', 'in_progress', 'quality_check']
-                    initial_status = 'in_progress' if new_status in auto_start_phases else 'pending'
-                    
-                    # Assign task based on phase
-                    # For "assigned" phase, assign to Service Coordinator
-                    # For other phases, assign to primary technician or keep unassigned
-                    assigned_user = None
-                    if new_status == 'assigned' and work_order.service_coordinator:
-                        assigned_user = work_order.service_coordinator
-                    elif work_order.primary_technician:
-                        assigned_user = work_order.primary_technician
-                    
-                    workflow_task = ServiceTask.objects.create(
-                        work_order=work_order,
-                        workflow_phase=new_status,
-                        is_workflow_task=True,
-                        task_type=task_config['task_type'],
-                        description=task_config['description'],
-                        sequence_order=task_config['sequence_order'] + max_manual_seq,
-                        status=initial_status,
-                        assigned_to=assigned_user,
-                    )
-                    
-                    # Set started_at if auto-started
-                    if initial_status == 'in_progress':
-                        ServiceTask.objects.filter(pk=workflow_task.pk).update(
-                            started_at=timezone.now()
-                        )
-            except (DatabaseError, AttributeError) as e:
-                # Log error but don't fail the status transition
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to create workflow task for phase {new_status}: {e}")
+            workflow_task = ServiceTask.objects.create(
+                work_order=work_order,
+                workflow_phase=new_status,
+                is_workflow_task=True,
+                task_type=new_config['task_type'],
+                description=new_config['description'],
+                sequence_order=new_config['sequence_order'] + max_manual_seq,
+                status=initial_status,
+                assigned_to=assigned_user,
+            )
+            
+            if initial_status == 'in_progress':
+                ServiceTask.objects.filter(pk=workflow_task.pk).update(started_at=timezone.now())
+
+        # Recalculate Work Order if tasks were modified
+        work_order.recalculate_totals()
+
     except Exception as e:
-        # Catch any other errors and log them without failing the transition
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in _handle_workflow_tasks: {e}", exc_info=True)
+        logger.error(f"Error in handle_workflow_tasks: {e}", exc_info=True)

@@ -480,6 +480,9 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
     is_partially_paid = serializers.BooleanField(read_only=True)
     payment_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
     
+    qbo_sync_status = serializers.SerializerMethodField()
+    qbo_sync_error = serializers.SerializerMethodField()
+    
     class Meta:
         model = Invoice
         fields = [
@@ -497,6 +500,7 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             'amount_paid', 'amount_due',
             'is_overdue', 'days_overdue', 'days_until_due',
             'is_paid', 'is_partially_paid', 'payment_percentage',
+            'qbo_sync_status', 'qbo_sync_error',
             'line_items',
             'payments',
             'created_by', 'created_by_name',
@@ -580,6 +584,26 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             'vat_amount': str(obj.tax_vat_amount),
             'total_tax': str(obj.tax_amount),
         }
+
+    def _get_qbo_mapping(self, obj):
+        if not hasattr(self, '_qbo_mapping_cache'):
+            self._qbo_mapping_cache = {}
+        if obj.id not in self._qbo_mapping_cache:
+            from apps.quickbooks_online.models import QBOMapping
+            from django.contrib.contenttypes.models import ContentType
+            self._qbo_mapping_cache[obj.id] = QBOMapping.objects.filter(
+                content_type=ContentType.objects.get_for_model(obj),
+                object_id=obj.id
+            ).first()
+        return self._qbo_mapping_cache[obj.id]
+
+    def get_qbo_sync_status(self, obj):
+        mapping = self._get_qbo_mapping(obj)
+        return mapping.status if mapping else 'un-synced'
+
+    def get_qbo_sync_error(self, obj):
+        mapping = self._get_qbo_mapping(obj)
+        return mapping.error_message if mapping else ''
 
 
 class InvoiceLineItemCreateSerializer(serializers.Serializer):

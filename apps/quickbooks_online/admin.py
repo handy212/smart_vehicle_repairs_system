@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import QBOConfig, QBOToken, QBOMapping
+from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
 
 @admin.register(QBOConfig)
 class QBOConfigAdmin(admin.ModelAdmin):
@@ -15,7 +15,24 @@ class QBOTokenAdmin(admin.ModelAdmin):
 
 @admin.register(QBOMapping)
 class QBOMappingAdmin(admin.ModelAdmin):
-    list_display = ('content_type', 'object_id', 'content_object', 'qbo_id', 'last_synced_at')
-    list_filter = ('content_type', 'last_synced_at')
+    list_display = ('content_type', 'object_id', 'content_object', 'qbo_id', 'status', 'last_synced_at')
+    list_filter = ('content_type', 'status', 'last_synced_at')
     search_fields = ('qbo_id',)
     readonly_fields = ('qbo_sync_token', 'last_synced_at')
+
+@admin.register(QBOSyncLog)
+class QBOSyncLogAdmin(admin.ModelAdmin):
+    list_display = (
+        'entity_type', 'status', 'started_at', 'finished_at',
+        'records_pulled', 'records_created', 'records_updated', 'records_skipped',
+        'triggered_by'
+    )
+    list_filter = ('entity_type', 'status', 'started_at')
+    readonly_fields = (
+        'entity_type', 'started_at', 'finished_at',
+        'records_pulled', 'records_created', 'records_updated', 'records_skipped',
+        'status', 'error_message', 'triggered_by'
+    )
+
+    def has_add_permission(self, request):
+        return False  # Logs should never be manually created via admin

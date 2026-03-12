@@ -50,6 +50,7 @@ export default function EditGatePassPage() {
     const { data: gatePass, isLoading, error } = useQuery({
         queryKey: ["gatepass", gatePassId],
         queryFn: () => gatepassApi.get(gatePassId),
+        enabled: !isNaN(gatePassId),
     });
 
     const {

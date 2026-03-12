@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import {
@@ -49,7 +49,13 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { useToast } from "@/lib/hooks/useToast"
 import { accountingApi } from "@/lib/api/accounting"
 import { useCurrency } from "@/lib/hooks/useCurrency"
@@ -202,16 +208,7 @@ export default function AccrualsPage() {
                 </TabsContent>
 
                 <TabsContent value="candidates" className="mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <Card className="bg-primary/5 border-orange-100">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium text-primary">How Candidates Work</CardTitle>
-                            </CardHeader>
-                            <CardContent className="text-sm text-primary">
-                                The system scans for <strong>Received but Unbilled Purchase Orders</strong> (Accrued Expense) and <strong>Completed but Uninvoiced Work Orders</strong> (Accrued Revenue). Review and create accruals to recognize them in the correct period.
-                            </CardContent>
-                        </Card>
-                    </div>
+
 
                     <Card>
                         <CardContent className="p-0">
@@ -325,6 +322,7 @@ export default function AccrualsPage() {
 
 
 function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
+    const { toast } = useToast();
     const { data: accounts } = useQuery({
         queryKey: ["accounts"],
         queryFn: accountingApi.getAccounts
@@ -337,17 +335,34 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
 
     const filteredAccounts = accounts?.filter((a: any) => a.account_type === accountFilter) || [];
 
+    const [accrualType, setAccrualType] = useState<string>('expense')
+    const [accountId, setAccountId] = useState<string>('')
+
+    // Sync state when dialog opens or candidate changes
+    useEffect(() => {
+        if (open) {
+            setAccrualType(candidate?.type || 'expense')
+            setAccountId('')
+        }
+    }, [open, candidate])
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
         const data = {
-            accrual_type: formData.get('accrual_type'),
-            account: formData.get('account'), // ID
+            accrual_type: accrualType,
+            account: accountId,
             amount: formData.get('amount'),
             accrual_date: formData.get('accrual_date'),
             reversal_date: formData.get('reversal_date'),
             description: formData.get('description'),
         }
+
+        if (!data.account) {
+            toast({ title: "Account Required", description: "Please select an account", variant: "destructive" });
+            return;
+        }
+
         onSubmit(data);
     }
 
@@ -364,9 +379,17 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>Accrual Type</Label>
-                            <Select name="accrual_type" defaultValue={candidate?.type || 'expense'}>
-                                <option value="expense">Accrued Expense</option>
-                                <option value="revenue">Accrued Revenue</option>
+                            <Select
+                                value={accrualType}
+                                onValueChange={setAccrualType}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="expense">Accrued Expense</SelectItem>
+                                    <SelectItem value="revenue">Accrued Revenue</SelectItem>
+                                </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2">
@@ -377,14 +400,20 @@ function CreateAccrualDialog({ open, onOpenChange, candidate, onSubmit }: any) {
 
                     <div className="space-y-2">
                         <Label>P&L Account</Label>
-                        <Select name="account" required>
-                            <option value="">Select account...</option>
-
-                            {filteredAccounts.map((acc: any) => (
-                                <option key={acc.id} value={String(acc.id)}>
-                                    {acc.code} - {acc.name}
-                                </option>
-                            ))}
+                        <Select
+                            value={accountId}
+                            onValueChange={setAccountId}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select account..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {filteredAccounts.map((acc: any) => (
+                                    <SelectItem key={acc.id} value={String(acc.id)}>
+                                        {acc.code} - {acc.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
                             Select the actual expense or revenue account.

@@ -39,6 +39,8 @@ export interface Supplier {
   parts_count?: number;
   active_po_count?: number;
   total_po_count?: number;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
@@ -79,6 +81,8 @@ export interface PurchaseOrder {
   items?: PurchaseOrderItem[];
   assigned_approver?: number;
   assigned_approver_name?: string;
+  qbo_sync_status?: string;
+  qbo_sync_error?: string;
 }
 
 export interface PurchaseOrderItem {

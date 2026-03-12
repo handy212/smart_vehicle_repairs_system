@@ -215,21 +215,12 @@ class GatePassViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='from-workorder/(?P<work_order_id>[^/.]+)')
     def from_workorder(self, request, work_order_id=None):
         """Get gate pass for a specific work order"""
-        from apps.workorders.models import WorkOrder
-
-        try:
-            work_order = WorkOrder.objects.get(pk=work_order_id)
-        except WorkOrder.DoesNotExist:
-            return Response(
-                {'error': 'Work order not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        gate_pass = GatePass.objects.filter(work_order=work_order).first()
+        
+        gate_pass = self.get_queryset().filter(work_order_id=work_order_id).first()
 
         if not gate_pass:
             return Response(
-                {'error': 'No gate pass found for this work order.'},
+                {'error': 'No gate pass found for this work order or you do not have permission to view it.'},
                 status=status.HTTP_404_NOT_FOUND
             )
 

@@ -89,12 +89,13 @@ class GatePassCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = GatePass
         fields = [
-            'work_order', 'branch', 'vehicle', 'customer',
+            'id', 'gate_pass_number', 'status', 'work_order', 'branch', 'vehicle', 'customer',
             'picked_up_by_customer', 'pickup_person_name',
             'pickup_person_relationship', 'pickup_person_id_type',
             'pickup_person_id_number', 'pickup_person_phone',
             'pickup_notes'
         ]
+        read_only_fields = ['id', 'gate_pass_number', 'status']
     
     def validate_work_order(self, value):
         """Validate that work order is closed"""

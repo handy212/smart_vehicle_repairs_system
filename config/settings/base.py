@@ -325,6 +325,26 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# QBO Inbound Sync Schedule — runs every 30 minutes
+# These are default schedules; admins can also override via django-celery-beat's DB scheduler.
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'qbo-pull-vendors': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_vendors_from_qbo',
+        'schedule': 1800,  # every 30 minutes
+    },
+    'qbo-pull-invoices': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_invoices_from_qbo',
+        'schedule': 1800,
+    },
+    'qbo-pull-bills': {
+        'task': 'apps.quickbooks_online.tasks.task_pull_bills_from_qbo',
+        'schedule': 1800,
+    },
+}
+
+
 # Redis Cache
 CACHES = {
     'default': {

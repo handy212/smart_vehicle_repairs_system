@@ -289,6 +289,14 @@ class WorkOrderStateTransitionMixin:
         # Determine next status
         if passed:
             try:
+                # Auto-return unused parts to allow completion
+                unused_parts = work_order.parts.exclude(status__in=['installed', 'returned', 'ready'])
+                if unused_parts.exists():
+                    logger.info(f"Auto-returning {unused_parts.count()} unused parts for WO {work_order.work_order_number}")
+                    for part in unused_parts:
+                        part.status = 'returned'
+                        part.save(update_fields=['status'])
+
                 work_order.transition_to('completed', user=request.user)
             except ValidationError as e:
                 logger.warning(f"Validation error during QC completion for WO {work_order.work_order_number}: {e}")

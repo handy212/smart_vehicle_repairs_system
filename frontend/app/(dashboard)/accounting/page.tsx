@@ -8,10 +8,12 @@ import { InteractiveTrendChart } from "@/components/dashboard/InteractiveTrendCh
 import { OperationalGrid } from "@/components/dashboard/OperationalGrid";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Download } from "lucide-react";
+import { RefreshCw, Download, Database } from "lucide-react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { addDays, startOfMonth, endOfMonth, format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
+import { quickbooksApi } from "@/lib/api/quickbooks";
+import { cn } from "@/lib/utils";
 
 export default function AccountingDashboardPage() {
     const { error: toastError, success: toastSuccess } = useToast();
@@ -19,6 +21,19 @@ export default function AccountingDashboardPage() {
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date())
     });
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleQBOSync = async () => {
+        try {
+            setIsSyncing(true);
+            await quickbooksApi.syncInbound();
+            toastSuccess("QuickBooks sync triggered successfully. Data will update in a few moments.");
+        } catch (err) {
+            toastError("Failed to trigger QuickBooks sync");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['accounting-analytics', dateRange.from, dateRange.to],
@@ -98,6 +113,10 @@ export default function AccountingDashboardPage() {
                     />
                     <Button variant="outline" size="icon" onClick={() => refetch()}>
                         <RefreshCw className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleQBOSync} disabled={isSyncing}>
+                        <Database className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
+                        {isSyncing ? "Syncing..." : "Sync from QuickBooks"}
                     </Button>
                     <Button onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />

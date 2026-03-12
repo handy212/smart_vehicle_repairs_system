@@ -57,8 +57,16 @@ class QBOMapping(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
     
-    qbo_id = models.CharField(max_length=50, help_text="ID in QuickBooks Online")
+    STATUS_CHOICES = [
+        ('synced', 'Synced Successfully'),
+        ('failed', 'Sync Failed'),
+        ('pending', 'Pending Sync'),
+    ]
+    
+    qbo_id = models.CharField(max_length=50, blank=True, help_text="ID in QuickBooks Online")
     qbo_sync_token = models.CharField(max_length=50, blank=True, help_text="Sync token for optimistic locking")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    error_message = models.TextField(blank=True, null=True, help_text="Last synchronization error")
     last_synced_at = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -70,3 +78,46 @@ class QBOMapping(models.Model):
 
     def __str__(self):
         return f"Mapping: {self.content_object} -> QBO {self.qbo_id}"
+
+
+class QBOSyncLog(models.Model):
+    """
+    Records each inbound synchronization run (pull from QBO) and its outcome.
+    """
+    ENTITY_TYPES = [
+        ('vendor', 'Vendors (Suppliers)'),
+        ('invoice', 'Invoices'),
+        ('bill', 'Bills (Purchase Orders)'),
+        ('all', 'Full Inbound Sync'),
+    ]
+
+    STATUS_CHOICES = [
+        ('running', 'Running'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+    ]
+
+    entity_type = models.CharField(max_length=20, choices=ENTITY_TYPES)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    records_pulled = models.IntegerField(default=0, help_text="Total records fetched from QBO")
+    records_created = models.IntegerField(default=0, help_text="New records created locally")
+    records_updated = models.IntegerField(default=0, help_text="Existing records updated locally")
+    records_skipped = models.IntegerField(default=0, help_text="Records skipped (no local match found)")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='running')
+    error_message = models.TextField(blank=True)
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="User who manually triggered this sync (null = scheduled)"
+    )
+
+    class Meta:
+        ordering = ['-started_at']
+        verbose_name = "QBO Sync Log"
+        verbose_name_plural = "QBO Sync Logs"
+
+    def __str__(self):
+        return f"{self.get_entity_type_display()} sync @ {self.started_at:%Y-%m-%d %H:%M} [{self.status}]"

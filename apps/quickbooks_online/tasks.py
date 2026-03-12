@@ -72,3 +72,123 @@ def task_sync_payment_to_qbo(payment_id):
         logger.error(f"Payment {payment_id} does not exist.")
     except Exception as e:
         logger.error(f"Error syncing Payment {payment_id} to QBO: {e}", exc_info=True)
+
+
+@shared_task
+def task_sync_supplier_to_qbo(supplier_id):
+    """
+    Background task to sync a Supplier to QBO.
+    """
+    try:
+        Supplier = apps.get_model('inventory', 'Supplier')
+        supplier = Supplier.objects.get(id=supplier_id)
+        
+        service = QuickBooksService()
+        qb_vendor = service.sync_supplier(supplier)
+        
+        if qb_vendor:
+            logger.info(f"Successfully synced Supplier {supplier_id} to QBO ID {qb_vendor.Id}")
+        else:
+            logger.warning(f"Failed to sync Supplier {supplier_id} to QBO (no result returned)")
+            
+    except Supplier.DoesNotExist:
+        logger.error(f"Supplier {supplier_id} does not exist.")
+    except Exception as e:
+        logger.error(f"Error syncing Supplier {supplier_id} to QBO: {e}", exc_info=True)
+
+
+@shared_task
+def task_sync_purchase_order_to_qbo(po_id):
+    """
+    Background task to sync a PurchaseOrder to QBO as a Bill.
+    """
+    try:
+        PurchaseOrder = apps.get_model('inventory', 'PurchaseOrder')
+        po = PurchaseOrder.objects.get(id=po_id)
+        
+        service = QuickBooksService()
+        qb_bill = service.sync_purchase_order(po)
+        
+        if qb_bill:
+            logger.info(f"Successfully synced PO {po_id} to QBO ID {qb_bill.Id}")
+        else:
+            logger.warning(f"Failed to sync PO {po_id} to QBO (no result returned)")
+            
+    except PurchaseOrder.DoesNotExist:
+        logger.error(f"PurchaseOrder {po_id} does not exist.")
+    except Exception as e:
+        logger.error(f"Error syncing PO {po_id} to QBO: {e}", exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+# INBOUND TASKS: Pull from QBO → local system
+# ---------------------------------------------------------------------------
+
+@shared_task
+def task_pull_vendors_from_qbo(triggered_by_id=None):
+    """
+    Pull Vendors from QBO → create any new local Suppliers not yet in our system.
+    Does NOT overwrite existing local Supplier data.
+    """
+    try:
+        service = QuickBooksService()
+        log = service.pull_vendors()
+        if log:
+            logger.info(
+                f"[QBO Inbound] Vendors pull complete: "
+                f"pulled={log.records_pulled}, created={log.records_created}, "
+                f"updated={log.records_updated}, skipped={log.records_skipped}, status={log.status}"
+            )
+    except Exception as e:
+        logger.error(f"Error in task_pull_vendors_from_qbo: {e}", exc_info=True)
+
+
+@shared_task
+def task_pull_invoices_from_qbo(triggered_by_id=None):
+    """
+    Pull Invoices from QBO → update payment status and amounts on existing local invoices.
+    Does NOT create new invoices from QBO.
+    """
+    try:
+        service = QuickBooksService()
+        log = service.pull_invoices()
+        if log:
+            logger.info(
+                f"[QBO Inbound] Invoices pull complete: "
+                f"pulled={log.records_pulled}, updated={log.records_updated}, "
+                f"skipped={log.records_skipped}, status={log.status}"
+            )
+    except Exception as e:
+        logger.error(f"Error in task_pull_invoices_from_qbo: {e}", exc_info=True)
+
+
+@shared_task
+def task_pull_bills_from_qbo(triggered_by_id=None):
+    """
+    Pull Bills from QBO → update status on existing local Purchase Orders.
+    Does NOT create new POs from QBO.
+    """
+    try:
+        service = QuickBooksService()
+        log = service.pull_bills()
+        if log:
+            logger.info(
+                f"[QBO Inbound] Bills pull complete: "
+                f"pulled={log.records_pulled}, updated={log.records_updated}, "
+                f"skipped={log.records_skipped}, status={log.status}"
+            )
+    except Exception as e:
+        logger.error(f"Error in task_pull_bills_from_qbo: {e}", exc_info=True)
+
+
+@shared_task
+def task_full_inbound_sync(triggered_by_id=None):
+    """
+    Convenience task: runs all three inbound pulls sequentially.
+    Triggered by Celery Beat schedule or manual admin action.
+    """
+    logger.info("[QBO Inbound] Starting full inbound sync...")
+    task_pull_vendors_from_qbo(triggered_by_id=triggered_by_id)
+    task_pull_invoices_from_qbo(triggered_by_id=triggered_by_id)
+    task_pull_bills_from_qbo(triggered_by_id=triggered_by_id)
+    logger.info("[QBO Inbound] Full inbound sync complete.")

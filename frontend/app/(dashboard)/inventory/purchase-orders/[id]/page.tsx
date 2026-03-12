@@ -384,7 +384,7 @@ export default function PurchaseOrderDetailPage() {
       </div>
 
       {/* Summary Widgets */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
           <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</label>
           <div className="flex items-center justify-between">
@@ -426,6 +426,21 @@ export default function PurchaseOrderDetailPage() {
             <span className="text-xs text-card-foreground">
               Exp: {purchaseOrder.expected_delivery_date ? format(new Date(purchaseOrder.expected_delivery_date), "MMM dd") : "-"}
             </span>
+          </div>
+        </div>
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-muted/50">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">QuickBooks Sync</label>
+          <div className="flex flex-col mt-1">
+            <span className="text-xl font-bold text-foreground">
+              <Badge variant={purchaseOrder.qbo_sync_status === 'synced' ? 'success' : purchaseOrder.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent m-0 p-0 h-auto capitalize">
+                {purchaseOrder.qbo_sync_status || 'Un-synced'}
+              </Badge>
+            </span>
+            {purchaseOrder.qbo_sync_status === 'failed' && purchaseOrder.qbo_sync_error && (
+              <span className="text-[10px] text-red-600 line-clamp-2 mt-1" title={purchaseOrder.qbo_sync_error}>
+                {purchaseOrder.qbo_sync_error}
+              </span>
+            )}
           </div>
         </div>
       </div>

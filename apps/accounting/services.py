@@ -981,9 +981,6 @@ class AccountingService:
 
 
 class ReportingService:
-    @staticmethod
-
-
     @classmethod
     def get_balance_sheet(cls, date=None, branch_id=None):
         if not date:
@@ -1129,7 +1126,7 @@ class ReportingService:
         # Filter by code range or description as 'bank'/'cash' types don't exist in model choices
         # Assuming typical chart of accounts: 1000-1099 is Cash/Bank
         cash_accounts = Account.objects.filter(
-            models.Q(code__startswith='10') | models.Q(name__icontains='bank') | models.Q(name__icontains='cash'),
+            Q(code__startswith='10') | Q(name__icontains='bank') | Q(name__icontains='cash'),
             account_type='asset'
         )
         cash_account_ids = cash_accounts.values_list('id', flat=True)

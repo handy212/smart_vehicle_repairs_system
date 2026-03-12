@@ -165,7 +165,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         className="min-h-screen px-2 py-0 sm:px-3 lg:px-3 pb-2 sm:pb-3 lg:pb-4 transition-all duration-300 print:!m-0 print:!p-0"
         style={{
           marginLeft: isDesktop ? `${totalMargin}px` : '0',
-          paddingTop: '5rem' // 80px to account for header (64px) + extra space for mobile search
+          paddingTop: !isDesktop && hasSubNav ? '7.5rem' : '5rem' // Extra space on mobile for horizontal sub-nav tab bar
         }}
       >
         <Suspense fallback={null}>

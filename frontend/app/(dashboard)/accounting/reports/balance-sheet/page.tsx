@@ -183,7 +183,7 @@ export default function BalanceSheetPage() {
                 </div>
             ) : report ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    // Assets
+                    {/* Assets */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-lg">Assets</CardTitle>
@@ -222,7 +222,7 @@ export default function BalanceSheetPage() {
                     </Card>
 
                     <div className="space-y-6">
-                        // Liabilities
+                        {/* Liabilities */}
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-lg">Liabilities</CardTitle>
@@ -260,7 +260,7 @@ export default function BalanceSheetPage() {
                             </CardContent>
                         </Card>
 
-                        // Equity
+                        {/* // Equity */}
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-lg">Equity</CardTitle>
@@ -298,7 +298,7 @@ export default function BalanceSheetPage() {
                             </CardContent>
                         </Card>
 
-                        // Summary
+                        {/* Summary */}
                         <Card className={report.is_balanced ? "border-green-200 bg-success/10" : "border-red-200 bg-red-50/50"}>
                             <CardContent className="pt-6">
                                 <div className="flex justify-between items-center">
