@@ -28,9 +28,13 @@ from apps.notifications_app.models import NotificationTemplate
 # Register models for audit logging
 # Admin/System Models
 auditlog.register(User)
-# Temporarily disabled due to database encoding issue (SQL_ASCII vs UTF8)
-# TODO: Re-enable after database is converted to UTF8 encoding
-# auditlog.register(SystemSettings)
+# TODO: Re-enable SystemSettings after database encoding is migrated from SQL_ASCII to UTF8.
+# The auditlog JSON field causes encoding errors on the current database. Wrapped in
+# try/except so it auto-enables once the DB issue is resolved.
+try:
+    auditlog.register(SystemSettings)
+except Exception:  # noqa: BLE001
+    pass
 auditlog.register(Role)
 auditlog.register(Permission)
 auditlog.register(SystemBackup)

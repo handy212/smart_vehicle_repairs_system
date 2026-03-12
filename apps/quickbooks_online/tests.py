@@ -122,6 +122,28 @@ class QuickBooksIntegrationTests(TestCase):
         self.assertEqual(mapping.qbo_id, "200")
         self.assertEqual(mapping.status, 'synced')
 
+    @patch('apps.quickbooks_online.services.QuickBooks')
+    @patch('apps.quickbooks_online.services.QBDepartment')
+    def test_sync_branch_success(self, mock_qb_dept_class, mock_quickbooks_class):
+        mock_client = MagicMock()
+        mock_quickbooks_class.return_value = mock_client
+        
+        mock_qb_dept = MagicMock()
+        mock_qb_dept.Id = "50"
+        mock_qb_dept.SyncToken = "0"
+        mock_qb_dept_class.return_value = mock_qb_dept
+        
+        service = QuickBooksService()
+        result = service.sync_branch(self.branch)
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(result.Id, "50")
+        
+        ct = ContentType.objects.get_for_model(self.branch)
+        mapping = QBOMapping.objects.get(content_type=ct, object_id=self.branch.id)
+        self.assertEqual(mapping.qbo_id, "50")
+        self.assertEqual(mapping.status, 'synced')
+
     @patch('apps.quickbooks_online.services.QuickBooksService.sync_customer')
     @patch('apps.quickbooks_online.services.QuickBooks')
     @patch('apps.quickbooks_online.services.QBInvoice')
@@ -179,6 +201,8 @@ class QuickBooksIntegrationTests(TestCase):
         ct = ContentType.objects.get_for_model(invoice)
         mapping = QBOMapping.objects.get(content_type=ct, object_id=invoice.id)
         self.assertEqual(mapping.status, 'synced')
+        # Verify DepartmentRef (Branch)
+        self.assertEqual(mock_qb_invoice.DepartmentRef.value, "50")
 
     @patch('apps.quickbooks_online.services.QuickBooksService.sync_supplier')
     @patch('apps.quickbooks_online.services.QuickBooks')
@@ -224,6 +248,8 @@ class QuickBooksIntegrationTests(TestCase):
         mapping = QBOMapping.objects.get(content_type=ct, object_id=po.id)
         self.assertEqual(mapping.qbo_id, "400")
         self.assertEqual(mapping.status, 'synced')
+        # Verify DepartmentRef (Branch)
+        self.assertEqual(mock_qb_bill.DepartmentRef.value, "50")
 
     @patch('apps.quickbooks_online.services.QuickBooksService.get_client', return_value=None)
     def test_sync_failure_no_client(self, mock_get_client):

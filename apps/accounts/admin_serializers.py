@@ -73,9 +73,12 @@ class AuditLogSerializer(serializers.ModelSerializer):
         return obj.actor.email if obj.actor else "system@system.local"
     
     def get_user_name(self, obj):
-        if obj.actor:
-            return obj.actor.get_full_name() or f"{obj.actor.first_name} {obj.actor.last_name}".strip()
-        return "System"
+        if not obj.actor:
+            return "System"
+        # Compose name directly rather than using get_full_name() which on this
+        # custom User model returns email as a fallback (masking the username fallback).
+        full_name = f"{obj.actor.first_name} {obj.actor.last_name}".strip()
+        return full_name or obj.actor.username
     
     def get_action(self, obj):
         # Map integer action to string
@@ -105,10 +108,9 @@ class AuditLogSerializer(serializers.ModelSerializer):
         if not obj.changes:
             return "No changes"
         try:
-             # Basic formatting
-             return json.dumps(obj.changes, indent=2)
-        except:
-             return str(obj.changes)
+            return json.dumps(obj.changes, indent=2)
+        except (TypeError, ValueError):
+            return str(obj.changes)
 
 
 class SystemBackupSerializer(serializers.ModelSerializer):

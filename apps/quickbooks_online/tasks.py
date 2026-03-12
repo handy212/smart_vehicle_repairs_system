@@ -120,6 +120,29 @@ def task_sync_purchase_order_to_qbo(po_id):
         logger.error(f"Error syncing PO {po_id} to QBO: {e}", exc_info=True)
 
 
+@shared_task
+def task_sync_branch_to_qbo(branch_id):
+    """
+    Background task to sync a Branch to QBO as a Department (Location).
+    """
+    try:
+        Branch = apps.get_model('branches', 'Branch')
+        branch = Branch.objects.get(id=branch_id)
+
+        service = QuickBooksService()
+        qb_dept = service.sync_branch(branch)
+
+        if qb_dept:
+            logger.info(f"Successfully synced Branch {branch_id} to QBO Department ID {qb_dept.Id}")
+        else:
+            logger.warning(f"Failed to sync Branch {branch_id} to QBO (no result returned)")
+
+    except Branch.DoesNotExist:
+        logger.error(f"Branch {branch_id} does not exist.")
+    except Exception as e:
+        logger.error(f"Error syncing Branch {branch_id} to QBO: {e}", exc_info=True)
+
+
 # ---------------------------------------------------------------------------
 # INBOUND TASKS: Pull from QBO → local system
 # ---------------------------------------------------------------------------

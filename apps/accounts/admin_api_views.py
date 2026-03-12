@@ -14,6 +14,7 @@ from django.conf import settings
 import os
 from pathlib import Path
 import json
+from datetime import datetime, time as dt_time
 
 from auditlog.models import LogEntry
 from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate
@@ -343,11 +344,19 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         })
 
 
+from rest_framework.pagination import PageNumberPagination
+
+class AuditLogPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for viewing audit logs (read-only)
     """
     permission_classes = [IsAdmin]
+    pagination_class = AuditLogPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = []
     search_fields = ['object_repr', 'actor__email', 'actor__username', 'remote_addr']
@@ -357,17 +366,28 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         # Use LogEntry from django-auditlog
         queryset = LogEntry.objects.select_related('actor', 'content_type').all()
-        
-        # Handle manual date filtering
+
+        # Handle manual date filtering (Bug 1 fix: use proper datetime objects)
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
-        
+
         if date_from:
-            queryset = queryset.filter(timestamp__gte=date_from)
+            try:
+                from_dt = timezone.make_aware(
+                    datetime.combine(datetime.strptime(date_from, '%Y-%m-%d').date(), dt_time.min)
+                )
+                queryset = queryset.filter(timestamp__gte=from_dt)
+            except ValueError:
+                pass  # Ignore malformed date
         if date_to:
-            # Add time to include the end date fully
-            queryset = queryset.filter(timestamp__lte=date_to + ' 23:59:59')
-            
+            try:
+                to_dt = timezone.make_aware(
+                    datetime.combine(datetime.strptime(date_to, '%Y-%m-%d').date(), dt_time.max)
+                )
+                queryset = queryset.filter(timestamp__lte=to_dt)
+            except ValueError:
+                pass  # Ignore malformed date
+
         return queryset
     
     def get_serializer_class(self):
@@ -429,13 +449,13 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def import_history(self, request):
         """Get import history (filtered audit logs for import actions)"""
-        # Auditlog doesn't natively have 'import' action type (only 0,1,2).
-        # We might need to filter by specific method if we can, or rely on 
-        # API logs if we extended the model.
-        # For now, return empty or filter by creation of specific objects if known
-        
-        # Returning empty to prevent error until custom action types are implemented
-        return Response([])
+        # TODO: django-auditlog only has action types 0/1/2 (create/update/delete).
+        # Custom import action tracking requires extending LogEntry or a dedicated model.
+        # Returning 501 until this is implemented.
+        return Response(
+            {'detail': 'Import history tracking is not yet implemented.'},
+            status=status.HTTP_501_NOT_IMPLEMENTED
+        )
     
     @action(detail=False, methods=['post'])
     def archive(self, request):
@@ -496,17 +516,8 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get filtered queryset
+        # Get filtered queryset (date filters are already applied via filter_queryset → get_queryset)
         queryset = self.filter_queryset(self.get_queryset())
-        
-        # Apply date filters if provided
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        
-        if date_from:
-            queryset = queryset.filter(timestamp__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(timestamp__lte=date_to + ' 23:59:59')
         
         # Limit to reasonable number for download (e.g., 10000)
         max_records = 10000

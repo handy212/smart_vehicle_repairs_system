@@ -5,28 +5,48 @@ import { inventoryApi } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Edit, Building2, Mail, Phone, MapPin, Globe, Database } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Edit, 
+  Building2, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Globe, 
+  Database,
+  FileText,
+  Clock,
+  CircleDollarSign,
+  AlertCircle
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils";
-
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+
 export default function SupplierDetailPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   const id = parseInt(params.id as string);
+  const { success: toastSuccess, error: toastError } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: supplier, isLoading, refetch } = useQuery({
     queryKey: ["supplier", id],
     queryFn: () => inventoryApi.getSupplier(id),
   });
 
-  const { success: toastSuccess, error: toastError } = useToast();
-  const [isSyncing, setIsSyncing] = useState(false);
+  const { data: transactions, isLoading: isTransLoading } = useQuery({
+    queryKey: ["supplier-transactions", id],
+    queryFn: () => inventoryApi.listPurchaseOrders({ supplier: id }),
+    enabled: !!supplier,
+  });
 
   const handleQBOSync = async () => {
     try {
@@ -54,7 +74,7 @@ export default function SupplierDetailPage() {
       <div className="text-center py-12">
         <p className="text-muted-foreground">Supplier not found.</p>
         <Link href="/inventory/suppliers">
-          <Button className="mt-4"variant="secondary">
+          <Button className="mt-4" variant="secondary">
             Back to Suppliers
           </Button>
         </Link>
@@ -62,209 +82,368 @@ export default function SupplierDetailPage() {
     );
   }
 
+  const transactionList = Array.isArray(transactions) ? transactions : transactions?.results || [];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/inventory/suppliers">
-            <Button variant="secondary">
+            <Button variant="secondary" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{supplier.name}</h1>
-            <p className="text-sm text-muted-foreground mt-1">Supplier Details</p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-foreground">
+                {supplier.name} ({supplier.supplier_code})
+              </h1>
+              <div className="flex items-center gap-2">
+                {supplier.email && (
+                  <a href={`mailto:${supplier.email}`} className="text-muted-foreground hover:text-primary transition-colors">
+                    <Mail className="w-5 h-5" />
+                  </a>
+                )}
+                {supplier.phone && (
+                  <a href={`tel:${supplier.phone}`} className="text-muted-foreground hover:text-primary transition-colors">
+                    <Phone className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-4 mt-1">
+              <p className="text-sm text-muted-foreground">Supplier Management</p>
+              <div className="flex items-center gap-2">
+                <Badge variant={supplier.is_active ? "success" : "secondary"} className="text-[10px] px-1.5 py-0 h-4">
+                  {supplier.is_active ? "Active" : "Inactive"}
+                </Badge>
+                {supplier.is_preferred && (
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500 hover:bg-amber-600 border-none">
+                    Preferred
+                  </Badge>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-        <Link href={`/inventory/suppliers/${id}/edit`}>
-          <Button>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          {supplier.qbo_sync_status && (
+            <div className="flex items-center gap-2 mr-2">
+              <Badge 
+                variant={supplier.qbo_sync_status === 'synced' ? 'success' : supplier.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} 
+                className="capitalize"
+              >
+                QBO: {supplier.qbo_sync_status}
+              </Badge>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleQBOSync}
+                disabled={isSyncing}
+                className="h-9 px-3"
+              >
+                <Database className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")} />
+                {isSyncing ? "Syncing..." : "Sync QBO"}
+              </Button>
+            </div>
+          )}
+          <Link href={`/inventory/suppliers/${id}/edit`}>
+            <Button size="sm">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Supplier
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Supplier Code</label>
-              <p className="text-lg font-mono">{supplier.supplier_code}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Type</label>
-              <div className="mt-1">
-                <Badge variant="secondary">{supplier.supplier_type || "N/A"}</Badge>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-l-2 border-l-blue-500 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Status</label>
-                <div className="mt-1">
-                  <Badge variant={supplier.is_active ? "success" : "secondary"}>
-                    {supplier.is_active ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Summary</p>
+                <h3 className="text-xl font-bold text-foreground">Status</h3>
+                <p className="text-[10px] text-muted-foreground">{supplier.is_active ? 'Active Account' : 'Inactive Account'}</p>
               </div>
-              {supplier.is_preferred && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Preferred</label>
-                  <div className="mt-1">
-                    <Badge variant="success">Yes</Badge>
-                  </div>
-                </div>
-              )}
+              <Building2 className="h-6 w-6 text-blue-500/30" />
             </div>
-            {supplier.parts_count !== undefined && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Parts Count</label>
-                <p className="text-lg">{supplier.parts_count}</p>
-              </div>
-            )}
-            {supplier.qbo_sync_status && (
-              <div className="col-span-1 md:col-span-2 mt-2">
-                <label className="text-sm font-medium text-muted-foreground">QuickBooks Sync</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={supplier.qbo_sync_status === 'synced' ? 'success' : supplier.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} className="w-fit capitalize">
-                    {supplier.qbo_sync_status}
-                  </Badge>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6" 
-                    onClick={handleQBOSync}
-                    disabled={isSyncing}
-                    title="Sync with QuickBooks"
-                  >
-                    <Database className={cn("h-3 w-3", isSyncing && "animate-spin")} />
-                  </Button>
-                  {supplier.qbo_sync_status === 'failed' && supplier.qbo_sync_error && (
-                    <span className="text-xs text-red-600 truncate max-w-[200px]" title={supplier.qbo_sync_error}>
-                      {supplier.qbo_sync_error}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* Contact Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {supplier.contact_person && (
+        <Card className="border-l-2 border-l-amber-500 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Contact Person</label>
-                <p className="text-lg">{supplier.contact_person}</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Open Balance</p>
+                <h3 className="text-xl font-bold text-foreground">
+                  {formatCurrency(parseFloat(supplier.open_balance || "0"))}
+                </h3>
+                <p className="text-[10px] text-muted-foreground">Unpaid amount</p>
               </div>
-            )}
-            {supplier.email && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Email
-                </label>
-                <p className="text-lg">{supplier.email}</p>
-              </div>
-            )}
-            {supplier.phone && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center">
-                  <Phone className="w-4 h-4 mr-2" />
-                  Phone
-                </label>
-                <p className="text-lg">{supplier.phone}</p>
-              </div>
-            )}
-            {supplier.fax && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Fax</label>
-                <p className="text-lg">{supplier.fax}</p>
-              </div>
-            )}
-            {supplier.website && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center">
-                  <Globe className="w-4 h-4 mr-2" />
-                  Website
-                </label>
-                <a
-                  href={supplier.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:text-orange-800"
-                >
-                  {supplier.website}
-                </a>
-              </div>
-            )}
+              <CircleDollarSign className="h-6 w-6 text-amber-500/30" />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Address */}
-        {(supplier.address_line1 || supplier.city) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Address</CardTitle>
+        <Card className="border-l-2 border-l-red-500 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Overdue</p>
+                <h3 className="text-xl font-bold text-red-600">
+                  {formatCurrency(parseFloat(supplier.overdue_payment || "0"))}
+                </h3>
+                <p className="text-[10px] text-muted-foreground">Past due date</p>
+              </div>
+              <AlertCircle className="h-6 w-6 text-red-500/30" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-2 border-l-green-500 shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Orders</p>
+                <h3 className="text-xl font-bold text-foreground">{supplier.total_po_count || 0}</h3>
+                <p className="text-[10px] text-muted-foreground">All time orders</p>
+              </div>
+              <FileText className="h-6 w-6 text-green-500/30" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="transactions" className="w-full">
+        <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-auto p-0 gap-6">
+          <TabsTrigger 
+            value="transactions" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 py-2 text-xs font-bold uppercase tracking-tight"
+          >
+            Transactions
+          </TabsTrigger>
+          <TabsTrigger 
+            value="details" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 py-2 text-xs font-bold uppercase tracking-tight"
+          >
+            Details
+          </TabsTrigger>
+          <TabsTrigger 
+            value="notes" 
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-1 py-2 text-xs font-bold uppercase tracking-tight"
+          >
+            Notes
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="transactions" className="pt-4">
+          <Card className="shadow-sm border-muted/40">
+            <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
+              <CardTitle className="text-sm font-bold uppercase tracking-wide">Purchase History</CardTitle>
+              <Link href={`/inventory/purchase-orders/new?supplier=${id}`}>
+                <Button size="sm" className="h-7 text-[10px] px-2 font-bold uppercase tracking-wider">Create PO</Button>
+              </Link>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {supplier.address_line1 && <p>{supplier.address_line1}</p>}
-                {supplier.address_line2 && <p>{supplier.address_line2}</p>}
-                {(supplier.city || supplier.state || supplier.postal_code) && (
-                  <p>
-                    {[supplier.city, supplier.state, supplier.postal_code]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                )}
-                {supplier.country && <p>{supplier.country}</p>}
-              </div>
+            <CardContent className="p-0">
+              {isTransLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              ) : transactionList.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-xs text-muted-foreground">No transactions found.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="h-8">
+                      <TableHead className="text-[10px] font-bold px-4">PO #</TableHead>
+                      <TableHead className="text-[10px] font-bold">DATE</TableHead>
+                      <TableHead className="text-[10px] font-bold">DUE</TableHead>
+                      <TableHead className="text-[10px] font-bold">STATUS</TableHead>
+                      <TableHead className="text-right text-[10px] font-bold px-4">TOTAL</TableHead>
+                      <TableHead className="w-[40px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactionList.map((po: any) => (
+                      <TableRow key={po.id} className="h-9 hover:bg-muted/10">
+                        <TableCell className="font-bold py-1 px-4 text-xs">
+                          <Link href={`/inventory/purchase-orders/${po.id}`} className="text-primary hover:underline">
+                            {po.po_number}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs">{format(new Date(po.order_date), "MMM dd, yy")}</TableCell>
+                        <TableCell className="text-xs">
+                          {po.due_date ? (
+                            <span className={cn(
+                              new Date(po.due_date) < new Date() && po.status !== 'received' && "text-red-500 font-bold"
+                            )}>
+                              {format(new Date(po.due_date), "MMM dd, yy")}
+                            </span>
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell className="py-1">
+                          <Badge variant={
+                            po.status === 'received' ? 'success' : 
+                            po.status === 'cancelled' ? 'secondary' : 
+                            po.status === 'draft' ? 'outline' : 'warning'
+                          } className="text-[9px] px-1 py-0 h-4 capitalize leading-none">
+                            {po.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-xs px-4">
+                          {formatCurrency(parseFloat(po.total))}
+                        </TableCell>
+                        <TableCell className="px-1">
+                          <Link href={`/inventory/purchase-orders/${po.id}`}>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              <FileText className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
-        )}
+        </TabsContent>
 
-        {/* Business Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Business Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {supplier.tax_id && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Tax ID / EIN</label>
-                <p className="text-lg">{supplier.tax_id}</p>
-              </div>
-            )}
-            {supplier.payment_terms && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Payment Terms</label>
-                <p className="text-lg">{supplier.payment_terms}</p>
-              </div>
-            )}
-            {supplier.credit_limit && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Credit Limit</label>
-                <p className="text-lg">{formatCurrency(parseFloat(supplier.credit_limit))}</p>
-              </div>
-            )}
-            {supplier.notes && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Notes</label>
-                <p className="text-sm text-foreground whitespace-pre-wrap">{supplier.notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="details" className="pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="shadow-sm border-muted/40">
+              <CardHeader className="py-3 px-4">
+                <CardTitle className="text-xs font-bold uppercase tracking-wide">Contact Details</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Person</label>
+                    <p className="text-xs font-semibold mt-0.5">{supplier.contact_person || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Phone</label>
+                    <p className="text-xs font-semibold mt-0.5">{supplier.phone || "N/A"}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Email</label>
+                  <p className="text-xs font-semibold mt-0.5">{supplier.email || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Website</label>
+                  <div className="mt-0.5">
+                    {supplier.website ? (
+                      <a href={supplier.website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-semibold">
+                        {supplier.website}
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">N/A</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-muted/40">
+              <CardHeader className="py-3 px-4">
+                <CardTitle className="text-xs font-bold uppercase tracking-wide">Business & Terms</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Type</label>
+                    <p className="text-xs font-semibold mt-0.5 capitalize">{supplier.supplier_type || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Tax ID</label>
+                    <p className="text-xs font-semibold mt-0.5">{supplier.tax_id || "N/A"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Terms</label>
+                    <p className="text-xs font-semibold mt-0.5">{supplier.payment_terms || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Credit</label>
+                    <p className="text-xs font-semibold mt-0.5">{formatCurrency(parseFloat(supplier.credit_limit || "0"))}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2 shadow-sm border-muted/40">
+              <CardHeader className="py-2 px-4 border-b bg-muted/20">
+                <CardTitle className="text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+                  <MapPin className="h-3 w-3 text-primary" />
+                  Address Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="grid grid-cols-1 md:grid-cols-3">
+                  <div className="col-span-1 p-4 border-r">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Billing</label>
+                    <div className="mt-1.5 text-xs text-foreground leading-snug font-medium">
+                      {supplier.address_line1 ? (
+                        <>
+                          <p>{supplier.address_line1}</p>
+                          {supplier.address_line2 && <p>{supplier.address_line2}</p>}
+                          <p>{[supplier.city, supplier.state, supplier.postal_code].filter(Boolean).join(", ")}</p>
+                          <p className="text-muted-foreground text-[10px]">{supplier.country}</p>
+                        </>
+                      ) : (
+                        <p className="text-muted-foreground italic font-normal">No address recorded</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="col-span-1 p-4 border-r">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Shipping</label>
+                    <div className="mt-1.5 text-xs text-foreground leading-snug font-medium">
+                      <p className="text-muted-foreground italic font-normal">Same as billing</p>
+                    </div>
+                  </div>
+                  <div className="col-span-1 p-4 bg-muted/5 flex items-center justify-center text-center">
+                    <div className="flex flex-col items-center">
+                      <Globe className="h-5 w-5 text-muted-foreground/30 mb-1" />
+                      <p className="text-[9px] text-muted-foreground leading-tight">Branch-specific overrides can be configured in settings.</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="notes" className="pt-4">
+          <Card className="shadow-sm border-muted/40">
+            <CardHeader className="py-3 px-4 border-b">
+              <CardTitle className="text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+                <FileText className="h-3 w-3 text-primary" />
+                Special Notes & Internal Memos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {supplier.notes ? (
+                <div className="bg-muted/10 p-4 rounded border border-muted/30">
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap font-medium">{supplier.notes}</p>
+                </div>
+              ) : (
+                <div className="text-center py-10 opacity-60">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-3">No active notes for this supplier</p>
+                  <Link href={`/inventory/suppliers/${id}/edit`}>
+                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase px-2">Add First Note</Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

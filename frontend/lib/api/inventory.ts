@@ -41,6 +41,8 @@ export interface Supplier {
   total_po_count?: number;
   qbo_sync_status?: string;
   qbo_sync_error?: string;
+  open_balance?: string;
+  overdue_payment?: string;
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
@@ -55,6 +57,7 @@ export interface PurchaseOrder {
   supplier_name?: string;
   order_date: string;
   expected_delivery_date?: string;
+  due_date?: string;
   status: 'draft' | 'pending_approval' | 'approved' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
   subtotal?: string;
   tax?: string;

@@ -103,6 +103,49 @@ class Supplier(models.Model):
     def __str__(self):
         return f"{self.name} ({self.supplier_code})"
 
+    @property
+    def open_balance(self):
+        """
+        Sum of totals for Purchase Orders that are synced to QBO but not yet fully settled.
+        Currently, in our sync logic, 'received' status on a synced PO indicates it is paid in QBO.
+        """
+        from apps.quickbooks_online.models import QBOMapping
+        from django.contrib.contenttypes.models import ContentType
+        
+        po_ct = ContentType.objects.get_for_model(self.purchase_orders.model)
+        synced_po_ids = QBOMapping.objects.filter(
+            content_type=po_ct,
+            status='synced'
+        ).values_list('object_id', flat=True)
+        
+        # Open POs are those synced but not yet 'received' (paid) or 'cancelled'
+        open_pos = self.purchase_orders.filter(
+            id__in=synced_po_ids,
+            status__in=['approved', 'confirmed', 'partially_received']
+        )
+        return open_pos.aggregate(total=models.Sum('total'))['total'] or Decimal('0.00')
+
+    @property
+    def overdue_payment(self):
+        """
+        Sum of totals for open Purchase Orders that are past their due date.
+        """
+        from apps.quickbooks_online.models import QBOMapping
+        from django.contrib.contenttypes.models import ContentType
+        
+        po_ct = ContentType.objects.get_for_model(self.purchase_orders.model)
+        synced_po_ids = QBOMapping.objects.filter(
+            content_type=po_ct,
+            status='synced'
+        ).values_list('object_id', flat=True)
+        
+        overdue_pos = self.purchase_orders.filter(
+            id__in=synced_po_ids,
+            status__in=['approved', 'confirmed', 'partially_received'],
+            due_date__lt=timezone.now().date()
+        )
+        return overdue_pos.aggregate(total=models.Sum('total'))['total'] or Decimal('0.00')
+
 
 class Part(models.Model):
     """Parts inventory catalog"""
@@ -542,6 +585,7 @@ class PurchaseOrder(models.Model):
     # Dates
     order_date = models.DateField(default=timezone.now)
     expected_delivery_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True, help_text="Due date for payment")
     received_date = models.DateField(null=True, blank=True)
     
     # Financial

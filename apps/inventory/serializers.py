@@ -46,7 +46,8 @@ class SupplierListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'supplier_code', 'supplier_type', 'contact_person',
             'email', 'phone', 'city', 'state', 'is_active', 'is_preferred',
-            'parts_count', 'active_po_count', 'created_at'
+            'parts_count', 'active_po_count', 'created_at',
+            'open_balance', 'overdue_payment'
         ]
 
     def get_parts_count(self, obj):
@@ -63,6 +64,9 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
     
     qbo_sync_status = serializers.SerializerMethodField()
     qbo_sync_error = serializers.SerializerMethodField()
+    
+    open_balance = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    overdue_payment = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
         model = Supplier
@@ -311,7 +315,7 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
         model = PurchaseOrder
         fields = [
             'id', 'po_number', 'supplier', 'supplier_name', 'status',
-            'order_date', 'expected_delivery_date', 'total_items',
+            'order_date', 'expected_delivery_date', 'due_date', 'total_items',
             'total_quantity', 'received_quantity', 'subtotal', 'total',
             'is_fully_received', 'created_by_name', 'created_at'
         ]

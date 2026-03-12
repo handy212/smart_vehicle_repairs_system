@@ -28,9 +28,11 @@ export const auditLogsApi = {
   list: async (params?: {
     page?: number;
     action?: string;
-    model_name?: string;
+    model_name?: string;  // Bug 6 fix: backend supports this filter
     user?: number;
     search?: string;
+    date_from?: string;   // Bug 6 fix: expose date range filters too
+    date_to?: string;
   }): Promise<AuditLogListResponse> => {
     const response = await apiClient.get("/accounts/admin/audit-logs/", { params });
     return response.data;

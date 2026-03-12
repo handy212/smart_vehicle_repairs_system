@@ -3,12 +3,14 @@ from django.dispatch import receiver
 from apps.customers.models import Customer
 from apps.billing.models import Invoice, Payment
 from apps.inventory.models import Supplier, PurchaseOrder
+from apps.branches.models import Branch
 from .tasks import (
     task_sync_customer_to_qbo, 
     task_sync_invoice_to_qbo, 
     task_sync_payment_to_qbo,
     task_sync_supplier_to_qbo,
-    task_sync_purchase_order_to_qbo
+    task_sync_purchase_order_to_qbo,
+    task_sync_branch_to_qbo,
 )
 import logging
 
@@ -32,10 +34,6 @@ def sync_invoice_on_save(sender, instance, created, **kwargs):
     """
     Trigger QBO sync when an Invoice is saved.
     """
-    # Only sync if not draft? Or sync drafts too?
-    # QBO supports drafts. But maybe we wait until it has a number or is finalized?
-    # For now, let's sync everything to keep state consistent.
-    
     logger.info(f"Triggering QBO sync for Invoice {instance.id}")
     task_sync_invoice_to_qbo.delay(instance.id)
 
@@ -65,3 +63,13 @@ def sync_purchase_order_on_save(sender, instance, created, **kwargs):
     """
     logger.info(f"Triggering QBO sync for PurchaseOrder {instance.id}")
     task_sync_purchase_order_to_qbo.delay(instance.id)
+
+
+@receiver(post_save, sender=Branch)
+def sync_branch_on_save(sender, instance, created, **kwargs):
+    """
+    Trigger QBO sync when a Branch is created or updated.
+    Branches map to QBO Departments (Locations).
+    """
+    logger.info(f"Triggering QBO sync for Branch {instance.id} ({instance.name})")
+    task_sync_branch_to_qbo.delay(instance.id)

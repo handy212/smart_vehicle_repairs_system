@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminApi, AuditLog } from "@/lib/api/admin";
+import { adminApi } from "@/lib/api/admin";
+import { AuditLog } from "@/lib/api/audit-logs";  // Bug 10 fix: import from canonical source
 import { useToast } from "@/lib/hooks/useToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ArrowLeft, Search, Filter, Eye, RotateCcw, Download, Archive, Settings } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -41,6 +42,8 @@ export default function AuditLogPage() {
   const queryClient = useQueryClient();
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");  // Enhancement 3: debounced search
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
@@ -49,13 +52,23 @@ export default function AuditLogPage() {
   const [archiveDays, setArchiveDays] = useState(90);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Enhancement 3: debounce the search input to avoid firing on every keystroke
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 300);
+  }, []);
+
   const { data: logsData, isLoading } = useQuery({
-    queryKey: ["admin", "audit-logs", actionFilter, searchTerm, dateFrom, dateTo, page],
+    queryKey: ["admin", "audit-logs", actionFilter, debouncedSearch, dateFrom, dateTo, page],  // Enhancement 3: use debounced value
     queryFn: () =>
       adminApi.auditLogs.list({
         page,
         action: actionFilter !== "all" ? actionFilter : undefined,
-        search: searchTerm || undefined,
+        search: debouncedSearch || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
       }),
@@ -84,6 +97,7 @@ export default function AuditLogPage() {
   const handleClearFilters = () => {
     setActionFilter("all");
     setSearchTerm("");
+    setDebouncedSearch("");
     setDateFrom("");
     setDateTo("");
     setPage(1);
@@ -194,20 +208,25 @@ export default function AuditLogPage() {
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
-                <div className="text-xl font-bold">{statsData.by_action.length}</div>
-                <p className="text-xs text-muted-foreground">Action Types</p>
+                {/* Bug 8 fix: show actual count per action, not just number of action types */}
+                <div className="text-xl font-bold">
+                  {statsData.by_action.reduce((sum, a) => sum + a.count, 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">Total Actions (period)</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
+                {/* Bug 8 fix: label makes clear this is top-10, not all-time unique users */}
                 <div className="text-xl font-bold">{statsData.top_users.length}</div>
-                <p className="text-xs text-muted-foreground">Active Users</p>
+                <p className="text-xs text-muted-foreground">Top Active Users</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 flex flex-col justify-center">
+                {/* Bug 8 fix: label clarifies this is top-10 models */}
                 <div className="text-xl font-bold">{statsData.top_models.length}</div>
-                <p className="text-xs text-muted-foreground">Models Tracked</p>
+                <p className="text-xs text-muted-foreground">Top Models Tracked</p>
               </CardContent>
             </Card>
           </div>
@@ -264,8 +283,7 @@ export default function AuditLogPage() {
                     placeholder="Search logs..."
                     value={searchTerm}
                     onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setPage(1);
+                      handleSearchChange(e.target.value);  // Enhancement 3: debounced
                     }}
                     className="pl-8 h-8 text-sm"
                   />
@@ -361,7 +379,8 @@ export default function AuditLogPage() {
                   logs.map((log) => (
                     <TableRow key={log.id} className="hover:bg-muted/50">
                       <TableCell className="whitespace-nowrap py-2 text-xs text-muted-foreground">
-                        {format(new Date(log.timestamp), "MMM dd, HH:mm")}
+                        {/* Enhancement 4 fix: include year so old logs are unambiguous */}
+                        {format(new Date(log.timestamp), "MMM dd yyyy, HH:mm")}
                       </TableCell>
                       <TableCell className="py-2">
                         <div className="flex items-center space-x-2 max-w-[200px]">
@@ -454,10 +473,10 @@ export default function AuditLogPage() {
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">User / Actor</h4>
                     <div className="flex items-center space-x-3">
                       <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-lg">
-                        {selectedLog.user_name?.charAt(0) || "S"}
+                        {selectedLog.user_name?.charAt(0).toUpperCase() || "S"}
                       </div>
                       <div>
-                        <div className="font-medium text-foreground">{selectedLog.user_name}</div>
+                        <div className="font-medium text-foreground">{selectedLog.user_name || "System"}</div>
                         <div className="text-sm text-muted-foreground">{selectedLog.user_email}</div>
                       </div>
                     </div>
@@ -469,7 +488,8 @@ export default function AuditLogPage() {
                         {selectedLog.action}
                       </Badge>
                       <span className="text-sm text-muted-foreground font-mono">
-                        {format(new Date(selectedLog.timestamp), "MMM dd, HH:mm:ss")}
+                        {/* Enhancement 4: include year in detail dialog too */}
+                        {format(new Date(selectedLog.timestamp), "MMM dd yyyy, HH:mm:ss")}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-2">
@@ -573,10 +593,12 @@ export default function AuditLogPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Archive className="w-5 h-5 text-primary" />
-                Archive Audit Logs
+                Delete Old Audit Logs
               </DialogTitle>
+              {/* Bug 5 fix: UX clarification — this is a permanent delete, not a file archive */}
               <DialogDescription className="pt-2">
-                Archive logs older than the specified number of days. This will permanently delete logs older than the cutoff date.
+                Permanently delete audit logs older than the specified number of days.
+                Consider downloading a backup first.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
@@ -619,7 +641,8 @@ export default function AuditLogPage() {
                 disabled={archiveMutation.isPending}
                 className="h-8 text-xs bg-primary hover:bg-orange-700"
               >
-                {archiveMutation.isPending ? "Archiving..." : "Archive Logs"}
+                {/* Bug 5 fix: label says Delete, not Archive */}
+                {archiveMutation.isPending ? "Deleting..." : "Delete Old Logs"}
               </Button>
             </DialogFooter>
           </DialogContent>
