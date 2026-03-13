@@ -142,7 +142,7 @@ export function QuickBooksOnlineCard() {
               </h3>
               <p className="text-[11px] text-muted-foreground max-w-[200px] mx-auto leading-relaxed">
                 {!status?.has_keys 
-                  ? "Configure your API Client ID and Secret to enable the QuickBooks integration."
+                  ? "Configure your API Client ID and Secret in the section below to enable the QuickBooks integration."
                   : "Securely link your QuickBooks account to synchronize invoices, customers, and payments."}
               </p>
             </div>

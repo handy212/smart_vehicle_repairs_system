@@ -13,7 +13,8 @@ import {
   Calculator,
   LayoutGrid,
   Search,
-  Settings2
+  Settings2,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -83,32 +84,31 @@ export default function IntegrationsPage() {
   const settings = settingsData?.results || [];
 
   const filteredSettings = useMemo(() => {
-    let base = settings;
-    
-    // Filter by category
-    if (activeCategory === "accounting") {
-        return []; // QBO is handled by a special card
-    } else if (activeCategory === "security") {
-        base = settings.filter(s => s.key.startsWith("recaptcha_"));
-    } else if (activeCategory === "analytics") {
-        base = settings.filter(s => /(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key));
-    } else if (activeCategory === "communication") {
-        base = settings.filter(s => 
-            s.key.startsWith("firebase_") || 
-            s.category === "sms" ||
-            s.key.includes("sms") ||
-            s.key.includes("twilio")
+    let base = settings.filter(s => {
+      if (activeCategory === "accounting") {
+        return s.key.startsWith("quickbooks_");
+      }
+      if (activeCategory === "communication") {
+        return s.category === "sms" || s.key.startsWith("firebase_") || s.key.startsWith("hubtel_");
+      }
+      if (activeCategory === "security") {
+        return s.key.startsWith("recaptcha_");
+      }
+      if (activeCategory === "analytics") {
+        return /(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key);
+      }
+      if (activeCategory === "advanced") {
+        return (
+          !s.key.startsWith("recaptcha_") && 
+          !s.key.startsWith("firebase_") && 
+          !/(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key) &&
+          !s.key.startsWith("quickbooks_") &&
+          s.category !== "sms" &&
+          !s.key.includes("twilio")
         );
-    } else if (activeCategory === "advanced") {
-        base = settings.filter(s => 
-            !s.key.startsWith("recaptcha_") && 
-            !s.key.startsWith("firebase_") && 
-            !/(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key) &&
-            !s.key.startsWith("quickbooks_") &&
-            s.category !== "sms" &&
-            !s.key.includes("twilio")
-        );
-    }
+      }
+      return s.category === activeCategory;
+    });
 
     // Filter by search
     if (searchQuery) {
@@ -140,6 +140,9 @@ export default function IntegrationsPage() {
       } else if (s.key.startsWith("recaptcha_")) {
         provider = "Recaptcha";
         prefix = "recaptcha_";
+      } else if (s.key.startsWith("quickbooks_")) {
+        provider = "QuickBooks Online";
+        prefix = "quickbooks_";
       } else if (/(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key)) {
         provider = "Analytics & Tracking";
         prefix = ""; // Keep full labels for mixing
@@ -236,12 +239,43 @@ export default function IntegrationsPage() {
         <main className="space-y-8">
           {/* Featured/Special Cards */}
           {activeCategory === "accounting" && !searchQuery && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <QuickBooksOnlineCard />
-                {/* Future: Xero, Sage, etc. */}
-                <Card className="border-dashed border-2 flex flex-col items-center justify-center p-8 bg-muted/20 opacity-60">
-                    <LayoutGrid className="h-8 w-8 text-muted-foreground mb-3" />
-                    <p className="text-sm font-bold text-muted-foreground">More accounting coming soon</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  <QuickBooksOnlineCard />
+                </div>
+                
+                {/* Platform Previews */}
+                <Card className="border border-border/40 bg-muted/5 group overflow-hidden relative grayscale opacity-70">
+                    <div className="absolute top-3 right-3">
+                      <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground/30 px-2 py-0.5 border border-border/20 rounded">Planned</span>
+                    </div>
+                    <CardHeader className="py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-[#13B5EA]/10 text-[#13B5EA]">
+                          <LayoutGrid className="h-5 w-5" />
+                        </div>
+                        <CardTitle className="text-sm font-bold">Xero Accounting</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-6 pb-6">
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Upcoming support for Xero cloud accounting to sync transactions and tax data.
+                      </p>
+                    </CardContent>
+                </Card>
+
+                {/* Request Integration Feature */}
+                <Card className="border-2 border-dashed border-primary/20 bg-primary/5 group hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-8 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Plus className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-sm font-bold text-foreground mb-1">Request Service</h3>
+                    <p className="text-[11px] text-muted-foreground max-w-[180px]">
+                      Need a specific platform? Let us know what to build next.
+                    </p>
+                    <Button variant="link" size="sm" className="mt-4 text-primary font-bold text-[10px] uppercase tracking-widest">
+                       Submit Feedback
+                    </Button>
                 </Card>
               </div>
           )}
