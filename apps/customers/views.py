@@ -179,12 +179,30 @@ class CustomerViewSet(viewsets.ModelViewSet):
         """
         Custom delete to ensure the associated User is also deleted.
         Deleting the User cascades to Customer (CASCADE) and AllAuth SocialAccounts.
+        Handles ProtectedError gracefully if the customer has dependent records.
         """
+        from django.db.models.deletion import ProtectedError
+        from rest_framework.exceptions import ValidationError
+        
         user = instance.user
-        if user:
-            user.delete()  # Cascades to Customer via OneToOneField
-        else:
-            instance.delete()
+        try:
+            if user:
+                user.delete()  # Cascades to Customer via OneToOneField
+            else:
+                instance.delete()
+        except ProtectedError as e:
+            # e.protected_objects contains a list of objects preventing deletion
+            # We can format this into a helpful message
+            protected_types = set()
+            for obj in e.protected_objects:
+                protected_types.add(obj._meta.verbose_name.title())
+            
+            types_str = ", ".join(protected_types)
+            message = (
+                f"Cannot delete customer because they are referenced by existing "
+                f"{types_str}. Please delete or reassign these records first."
+            )
+            raise ValidationError(message)
     
     @action(detail=True, methods=['get'])
     def vehicles(self, request, pk=None):

@@ -10,7 +10,6 @@ import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dial
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Suspense } from "react";
-import { QuickActionsFAB } from "./QuickActionsFAB";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -185,7 +184,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         onOpenChange={setShowShortcutsDialog}
       />
 
-      <QuickActionsFAB />
       <CommandPalette />
     </div>
   );

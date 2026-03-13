@@ -296,7 +296,7 @@ export default function PackagesPage() {
           {pkg.features.emergency_fuel && (
             <Badge variant="outline" className="text-[10px] bg-muted bg-background">Fuel: {pkg.features.emergency_fuel}</Badge>
           )}
-        // Show +N more if many features? For now let's just show key ones or trunc
+        {/* // Show +N more if many features? For now let's just show key ones or trunc */}
         </div>
       )
     },

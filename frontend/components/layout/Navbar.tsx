@@ -12,6 +12,7 @@ import { authApi } from "@/lib/api/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { QuickActionsMenu } from "@/components/layout/QuickActionsMenu";
 import Link from "next/link";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -199,7 +200,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
           </div>
 
           {/* Global Search Trigger (Centered) */}
-          <div className="hidden lg:flex items-center flex-1 max-w-md mx-4 lg:mx-8">
+          <div className="hidden lg:flex items-center flex-1 max-w-md mx-4 lg:mx-8 gap-3">
             <button
               onClick={() => {
                 const event = new KeyboardEvent('keydown', {
@@ -218,6 +219,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                 <span className="text-[10px] font-bold uppercase tracking-tighter">Ctrl K</span>
               </div>
             </button>
+            <QuickActionsMenu />
           </div>
 
           {/* Right Side Actions */}
