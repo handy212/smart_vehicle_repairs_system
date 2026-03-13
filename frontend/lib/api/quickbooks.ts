@@ -1,6 +1,24 @@
 import apiClient from "./client";
 
+export interface QBOStatus {
+  is_connected: boolean;
+  has_keys: boolean;
+  realm_id: string | null;
+  is_sandbox: boolean;
+  last_sync: string | null;
+  company_name: string | null;
+  error?: string;
+}
+
 export const quickbooksApi = {
+  /**
+   * Returns current QBO connection status
+   */
+  getStatus: async (): Promise<QBOStatus> => {
+    const response = await apiClient.get("/quickbooks/status/");
+    return response.data;
+  },
+
   /**
    * Manually triggers a full inbound sync (QBO -> local)
    */

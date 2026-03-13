@@ -15,12 +15,14 @@ const COOKIE_PATH = '/';
 
 function setCookie(name: string, value: string, maxAgeSeconds = 3600) {
     if (typeof document === 'undefined') return;
-    document.cookie = `${name}=${encodeURIComponent(value)}; path=${COOKIE_PATH}; max-age=${maxAgeSeconds}; SameSite=Strict; Secure`;
+    const secure = window.location.protocol === 'https:' ? 'Secure;' : '';
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=${COOKIE_PATH}; max-age=${maxAgeSeconds}; SameSite=Lax; ${secure}`;
 }
 
 function deleteCookie(name: string) {
     if (typeof document === 'undefined') return;
-    document.cookie = `${name}=; path=${COOKIE_PATH}; max-age=0; SameSite=Strict; Secure`;
+    const secure = window.location.protocol === 'https:' ? 'Secure;' : '';
+    document.cookie = `${name}=; path=${COOKIE_PATH}; max-age=0; SameSite=Lax; ${secure}`;
 }
 
 /** Store both access and refresh tokens */

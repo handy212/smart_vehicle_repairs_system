@@ -45,7 +45,6 @@ import {
   Repeat,
   Zap,
   Shield,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   UserPlus,
   Calendar,
   Briefcase,
@@ -53,7 +52,11 @@ import {
   Star,
   FileCheck,
   MessageSquare,
-  LucideIcon
+  LucideIcon,
+  Puzzle,
+  LayoutGrid,
+  ShieldAlert,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -320,6 +323,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Email Templates", href: "/admin/settings/email-templates", permission: "view_email_templates", icon: Mail },
     { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_log", icon: History },
     { name: "Import History", href: "/admin/import-history", permission: "view_import_history", icon: Inbox },
+    { name: "Integrations", href: "/admin/integrations", permission: "manage_settings", icon: Puzzle },
     { name: "Feedback", href: "/admin/feedback", permission: "view_settings", icon: MessageSquare },
   ],
   accounting: [

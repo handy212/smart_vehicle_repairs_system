@@ -9,4 +9,5 @@ urlpatterns = [
     path('refresh/', views.QBORefreshView.as_view(), name='refresh'),
     path('disconnect/', views.QBODisconnectView.as_view(), name='disconnect'),
     path('sync-inbound/', views.QBOInboundSyncView.as_view(), name='sync_inbound'),
+    path('status/', views.QBOStatusView.as_view(), name='status'),
 ]

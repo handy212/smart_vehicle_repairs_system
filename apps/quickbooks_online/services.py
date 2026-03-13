@@ -26,9 +26,33 @@ class QuickBooksService:
     """
     
     @staticmethod
-    def get_config():
-        """Get the active QBO configuration."""
-        return QBOConfig.objects.filter(is_active=True).first()
+    def get_config(active_only=True):
+        """Get the QBO configuration, syncing from SystemSettings if needed."""
+        from apps.accounts.admin_models import SystemSettings
+        
+        query = QBOConfig.objects.all()
+        if active_only:
+            query = query.filter(is_active=True)
+        
+        config = query.first()
+        
+        # If no config or keys missing, try to sync from SystemSettings
+        client_id = SystemSettings.get_setting('quickbooks_client_id')
+        client_secret = SystemSettings.get_setting('quickbooks_client_secret')
+        is_sandbox = SystemSettings.get_setting('quickbooks_sandbox_enabled', 'true').lower() == 'true'
+        
+        if client_id and client_secret:
+            if not config:
+                # Create if missing (using first available or new)
+                config = QBOConfig.objects.first() or QBOConfig()
+                
+            config.client_id = client_id
+            config.client_secret = client_secret
+            config.is_sandbox = is_sandbox
+            # Don't force is_active=True here, let the auth flow handle it
+            config.save()
+            
+        return config
 
     @staticmethod
     def get_auth_client(config=None):

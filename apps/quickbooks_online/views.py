@@ -1,4 +1,5 @@
 from django.shortcuts import redirect, render
+from django.conf import settings
 from django.views import View
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -25,9 +26,9 @@ class QBOConnectView(LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     def get(self, request):
         logger.info("QBOConnectView.get called - attempting to fetch config")
-        config = QuickBooksService.get_config()
-        if not config:
-            return HttpResponse("QBO Configuration missing. Please set up Client ID and Secret in Admin.", status=400)
+        config = QuickBooksService.get_config(active_only=False)
+        if not config or not config.client_id or not config.client_secret:
+            return HttpResponse("QBO Configuration missing. Please set up Client ID and Secret in Admin Settings (Integrations section).", status=400)
             
         auth_client = QuickBooksService.get_auth_client(config)
         
@@ -71,7 +72,7 @@ class QBOCallbackView(LoginRequiredMixin, SuperUserRequiredMixin, View):
              # Basic CSRF check, potentially optional depending on strictness
              pass
             
-        config = QuickBooksService.get_config()
+        config = QuickBooksService.get_config(active_only=False)
         auth_client = QuickBooksService.get_auth_client(config)
         
         try:
@@ -91,6 +92,10 @@ class QBOCallbackView(LoginRequiredMixin, SuperUserRequiredMixin, View):
             expires_at = timezone.now() + timedelta(seconds=expires_in)
             refresh_token_expires_at = timezone.now() + timedelta(seconds=x_refresh_token_expires_in)
             
+            # Activate config
+            config.is_active = True
+            config.save()
+
             QBOToken.objects.update_or_create(
                 config=config,
                 defaults={
@@ -102,8 +107,10 @@ class QBOCallbackView(LoginRequiredMixin, SuperUserRequiredMixin, View):
             )
             
             messages.success(request, f"Successfully connected to QuickBooks Company ID: {realm_id}")
-            # Redirect to admin config page
-            return redirect(reverse('admin:quickbooks_online_qboconfig_change', args=[config.id]))
+            
+            # Redirect back to frontend integrations page
+            frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/admin/integrations")
             
         except Exception as e:
             logger.error(f"Error during QBO callback: {e}")
@@ -219,3 +226,24 @@ class QBOInboundSyncView(LoginRequiredMixin, SuperUserRequiredMixin, View):
         if config:
             return redirect(reverse('admin:quickbooks_online_qboconfig_change', args=[config.id]))
         return redirect('/admin/')
+
+class QBOStatusView(LoginRequiredMixin, SuperUserRequiredMixin, View):
+    """
+    Returns the current connection status and basic stats for QBO.
+    """
+    def get(self, request):
+        config = QuickBooksService.get_config(active_only=False)
+        
+        has_keys = config and config.client_id and config.client_secret
+        has_token = config and hasattr(config, 'token') and config.token is not None
+        
+        last_sync = QBOSyncLog.objects.order_by('-finished_at').first()
+        
+        return JsonResponse({
+            'is_connected': config.is_active and has_token if config else False,
+            'has_keys': bool(has_keys),
+            'realm_id': config.realm_id if config else None,
+            'is_sandbox': config.is_sandbox if config else True,
+            'last_sync': last_sync.finished_at if last_sync else None,
+            'company_name': config.company_name if config and hasattr(config, 'company_name') else None,
+        })

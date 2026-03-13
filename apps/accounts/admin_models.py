@@ -63,6 +63,12 @@ class SystemSettings(models.Model):
         ('tax_getfund_rate', '2.5', 'GETFund levy percentage applied on taxable supply'),
         ('tax_covid_rate', '1.0', 'COVID-19 Health Recovery Levy percentage applied on taxable supply'),
     ]
+
+    INTEGRATION_SETTING_DEFAULTS = [
+        ('quickbooks_client_id', '', 'QuickBooks Online Client ID from Intuit Developer Portal'),
+        ('quickbooks_client_secret', '', 'QuickBooks Online Client Secret'),
+        ('quickbooks_sandbox_enabled', 'true', 'Use QuickBooks Online Sandbox environment if true'),
+    ]
     
     @classmethod
     def get_setting(cls, key, default=None):
@@ -143,6 +149,21 @@ class SystemSettings(models.Model):
                     'value': value,
                     'description': description,
                     'is_secret': False,
+                    'is_active': True,
+                }
+            )
+
+    @classmethod
+    def ensure_integration_settings(cls):
+        """Ensure default integration settings exist."""
+        for key, value, description in cls.INTEGRATION_SETTING_DEFAULTS:
+            cls.objects.get_or_create(
+                key=key,
+                defaults={
+                    'category': 'integration',
+                    'value': value,
+                    'description': description,
+                    'is_secret': key.endswith('_secret'),
                     'is_active': True,
                 }
             )
