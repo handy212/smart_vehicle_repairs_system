@@ -28,6 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: APP_CONFIG.description,
     manifest: "/manifest.json",
+    icons: {
+      apple: "/icons/icon-192x192.png?v=2",
+    },
   };
 }
 
