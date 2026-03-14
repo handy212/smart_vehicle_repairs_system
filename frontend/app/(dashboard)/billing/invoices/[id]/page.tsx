@@ -410,7 +410,7 @@ export default function InvoiceDetailPage() {
                         <Mail className="w-4 h-4" />
                         {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                       </button>
-                    // Only show Convert to Invoice for proforma invoices
+                      {/* // Only show Convert to Invoice for proforma invoices */}
                       {invoice.status === 'proforma' && (
                         <>
                           <div className="border-t border-border my-1" />
@@ -552,10 +552,10 @@ export default function InvoiceDetailPage() {
                               <Badge variant={invoice.qbo_sync_status === 'synced' ? 'success' : invoice.qbo_sync_status === 'failed' ? 'danger' : 'secondary'} className="w-fit capitalize">
                                 {invoice.qbo_sync_status}
                               </Badge>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
                                 onClick={handleQBOSync}
                                 disabled={isSyncing}
                                 title="Sync with QuickBooks"

@@ -7,7 +7,8 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
+import logging
 
 from .models import NotificationTemplate, Notification, NotificationPreference, NotificationLog, WebPushSubscription
 from .serializers import (
@@ -484,13 +485,13 @@ class SMSConsoleViewSet(viewsets.ViewSet):
     """
     ViewSet for SMS Console operations (Single & Bulk)
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('sms')]
     
     def get_permissions(self):
         """
         Require 'send_notifications' permission
         """
-        return [IsAuthenticated(), HasPermission('send_notifications')]
+        return [IsAuthenticated(), IsModuleEnabled('sms'), HasPermission('send_notifications')]
 
     @action(detail=False, methods=['post'])
     def send_single(self, request):

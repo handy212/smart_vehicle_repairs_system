@@ -5,7 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission, user_has_permission
+from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from apps.branches.utils import filter_queryset_for_user_branches
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, F
@@ -42,7 +42,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
     update: Update vehicle information
     destroy: Delete vehicle
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('vehicles')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -50,16 +50,16 @@ class VehicleViewSet(viewsets.ModelViewSet):
         
         # Customers can view their own vehicles without view_vehicles permission
         if (self.action == 'list' or self.action == 'retrieve') and getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
-            return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('vehicles')]
         elif self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), HasPermission('view_vehicles')]
+            return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('view_vehicles')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_vehicles')]
+            return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('create_vehicles')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_vehicles')]
+            return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('edit_vehicles')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_vehicles')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('vehicles'), HasPermission('delete_vehicles')]
+        return [IsAuthenticated(), IsModuleEnabled('vehicles')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'make', 'model', 'year', 'engine_type', 'transmission_type', 'owner']
     search_fields = ['vin', 'license_plate', 'make', 'model', 'owner__user__first_name', 
@@ -806,7 +806,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
 class VehicleMileageHistoryViewSet(viewsets.ModelViewSet):
     """ViewSet for vehicle mileage history"""
     serializer_class = VehicleMileageHistorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('vehicles')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -827,7 +827,7 @@ class VehicleMileageHistoryViewSet(viewsets.ModelViewSet):
 class VehicleDocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for vehicle documents"""
     serializer_class = VehicleDocumentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('vehicles')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -848,7 +848,7 @@ class VehicleDocumentViewSet(viewsets.ModelViewSet):
 class VehiclePhotoViewSet(viewsets.ModelViewSet):
     """ViewSet for vehicle photos"""
     serializer_class = VehiclePhotoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('vehicles')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -868,7 +868,7 @@ class VehiclePhotoViewSet(viewsets.ModelViewSet):
 
 class ServiceTypeViewSet(viewsets.ModelViewSet):
     """ViewSet for service types"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('vehicles')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_predefined', 'is_active']
     search_fields = ['name', 'description']
@@ -899,7 +899,7 @@ class ServiceTypeViewSet(viewsets.ModelViewSet):
 
 class VehicleServiceScheduleViewSet(viewsets.ModelViewSet):
     """ViewSet for vehicle service schedules"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('vehicles')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['vehicle', 'service_type', 'is_active']
     search_fields = ['service_type__name', 'vehicle__vin', 'vehicle__license_plate']

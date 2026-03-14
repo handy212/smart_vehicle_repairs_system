@@ -21,52 +21,54 @@ import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { useMemo } from "react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
+import { useModules } from "@/lib/hooks/useModules";
 
 // Group navigation items by category for better organization with permission requirements
 const navigationGroups = [
   {
     name: "Main",
     items: [
-      { name: "Dashboard", href: "/dashboard", icon: PremiumIcons.Dashboard, permission: "view_dashboard" },
+      { name: "Dashboard", href: "/dashboard", icon: PremiumIcons.Dashboard, permission: "view_dashboard", module: "dashboard" },
+      { name: "Live Chat", href: "/chat", icon: PremiumIcons.MessageSquare, module: "chat" },
     ],
   },
   {
     name: "Operations",
     items: [
-      { name: "Customers", href: "/customers", icon: PremiumIcons.Users, permission: "view_customers" },
-      { name: "Vehicles", href: "/vehicles", icon: PremiumIcons.Car, permission: "view_vehicles" },
-      { name: "Appointments", href: "/appointments", icon: PremiumIcons.Calendar, permission: "view_appointments" },
-      { name: "Work Orders", href: "/workorders", icon: PremiumIcons.Wrench, permission: "view_workorders" },
-      { name: "Services Due", href: "/services-due", icon: PremiumIcons.Clock, permission: "view_vehicles" },
-      { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass" },
-      { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside" },
-      { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_technicians" },
-      { name: "HR", href: "/hr", icon: PremiumIcons.Building2, permission: "view_hr" },
+      { name: "Customers", href: "/customers", icon: PremiumIcons.Users, permission: "view_customers", module: "customers" },
+      { name: "Vehicles", href: "/vehicles", icon: PremiumIcons.Car, permission: "view_vehicles", module: "vehicles" },
+      { name: "Appointments", href: "/appointments", icon: PremiumIcons.Calendar, permission: "view_appointments", module: "appointments" },
+      { name: "Work Orders", href: "/workorders", icon: PremiumIcons.Wrench, permission: "view_workorders", module: "workorders" },
+      { name: "Services Due", href: "/services-due", icon: PremiumIcons.Clock, permission: "view_vehicles", module: "vehicles" },
+      { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass", module: "gatepass" },
+      { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside", module: "roadside" },
+      { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_technicians", module: "technicians" },
+      { name: "HR", href: "/hr", icon: PremiumIcons.Building2, permission: "view_hr", module: "hr" },
     ],
   },
   {
     name: "Inventory & Billing",
     items: [
-      { name: "Inventory", href: "/inventory", icon: PremiumIcons.Package, permission: "view_inventory" },
-      { name: "Billing", href: "/billing", icon: PremiumIcons.Receipt, permission: "view_billing" },
-      { name: "Accounting", href: "/accounting", icon: PremiumIcons.Calculator, permission: "view_accounting" },
-      { name: "Fixed Assets", href: "/fixed-assets", icon: PremiumIcons.Landmark, permission: "view_assets" },
-      { name: "Subscriptions", href: "/subscriptions", icon: PremiumIcons.CreditCard, permission: "view_subscriptions" },
+      { name: "Inventory", href: "/inventory", icon: PremiumIcons.Package, permission: "view_inventory", module: "inventory" },
+      { name: "Billing", href: "/billing", icon: PremiumIcons.Receipt, permission: "view_billing", module: "billing" },
+      { name: "Accounting", href: "/accounting", icon: PremiumIcons.Calculator, permission: "view_accounting", module: "accounting" },
+      { name: "Fixed Assets", href: "/fixed-assets", icon: PremiumIcons.Landmark, permission: "view_assets", module: "fixed-assets" },
+      { name: "Subscriptions", href: "/subscriptions", icon: PremiumIcons.CreditCard, permission: "view_subscriptions", module: "subscriptions" },
     ],
   },
   {
     name: "Tools & Reports",
     items: [
-      { name: "Inspections", href: "/inspections", icon: PremiumIcons.FileText, permission: "view_inspections" },
-      { name: "Diagnosis", href: "/diagnosis", icon: PremiumIcons.Stethoscope, permission: "view_diagnosis" },
-      { name: "Reports", href: "/reports", icon: PremiumIcons.BarChart, permission: "view_reports" },
+      { name: "Inspections", href: "/inspections", icon: PremiumIcons.FileText, permission: "view_inspections", module: "inspections" },
+      { name: "Diagnosis", href: "/diagnosis", icon: PremiumIcons.Stethoscope, permission: "view_diagnosis", module: "diagnosis" },
+      { name: "Reports", href: "/reports", icon: PremiumIcons.BarChart, permission: "view_reports", module: "reports" },
     ],
   },
   {
     name: "System",
     items: [
       { name: "Configurations", href: "/admin", icon: PremiumIcons.Settings, permission: "view_settings" },
-      { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications" },
+      { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications", module: "sms" },
     ],
   },
 ];
@@ -82,6 +84,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
+  const { isModuleEnabled } = useModules();
 
   const { data: brandingSettings } = useQuery<SystemSetting[]>({
     queryKey: ["settings", "branding", "public"],
@@ -137,7 +140,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                 </h3>
               )}
               <div className="space-y-1">
-                {group.items.map((item) => {
+                {group.items.filter(item => !item.module || isModuleEnabled(item.module)).map((item) => {
                   const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
                   const isDark = resolvedTheme === "dark";
                   const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;

@@ -66,7 +66,7 @@ export default function PurchaseOrderDetailPage() {
 
   const { activeBranchId } = useBranchStore();
   const isSubmitter = currentUser?.id === purchaseOrder?.created_by;
-  const isApprover = currentUser?.id === purchaseOrder?.assigned_approver || currentUser?.role === "admin";
+  const isApprover = currentUser?.id === purchaseOrder?.assigned_approver || currentUser?.role === "admin" || currentUser?.role === "super-admin";
   const canApprove = isApprover && !isSubmitter;
   const isBranchUser = activeBranchId === purchaseOrder?.branch;
 

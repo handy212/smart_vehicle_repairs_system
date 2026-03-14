@@ -17,7 +17,7 @@ class CustomUserManager(UserManager):
         """Create and save a superuser with the given email and password."""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'admin')  # Automatically set role to admin
+        extra_fields.setdefault('role', 'super-admin')  # Automatically set role to super-admin
         
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
@@ -32,6 +32,7 @@ class User(AbstractUser):
     Custom user model extending Django's AbstractUser
     """
     ROLE_CHOICES = (
+        ('super-admin', 'Super Admin'),
         ('admin', 'Admin'),
         ('manager', 'Manager'),
         ('service_coordinator', 'Service Coordinator'),

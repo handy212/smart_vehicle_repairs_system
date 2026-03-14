@@ -148,6 +148,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <SubNav
             items={subNavConfig.items}
             title={subNavConfig.title}
+            module={subNavConfig.module}
             onToggle={(collapsed) => {
               setIsSubNavCollapsed(collapsed);
               if (mounted) {

@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.db.models import Q, Count, Sum
 from decimal import Decimal
 
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from .models import (
     Department, Position, EmployeeProfile,
     LeaveType, LeaveBalance, LeaveRequest,
@@ -87,7 +87,7 @@ def resolve_branch_for_user(request, specified_branch=None):
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_departments'))
         else:
@@ -120,7 +120,7 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 class PositionViewSet(viewsets.ModelViewSet):
     serializer_class = PositionSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_departments'))
         else:
@@ -145,7 +145,7 @@ class PositionViewSet(viewsets.ModelViewSet):
 
 class EmployeeProfileViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['my_profile', 'org_chart', 'summary']:
             pass
         elif self.action in ['list', 'retrieve']:
@@ -287,7 +287,7 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     queryset = LeaveType.objects.all()
     serializer_class = LeaveTypeSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_leave'))
         else:
@@ -307,7 +307,7 @@ class LeaveBalanceFilter(DjangoFilterBackend):
 class LeaveBalanceViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveBalanceSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_leave'))
         else:
@@ -347,7 +347,7 @@ class LeaveRequestFilter(DjangoFilterBackend):
 class LeaveRequestViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveRequestSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['my_requests', 'create', 'cancel']:
             pass
         elif self.action in ['list', 'retrieve', 'pending']:
@@ -482,7 +482,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 class AttendancePolicyViewSet(viewsets.ModelViewSet):
     serializer_class = AttendancePolicySerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_attendance'))
         else:
@@ -514,7 +514,7 @@ class AttendanceFilter(DjangoFilterBackend):
 class AttendanceViewSet(viewsets.ModelViewSet):
     serializer_class = AttendanceSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['clock_in', 'clock_out', 'my_attendance', 'status']:
             pass
         elif self.action in ['list', 'retrieve']:
@@ -703,7 +703,7 @@ class SalaryComponentViewSet(viewsets.ModelViewSet):
     queryset = SalaryComponent.objects.all()
     serializer_class = SalaryComponentSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_payroll'))
         else:
@@ -718,7 +718,7 @@ class EmployeeSalaryComponentViewSet(viewsets.ModelViewSet):
     queryset = EmployeeSalaryComponent.objects.all().select_related('employee', 'component')
     serializer_class = EmployeeSalaryComponentSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_payroll'))
         else:
@@ -733,7 +733,7 @@ class TaxRuleViewSet(viewsets.ModelViewSet):
     queryset = TaxRule.objects.all().order_by('min_income')
     serializer_class = TaxRuleSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_payroll'))
         else:
@@ -746,7 +746,7 @@ class TaxRuleViewSet(viewsets.ModelViewSet):
 class PayrollPeriodViewSet(viewsets.ModelViewSet):
     serializer_class = PayrollPeriodSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_payroll'))
         else:
@@ -861,7 +861,7 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
 class PaySlipViewSet(viewsets.ModelViewSet):
     serializer_class = PaySlipSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['my_slips', 'my_summary', 'download_pdf']:
             pass
         elif self.action in ['list', 'retrieve']:
@@ -916,7 +916,7 @@ class PaySlipViewSet(viewsets.ModelViewSet):
 class JobOpeningViewSet(viewsets.ModelViewSet):
     serializer_class = JobOpeningSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_recruitment'))
         else:
@@ -965,7 +965,7 @@ class JobOpeningViewSet(viewsets.ModelViewSet):
 class ApplicantViewSet(viewsets.ModelViewSet):
     serializer_class = ApplicantSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_recruitment'))
         else:
@@ -1023,7 +1023,7 @@ class ApplicantViewSet(viewsets.ModelViewSet):
 class InterviewViewSet(viewsets.ModelViewSet):
     serializer_class = InterviewSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_recruitment'))
         else:
@@ -1057,7 +1057,7 @@ class PerformanceReviewFilter(DjangoFilterBackend):
 class PerformanceReviewViewSet(viewsets.ModelViewSet):
     serializer_class = PerformanceReviewSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_performance'))
         else:
@@ -1101,7 +1101,7 @@ class PerformanceReviewViewSet(viewsets.ModelViewSet):
 class TrainingProgramViewSet(viewsets.ModelViewSet):
     serializer_class = TrainingProgramSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_training'))
         else:
@@ -1152,7 +1152,7 @@ class EmployeeTrainingFilter(DjangoFilterBackend):
 class EmployeeTrainingViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeTrainingSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_training'))
         else:

@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -27,7 +27,7 @@ from apps.inspections.serializers import (
 class InspectionPhotoViewSet(viewsets.ModelViewSet):
     """ViewSet for inspection photos"""
     queryset = InspectionPhoto.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inspections')]
     serializer_class = InspectionPhotoSerializer
     
     def get_queryset(self):
@@ -52,8 +52,8 @@ class InspectionPhotoViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('edit_inspections')]
-        return [IsAuthenticated(), HasPermission('view_inspections')]
+            return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('edit_inspections')]
+        return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('view_inspections')]
 
 
 class InspectionTemplateViewSet(viewsets.ModelViewSet):
@@ -71,19 +71,15 @@ class InspectionTemplateViewSet(viewsets.ModelViewSet):
     - set_default: Set a template as default
     """
     queryset = InspectionTemplate.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inspections')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), HasPermission('view_inspection_templates')]
-        elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('manage_inspection_templates')]
-        elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('manage_inspection_templates')]
-        elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('manage_inspection_templates')]
-        return [IsAuthenticated()]
+        if self.action == 'list' or self.action == 'retrieve' or self.action == 'active':
+            return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('view_inspection_templates')]
+        elif self.action == 'create' or self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy' or self.action == 'set_default':
+            return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('manage_inspection_templates')]
+        return [IsAuthenticated(), IsModuleEnabled('inspections')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_default']
     search_fields = ['name', 'description']
@@ -278,29 +274,30 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     queryset = VehicleInspection.objects.select_related(
         'vehicle', 'work_order', 'template', 'performed_by', 'approved_by'
     ).prefetch_related('results', 'results__photos')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inspections')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         user = self.request.user
+        base_permissions = [IsAuthenticated(), IsModuleEnabled('inspections')]
         
         # Customers can view and approve/reject their own inspections without special permissions
         if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
             if self.action in ['list', 'retrieve', 'approve', 'reject']:
-                return [IsAuthenticated()]
+                return base_permissions
         
         # Staff permissions
         if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), HasPermission('view_inspections')]
+            return base_permissions + [HasPermission('view_inspections')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_inspections')]
+            return base_permissions + [HasPermission('create_inspections')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_inspections')]
+            return base_permissions + [HasPermission('edit_inspections')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_inspections')]
+            return base_permissions + [HasPermission('delete_inspections')]
         elif self.action in ['approve', 'reject']:
-            return [IsAuthenticated(), HasPermission('edit_inspections')]
-        return [IsAuthenticated()]
+            return base_permissions + [HasPermission('edit_inspections')]
+        return base_permissions
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'overall_result', 'vehicle', 'work_order', 'template', 'performed_by']
@@ -892,7 +889,7 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
     queryset = InspectionResult.objects.select_related(
         'inspection', 'inspection_item', 'inspection_item__category'
     ).prefetch_related('photos')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inspections')]
     serializer_class = InspectionResultSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['inspection', 'result', 'condition', 'needs_immediate_attention']

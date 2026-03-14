@@ -1,4 +1,5 @@
 from rest_framework import viewsets, status, permissions
+from apps.accounts.permissions import IsModuleEnabled
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
@@ -25,7 +26,7 @@ from .serializers import (
 )
 
 class PortalViewSet(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsModuleEnabled('customers')]
 
     def _get_customer(self, user):
         """Helper to get customer profile for user"""

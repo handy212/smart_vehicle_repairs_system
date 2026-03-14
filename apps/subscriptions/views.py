@@ -24,7 +24,7 @@ from .serializers import (
 )
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from apps.accounts.permissions import HasPermission, HasAnyPermission
+from apps.accounts.permissions import HasPermission, HasAnyPermission, IsModuleEnabled
 from apps.customers.models import Customer
 
 
@@ -33,15 +33,15 @@ class PackageViewSet(viewsets.ModelViewSet):
     ViewSet for managing subscription packages
     """
     queryset = Package.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('subscriptions')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'available', 'stats']:
-            return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('manage_subscriptions')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasPermission('manage_subscriptions')]
+        return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -92,7 +92,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     ViewSet for managing customer subscriptions
     """
     queryset = Subscription.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('subscriptions')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['customer', 'vehicle', 'status', 'payment_status', 'package', 'auto_renew']
     search_fields = ['subscription_number', 'customer__user__first_name', 'customer__user__last_name', 'package__name']
@@ -102,17 +102,17 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'my_subscriptions']:
-            return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
         elif self.action == 'create':
             # Allow customers to create their own subscriptions without extra perms
             if getattr(self.request.user, "role", None) == "customer":
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasAnyPermission(['manage_subscriptions', 'create_subscriptions'])]
+                return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasAnyPermission(['manage_subscriptions', 'create_subscriptions'])]
         elif self.action in ['update', 'partial_update', 'cancel', 'renew', 'destroy', 'change_plan']:
-            return [IsAuthenticated(), HasAnyPermission(['manage_subscriptions', 'cancel_subscriptions'])]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasAnyPermission(['manage_subscriptions', 'cancel_subscriptions'])]
         elif self.action in ['usage', 'remaining']:
-            return [IsAuthenticated()]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
+        return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -424,17 +424,17 @@ class SubscriptionUsageViewSet(viewsets.ModelViewSet):
     ViewSet for managing subscription usage records
     """
     queryset = SubscriptionUsage.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('subscriptions')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasAnyPermission(['view_subscriptions', 'manage_subscriptions'])]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasAnyPermission(['view_subscriptions', 'manage_subscriptions'])]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasAnyPermission(['manage_subscriptions', 'record_usage'])]
+            return [IsAuthenticated(), IsModuleEnabled('subscriptions'), HasAnyPermission(['manage_subscriptions', 'record_usage'])]
         elif self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), HasPermission('manage_subscriptions')]
-        return [IsAuthenticated()]
+        return [IsAuthenticated(), IsModuleEnabled('subscriptions')]
     
     def get_serializer_class(self):
         if self.action == 'create':

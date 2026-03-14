@@ -63,16 +63,20 @@ import { Button } from "@/components/ui/button";
 
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "@/store/authStore";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { useMemo } from "react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { ensureVisibleColor } from "@/lib/utils/color-utils";
+import { useModules } from "@/lib/hooks/useModules";
 
 interface SubNavItem {
   name: string;
   href: string;
   permission?: string;
   icon?: LucideIcon;
+  module?: string;
+  requiredRole?: string;
 }
 
 interface SubNavProps {
@@ -81,11 +85,14 @@ interface SubNavProps {
   onToggle?: (collapsed: boolean) => void;
   isCollapsed?: boolean;
   sidebarCollapsed?: boolean;
+  module?: string;
 }
 
-export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed, sidebarCollapsed = false }: SubNavProps) {
+export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed, sidebarCollapsed = false, module }: SubNavProps) {
+  const { user } = useAuthStore();
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
+  const { isModuleEnabled } = useModules();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
@@ -140,6 +147,11 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
   const isDark = resolvedTheme === "dark";
   const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;
 
+  // If module is disabled, hide the entire SubNav
+  if (module && !isModuleEnabled(module)) {
+    return null;
+  }
+
   return (
     <>
       {/* Mobile: Horizontal scrollable tab bar */}
@@ -147,7 +159,10 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
         className="fixed top-16 left-0 right-0 z-20 lg:hidden bg-background/90 backdrop-blur-xl border-b border-border/60 shadow-sm"
       >
         <nav className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-none">
-          {items.map((item) => {
+          {items.filter(item => 
+            (!item.module || isModuleEnabled(item.module)) && 
+            (!item.requiredRole || user?.role === item.requiredRole)
+          ).map((item) => {
             const isActive = getIsActive(item);
 
             const navItem = (
@@ -223,7 +238,10 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
             </Button>
           </div>
           <nav className="space-y-1">
-            {items.map((item) => {
+            {items.filter(item => 
+              (!item.module || isModuleEnabled(item.module)) && 
+              (!item.requiredRole || user?.role === item.requiredRole)
+            ).map((item) => {
               const isActive = getIsActive(item);
 
               const navItem = (
@@ -320,6 +338,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Branches", href: "/admin/branches", permission: "view_branches", icon: Building2 },
     { name: "Backups", href: "/admin/backups", permission: "view_backups", icon: Database },
     { name: "Settings", href: "/admin/settings", permission: "view_settings", icon: Settings },
+    { name: "Modules", href: "/admin/modules", requiredRole: "super-admin", icon: Puzzle },
     { name: "Email Templates", href: "/admin/settings/email-templates", permission: "view_email_templates", icon: Mail },
     { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_log", icon: History },
     { name: "Import History", href: "/admin/import-history", permission: "view_import_history", icon: Inbox },
@@ -358,13 +377,14 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
 };
 
 // Helper function to get sub-nav config based on pathname
-export function getSubNavConfig(pathname: string | null): { items: SubNavItem[]; title: string } | null {
+export function getSubNavConfig(pathname: string | null): { items: SubNavItem[]; title: string; module?: string } | null {
   if (!pathname) return null;
 
   if (pathname.startsWith("/inventory")) {
     return {
       items: subNavConfig.inventory,
       title: "Inventory",
+      module: "inventory",
     };
   }
 
@@ -372,6 +392,7 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     return {
       items: subNavConfig.billing,
       title: "Billing",
+      module: "billing",
     };
   }
 
@@ -379,6 +400,7 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     return {
       items: subNavConfig.accounting,
       title: "Accounting",
+      module: "accounting",
     };
   }
 
@@ -386,6 +408,7 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     return {
       items: subNavConfig.admin,
       title: "Administration",
+      module: "admin", // Even if admin isn't togglable, good to have
     };
   }
 
@@ -393,6 +416,7 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     return {
       items: subNavConfig.hr,
       title: "HR Management",
+      module: "hr",
     };
   }
 

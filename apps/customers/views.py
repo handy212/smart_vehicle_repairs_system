@@ -5,7 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission, user_has_permission
+from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
@@ -33,19 +33,19 @@ class CustomerViewSet(viewsets.ModelViewSet):
     update: Update customer information
     destroy: Delete customer (soft delete recommended)
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('customers')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), HasPermission('view_customers')]
+            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('view_customers')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_customers')]
+            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('create_customers')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_customers')]
+            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('edit_customers')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_customers')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('customers'), HasPermission('delete_customers')]
+        return [IsAuthenticated(), IsModuleEnabled('customers')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'customer_type', 'payment_terms', 'loyalty_tier']
     search_fields = [

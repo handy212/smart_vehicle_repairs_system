@@ -17,7 +17,7 @@ import json
 from datetime import datetime, time as dt_time
 
 from auditlog.models import LogEntry
-from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate
+from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate, SystemModule
 from .permission_models import Role, Permission
 from .models import User
 from .serializers import UserSerializer
@@ -25,16 +25,13 @@ from .serializers import UserSerializer
 User = get_user_model()
 
 
+from .permissions import IsAdmin, IsSuperAdmin, IsModuleEnabled
+
 def is_admin_user(user):
-    """Check if user is admin"""
-    return user.is_authenticated and (user.is_superuser or user.role == 'admin')
-
-
-class IsAdmin(IsAuthenticated):
-    """Permission class to check if user is admin"""
-    
-    def has_permission(self, request, view):
-        return super().has_permission(request, view) and is_admin_user(request.user)
+    """Check if user is admin or super-admin (utility for this file)"""
+    if not user or not user.is_authenticated:
+        return False
+    return user.role in ('admin', 'super-admin')
 
 
 
@@ -178,7 +175,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         if settings_count == 0:
             initialize_category_settings('integration')
         
-        # Get Firebase settings
+        # Get Firebase settings using secure get_setting (prioritizes .env)
         firebase_enabled = SystemSettings.get_setting('firebase_enabled', 'false')
         firebase_api_key = SystemSettings.get_setting('firebase_api_key', '')
         firebase_project_id = SystemSettings.get_setting('firebase_project_id', '')
@@ -186,10 +183,10 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         firebase_app_id = SystemSettings.get_setting('firebase_app_id', '')
         
         # Only return config if Firebase is enabled
-        if firebase_enabled.lower() == 'true' and firebase_api_key and firebase_project_id:
+        if firebase_enabled.lower() == 'true' and firebase_project_id:
             return Response({
                 'enabled': True,
-                'apiKey': firebase_api_key,
+                'apiKey': firebase_api_key, # Usually required for frontend Firebase JS
                 'projectId': firebase_project_id,
                 'messagingSenderId': firebase_messaging_sender_id,
                 'appId': firebase_app_id,
@@ -743,7 +740,20 @@ class RoleViewSet(viewsets.ModelViewSet):
     ordering = ['-priority', 'name']
     
     def get_queryset(self):
-        return Role.objects.prefetch_related('permissions').all()
+        queryset = Role.objects.prefetch_related('permissions').all()
+        if self.request.user and self.request.user.role != 'super-admin':
+            queryset = queryset.exclude(code='super-admin')
+        return queryset
+
+    def get_object(self):
+        """
+        Ensure non-super-admins cannot access the super-admin role object.
+        """
+        obj = super().get_object()
+        if self.request.user and self.request.user.role != 'super-admin' and obj.code == 'super-admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to access the super-admin role.")
+        return obj
     
     def get_serializer_class(self):
         from .admin_serializers import RoleSerializer, RoleCreateUpdateSerializer
@@ -801,3 +811,31 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     def get_serializer_class(self):
         from .admin_serializers import PermissionSerializer
         return PermissionSerializer
+
+
+class SystemModuleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing system modules
+    """
+    permission_classes = [IsAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['is_enabled']
+    search_fields = ['name', 'slug', 'description']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+    
+    def get_queryset(self):
+        return SystemModule.objects.all()
+    
+    def get_serializer_class(self):
+        from .admin_serializers import SystemModuleSerializer
+        return SystemModuleSerializer
+
+    def get_permissions(self):
+        """
+        List/Retrieve available to all admins.
+        Create/Update/Delete (enabling/disabling) restricted to super-admins.
+        """
+        if self.action in ['list', 'retrieve']:
+            return [IsAdmin()]
+        return [IsSuperAdmin()]

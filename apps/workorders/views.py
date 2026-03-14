@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from apps.accounts.permissions import HasPermission, user_has_permission
+from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -55,7 +55,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             'purchase_order_item__purchase_order__supplier', 'inventory_part__preferred_supplier'
         ))
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
     # Use custom filterset class instead of filterset_fields
@@ -74,17 +74,15 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated()]
+        if self.action in ['list', 'retrieve', 'dashboard_stats']:
+            return [IsAuthenticated(), IsModuleEnabled('workorders')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_workorders')]
+            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('create_workorders')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_workorders')]
+            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('edit_workorders')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_workorders')]
-        elif self.action == 'dashboard_stats':
-            return [IsAuthenticated()]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('workorders'), HasPermission('delete_workorders')]
+        return [IsAuthenticated(), IsModuleEnabled('workorders')]
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """
@@ -862,7 +860,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
 class ServiceTaskViewSet(viewsets.ModelViewSet):
     """Service Task management"""
     queryset = ServiceTask.objects.all().select_related('work_order', 'assigned_to').prefetch_related('time_logs')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['work_order', 'status', 'task_type', 'assigned_to']
     ordering_fields = ['sequence_order', 'created_at']
@@ -975,7 +973,7 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
 class WorkOrderPartViewSet(viewsets.ModelViewSet):
     """Work Order Part management"""
     queryset = WorkOrderPart.objects.all().select_related('work_order', 'task', 'installed_by')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['work_order', 'status']
     search_fields = ['part_number', 'part_name', 'description']
@@ -1498,7 +1496,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
 class TechnicianTimeLogViewSet(viewsets.ModelViewSet):
     """Technician Time Log management"""
     queryset = TechnicianTimeLog.objects.all().select_related('work_order', 'task', 'technician')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = TechnicianTimeLogFilter
     ordering_fields = ['clock_in', 'created_at']
@@ -1562,7 +1560,7 @@ class TechnicianTimeLogViewSet(viewsets.ModelViewSet):
 class WorkOrderNoteViewSet(viewsets.ModelViewSet):
     """Work Order Note management"""
     queryset = WorkOrderNote.objects.all().select_related('work_order', 'created_by')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['work_order', 'note_type', 'is_important', 'is_customer_visible']
     
@@ -1575,7 +1573,7 @@ class WorkOrderNoteViewSet(viewsets.ModelViewSet):
 class WorkOrderPhotoViewSet(viewsets.ModelViewSet):
     """Work Order Photo management"""
     queryset = WorkOrderPhoto.objects.all().select_related('work_order', 'taken_by')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['work_order', 'photo_type']
     

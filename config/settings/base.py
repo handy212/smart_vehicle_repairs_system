@@ -28,6 +28,7 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -57,6 +58,7 @@ INSTALLED_APPS = [
     'storages',
     'django_extensions',
     'notifications',
+    'channels',
     'schedule',
     'import_export',
     'drf_spectacular',
@@ -89,6 +91,7 @@ INSTALLED_APPS = [
     'apps.portal',
     'apps.quickbooks_online',
     'apps.feedback',
+    'apps.chat',
 ]
 
 MIDDLEWARE = [
@@ -356,6 +359,17 @@ CACHES = {
     }
 }
 
+# Channels Configuration
+ASGI_APPLICATION = 'config.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [env('REDIS_URL', default='redis://localhost:6379/0')],
+        },
+    },
+}
+
 # API Documentation
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Smart Vehicle Repairs API',
@@ -372,6 +386,10 @@ CARAPI_BASE_URL = 'https://carapi.app/api'
 CARAPI_KEY = env('CARAPI_KEY', default='')
 CARAPI_SECRET = env('CARAPI_SECRET', default='')
 
+# QuickBooks Online Configuration
+QUICKBOOKS_CLIENT_ID = env('QUICKBOOKS_CLIENT_ID', default='')
+QUICKBOOKS_CLIENT_SECRET = env('QUICKBOOKS_CLIENT_SECRET', default='')
+QUICKBOOKS_SANDBOX_ENABLED = env.bool('QUICKBOOKS_SANDBOX_ENABLED', default=True)
 
 # Twilio Configuration
 TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')
@@ -406,6 +424,14 @@ HUBTEL_SANDBOX = env.bool('HUBTEL_SANDBOX', default=True)
 PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY', default='')
 PAYSTACK_SECRET_KEY = env('PAYSTACK_SECRET_KEY', default='')
 PAYSTACK_PAYMENT_ENABLED = env.bool('PAYSTACK_PAYMENT_ENABLED', default=False)
+
+# Stripe Payment Gateway Configuration
+STRIPE_PUBLIC_KEY = env('STRIPE_PUBLIC_KEY', default='')
+STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='')
+
+# PayPal Configuration
+PAYPAL_CLIENT_ID = env('PAYPAL_CLIENT_ID', default='')
+PAYPAL_SECRET = env('PAYPAL_SECRET', default='')
 
 # Site URL for payment callbacks
 SITE_URL = env('SITE_URL', default='http://localhost:8000')

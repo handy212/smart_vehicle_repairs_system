@@ -5,7 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from apps.accounts.permissions import HasPermission, user_has_permission
+from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse, HttpResponse
@@ -76,7 +76,7 @@ class DocumentCategoryViewSet(viewsets.ModelViewSet):
     
     queryset = DocumentCategory.objects.all()
     serializer_class = DocumentCategorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -120,7 +120,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         'invoice',
         'estimate'
     ).all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -660,7 +660,7 @@ class DocumentVersionViewSet(viewsets.ReadOnlyModelViewSet):
     
     queryset = DocumentVersion.objects.select_related('document', 'uploaded_by').all()
     serializer_class = DocumentVersionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['version_number', 'uploaded_at']
     ordering = ['-version_number']
@@ -694,6 +694,7 @@ class DocumentShareViewSet(viewsets.ModelViewSet):
     
     queryset = DocumentShare.objects.select_related('document', 'shared_by').all()
     serializer_class = DocumentShareSerializer
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
     filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['created_at', 'expires_at', 'view_count']
     ordering = ['-created_at']

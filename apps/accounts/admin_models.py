@@ -288,3 +288,24 @@ class SMSTemplate(models.Model):
     def clean(self):
         if len(self.message) > 160:
             raise ValidationError({'message': 'SMS message cannot exceed 160 characters'})
+
+
+class SystemModule(models.Model):
+    """
+    Application modules that can be enabled or disabled
+    """
+    name = models.CharField(_('module name'), max_length=100)
+    slug = models.SlugField(_('slug'), max_length=100, unique=True, help_text='Unique identifier used for checking status (e.g., hr, accounting)')
+    is_enabled = models.BooleanField(_('is enabled'), default=True)
+    description = models.TextField(_('description'), blank=True)
+    icon = models.CharField(_('icon'), max_length=50, blank=True, help_text='Icon name used in frontend')
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('system module')
+        verbose_name_plural = _('system modules')
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({'Enabled' if self.is_enabled else 'Disabled'})"

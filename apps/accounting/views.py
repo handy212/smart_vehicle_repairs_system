@@ -10,12 +10,13 @@ import io
 from decimal import Decimal
 from django.utils import timezone
 from datetime import datetime
+from apps.accounts.permissions import IsModuleEnabled
 from .services import ReportingService, DashboardService, ExportService
 from .models import JournalEntry, Account, AccountingControl, AuditLog
 from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
 
 from django.http import HttpResponse
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from apps.branches.utils import resolve_branch
 
 def get_report_branch_id(request):
@@ -30,7 +31,7 @@ def get_report_branch_id(request):
     return branch.id if branch else None
 
 class BalanceSheetView(APIView):
-    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
     def get(self, request):
         date_str = request.query_params.get('date')
@@ -41,7 +42,7 @@ class BalanceSheetView(APIView):
         return Response(report)
 
 class ProfitLossView(APIView):
-    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
     def get(self, request):
         start_str = request.query_params.get('start_date')
@@ -67,7 +68,7 @@ class ProfitLossView(APIView):
         return Response(report)
 
 class TrialBalanceView(APIView):
-    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
     def get(self, request):
         date_str = request.query_params.get('date')
@@ -78,7 +79,7 @@ class TrialBalanceView(APIView):
         return Response(report)
 
 class AgingReportView(APIView):
-    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
     def get(self, request):
         report_type = request.query_params.get('type', 'ar') # 'ar' or 'ap'
@@ -90,7 +91,7 @@ class AgingReportView(APIView):
         return Response(report)
 
 class CashFlowView(APIView):
-    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
@@ -104,7 +105,7 @@ class CashFlowView(APIView):
         return Response(report)
 
 class TaxReportView(APIView):
-    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
     
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
@@ -132,7 +133,7 @@ class BankStatementViewSet(viewsets.ModelViewSet):
     queryset = BankStatement.objects.all()
     serializer_class = BankStatementSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_banking'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -230,7 +231,7 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
     queryset = BankStatementLine.objects.all()
     serializer_class = BankStatementLineSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_banking'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -281,7 +282,7 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
 class UnreconciledTransactionsView(ListAPIView):
     """Fetch transactions for a bank account that are not yet matched"""
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_banking'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -317,7 +318,7 @@ class FundTransferViewSet(viewsets.ModelViewSet):
     queryset = FundTransfer.objects.all()
     serializer_class = FundTransferSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_banking'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -363,7 +364,7 @@ class FundTransferViewSet(viewsets.ModelViewSet):
 class JobProfitabilityView(APIView):
     """Job profitability analysis"""
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_financial_reports'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -402,7 +403,7 @@ class BudgetViewSet(viewsets.ModelViewSet):
     queryset = Budget.objects.all()
     serializer_class = BudgetSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_budgets'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -447,7 +448,7 @@ class BudgetLineViewSet(viewsets.ModelViewSet):
     queryset = BudgetLine.objects.all()
     serializer_class = BudgetLineSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_budgets'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -461,7 +462,7 @@ class BudgetLineViewSet(viewsets.ModelViewSet):
 class BudgetVsActualView(APIView):
     """Budget vs Actual variance analysis"""
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_budgets'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -487,7 +488,7 @@ class BudgetVsActualView(APIView):
 
 class AccountingControlView(RetrieveUpdateAPIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -505,7 +506,7 @@ class AccountingControlView(RetrieveUpdateAPIView):
 
 class AuditLogView(ListAPIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -521,7 +522,7 @@ class AuditLogView(ListAPIView):
 
 class JournalEntryListView(ListAPIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -551,7 +552,7 @@ class JournalEntryListView(ListAPIView):
 
 class JournalEntryDetailView(RetrieveUpdateAPIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -565,7 +566,7 @@ class JournalEntryDetailView(RetrieveUpdateAPIView):
 
 class JournalEntryCreateView(CreateAPIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -579,7 +580,7 @@ class JournalEntryCreateView(CreateAPIView):
 
 class AccountListView(ListCreateAPIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -608,7 +609,7 @@ class AccountListView(ListCreateAPIView):
 class AccountDetailView(RetrieveUpdateAPIView):
     """View for retrieving, updating, and deleting individual accounts"""
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -635,7 +636,7 @@ class AccountDetailView(RetrieveUpdateAPIView):
 class ManagementDashboardView(APIView):
     """Executive Management Dashboard Metrics"""
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_financial_reports'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -687,7 +688,7 @@ class AccrualViewSet(viewsets.ModelViewSet):
     queryset = Accrual.objects.all().select_related('account', 'created_by')
     serializer_class = AccrualSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_accounting'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:
@@ -784,7 +785,7 @@ class AccrualViewSet(viewsets.ModelViewSet):
 
 class AnalyticsDashboardView(APIView):
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
             permission_classes.append(HasPermission('view_financial_reports'))
         elif hasattr(self, 'request') and getattr(self.request, 'method') in ['GET', 'HEAD', 'OPTIONS']:

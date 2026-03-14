@@ -17,7 +17,7 @@ from .serializers import (
     RoadsideRequestCreateSerializer,
     RoadsideRequestUpdateSerializer,
 )
-from apps.accounts.permissions import HasPermission, HasAnyPermission
+from apps.accounts.permissions import HasPermission, HasAnyPermission, IsModuleEnabled
 from apps.branches.utils import resolve_branch
 from apps.branches.utils import filter_queryset_for_user_branches
 from apps.core.services.ai_service import AIService
@@ -71,7 +71,7 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         # Admin, Manager, and other staff -> Apply branch filtering
         return filter_queryset_for_user_branches(queryset, user, self.request)
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'service_type', 'customer', 'vehicle', 'branch', 'is_covered_by_subscription', 'assigned_technician']
@@ -103,28 +103,34 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         action = getattr(self, 'action', None)
+        permission_classes = [IsAuthenticated, IsModuleEnabled('roadside')]
         if action in ['list', 'retrieve', 'my_requests']:
-            return [IsAuthenticated()]
+            return [p() for p in permission_classes]
         elif action == 'create':
             # Allow customers to create their own requests
             if getattr(self.request.user, "role", None) == "customer":
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'create_roadside_requests'])]
+                return [p() for p in permission_classes]
+            permission_classes.append(HasAnyPermission(['manage_roadside', 'create_roadside_requests']))
+            return [p() for p in permission_classes]
         elif action == 'cancel':
-             return [IsAuthenticated()]
+             return [p() for p in permission_classes]
         elif action == 'assign_dispatch':
-            return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
+            permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+            return [p() for p in permission_classes]
         elif action in ['en_route', 'in_progress', 'arrive', 'complete', 'fail']:
              # Allow dispatchers OR the assigned technician (via object permission or get_queryset security)
              # But we must Block customers
              if getattr(self.request.user, "role", None) == "customer":
-                 return [IsAuthenticated(), HasAnyPermission(['manage_roadside'])] # Effectively blocks customers
-             return [IsAuthenticated()]
+                 permission_classes.append(HasAnyPermission(['manage_roadside'])) # Effectively blocks customers
+                 return [p() for p in permission_classes]
+             return [p() for p in permission_classes]
         elif action in ['update', 'partial_update']:
-             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
+             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+             return [p() for p in permission_classes]
         elif action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
-             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
-        return [IsAuthenticated()]
+             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+             return [p() for p in permission_classes]
+        return [p() for p in permission_classes]
     
     def get_serializer_class(self):
         action = getattr(self, 'action', None)

@@ -4,7 +4,7 @@ Serializers for Admin Features
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from auditlog.models import LogEntry
-from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate
+from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate, SystemModule
 from .permission_models import Role, Permission
 import json
 
@@ -34,11 +34,12 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
         return obj.display_name
     
     def to_representation(self, instance):
-        """Mask secret values - but show actual value if it's empty or being edited"""
+        """Mask secret values for transmission to the frontend"""
         data = super().to_representation(instance)
-        # Only mask if there's a value and it's a secret
-        # This allows admins to see/edit the actual value when needed
-        # The frontend should handle masking for display purposes
+        # Always mask secrets in API responses to prevent leakage
+        if instance.is_secret and data.get('value'):
+            # Show masked value
+            data['value'] = '********'
         return data
 
 
@@ -227,3 +228,15 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
         if permission_ids is not None:
             instance.permissions.set(permission_ids)
         return instance
+
+
+class SystemModuleSerializer(serializers.ModelSerializer):
+    """Serializer for SystemModule"""
+    
+    class Meta:
+        model = SystemModule
+        fields = [
+            'id', 'name', 'slug', 'is_enabled', 'description', 
+            'icon', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']

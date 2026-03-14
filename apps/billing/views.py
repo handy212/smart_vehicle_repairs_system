@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission, user_has_permission
+from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -84,15 +84,15 @@ class TaxRateViewSet(viewsets.ModelViewSet):
     """
     
     queryset = TaxRate.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'active', 'by_location']:
-            return [IsAuthenticated(), HasPermission('view_settings')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_settings')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('manage_settings')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_settings')]
+        return [IsAuthenticated(), IsModuleEnabled('billing')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'state', 'county', 'city']
     search_fields = ['name', 'description', 'state', 'county', 'city']
@@ -174,22 +174,22 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
     queryset = Estimate.objects.select_related(
         'customer', 'vehicle', 'work_order', 'created_by', 'approved_by', 'sent_by'
     ).prefetch_related('line_items')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         # Allow customers to view their own estimates without billing permission
         if self.action in ['list', 'retrieve']:
             if getattr(self.request.user, 'role', None) == 'customer':
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasPermission('view_billing')]
+                return [IsAuthenticated(), IsModuleEnabled('billing')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_estimates')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_estimates')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_estimates')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_estimates')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('manage_billing')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
+        return [IsAuthenticated(), IsModuleEnabled('billing')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'estimate_date']
     search_fields = ['estimate_number', 'title', 'description', 'customer__first_name', 'customer__last_name']
@@ -508,15 +508,15 @@ class EstimateLineItemViewSet(viewsets.ModelViewSet):
     """ViewSet for managing estimate line items"""
     
     queryset = EstimateLineItem.objects.select_related('estimate', 'part')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
             if getattr(self.request.user, 'role', None) == 'customer':
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasPermission('view_billing')]
-        return [IsAuthenticated(), HasPermission('edit_estimates')]
+                return [IsAuthenticated(), IsModuleEnabled('billing')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
+        return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_estimates')]
         
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['estimate', 'item_type', 'is_taxable']
@@ -548,24 +548,24 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
         'customer', 'vehicle', 'work_order', 'estimate',
         'created_by', 'sent_by', 'voided_by'
     ).prefetch_related('payments', 'line_items')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         # Allow customers to view their own invoices without billing permission
         if self.action in ['list', 'retrieve']:
             if getattr(self.request.user, 'role', None) == 'customer':
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasPermission('view_billing')]
+                return [IsAuthenticated(), IsModuleEnabled('billing')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_invoices')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_invoices')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_invoices')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_invoices')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('delete_invoices')]
         elif self.action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
-            return [IsAuthenticated(), HasPermission('edit_invoices')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
+        return [IsAuthenticated(), IsModuleEnabled('billing')]
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
@@ -666,21 +666,21 @@ class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.select_related(
         'invoice', 'customer', 'processed_by', 'refunded_by'
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
             if getattr(self.request.user, 'role', None) == 'customer':
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasPermission('view_billing')]
+                return [IsAuthenticated(), IsModuleEnabled('billing')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_payments')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_payments')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_payments')]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_payments')]
         elif self.action in ['destroy', 'refund']:
-            return [IsAuthenticated(), HasPermission('manage_billing')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
+        return [IsAuthenticated(), IsModuleEnabled('billing')]
 
     serializer_class = PaymentSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -1085,7 +1085,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 class TaxConfigurationView(APIView):
     """Expose configured tax regime and rates."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get(self, request):
         config = TaxService.get_config()
@@ -1361,7 +1361,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
     queryset = PaymentAllocation.objects.select_related(
         'payment', 'invoice', 'invoice__customer', 'allocated_by'
     ).all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1626,7 +1626,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
 
 class CreditNoteViewSet(viewsets.ModelViewSet):
     """ViewSet for managing credit notes"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1721,7 +1721,7 @@ class BillViewSet(viewsets.ModelViewSet):
     ViewSet for managing vendor bills
     """
     queryset = Bill.objects.select_related('vendor', 'branch', 'created_by').prefetch_related('line_items')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""

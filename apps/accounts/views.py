@@ -41,6 +41,10 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             queryset = queryset.exclude(role__in=['customer', 'technician', 'service_coordinator'])
         
+        # Filter out super-admins if the requester is not a super-admin
+        if self.request.user and self.request.user.role != 'super-admin':
+            queryset = queryset.exclude(role='super-admin')
+            
         # Support branch filtering via query params
         branch_id = self.request.query_params.get('branch')
         if branch_id:
@@ -55,6 +59,16 @@ class UserViewSet(viewsets.ModelViewSet):
                 pass
         
         return queryset
+
+    def get_object(self):
+        """
+        Ensure non-super-admins cannot access super-admin objects even if they know the ID.
+        """
+        obj = super().get_object()
+        if self.request.user and self.request.user.role != 'super-admin' and obj.role == 'super-admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to access super-admin accounts.")
+        return obj
     
     def get_serializer_class(self):
         if self.action == 'create':

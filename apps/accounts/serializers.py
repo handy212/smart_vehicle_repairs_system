@@ -122,6 +122,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         role = attrs.get('role')
         branch = attrs.get('branch')
         managed_branches = attrs.get('managed_branches', [])
+
+        # Prevent non-super-admins from creating super-admin users
+        request = self.context.get('request')
+        if role == 'super-admin':
+            if not request or not request.user or request.user.role != 'super-admin':
+                raise serializers.ValidationError({"role": "Only super-admins can create other super-admin accounts."})
         
         # Validate branch assignment based on role
         if role == 'manager':
@@ -372,6 +378,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         role = attrs.get('role', self.instance.role if self.instance else None)
         branch = attrs.get('branch')
         managed_branches = attrs.get('managed_branches')
+
+        # Prevent non-super-admins from editing super-admin users or assigning the super-admin role
+        request = self.context.get('request')
+        if self.instance and self.instance.role == 'super-admin':
+            if not request or not request.user or request.user.role != 'super-admin':
+                raise serializers.ValidationError("Only super-admins can modify super-admin accounts.")
+        
+        if role == 'super-admin' and (not self.instance or self.instance.role != 'super-admin'):
+             if not request or not request.user or request.user.role != 'super-admin':
+                raise serializers.ValidationError({"role": "Only super-admins can assign the super-admin role."})
         
         # If role is being changed, validate branch assignment
         if role:

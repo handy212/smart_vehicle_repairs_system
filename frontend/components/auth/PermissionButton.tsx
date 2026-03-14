@@ -32,7 +32,7 @@ export function PermissionButton({
 
   // Admin bypass — consistent with PermissionGuard
 
-  const isAdmin = user?.role === 'admin' || (user as any)?.is_superuser;
+  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin' || (user as any)?.is_superuser;
 
   let hasAccess = true;
 

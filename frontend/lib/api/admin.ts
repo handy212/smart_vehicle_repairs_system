@@ -251,6 +251,24 @@ export interface SystemBackupListResponse {
   results: SystemBackup[];
 }
 
+export interface SystemModule {
+  id: number;
+  name: string;
+  slug: string;
+  is_enabled: boolean;
+  description: string;
+  icon: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SystemModuleListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: SystemModule[];
+}
+
 export const adminApi = {
   // User Management
   users: {
@@ -535,6 +553,27 @@ export const adminApi = {
 
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/accounts/admin/backups/${id}/`);
+    },
+  },
+
+  // System Modules
+  modules: {
+    list: async (params?: {
+      is_enabled?: boolean;
+      search?: string;
+    }): Promise<SystemModuleListResponse> => {
+      const response = await apiClient.get("/accounts/admin/modules/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<SystemModule> => {
+      const response = await apiClient.get(`/accounts/admin/modules/${id}/`);
+      return response.data;
+    },
+
+    update: async (id: number, data: Partial<SystemModule>): Promise<SystemModule> => {
+      const response = await apiClient.patch(`/accounts/admin/modules/${id}/`, data);
+      return response.data;
     },
   },
 };

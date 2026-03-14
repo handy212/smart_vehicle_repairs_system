@@ -37,7 +37,7 @@ export default function ProfilePage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "super-admin";
   const [profileImage, setProfileImage] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);

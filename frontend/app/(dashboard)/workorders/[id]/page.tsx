@@ -435,6 +435,15 @@ export default function WorkOrderDetailPage() {
                 </>
               )}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/chat?work_order_id=${workOrderId}`)}
+              className="h-9"
+            >
+              <PremiumIcons.MessageSquare className="w-3.5 h-3.5 mr-2" />
+              Chat
+            </Button>
             <PermissionGuard permission="edit_workorders">
               <Link href={`/workorders/${workOrderId}/edit`}>
                 <Button size="sm" className="h-9">

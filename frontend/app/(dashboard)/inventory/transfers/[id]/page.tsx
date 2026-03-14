@@ -63,7 +63,7 @@ export default function TransferDetailPage() {
 
     const { activeBranchId } = useBranchStore();
     const isSubmitter = currentUser?.id === transfer?.created_by;
-    const isApprover = currentUser?.id === transfer?.assigned_approver || currentUser?.role === "admin";
+    const isApprover = currentUser?.id === transfer?.assigned_approver || currentUser?.role === "admin" || currentUser?.role === "super-admin";
     const canApprove = isApprover && !isSubmitter;
     const isSourceBranch = activeBranchId === transfer?.source_branch;
     const isDestinationBranch = activeBranchId === transfer?.destination_branch;

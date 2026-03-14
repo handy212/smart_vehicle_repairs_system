@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { authApi } from "@/lib/api/auth";
+import { useModules } from "@/lib/hooks/useModules";
 
 export default function DashboardLayoutWrapper({
   children,
@@ -12,8 +13,10 @@ export default function DashboardLayoutWrapper({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, setUser, isAuthenticated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
+  const { isModuleEnabled, isLoading: modulesLoading } = useModules();
 
   useEffect(() => {
     setMounted(true);
@@ -63,7 +66,30 @@ export default function DashboardLayoutWrapper({
     };
   }, [user, setUser, router, mounted]);
 
-  if (!mounted || !isAuthenticated) {
+  // Module protection logic
+  useEffect(() => {
+    if (!mounted || modulesLoading || !user) return;
+
+    // Get the top-level segment (e.g., /hr/employees -> hr)
+    const segments = pathname.split("/").filter(Boolean);
+    const topSegment = segments[0];
+
+    // List of segments that correspond to modules
+    const moduleSegments = [
+      "hr", "inventory", "accounting", "billing", "roadside", 
+      "diagnosis", "inspections", "fixed-assets", "subscriptions",
+      "reports", "sms", "appointments", "workorders", "gatepass",
+      "customers", "vehicles"
+    ];
+
+    if (topSegment && moduleSegments.includes(topSegment)) {
+      if (!isModuleEnabled(topSegment) && user.role !== "super-admin") {
+        router.push("/dashboard");
+      }
+    }
+  }, [pathname, mounted, modulesLoading, user, isModuleEnabled, router]);
+
+  if (!mounted || !isAuthenticated || modulesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

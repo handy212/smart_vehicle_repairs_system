@@ -6,28 +6,28 @@ from .models import Technician, Skill, TimeOffRequest, Shift, Certification
 from .serializers import TechnicianSerializer, SkillSerializer, TimeOffRequestSerializer, ShiftSerializer, TechnicianJobHistorySerializer, CertificationSerializer
 from django.db import models
 from apps.branches.utils import filter_queryset_for_user_branches
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.filter(is_active=True)
     serializer_class = SkillSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsModuleEnabled('technicians')]
 
 class TechnicianViewSet(viewsets.ModelViewSet):
     queryset = Technician.objects.all()
     serializer_class = TechnicianSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsModuleEnabled('technicians')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['my_profile', 'job_history', 'shifts', 'performance_metrics', 'update_location']:
             # Allow technicians to view their own profile/stats
-            return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
         elif self.action in ['list', 'retrieve']:
-            return [permissions.IsAuthenticated(), HasPermission('view_users')]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_users')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAuthenticated(), HasPermission('manage_branch_staff')]
-        return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_branch_staff')]
+        return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):
@@ -240,15 +240,15 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
 class ShiftViewSet(viewsets.ModelViewSet):
     queryset = Shift.objects.all()
     serializer_class = ShiftSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsModuleEnabled('technicians')]
 
     def get_permissions(self):
         action = getattr(self, 'action', None)
         if action in ['clock_in', 'clock_out', 'add_break']:
-            return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
         if action in ['list', 'retrieve']:
-            return [permissions.IsAuthenticated(), HasPermission('view_users')]
-        return [permissions.IsAuthenticated(), HasPermission('manage_technicians')]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_users')]
+        return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_technicians')]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -350,12 +350,12 @@ class CertificationViewSet(viewsets.ModelViewSet):
     """
     queryset = Certification.objects.all()
     serializer_class = CertificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsModuleEnabled('technicians')]
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'expiring_soon']:
-            return [permissions.IsAuthenticated(), HasPermission('view_users')]
-        return [permissions.IsAuthenticated(), HasPermission('manage_technicians')]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_users')]
+        return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_technicians')]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):

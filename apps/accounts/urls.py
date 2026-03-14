@@ -10,7 +10,7 @@ from .two_factor_views import TwoFactorViewSet
 from .admin_api_views import (
     SystemSettingsViewSet, AuditLogViewSet, SystemBackupViewSet,
     EmailTemplateViewSet, SMSTemplateViewSet, admin_dashboard_stats,
-    RoleViewSet, PermissionViewSet
+    RoleViewSet, PermissionViewSet, SystemModuleViewSet
 )
 
 router = DefaultRouter()
@@ -28,6 +28,7 @@ admin_router.register(r'email-templates', EmailTemplateViewSet, basename='email-
 admin_router.register(r'sms-templates', SMSTemplateViewSet, basename='sms-template')
 admin_router.register(r'roles', RoleViewSet, basename='role')
 admin_router.register(r'permissions', PermissionViewSet, basename='permission')
+admin_router.register(r'modules', SystemModuleViewSet, basename='system-module')
 
 urlpatterns = [
     # JWT Authentication (with reCAPTCHA support)

@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, status
+from apps.accounts.permissions import IsModuleEnabled
 from rest_framework.response import Response
 from .models import Feedback
 from .serializers import FeedbackSerializer
@@ -14,7 +15,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         """
         if self.action == 'create':
             return [permissions.AllowAny()]
-        return [permissions.IsAuthenticated(), permissions.DjangoModelPermissions()]
+        return [permissions.IsAuthenticated(), IsModuleEnabled('reports'), permissions.DjangoModelPermissions()]
 
     def create(self, request, *args, **kwargs):
         """

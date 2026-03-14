@@ -48,6 +48,9 @@ class HasAnyPermission(BasePermission):
             if user_has_permission(request.user, permission_code):
                 return True
         return False
+    
+    def __call__(self):
+        return self
 
 
 class HasAllPermissions(BasePermission):
@@ -68,6 +71,9 @@ class HasAllPermissions(BasePermission):
             if not user_has_permission(request.user, permission_code):
                 return False
         return True
+    
+    def __call__(self):
+        return self
 
 
 class IsAdmin(permissions.BasePermission):
@@ -75,15 +81,17 @@ class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return request.user.role == 'admin' or request.user.is_superuser
+        # Role-based check
+        return request.user.role in ('admin', 'super-admin')
 
 
 class IsManager(permissions.BasePermission):
-    """Permission check for manager users (also grants access to admins and superusers)"""
+    """Permission check for manager users (also grants access to admins)"""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return request.user.role in ('manager', 'admin') or request.user.is_superuser
+        # Role-based check
+        return request.user.role in ('manager', 'admin', 'super-admin')
 
 
 class IsStaff(permissions.BasePermission):
@@ -102,6 +110,51 @@ class IsCustomer(permissions.BasePermission):
         return request.user.role == 'customer'
 
 
+class IsSuperAdmin(permissions.BasePermission):
+    """Permission check for super-admin users (owner/system admins)"""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        # Strictly require the 'super-admin' role for this permission
+        return request.user.role == 'super-admin'
+
+
+class IsModuleEnabled(permissions.BasePermission):
+    """
+    Permission check that ensures a module is active.
+    Usage: permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
+    """
+    def __init__(self, module_slug=None):
+        self.module_slug = module_slug
+        super().__init__()
+
+    def has_permission(self, request, view):
+        # Allow only the 'super-admin' role to bypass module status checks
+        if request.user and request.user.role == 'super-admin':
+            return True
+        # Note: We even block superusers if they don't have the 'super-admin' role 
+        # to ensure strict role-based access control per user requirements.
+            
+        # If no slug provided, attempt to get it from view if it exists
+        module_slug = self.module_slug
+        if not module_slug and hasattr(view, 'module_slug'):
+            module_slug = view.module_slug
+            
+        if not module_slug:
+            return True
+            
+        from apps.accounts.admin_models import SystemModule
+        try:
+            module = SystemModule.objects.get(slug=module_slug)
+            return module.is_enabled
+        except SystemModule.DoesNotExist:
+            return False
+
+    def __call__(self):
+        """Allow using the class as a decorator or standalone in list"""
+        return self
+
+
 def user_has_permission(user, permission_code):
     """
     Check if a user has a specific permission through their role
@@ -117,7 +170,7 @@ def user_has_permission(user, permission_code):
         return False
     
     # Admins and superusers have all permissions
-    if user.role == 'admin' or getattr(user, 'is_superuser', False):
+    if user.role in ('admin', 'super-admin') or getattr(user, 'is_superuser', False):
         return True
     
     # Check user-specific permission overrides first
@@ -160,7 +213,7 @@ def get_user_permissions(user):
         return []
     
     # Admins and superusers have all permissions
-    if user.role == 'admin' or getattr(user, 'is_superuser', False):
+    if user.role in ('admin', 'super-admin') or getattr(user, 'is_superuser', False):
         from apps.accounts.permission_models import Role, Permission
         try:
             # Try to get permissions from admin role
@@ -244,5 +297,3 @@ def check_object_permission(user, permission_code, obj):
         return True
     
     return False
-
-

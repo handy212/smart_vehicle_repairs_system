@@ -248,7 +248,7 @@ export function CommandPalette() {
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
                         <CommandIcon className="w-3 h-3 text-primary/50" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.15em] text-primary/70">Global Search</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.15em] text-primary/70">Enter</span>
                     </div>
                 </div>
             </div>

@@ -41,7 +41,7 @@ export const helpContent: Record<string, HelpModule> = {
                 actionLabel: "Go to Dashboard"
             },
             {
-                title: "Global Search",
+                title: "Search",
                 steps: [
                     "Use the search bar in the top navigation or press 'Cmd+K' / 'Ctrl+K'.",
                     "Search for Customers, Vehicles, Work Orders, or Inventory parts.",

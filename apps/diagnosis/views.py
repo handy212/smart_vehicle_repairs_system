@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
@@ -128,7 +128,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         'findings',
         'photos',
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_completed', 'technician', 'work_order']
     search_fields = [
@@ -697,7 +697,7 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
     queryset = RepairRecommendation.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order'
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'diagnosis', 'recommendation_type', 'priority',
@@ -743,7 +743,7 @@ class DiagnosticCodeViewSet(viewsets.ModelViewSet):
     ViewSet for Diagnostic Codes (DTCs).
     """
     queryset = DiagnosticCode.objects.all().select_related('diagnosis', 'diagnosis__work_order')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'code_type', 'severity', 'status']
     search_fields = ['code_number', 'description']
@@ -838,7 +838,7 @@ class DiagnosticTestViewSet(viewsets.ModelViewSet):
     queryset = DiagnosticTest.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order', 'performed_by'
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'category', 'status', 'performed_by']
     search_fields = ['test_name', 'test_procedure']
@@ -875,7 +875,7 @@ class DiagnosisFindingViewSet(viewsets.ModelViewSet):
     queryset = DiagnosisFinding.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order'
     ).prefetch_related('diagnostic_codes', 'diagnostic_tests', 'photos')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'category', 'severity', 'status']
     search_fields = ['finding_title', 'description', 'root_cause']
@@ -905,7 +905,7 @@ class DiagnosisPhotoViewSet(viewsets.ModelViewSet):
     queryset = DiagnosisPhoto.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order', 'finding', 'taken_by'
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['diagnosis', 'finding', 'photo_type', 'taken_by']
     search_fields = ['caption']
@@ -962,7 +962,7 @@ class TestProcedureLibraryViewSet(viewsets.ModelViewSet):
     ViewSet for Test Procedure Library.
     """
     queryset = TestProcedureLibrary.objects.all().select_related('created_by')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'description', 'test_procedure']
@@ -989,7 +989,7 @@ class DiagnosticCodeLibraryViewSet(viewsets.ModelViewSet):
     ViewSet for Diagnostic Code Library (Code Lookup).
     """
     queryset = DiagnosticCodeLibrary.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['code_type', 'severity', 'is_active']
     search_fields = ['code_number', 'title', 'description']
@@ -1088,7 +1088,7 @@ class DiagnosisHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     ViewSet for Diagnosis History/Analytics (Read-only).
     """
     queryset = DiagnosisHistory.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['vehicle_make', 'vehicle_model', 'vehicle_year']
     search_fields = ['vehicle_make', 'vehicle_model']

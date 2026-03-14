@@ -7,7 +7,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission, user_has_permission
+from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -36,7 +36,7 @@ from .serializers import (
 class ServiceBayViewSet(viewsets.ModelViewSet):
     """ViewSet for service bay management"""
     serializer_class = ServiceBaySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('appointments')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'bay_type', 'is_active']
     search_fields = ['name', 'equipment_available']
@@ -65,27 +65,27 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     - Status management
     - Technician assignment
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('appointments')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
             # Allow customers to view their own appointments
             if getattr(self.request.user, 'role', None) == 'customer':
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasPermission('view_appointments')]
+                return [IsAuthenticated(), IsModuleEnabled('appointments')]
+            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('view_appointments')]
         elif self.action == 'create':
             # Allow customers to book appointments
             if getattr(self.request.user, 'role', None) == 'customer':
-                return [IsAuthenticated()]
-            return [IsAuthenticated(), HasPermission('create_appointments')]
+                return [IsAuthenticated(), IsModuleEnabled('appointments')]
+            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('create_appointments')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_appointments')]
+            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('edit_appointments')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_appointments')]
+            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('delete_appointments')]
         elif self.action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
-            return [IsAuthenticated(), HasPermission('edit_appointments')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('appointments'), HasPermission('edit_appointments')]
+        return [IsAuthenticated(), IsModuleEnabled('appointments')]
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
@@ -722,7 +722,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 class AppointmentReminderViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for appointment reminders (read-only)"""
     serializer_class = AppointmentReminderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('appointments')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['appointment', 'reminder_type', 'status']
     ordering = ['-scheduled_send_time']

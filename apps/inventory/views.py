@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Sum, Count, F, Q, Avg
@@ -47,15 +47,15 @@ class PartCategoryViewSet(viewsets.ModelViewSet):
     """
     queryset = PartCategory.objects.prefetch_related('subcategories', 'parts')
     serializer_class = PartCategorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'root_categories', 'dashboard_stats', 'subcategories', 'parts_list']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_inventory')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), HasPermission('manage_categories')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_categories')]
+        return [IsAuthenticated(), IsModuleEnabled('inventory')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'parent']
     search_fields = ['name', 'description']
@@ -102,25 +102,25 @@ class SupplierViewSet(viewsets.ModelViewSet):
     ViewSet for supplier management
     """
     queryset = Supplier.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), HasPermission('view_suppliers')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_suppliers')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('manage_suppliers')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_suppliers')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('manage_suppliers')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_suppliers')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('manage_suppliers')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_suppliers')]
+        return [IsAuthenticated(), IsModuleEnabled('inventory')]
     
     """
     ViewSet for suppliers with filtering and custom actions
     """
     queryset = Supplier.objects.prefetch_related('parts', 'purchase_orders')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['supplier_type', 'is_active', 'is_preferred']
     search_fields = ['name', 'supplier_code', 'contact_person', 'email', 'city']
@@ -212,21 +212,21 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
     ViewSet for parts inventory with extensive filtering and stock management
     """
     queryset = Part.objects.select_related('category', 'preferred_supplier', 'created_by').prefetch_related('suppliers')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
     
     # Removed redundant dashboard_stats action provided by InventoryReportMixin
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), HasPermission('view_inventory')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_inventory')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_parts')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('create_parts')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_parts')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('edit_parts')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_parts')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('delete_parts')]
+        return [IsAuthenticated(), IsModuleEnabled('inventory')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = [
         'category', 'is_active', 'manufacturer', 'preferred_supplier', 'is_taxable', 'is_core'
@@ -1289,7 +1289,7 @@ class ServicePackageViewSet(viewsets.ModelViewSet):
     ViewSet for service packages (Job Kits)
     """
     queryset = ServicePackage.objects.select_related('category').prefetch_related('parts', 'parts__part')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1318,7 +1318,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     queryset = PurchaseOrder.objects.select_related(
         'supplier', 'created_by', 'submitted_by', 'received_by'
     ).prefetch_related('items__part')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1660,7 +1660,7 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
     """
     queryset = PurchaseOrderItem.objects.select_related('purchase_order', 'part')
     serializer_class = PurchaseOrderItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1790,7 +1790,7 @@ class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
         'part', 'purchase_order', 'work_order', 'created_by'
     )
     serializer_class = InventoryTransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1834,7 +1834,7 @@ class StockItemViewSet(viewsets.ModelViewSet):
     """
     queryset = StockItem.objects.all().select_related('part', 'branch')
     serializer_class = StockItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1881,7 +1881,7 @@ class TransferViewSet(viewsets.ModelViewSet):
         'created_by', 'approved_by', 'received_by'
     ).prefetch_related('items__part')
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -2036,7 +2036,7 @@ class StockAlertViewSet(viewsets.ModelViewSet):
     ViewSet for managing stock alerts (low stock, out of stock, etc.)
     """
     queryset = StockAlert.objects.select_related('part', 'branch', 'stock_item', 'acknowledged_by')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -2177,7 +2177,7 @@ class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
     queryset = PhysicalCountSession.objects.select_related(
         'branch', 'created_by', 'completed_by'
     ).prefetch_related('count_items__part', 'count_items__stock_item')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -2342,7 +2342,7 @@ class PhysicalCountItemViewSet(viewsets.ModelViewSet):
     queryset = PhysicalCountItem.objects.select_related(
         'session', 'part', 'stock_item', 'reconciled_by'
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""

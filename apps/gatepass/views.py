@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from apps.accounts.permissions import IsModuleEnabled
 from .models import GatePass
 from .serializers import (
     GatePassListSerializer,
@@ -17,7 +18,7 @@ from .serializers import (
     GatePassCreateSerializer,
     GatePassUpdateSerializer
 )
-from apps.accounts.permissions import HasPermission
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
 from apps.notifications_app.triggers import notification_triggers
 
@@ -31,7 +32,7 @@ class GatePassViewSet(viewsets.ModelViewSet):
         'customer', 'customer__user', 'vehicle', 'branch',
         'issued_by', 'authorized_by'
     )
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('gatepass')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'work_order', 'customer', 'vehicle', 'branch']
     search_fields = [
@@ -70,14 +71,14 @@ class GatePassViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_gatepass')]
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('view_gatepass')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_gatepass')]
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('create_gatepass')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('change_gatepass')]
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('change_gatepass')]
         elif self.action == 'destroy':
-            return [IsAuthenticated(), HasPermission('delete_gatepass')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('delete_gatepass')]
+        return [IsAuthenticated(), IsModuleEnabled('gatepass')]
 
     def get_queryset(self):
         """Filter gate passes by active branch from session"""

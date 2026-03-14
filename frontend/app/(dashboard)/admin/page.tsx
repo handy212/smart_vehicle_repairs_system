@@ -130,6 +130,17 @@ export default function AdminDashboardPage() {
                   </div>
                 </Button>
               </Link>
+              <Link href="/admin/modules">
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-muted border-border shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-1">
+                    <Package className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="text-center">
+                    <span className="font-semibold text-sm block">Modules</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">Toggle features</span>
+                  </div>
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

@@ -106,6 +106,7 @@ urlpatterns = [
     path('api/hr/', include(('apps.hr.urls', 'api_hr'))),  # HR Management
     path('api/portal/', include(('apps.portal.urls', 'api_portal'))),  # Customer API Portal
     path('api/feedback/', include(('apps.feedback.urls', 'api_feedback'))),  # Feedback API
+    path('api/chat/', include('apps.chat.urls')),  # Chat API
     
     # Frontend app routes (namespaced)
     path('branches/', include('apps.branches.frontend_urls', namespace='branches')),

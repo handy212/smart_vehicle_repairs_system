@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count, Q, Avg, F
 from django.utils import timezone
@@ -27,7 +28,7 @@ class AssetCategoryViewSet(viewsets.ModelViewSet):
     """ViewSet for asset categories"""
     
     queryset = AssetCategory.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('fixed-assets')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active']
     search_fields = ['name', 'description']
@@ -53,7 +54,7 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
     queryset = FixedAsset.objects.select_related(
         'category', 'branch', 'supplier', 'created_by', 'assigned_to__user'
     ).all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('fixed-assets')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'category', 'branch', 'depreciation_method', 'assigned_to']
     search_fields = ['asset_number', 'name', 'description', 'serial_number', 'manufacturer']
@@ -329,7 +330,7 @@ class DepreciationScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     
     queryset = DepreciationSchedule.objects.select_related('asset').all()
     serializer_class = DepreciationScheduleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('fixed-assets')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['asset', 'is_posted']
     ordering_fields = ['period_start_date', 'created_at']
@@ -362,7 +363,7 @@ class AssetMaintenanceViewSet(viewsets.ModelViewSet):
     queryset = AssetMaintenance.objects.select_related(
         'asset', 'invoice', 'created_by'
     ).all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('fixed-assets')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['asset', 'maintenance_type']
     ordering_fields = ['maintenance_date', 'created_at']

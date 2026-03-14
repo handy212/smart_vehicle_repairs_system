@@ -8,16 +8,61 @@ from .admin_models import SystemSettings
 
 def get_setting(key, default='', use_cache=True):
     """
-    Get a setting value by key with optional caching
-    
-    Args:
-        key (str): The setting key
-        default (str): Default value if setting doesn't exist
-        use_cache (bool): Whether to use cache
-    
-    Returns:
-        str: The setting value
+    Get a setting value by key with optional caching.
+    PRIORITY: Django Settings (.env) > Database > Default
     """
+    from django.conf import settings
+    
+    # 1. Check if mapping exists in Django settings (.env)
+    # Most secret keys are mapped in settings.py
+    env_mapping = {
+        'email_host': 'EMAIL_HOST',
+        'email_port': 'EMAIL_PORT',
+        'email_username': 'EMAIL_HOST_USER',
+        'email_password': 'EMAIL_HOST_PASSWORD',
+        'email_use_tls': 'EMAIL_USE_TLS',
+        'email_use_ssl': 'EMAIL_USE_SSL',
+        'hubtel_client_id': 'HUBTEL_CLIENT_ID',
+        'hubtel_client_secret': 'HUBTEL_CLIENT_SECRET',
+        'hubtel_merchant_id': 'HUBTEL_MERCHANT_ID',
+        'hubtel_api_key': 'HUBTEL_API_KEY',
+        'hubtel_api_secret': 'HUBTEL_API_SECRET',
+        'paystack_public_key': 'PAYSTACK_PUBLIC_KEY',
+        'paystack_secret_key': 'PAYSTACK_SECRET_KEY',
+        'whatsapp_access_token': 'WHATSAPP_ACCESS_TOKEN',
+        'whatsapp_phone_number_id': 'WHATSAPP_PHONE_NUMBER_ID',
+        'whatsapp_business_account_id': 'WHATSAPP_BUSINESS_ACCOUNT_ID',
+        'firebase_api_key': 'FIREBASE_API_KEY',
+        'firebase_project_id': 'FIREBASE_PROJECT_ID',
+        'firebase_messaging_sender_id': 'FIREBASE_MESSAGING_SENDER_ID',
+        'firebase_app_id': 'FIREBASE_APP_ID',
+        'firebase_credentials_path': 'FIREBASE_CREDENTIALS_PATH',
+        'recaptcha_site_key': 'RECAPTCHA_SITE_KEY',
+        'recaptcha_secret_key': 'RECAPTCHA_SECRET_KEY',
+        'google_oauth_client_id': 'GOOGLE_OAUTH_CLIENT_ID',
+        'google_oauth_client_secret': 'GOOGLE_OAUTH_CLIENT_SECRET',
+        'carapi_key': 'CARAPI_KEY',
+        'carapi_secret': 'CARAPI_SECRET',
+        'twilio_account_sid': 'TWILIO_ACCOUNT_SID',
+        'twilio_auth_token': 'TWILIO_AUTH_TOKEN',
+        'twilio_phone_number': 'TWILIO_PHONE_NUMBER',
+        'quickbooks_client_id': 'QUICKBOOKS_CLIENT_ID',
+        'quickbooks_client_secret': 'QUICKBOOKS_CLIENT_SECRET',
+        'quickbooks_sandbox_enabled': 'QUICKBOOKS_SANDBOX_ENABLED',
+        'stripe_public_key': 'STRIPE_PUBLIC_KEY',
+        'stripe_secret_key': 'STRIPE_SECRET_KEY',
+        'paypal_client_id': 'PAYPAL_CLIENT_ID',
+        'paypal_secret': 'PAYPAL_SECRET',
+    }
+    
+    if key in env_mapping:
+        env_val = getattr(settings, env_mapping[key], None)
+        if env_val is not None:
+            # Handle boolean strings from settings if necessary
+            if isinstance(env_val, bool):
+                return 'true' if env_val else 'false'
+            return str(env_val)
+
     if use_cache:
         try:
             cache_key = f'setting_{key}'
@@ -126,7 +171,8 @@ def get_branding_settings():
 
 
 def get_email_settings():
-    """Get all email settings"""
+    """Get all email settings, prioritizing environment variables"""
+    # Keys handled by get_setting priority logic
     keys = [
         'email_enabled',
         'email_backend',
@@ -150,7 +196,16 @@ def get_email_settings():
         'email_use_ssl': 'false',
     }
     
-    return get_settings(keys, defaults)
+    settings_dict = get_settings(keys, defaults)
+    
+    # Extra layer: override from Django settings directly for core SMTP props
+    from django.conf import settings
+    settings_dict['email_host'] = getattr(settings, 'EMAIL_HOST', settings_dict['email_host'])
+    settings_dict['email_port'] = str(getattr(settings, 'EMAIL_PORT', settings_dict['email_port']))
+    settings_dict['email_username'] = getattr(settings, 'EMAIL_HOST_USER', settings_dict['email_username'])
+    settings_dict['email_password'] = getattr(settings, 'EMAIL_HOST_PASSWORD', settings_dict['email_password'])
+    
+    return settings_dict
 
 
 def get_sms_settings():

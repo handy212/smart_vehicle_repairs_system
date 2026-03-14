@@ -22,6 +22,7 @@ from apps.branches.utils import (
     get_user_accessible_branches,
     resolve_branch,
 )
+from apps.accounts.permissions import IsModuleEnabled
 
 
 def _filter_branch_queryset(queryset, request, use_active_branch=True):
@@ -47,7 +48,7 @@ def _get_branch_ids(request, use_active_branch=True):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def dashboard_overview(request):
     """
     Get comprehensive dashboard overview with key metrics
@@ -327,7 +328,7 @@ def dashboard_overview(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def revenue_report(request):
     """
     Detailed revenue report with breakdown by period, service type, and technician
@@ -529,7 +530,7 @@ def revenue_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def profit_margin_report(request):
     """
     Calculate profit margins by analyzing revenue vs costs
@@ -608,7 +609,7 @@ def profit_margin_report(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def work_order_statistics(request):
     """
     Comprehensive work order statistics
@@ -722,7 +723,7 @@ def work_order_statistics(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def technician_performance(request):
     """
     Technician performance metrics including efficiency
@@ -826,7 +827,7 @@ def technician_performance(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def appointment_statistics(request):
     """
     Appointment statistics including no-show rate
@@ -885,7 +886,7 @@ def appointment_statistics(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def inventory_valuation(request):
     """
     Calculate total inventory value
@@ -937,7 +938,7 @@ def inventory_valuation(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def inventory_turnover(request):
     """
     Calculate inventory turnover rates
@@ -1006,7 +1007,7 @@ def inventory_turnover(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def low_stock_report(request):
     """
     Get low stock items that need reordering
@@ -1055,7 +1056,7 @@ def low_stock_report(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def customer_statistics(request):
     """
     Customer statistics and retention metrics
@@ -1156,7 +1157,7 @@ def customer_statistics(request):
 # ============================================================================
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def vehicle_statistics(request):
     """
     Vehicle statistics by make, model, year
@@ -1263,7 +1264,7 @@ def vehicle_statistics(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def subscription_analytics(request):
     """
     Comprehensive subscription analytics and metrics
@@ -1413,7 +1414,7 @@ def subscription_analytics(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def service_due_report(request):
     """
     Vehicles due for service based on time/mileage
@@ -1491,7 +1492,7 @@ def service_due_report(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
 def service_bundle_popularity(request):
     """
     Detailed report on service bundle popularity and revenue
