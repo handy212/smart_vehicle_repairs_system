@@ -201,7 +201,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             'requires_approval', 'is_warranty', 'is_recall',
             'is_customer_waiting', 'quality_check_required',
             'is_warranty_rework', 'related_work_order', 'warranty_reason',
-            'maintenance_type', 'service_type'
+            'maintenance_type', 'service_type', 'service_bundle'
         ]
     
     def validate(self, data):
@@ -443,7 +443,7 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'quality_check_required', 'quality_check_completed',
             'quality_check_by', 'quality_check_notes', 'quality_check_passed',
             'is_customer_waiting',
-            'maintenance_type', 'service_type'
+            'maintenance_type', 'service_type', 'service_bundle'
         ]
     
     def __init__(self, *args, **kwargs):

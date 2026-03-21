@@ -308,9 +308,14 @@ class VehicleViewSet(viewsets.ModelViewSet):
             ).order_by('progression_order').first()
             
             if first_service:
+                # Find linked bundle
+                from apps.inventory.models import ServiceBundle
+                bundle = ServiceBundle.objects.filter(service_type=first_service, is_active=True).first()
+                
                 return Response({
                     'suggested_service_id': first_service.id,
                     'suggested_service_name': first_service.name,
+                    'suggested_bundle_id': bundle.id if bundle else None,
                     'reason': "No previous routine service history found.",
                     'last_service_name': None,
                     'is_repeat': False
@@ -329,9 +334,14 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 progression_order__gt=0
             ).order_by('progression_order').first()
             
+        # Find linked bundle
+        from apps.inventory.models import ServiceBundle
+        bundle = ServiceBundle.objects.filter(service_type=next_service, is_active=True).first()
+            
         return Response({
             'suggested_service_id': next_service.id,
             'suggested_service_name': next_service.name,
+            'suggested_bundle_id': bundle.id if bundle else None,
             'reason': f"Last service was {latest_schedule.service_type.name} on {latest_schedule.last_service_date}.",
             'last_service_id': latest_schedule.service_type.id,
             'last_service_name': latest_schedule.service_type.name,

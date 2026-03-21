@@ -227,6 +227,7 @@ export const vehiclesApi = {
   getSuggestedService: async (id: number): Promise<{
     suggested_service_id: number;
     suggested_service_name: string;
+    suggested_bundle_id?: number | null;
     reason: string;
     last_service_id?: number;
     last_service_name?: string;

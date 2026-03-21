@@ -42,6 +42,27 @@ class Command(BaseCommand):
         # Predefined service types with default intervals
         service_types = [
             {
+                'name': 'Minor Service',
+                'description': 'Routine Minor Service - Level 1',
+                'default_interval_months': 3,
+                'default_interval_miles': 5000,
+                'progression_order': 1,
+            },
+            {
+                'name': 'Medium Service',
+                'description': 'Routine Medium Service - Level 2',
+                'default_interval_months': 3,
+                'default_interval_miles': 10000,
+                'progression_order': 2,
+            },
+            {
+                'name': 'Major Service',
+                'description': 'Routine Major Service - Level 3',
+                'default_interval_months': 3,
+                'default_interval_miles': 20000,
+                'progression_order': 3,
+            },
+            {
                 'name': 'Oil Change',
                 'description': 'Regular engine oil and filter change',
                 'default_interval_months': 3,
@@ -147,6 +168,7 @@ class Command(BaseCommand):
                     description=service_data['description'],
                     default_interval_months=service_data['default_interval_months'],
                     default_interval_miles=service_data['default_interval_miles'],
+                    progression_order=service_data.get('progression_order', 0),
                     is_predefined=True,
                     is_active=True,
                     created_by=system_user

@@ -7,6 +7,7 @@ command to update templates or recreate them if needed.
 """
 from django.core.management.base import BaseCommand
 from apps.notifications_app.models import NotificationTemplate
+from apps.accounts.management.commands._auditlog_utils import disable_auditlog
 
 
 class Command(BaseCommand):
@@ -218,24 +219,25 @@ We appreciate your immediate attention to this matter.''',
         created_count = 0
         updated_count = 0
 
-        for template_data in templates:
-            template, created = NotificationTemplate.objects.update_or_create(
-                name=template_data['name'],
-                template_type=template_data['template_type'],
-                channel=template_data['channel'],
-                defaults={
-                    'subject': template_data.get('subject', ''),
-                    'body': template_data['body'],
-                    'html_body': template_data.get('html_body', ''),
-                    'is_active': True,
-                }
-            )
-            if created:
-                created_count += 1
-                self.stdout.write(self.style.SUCCESS(f'Created template: {template.name}'))
-            else:
-                updated_count += 1
-                self.stdout.write(self.style.SUCCESS(f'Updated template: {template.name}'))
+        with disable_auditlog():
+            for template_data in templates:
+                template, created = NotificationTemplate.objects.update_or_create(
+                    name=template_data['name'],
+                    template_type=template_data['template_type'],
+                    channel=template_data['channel'],
+                    defaults={
+                        'subject': template_data.get('subject', ''),
+                        'body': template_data['body'],
+                        'html_body': template_data.get('html_body', ''),
+                        'is_active': True,
+                    }
+                )
+                if created:
+                    created_count += 1
+                    self.stdout.write(self.style.SUCCESS(f'Created template: {template.name}'))
+                else:
+                    updated_count += 1
+                    self.stdout.write(self.style.SUCCESS(f'Updated template: {template.name}'))
 
         self.stdout.write(
             self.style.SUCCESS(

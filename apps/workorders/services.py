@@ -7,10 +7,24 @@ def apply_service_bundle(work_order):
     """
     Apply service bundle parts to a work order if it's a routine maintenance type.
     """
-    if work_order.maintenance_type == 'routine' and work_order.service_type:
+    if work_order.maintenance_type == 'routine':
         try:
-            # Find bundle linked to this service type
-            bundle = ServiceBundle.objects.filter(service_type=work_order.service_type, is_active=True).first()
+            bundle = None
+            
+            # 1. Prefer explicit service_bundle if provided
+            if work_order.service_bundle:
+                bundle = work_order.service_bundle
+                # Ensure service_type is also set for other logic/reporting
+                if not work_order.service_type and bundle.service_type:
+                    work_order.service_type = bundle.service_type
+                    work_order.save(update_fields=['service_type'])
+            
+            # 2. Fallback to finding bundle via service_type
+            elif work_order.service_type:
+                bundle = ServiceBundle.objects.filter(service_type=work_order.service_type, is_active=True).first()
+                if bundle:
+                    work_order.service_bundle = bundle
+                    work_order.save(update_fields=['service_bundle'])
             
             if bundle:
                 # Create note

@@ -43,6 +43,7 @@ const workOrderSchema = z.object({
   odometer_in: z.number().min(0),
   maintenance_type: z.enum(["general", "routine"]),
   service_type: z.number().optional(),
+  service_bundle: z.number().optional(),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
@@ -209,6 +210,7 @@ export default function NewWorkOrderPage() {
   const [suggestedService, setSuggestedService] = useState<{
     suggested_service_id: number;
     suggested_service_name: string;
+    suggested_bundle_id?: number | null;
     reason: string;
     last_service_id?: number;
     last_service_name?: string;
@@ -236,6 +238,7 @@ export default function NewWorkOrderPage() {
       odometer_in: 0,
       customer_concerns: "",
       maintenance_type: "general",
+      service_bundle: undefined,
     },
   });
 
@@ -312,6 +315,11 @@ export default function NewWorkOrderPage() {
       vehiclesApi.getSuggestedService(vehicle)
         .then(data => {
           setSuggestedService(data);
+          // If maintenance type is routine and nothing is selected yet, pre-select suggested bundle
+          if (watch("maintenance_type") === "routine" && !watch("service_bundle") && data.suggested_bundle_id) {
+            setValue("service_bundle", data.suggested_bundle_id);
+            setValue("service_type", data.suggested_service_id);
+          }
         })
         .catch(err => {
           console.error("Error fetching suggested service:", err);
@@ -955,26 +963,31 @@ export default function NewWorkOrderPage() {
                         )}
                       </div>
                       <Select
-                        value={watch("service_type")?.toString()}
+                        value={watch("service_bundle")?.toString()}
                         onValueChange={(val) => {
                           const bundleId = parseInt(val);
-                          setValue("service_type", bundleId);
+                          setValue("service_bundle", bundleId);
 
-                          // Check for progression logic (optional, keep if applicable)
-                          if (suggestedService) {
-                            if (suggestedService.last_service_id === bundleId) {
-                              setProgressionWarning(`Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`);
-                            } else if (suggestedService.suggested_service_id !== bundleId) {
-                              setProgressionWarning(`Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`);
-                            } else {
-                              setProgressionWarning(null);
-                            }
-                          }
-
-                          // Auto-fill concerns if empty - use bundle name
+                          // Find selected bundle and set service_type
                           const bundle = bundles.find((b: ServiceBundle) => b.id === bundleId);
-                          if (bundle && (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform"))) {
-                            setValue("customer_concerns", `Perform ${bundle.name}`);
+                          if (bundle && bundle.service_type) {
+                            setValue("service_type", bundle.service_type);
+
+                            // Check for progression logic
+                            if (suggestedService) {
+                              if (suggestedService.last_service_id === bundle.service_type) {
+                                setProgressionWarning(`Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`);
+                              } else if (suggestedService.suggested_service_id !== bundle.service_type) {
+                                setProgressionWarning(`Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`);
+                              } else {
+                                setProgressionWarning(null);
+                              }
+                            }
+
+                            // Auto-fill concerns if empty - use bundle name
+                            if (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform")) {
+                              setValue("customer_concerns", `Perform ${bundle.name}`);
+                            }
                           }
                         }}
                       >
