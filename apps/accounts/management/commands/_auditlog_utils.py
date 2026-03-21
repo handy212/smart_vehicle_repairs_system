@@ -10,25 +10,29 @@ def disable_auditlog():
     """
     Temporarily disconnect auditlog signals to avoid encoding errors
     (e.g. SQL_ASCII vs UTF8) on production databases during seeding.
-    Works across multiple versions of django-auditlog.
     """
     try:
-        from auditlog.receivers import log_create, log_update, pre_log_delete
-        from django.db.models.signals import post_save, pre_delete
-
-        # Disconnect auditlog signals
-        post_save.disconnect(log_create)
-        post_save.disconnect(log_update)
-        pre_delete.disconnect(pre_log_delete)
-
-        try:
-            yield
-        finally:
-            # Reconnect after seeding
-            post_save.connect(log_create)
-            post_save.connect(log_update)
-            pre_delete.connect(pre_log_delete)
-
-    except (ImportError, Exception):
-        # Auditlog not installed or receiver names differ — run without disabling
+        from auditlog.registry import auditlog
+        
+        # Aggressive approach: Clear all registered models temporarily
+        if hasattr(auditlog, '_models'):
+            original_models = auditlog._models.copy()
+            auditlog._models.clear()
+            try:
+                yield
+            finally:
+                auditlog._models.update(original_models)
+        else:
+            # Fallback for different versions: Try to use disable_signals if it exists
+            if hasattr(auditlog, 'disable_signals'):
+                with auditlog.disable_signals():
+                    yield
+            else:
+                # If all else fails, run without disabling
+                yield
+    except ImportError:
+        # Auditlog not installed — run without disabling
+        yield
+    except Exception:
+        # Catch any other errors to ensure seeding completes
         yield

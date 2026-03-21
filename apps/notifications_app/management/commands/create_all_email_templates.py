@@ -991,84 +991,85 @@ Best regards,
         created_count = 0
         updated_count = 0
 
-        # Process each template type
-        for template_type, template_def in template_definitions.items():
-            template, created = NotificationTemplate.objects.update_or_create(
-                template_type=template_type,
-                channel='email',
-                defaults={
-                    'name': template_def['name'],
-                    'subject': template_def['subject'],
-                    'body': template_def['body'],
-                    'html_body': template_def['html_body'],
-                    'is_active': True,
-                    'variables': {
-                        'customer_name': "Customer's full name or company name",
-                        'company_name': 'Your company name',
-                        'work_order_number': 'Work order number',
-                        'vehicle': 'Vehicle details (year, make, model)',
-                        'invoice_number': 'Invoice number',
-                        'total': 'Total amount',
-                        'due_date': 'Due date',
-                        'balance_due': 'Balance due',
-                        'invoice_link': 'URL to view invoice',
-                        'appointment_date': 'Appointment date',
-                        'appointment_time': 'Appointment time',
-                        'service_description': 'Service description',
-                        'technician_name': 'Technician name',
-                        'reason': 'Cancellation reason',
-                        'estimated_completion': 'Estimated completion date/time',
-                        'completion_date': 'Completion date',
-                        'total_amount': 'Total amount',
-                        'estimate_amount': 'Estimate amount',
-                        'ready_time': 'Ready time',
-                        'pickup_location': 'Pickup location',
-                        'inspection_number': 'Inspection number',
-                        'inspection_date': 'Inspection date',
-                        'inspection_link': 'URL to view inspection',
-                        'portal_link': 'URL to customer portal inspection page',
-                        'vehicle_display': 'Vehicle display (year, make, model)',
-                        'part_name': 'Part name',
-                        'part_number': 'Part number',
-                        'current_stock': 'Current stock level',
-                        'min_stock': 'Minimum stock level',
-                        'reorder_quantity': 'Recommended reorder quantity',
-                        'service_type': 'Service type',
-                        'miles_remaining': 'Miles remaining',
-                        'quantity': 'Part quantity',
-                        'estimate_number': 'Estimate number',
-                        'days_until_expiration': 'Days until expiration',
-                        'description': 'Estimate description',
-                        'vehicle_display': 'Vehicle display (year, make, model)',
-                        'user_name': 'User full name',
-                        'email': 'User email address',
-                        'username': 'Username',
-                        'password': 'User password',
-                        'new_password': 'New password',
-                        'role': 'User role',
-                        'branch_info': 'Branch information',
-                        'login_url': 'Login page URL',
-                        'reset_link': 'Password reset link URL',
-                        'po_number': 'Purchase Order number',
-                        'supplier': 'Supplier name',
-                        'transfer_number': 'Stock Transfer number',
-                        'source_branch': 'Source branch name',
-                        'destination_branch': 'Destination branch name',
-                        'requested_by': 'Name of requestor',
-                    },
-                    'created_by': created_by_user,
-                }
-            )
-
-            if created:
-                created_count += 1
-                self.stdout.write(
-                    self.style.SUCCESS(f'✓ Created template: {template_type}')
+        # Process each template type, bypassing auditlog if present to avoid SQL_ASCII issues
+        with disable_auditlog():
+            for template_type, template_def in template_definitions.items():
+                template, created = NotificationTemplate.objects.update_or_create(
+                    template_type=template_type,
+                    channel='email',
+                    defaults={
+                        'name': template_def['name'],
+                        'subject': template_def['subject'],
+                        'body': template_def['body'],
+                        'html_body': template_def['html_body'],
+                        'is_active': True,
+                        'variables': {
+                            'customer_name': "Customer's full name or company name",
+                            'company_name': 'Your company name',
+                            'work_order_number': 'Work order number',
+                            'vehicle': 'Vehicle details (year, make, model)',
+                            'invoice_number': 'Invoice number',
+                            'total': 'Total amount',
+                            'due_date': 'Due date',
+                            'balance_due': 'Balance due',
+                            'invoice_link': 'URL to view invoice',
+                            'appointment_date': 'Appointment date',
+                            'appointment_time': 'Appointment time',
+                            'service_description': 'Service description',
+                            'technician_name': 'Technician name',
+                            'reason': 'Cancellation reason',
+                            'estimated_completion': 'Estimated completion date/time',
+                            'completion_date': 'Completion date',
+                            'total_amount': 'Total amount',
+                            'estimate_amount': 'Estimate amount',
+                            'ready_time': 'Ready time',
+                            'pickup_location': 'Pickup location',
+                            'inspection_number': 'Inspection number',
+                            'inspection_date': 'Inspection date',
+                            'inspection_link': 'URL to view inspection',
+                            'portal_link': 'URL to customer portal inspection page',
+                            'vehicle_display': 'Vehicle display (year, make, model)',
+                            'part_name': 'Part name',
+                            'part_number': 'Part number',
+                            'current_stock': 'Current stock level',
+                            'min_stock': 'Minimum stock level',
+                            'reorder_quantity': 'Recommended reorder quantity',
+                            'service_type': 'Service type',
+                            'miles_remaining': 'Miles remaining',
+                            'quantity': 'Part quantity',
+                            'estimate_number': 'Estimate number',
+                            'days_until_expiration': 'Days until expiration',
+                            'description': 'Estimate description',
+                            'vehicle_display': 'Vehicle display (year, make, model)',
+                            'user_name': 'User full name',
+                            'email': 'User email address',
+                            'username': 'Username',
+                            'password': 'User password',
+                            'new_password': 'New password',
+                            'role': 'User role',
+                            'branch_info': 'Branch information',
+                            'login_url': 'Login page URL',
+                            'reset_link': 'Password reset link URL',
+                            'po_number': 'Purchase Order number',
+                            'supplier': 'Supplier name',
+                            'transfer_number': 'Stock Transfer number',
+                            'source_branch': 'Source branch name',
+                            'destination_branch': 'Destination branch name',
+                            'requested_by': 'Name of requestor',
+                        },
+                        'created_by': created_by_user,
+                    }
                 )
-            else:
-                updated_count += 1
-                self.stdout.write(
-                    self.style.WARNING(f'→ Updated existing template: {template_type}')
+
+                if created:
+                    created_count += 1
+                    self.stdout.write(
+                        self.style.SUCCESS(f'✓ Created template: {template_type}')
+                    )
+                else:
+                    updated_count += 1
+                    self.stdout.write(
+                        self.style.WARNING(f'→ Updated existing template: {template_type}')
                 )
 
         # Note: Invoice and payment templates are already created by migration 0002
