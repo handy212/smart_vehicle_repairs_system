@@ -182,6 +182,43 @@ if [ "$REBUILD_BACKEND" = true ]; then
         # Collect static files
         echo -e "${YELLOW}Collecting static files...${NC}"
         python manage.py collectstatic --noinput --clear
+
+        # Initialize and seed system data
+        echo -e "${YELLOW}Initializing system roles and permissions...${NC}"
+        python manage.py init_permissions
+        
+        echo -e "${YELLOW}Initializing system settings...${NC}"
+        python manage.py init_settings
+        
+        echo -e "${YELLOW}Seeding system modules...${NC}"
+        python manage.py seed_modules
+        
+        echo -e "${YELLOW}Ensuring super-admin account exists...${NC}"
+        python manage.py create_super_admin
+        
+        echo -e "${YELLOW}Initializing vehicle service types...${NC}"
+        python manage.py init_service_types
+
+        echo -e "${YELLOW}Seeding AA membership packages...${NC}"
+        python manage.py seed_aa_membership
+
+        echo -e "${YELLOW}Seeding HR leave types...${NC}"
+        python manage.py seed_leave_types
+
+        echo -e "${YELLOW}Populating comprehensive diagnostic code library...${NC}"
+        python manage.py populate_comprehensive_code_library
+        
+        echo -e "${YELLOW}Syncing additional diagnostic codes from APIs...${NC}"
+        python manage.py sync_code_library --limit 50
+        
+        echo -e "${YELLOW}Creating email notification templates...${NC}"
+        python manage.py create_all_email_templates
+        
+        echo -e "${YELLOW}Setting up invoice email templates...${NC}"
+        python manage.py setup_invoice_email_templates
+        
+        echo -e "${YELLOW}Creating vehicle inspection templates...${NC}"
+        python manage.py create_inspection_templates
         
         deactivate
     fi
