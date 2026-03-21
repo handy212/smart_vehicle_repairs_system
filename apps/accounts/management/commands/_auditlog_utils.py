@@ -8,31 +8,24 @@ from contextlib import contextmanager
 @contextmanager
 def disable_auditlog():
     """
-    Temporarily disconnect auditlog signals to avoid encoding errors
-    (e.g. SQL_ASCII vs UTF8) on production databases during seeding.
+    Aggressively disable auditlog by monkeypatching its core logging function.
+    This works even when signals are already connected or decorated.
     """
+    original_create_log_entry = None
+    auditlog_receivers = None
+    
     try:
-        from auditlog.registry import auditlog
-        
-        # Aggressive approach: Clear all registered models temporarily
-        if hasattr(auditlog, '_models'):
-            original_models = auditlog._models.copy()
-            auditlog._models.clear()
-            try:
-                yield
-            finally:
-                auditlog._models.update(original_models)
-        else:
-            # Fallback for different versions: Try to use disable_signals if it exists
-            if hasattr(auditlog, 'disable_signals'):
-                with auditlog.disable_signals():
-                    yield
-            else:
-                # If all else fails, run without disabling
-                yield
-    except ImportError:
-        # Auditlog not installed — run without disabling
+        from auditlog import receivers as auditlog_receivers
+        if hasattr(auditlog_receivers, '_create_log_entry'):
+            original_create_log_entry = auditlog_receivers._create_log_entry
+            # Replace with a no-op
+            auditlog_receivers._create_log_entry = lambda *args, **kwargs: None
+            
         yield
     except Exception:
-        # Catch any other errors to ensure seeding completes
+        # Catch errors but don't re-raise immediately so finally can restore
         yield
+    finally:
+        # Restore the original function
+        if auditlog_receivers and original_create_log_entry:
+            auditlog_receivers._create_log_entry = original_create_log_entry
