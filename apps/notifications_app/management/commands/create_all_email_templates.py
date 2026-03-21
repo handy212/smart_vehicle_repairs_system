@@ -5,11 +5,7 @@ This ensures all notification types have default email templates.
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from apps.notifications_app.models import NotificationTemplate
-try:
-    from auditlog.registry import auditlog
-    HAS_AUDITLOG = True
-except ImportError:
-    HAS_AUDITLOG = False
+from apps.accounts.management.commands._auditlog_utils import disable_auditlog
 
 User = get_user_model()
 

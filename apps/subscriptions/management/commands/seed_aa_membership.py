@@ -1,11 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from apps.subscriptions.models import Package
-try:
-    from auditlog.registry import auditlog
-    HAS_AUDITLOG = True
-except ImportError:
-    HAS_AUDITLOG = False
+from apps.accounts.management.commands._auditlog_utils import disable_auditlog
 
 
 class Command(BaseCommand):
@@ -92,14 +88,8 @@ class Command(BaseCommand):
     ]
 
     def handle(self, *args, **options):
-        def run_seed():
+        with disable_auditlog():
             self._do_seed()
-
-        if HAS_AUDITLOG:
-            with auditlog.disable_signals():
-                run_seed()
-        else:
-            run_seed()
 
     def _do_seed(self):
         User = get_user_model()

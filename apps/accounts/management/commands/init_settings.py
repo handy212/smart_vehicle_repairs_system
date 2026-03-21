@@ -4,11 +4,7 @@ Initialize System Settings with predefined values
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from apps.accounts.admin_models import SystemSettings
-try:
-    from auditlog.registry import auditlog
-    HAS_AUDITLOG = True
-except ImportError:
-    HAS_AUDITLOG = False
+from apps.accounts.management.commands._auditlog_utils import disable_auditlog
 
 
 class Command(BaseCommand):
@@ -17,15 +13,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Initializing system settings...'))
         
-        def run_init():
-            with transaction.atomic():
-                self._do_init()
-
-        if HAS_AUDITLOG:
-            with auditlog.disable_signals():
-                run_init()
-        else:
-            run_init()
+        with disable_auditlog():
+            self._do_init()
 
     def _do_init(self):
         with transaction.atomic():
