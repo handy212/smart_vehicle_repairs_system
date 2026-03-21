@@ -6,6 +6,11 @@ Usage:
 """
 from django.core.management.base import BaseCommand
 from apps.vehicles.models import ServiceType
+try:
+    from auditlog.registry import auditlog
+    HAS_AUDITLOG = True
+except ImportError:
+    HAS_AUDITLOG = False
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -22,6 +27,18 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        self.stdout.write(self.style.SUCCESS('Initializing vehicle service types...'))
+        
+        def run_init():
+            self._do_init(*args, **options)
+
+        if HAS_AUDITLOG:
+            with auditlog.disable_signals():
+                run_init()
+        else:
+            run_init()
+
+    def _do_init(self, *args, **options):
         overwrite = options['overwrite']
         
         # Get or create a system user for predefined types

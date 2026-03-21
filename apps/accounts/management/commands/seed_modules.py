@@ -1,10 +1,25 @@
 from django.core.management.base import BaseCommand
 from apps.accounts.admin_models import SystemModule
+try:
+    from auditlog.registry import auditlog
+    HAS_AUDITLOG = True
+except ImportError:
+    HAS_AUDITLOG = False
 
 class Command(BaseCommand):
     help = 'Seed initial system modules'
 
     def handle(self, *args, **options):
+        def run_seed():
+            self._do_seed()
+
+        if HAS_AUDITLOG:
+            with auditlog.disable_signals():
+                run_seed()
+        else:
+            run_seed()
+
+    def _do_seed(self):
         modules = [
             {'name': 'Dashboard', 'slug': 'dashboard', 'is_enabled': True, 'icon': 'Dashboard', 'description': 'Main system dashboard'},
             {'name': 'Customers', 'slug': 'customers', 'is_enabled': True, 'icon': 'Users', 'description': 'Customer management'},

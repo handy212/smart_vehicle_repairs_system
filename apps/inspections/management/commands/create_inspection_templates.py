@@ -4,6 +4,11 @@ Management command to create pre-defined inspection templates
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from apps.inspections.models import InspectionTemplate, InspectionCategory, InspectionItem
+try:
+    from auditlog.registry import auditlog
+    HAS_AUDITLOG = True
+except ImportError:
+    HAS_AUDITLOG = False
 
 User = get_user_model()
 
@@ -12,8 +17,18 @@ class Command(BaseCommand):
     help = 'Creates pre-defined inspection checklist templates'
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS('Creating pre-defined inspection templates...'))
+        self.stdout.write(self.style.SUCCESS('Creating vehicle inspection templates...'))
         
+        def run_create():
+            self._do_create()
+
+        if HAS_AUDITLOG:
+            with auditlog.disable_signals():
+                run_create()
+        else:
+            run_create()
+
+    def _do_create(self):
         # Get or create a system user for templates
         system_user, created = User.objects.get_or_create(
             username='system',

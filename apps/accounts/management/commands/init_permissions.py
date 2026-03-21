@@ -6,6 +6,11 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from apps.accounts.permission_models import Permission, Role
 from config import roles as config_roles
+try:
+    from auditlog.registry import auditlog
+    HAS_AUDITLOG = True
+except ImportError:
+    HAS_AUDITLOG = False
 
 
 class Command(BaseCommand):
@@ -14,6 +19,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Initializing comprehensive permissions and roles...'))
         
+        def run_init():
+            with transaction.atomic():
+                # ... existing logic wrapped in a function ...
+                self._do_init()
+
+        if HAS_AUDITLOG:
+            with auditlog.disable_signals():
+                run_init()
+        else:
+            run_init()
+
+    def _do_init(self):
         with transaction.atomic():
             # Comprehensive permission definitions covering all modules and operations
             # Format: 'code': ('category', 'Display Name', 'Description')

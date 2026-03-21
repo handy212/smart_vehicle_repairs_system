@@ -3,6 +3,11 @@ Seed default leave types for the HR module.
 """
 from django.core.management.base import BaseCommand
 from apps.hr.models import LeaveType
+try:
+    from auditlog.registry import auditlog
+    HAS_AUDITLOG = True
+except ImportError:
+    HAS_AUDITLOG = False
 
 
 DEFAULT_LEAVE_TYPES = [
@@ -85,6 +90,16 @@ class Command(BaseCommand):
     help = 'Seed default leave types for HR module'
 
     def handle(self, *args, **options):
+        def run_seed():
+            self._do_seed()
+
+        if HAS_AUDITLOG:
+            with auditlog.disable_signals():
+                run_seed()
+        else:
+            run_seed()
+
+    def _do_seed(self):
         created_count = 0
         updated_count = 0
 
