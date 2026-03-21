@@ -13,6 +13,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - svr_network
+    ports:
+      - "5433:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-svr_user}"]
@@ -29,6 +31,8 @@ services:
       - redis_data:/data
     networks:
       - svr_network
+    ports:
+      - "6379:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]

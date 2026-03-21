@@ -27,8 +27,7 @@ export function useModules() {
    */
   const isModuleEnabled = useMemo(() => {
     return (slug: string) => {
-      // Super-admin bypass - they see everything even if modules are disabled
-      if (user?.role === 'super-admin') return true;
+      // No bypass for super-admin - they should respect system-wide module settings
 
       if (!modules.length) return true; // Default to true if not loaded yet
       const module = modules.find((m) => m.slug === slug);

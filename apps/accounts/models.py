@@ -88,6 +88,10 @@ class User(AbstractUser):
     two_factor_enabled = models.BooleanField(_('2FA enabled'), default=False)
     two_factor_secret = models.CharField(_('2FA secret'), max_length=32, blank=True)
     
+    # Presence tracking
+    is_online = models.BooleanField(_('is online'), default=False)
+    last_seen = models.DateTimeField(_('last seen'), blank=True, null=True)
+    
     # Metadata
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)

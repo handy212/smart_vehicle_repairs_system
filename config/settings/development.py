@@ -8,7 +8,7 @@ from corsheaders.defaults import default_headers
 DEBUG = True
 
 # Allow all hosts in development
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['*']
 
 # CORS Settings for development
 CORS_ALLOW_ALL_ORIGINS = True

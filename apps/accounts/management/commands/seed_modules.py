@@ -24,6 +24,7 @@ class Command(BaseCommand):
             {'name': 'Diagnosis', 'slug': 'diagnosis', 'is_enabled': True, 'icon': 'Stethoscope', 'description': 'Vehicle diagnosis'},
             {'name': 'Reports', 'slug': 'reports', 'is_enabled': True, 'icon': 'BarChart', 'description': 'System-wide reports'},
             {'name': 'SMS Console', 'slug': 'sms', 'is_enabled': True, 'icon': 'MessageSquare', 'description': 'SMS communication console'},
+            {'name': 'Live Chat', 'slug': 'chat', 'is_enabled': True, 'icon': 'MessageSquare', 'description': 'Real-time communication between staff, technicians, and clients'},
         ]
 
         for module_data in modules:

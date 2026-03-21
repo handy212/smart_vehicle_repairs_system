@@ -79,11 +79,11 @@ export default function DashboardLayoutWrapper({
       "hr", "inventory", "accounting", "billing", "roadside", 
       "diagnosis", "inspections", "fixed-assets", "subscriptions",
       "reports", "sms", "appointments", "workorders", "gatepass",
-      "customers", "vehicles"
+      "customers", "vehicles", "chat"
     ];
 
     if (topSegment && moduleSegments.includes(topSegment)) {
-      if (!isModuleEnabled(topSegment) && user.role !== "super-admin") {
+      if (!isModuleEnabled(topSegment)) {
         router.push("/dashboard");
       }
     }

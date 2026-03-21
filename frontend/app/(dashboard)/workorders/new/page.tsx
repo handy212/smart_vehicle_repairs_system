@@ -9,6 +9,7 @@ import { workordersApi } from "@/lib/api/workorders";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { appointmentsApi } from "@/lib/api/appointments";
+import { inventoryApi, ServiceBundle } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertCircle, Check, User, XCircle, AlertTriangle, CheckCircle } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { AxiosError } from "axios";
 import {
@@ -92,11 +93,22 @@ export default function NewWorkOrderPage() {
 
   // ... (state vars)
 
-  // Fetch service types
+  // Fetch service types (for legacy or fallback)
   const { data: serviceTypesData } = useQuery({
     queryKey: ["serviceTypes"],
     queryFn: () => vehiclesApi.getServiceTypes(),
   });
+
+  // Fetch inventory bundles for service types
+  const { data: bundlesData } = useQuery({
+    queryKey: ["inventory", "bundles", "active"],
+    queryFn: () => inventoryApi.listBundles({ is_active: true }),
+  });
+
+  const bundles = useMemo(() => {
+    if (!bundlesData) return [];
+    return Array.isArray(bundlesData) ? bundlesData : (bundlesData as any).results || [];
+  }, [bundlesData]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(
     customerId ? parseInt(customerId) : null
@@ -945,34 +957,34 @@ export default function NewWorkOrderPage() {
                       <Select
                         value={watch("service_type")?.toString()}
                         onValueChange={(val) => {
-                          const serviceTypeId = parseInt(val);
-                          setValue("service_type", serviceTypeId);
+                          const bundleId = parseInt(val);
+                          setValue("service_type", bundleId);
 
-                          // Check for progression logic
+                          // Check for progression logic (optional, keep if applicable)
                           if (suggestedService) {
-                            if (suggestedService.last_service_id === serviceTypeId) {
+                            if (suggestedService.last_service_id === bundleId) {
                               setProgressionWarning(`Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`);
-                            } else if (suggestedService.suggested_service_id !== serviceTypeId) {
+                            } else if (suggestedService.suggested_service_id !== bundleId) {
                               setProgressionWarning(`Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`);
                             } else {
                               setProgressionWarning(null);
                             }
                           }
 
-                          // Auto-fill concerns if empty
-                          const type = serviceTypesData?.results?.find(t => t.id === serviceTypeId);
-                          if (type && (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform"))) {
-                            setValue("customer_concerns", `Perform ${type.name}`);
+                          // Auto-fill concerns if empty - use bundle name
+                          const bundle = bundles.find((b: ServiceBundle) => b.id === bundleId);
+                          if (bundle && (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform"))) {
+                            setValue("customer_concerns", `Perform ${bundle.name}`);
                           }
                         }}
                       >
                         <SelectTrigger id="service_type">
-                          <SelectValue placeholder="Select service type" />
+                          <SelectValue placeholder="Select service bundle" />
                         </SelectTrigger>
                         <SelectContent>
-                          {serviceTypesData?.results?.filter(type => type.is_active !== false).map((type) => (
-                            <SelectItem key={type.id} value={type.id.toString()}>
-                              {type.name}
+                          {bundles.map((bundle: ServiceBundle) => (
+                            <SelectItem key={bundle.id} value={bundle.id.toString()}>
+                              {bundle.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
