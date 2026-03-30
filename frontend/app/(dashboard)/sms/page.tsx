@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,35 +10,43 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/lib/hooks/useToast';
-import { Loader2, Send, Users, UserPlus, X, Phone, Search, TrendingUp, AlertCircle, DollarSign } from 'lucide-react';
+import { 
+    Loader2, Send, Users, UserPlus, X, Phone, 
+    Search, TrendingUp, AlertCircle, DollarSign,
+    Sparkles, Paperclip, Clock, Calendar, MoreVertical,
+    CheckCircle2, XCircle, Info, History
+} from 'lucide-react';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
-import smsApi, { SMSRecipient } from '@/services/sms';
-import { useQuery } from '@tanstack/react-query';
+import smsApi, { SMSRecipient, SMSHistoryItem } from '@/services/sms';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { DataTable, Column } from '@/components/shared/DataTable';
 import api from '@/lib/api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Calendar, Clock, History, FileText } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { TemplateManager } from '@/components/sms/TemplateManager';
 import { RecipientSelector } from '@/components/sms/RecipientSelector';
-import { useEffect } from 'react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils/cn';
 
-// Type for Customer Selection
+
 interface Customer {
     id: number;
     company_name: string;
-    full_name: string; // From API
-    first_name: string; // Fallback
-    last_name: string; // Fallback
+    full_name: string;
+    first_name: string;
+    last_name: string;
     email: string;
     phone: string;
 }
 
-// Temporary Customers API definition
 const customersApi = {
-
     getAll: async (params: any) => {
         const response = await api.get('/customers/customers/', { params });
         return response.data;
@@ -56,59 +64,61 @@ export default function SMSConsolePage() {
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
     const [scheduledFor, setScheduledFor] = useState('');
 
-    // Fetch Templates
+    // Queries
     const { data: templates } = useQuery({
         queryKey: ['sms-templates'],
         queryFn: () => smsApi.getTemplates(),
     });
 
-    // Fetch History
     const { data: history, refetch: refetchHistory } = useQuery({
         queryKey: ['sms-history'],
         queryFn: () => smsApi.getHistory(),
     });
 
-    // Fetch Stats
     const { data: stats } = useQuery({
         queryKey: ['sms-stats'],
         queryFn: () => smsApi.getStats(),
-        refetchInterval: 30000, // Refresh every 30 seconds
+        refetchInterval: 30000,
     });
 
-    // Fetch Balance
     const { data: balance } = useQuery({
         queryKey: ['sms-balance'],
         queryFn: () => smsApi.getBalance(),
-        refetchInterval: 60000, // Refresh every minute
+        refetchInterval: 60000,
     });
 
-    // Fetch Customers for Selection
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
+    const { data: customersData } = useQuery({
         queryKey: ['customers'],
-        queryFn: () => customersApi.getAll({ limit: 1000 }), // Get all for simplified selection
+        queryFn: () => customersApi.getAll({ limit: 1000 }),
     });
     const customers = customersData?.results || [];
 
-    // Handle URL Params for Recipients
+    // AI Assist Mutation
+    const aiAssistMutation = useMutation({
+        mutationFn: (prompt: string) => smsApi.aiAssist(prompt),
+        onSuccess: (data) => {
+            setMessage(data.suggestion);
+            toast({ title: 'AI Assist', description: 'Message suggestion generated.' });
+        },
+        onError: () => {
+            toast({ title: 'Error', description: 'Failed to generate suggestion.', variant: 'destructive' });
+        }
+    });
+
     useEffect(() => {
         const rId = searchParams.get('recipient_id');
         const rName = searchParams.get('recipient_name');
         const rPhone = searchParams.get('phone');
 
         if (rId && rName && rPhone) {
-            // Avoid adding duplicate if already exists (check by value/id)
             setRecipients(prev => {
                 if (prev.some(p => p.value === rId && p.type === 'user')) return prev;
                 return [...prev, { type: 'user', value: rId, name: `${decodeURIComponent(rName)} (${rPhone})` }];
             });
-            // Clear params to avoid re-adding on soft refresh? (Optional, maybe not needed for MVP)
         }
     }, [searchParams]);
 
-    // Handle Recipient Logic (Unified)
     const handleAddRecipient = (recipient: { type: 'user' | 'phone'; value: string; name: string }) => {
-        // Check duplicate
         if (recipients.some(r => r.value === recipient.value && r.type === recipient.type)) {
             toast({ title: 'Already added', description: 'Recipient already in list.' });
             return;
@@ -117,9 +127,7 @@ export default function SMSConsolePage() {
     };
 
     const handleRemoveRecipient = (index: number) => {
-        const newList = [...recipients];
-        newList.splice(index, 1);
-        setRecipients(newList);
+        setRecipients(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSend = async () => {
@@ -135,7 +143,6 @@ export default function SMSConsolePage() {
         setIsSending(true);
         try {
             if (recipients.length === 1) {
-                // Single Send Optimization
                 const r = recipients[0];
                 const payload = {
                     message,
@@ -145,41 +152,22 @@ export default function SMSConsolePage() {
                 await smsApi.sendSingle(payload);
                 toast({ title: scheduledFor ? 'Scheduled' : 'Sent', description: scheduledFor ? 'SMS scheduled successfully.' : 'SMS sent successfully.' });
             } else {
-                // Bulk Send
                 const response = await smsApi.sendBulk({
                     message,
                     recipients: recipients.map(r => ({ type: r.type, value: r.value })),
                     scheduled_for: scheduledFor || undefined
                 });
-
                 const failed = response.failed || (response.total - response.successful);
-                const variant = failed === 0 ? 'default' : (failed === response.total ? 'destructive' : 'default');
-
-                // Use backend message (Now includes failed count)
-                let description = response.message;
-
-                // Add first error detail if there are failures
-                if (failed > 0 && response.results) {
-
-                    const firstError = response.results.find((r: any) => !r.success)?.error;
-                    if (firstError) {
-                        description += `\nReason: ${firstError}`;
-                    }
-                }
-
                 toast({
-                    title: failed === 0 ? 'Success' : (failed === response.total ? 'All Failed' : 'Partial Success'),
-                    description: description,
-                    variant: variant
+                    title: failed === 0 ? 'Success' : 'Partial Success',
+                    description: response.message,
+                    variant: failed === response.total ? 'destructive' : 'default'
                 });
             }
-
-            // Clear form on success
             setMessage('');
             setRecipients([]);
             setScheduledFor('');
-            refetchHistory(); // Refresh history
-
+            refetchHistory();
         } catch (error: any) {
             toast({
                 title: 'Error',
@@ -191,134 +179,14 @@ export default function SMSConsolePage() {
         }
     };
 
-    // Handler for bulk customer selection
-    const handleToggleCustomerSelection = (customerId: number) => {
-        setSelectedCustomerIds(prev =>
-            prev.includes(customerId)
-                ? prev.filter(id => id !== customerId)
-                : [...prev, customerId]
-        );
-    };
-
-    const handleAddSelectedCustomers = () => {
-        const selected = customers.filter((c: Customer) => selectedCustomerIds.includes(c.id));
-        let addedCount = 0;
-
-        selected.forEach((customer: Customer) => {
-            if (!customer.phone) return;
-            if (recipients.some(r => r.value === customer.id.toString() && r.type === 'user')) return;
-
-            const name = customer.company_name || `${customer.first_name} ${customer.last_name}`;
-            setRecipients(prev => [...prev, { type: 'user', value: customer.id.toString(), name: `${name} (${customer.phone})` }]);
-            addedCount++;
-        });
-
-        if (addedCount > 0) {
-            toast({ title: 'Added', description: `${addedCount} customer(s) added to recipient list.` });
-        }
-        setSelectedCustomerIds([]);
-        setIsCustomerDialogOpen(false);
-    };
-
-    const customerColumns: Column<Customer>[] = [
-        {
-
-            accessorKey: 'checkbox' as any,
-            header: '',
-            cell: (c) => (
-                <div className="flex items-center justify-center">
-                    <input
-                        type="checkbox"
-                        checked={selectedCustomerIds.includes(c.id)}
-                        onChange={() => handleToggleCustomerSelection(c.id)}
-                        className="h-4 w-4"
-                    />
-                </div>
-            ),
-        },
-        {
-            accessorKey: 'company_name',
-            header: 'Name',
-
-            cell: (c: any) => <span>{c.company_name || c.full_name || `${c.first_name || ''} ${c.last_name || ''}`}</span>
-        },
-        {
-            accessorKey: 'phone', // Use accessor for phone
-            header: 'Phone',
-
-            cell: (c: any) => <span>{c.phone}</span>
-        },
-        {
-            header: 'Actions',
-
-            cell: (c: any) => (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                        const name = c.company_name || c.full_name || `${c.first_name || ''} ${c.last_name || ''}`;
-                        handleAddRecipient({
-                            type: 'user',
-                            value: c.id.toString(),
-                            name: `${name} (${c.phone})`
-                        });
-                    }}
-                    disabled={recipients.some(r => r.value === c.id.toString() && r.type === 'user')}
-                >
-                    Add
-                </Button>
-            )
-        }
-    ];
-
-
-    const historyColumns: Column<any>[] = [
-        {
-            accessorKey: 'recipient',
-            header: 'Recipient',
-        },
-        {
-            accessorKey: 'message',
-            header: 'Message',
-            cell: (row) => <span className="truncate max-w-[200px] block" title={row.message}>{row.message}</span>
-        },
-        {
-            accessorKey: 'created_at',
-            header: 'Date',
-            cell: (row) => new Date(row.created_at).toLocaleString()
-        },
-        {
-            accessorKey: 'status',
-            header: 'Status',
-            cell: (row) => (
-                <Badge variant={
-                    row.status === 'sent' || row.status === 'delivered' ? 'default' :
-                        row.status === 'failed' ? 'danger' : 'secondary'
-                }>
-                    {row.status}
-                </Badge>
-            )
-        }
-    ];
-
-    // Helper: Calculate SMS count and cost
     const getSMSInfo = () => {
         const length = message.length;
         if (length === 0) return { count: 0, chars: 0, cost: 0 };
-
-        // SMS segmentation logic
         const singleSMSLimit = 160;
         const multiSMSLimit = 153;
-
-        let count = 1;
-        if (length > singleSMSLimit) {
-            count = Math.ceil(length / multiSMSLimit);
-        }
-
-        // Estimated cost (adjust based on your pricing)
-        const costPerSMS = 0.05; // Example: 5 pesewas per SMS
+        let count = length > singleSMSLimit ? Math.ceil(length / multiSMSLimit) : 1;
+        const costPerSMS = 0.05;
         const cost = count * costPerSMS * recipients.length;
-
         return { count, chars: length, cost };
     };
 
@@ -326,278 +194,490 @@ export default function SMSConsolePage() {
 
     return (
         <PermissionGuard permission="send_notifications">
-            <div className="space-y-4">
-                {/* Compact Header */}
-                <div>
-                    <h1 className="text-xl font-bold text-foreground tracking-tight">SMS Console</h1>
-                    <p className="text-sm text-muted-foreground">Send SMS messages to customers</p>
+            <div className="space-y-6 max-w-[1600px] mx-auto px-4 py-4 lg:px-8">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
+                    <div>
+                        <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                            SMS Console
+                        </h1>
+                        <p className="text-sm text-muted-foreground mt-0.5">Manage customer communications and messaging stats</p>
+                    </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <Card className="shadow-sm border">
-                        <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Sent Today</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">{stats?.sent_today || 0}</p>
-                                </div>
-                                <TrendingUp className="h-8 w-8 text-green-500 opacity-20" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="shadow-sm border">
-                        <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Scheduled</p>
-                                    <p className="text-2xl font-bold text-primary mt-1">{stats?.scheduled || 0}</p>
-                                </div>
-                                <Clock className="h-8 w-8 text-primary opacity-20" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="shadow-sm border">
-                        <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Failed Today</p>
-                                    <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats?.failed_today || 0}</p>
-                                </div>
-                                <AlertCircle className="h-8 w-8 text-red-500 opacity-20" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="shadow-sm border">
-                        <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Balance</p>
-                                    <p className="text-2xl font-bold text-foreground mt-1">
-                                        {balance?.success ? `${balance.currency} ${balance.balance.toFixed(2)}` : 'N/A'}
-                                    </p>
-                                </div>
-                                <DollarSign className="h-8 w-8 text-muted-foreground opacity-20" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                {/* Stats Cards - Modern Premium Style */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                    <StatCard 
+                        label="SENT TODAY" 
+                        value={stats?.sent_today || 0} 
+                        icon={<TrendingUp className="h-5 w-5 text-green-600" />}
+                        iconBg="bg-green-100"
+                    />
+                    <StatCard 
+                        label="SCHEDULED" 
+                        value={stats?.scheduled || 0} 
+                        icon={<Clock className="h-5 w-5 text-blue-600" />}
+                        iconBg="bg-blue-100"
+                        variant="primary"
+                    />
+                    <StatCard 
+                        label="FAILED TODAY" 
+                        value={stats?.failed_today || 0} 
+                        icon={<AlertCircle className="h-5 w-5 text-red-600" />}
+                        iconBg="bg-red-100"
+                        variant="danger"
+                    />
+                    <StatCard 
+                        label="SMS BALANCE" 
+                        value={balance?.success ? balance.balance.toLocaleString() : 'N/A'} 
+                        icon={<DollarSign className="h-5 w-5 text-orange-600" />}
+                        iconBg="bg-orange-100"
+                        symbol={balance?.currency || ""}
+                    />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     {/* Left Column: Composer */}
-                    <Card className="md:col-span-2">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Compose Message</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div>
-                                <Label htmlFor="message" className="text-sm">Message</Label>
+                    <Card className="xl:col-span-2 shadow-sm border-muted/60 rounded-xl overflow-hidden glass-card">
+                        <div className="p-4 lg:p-6 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 font-semibold text-foreground">
+                                    <Send className="h-4 w-4 text-primary" />
+                                    <span>Compose Message</span>
+                                </div>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-primary h-8 hover:bg-primary/10 transition-colors"
+                                    onClick={() => aiAssistMutation.mutate(message)}
+                                    disabled={aiAssistMutation.isPending}
+                                >
+                                    {aiAssistMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                                    AI Assist
+                                </Button>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">
+                                    <span>Message Content</span>
+                                    <span>{smsInfo.chars} / 160 ({smsInfo.count} Segment)</span>
+                                </div>
                                 <Textarea
                                     id="message"
                                     placeholder="Type your message here..."
-                                    className="h-28 mt-1.5 text-sm"
+                                    className="min-h-[160px] text-sm resize-none bg-muted/20 border-muted focus:ring-primary/20 rounded-xl transition-all"
                                     value={message}
                                     onChange={(e) => setMessage(e.target.value)}
-                                    maxLength={612} // 4 SMS segments max
+                                    maxLength={612}
                                 />
-                                {/* Enhanced Character Counter */}
-                                <div className="flex items-center justify-between mt-2 text-xs">
-                                    <div className="flex items-center gap-3">
-                                        <span className={`font-medium ${smsInfo.count === 1 ? 'text-success' :
-                                            smsInfo.count === 2 ? 'text-yellow-600 dark:text-yellow-400' :
-                                                'text-primary'
-                                            }`}>
-                                            {smsInfo.chars} chars
-                                        </span>
-                                        <span className="text-muted-foreground">•</span>
-                                        <span className="text-muted-foreground">
-                                            {smsInfo.count} SMS {smsInfo.count > 1 ? 'segments' : 'segment'}
-                                        </span>
-                                        {recipients.length > 0 && (
-                                            <>
-                                                <span className="text-muted-foreground">•</span>
-                                                <span className="text-muted-foreground">
-                                                    Est. cost: GHS {smsInfo.cost.toFixed(2)}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <span className="text-muted-foreground">{612 - smsInfo.chars} left</span>
-                                </div>
                             </div>
 
-                            <div className="flex gap-3 items-end">
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <Label htmlFor="template" className="text-sm">Use Template</Label>
-                                        <TemplateManager />
-                                    </div>
-                                    <Select
-                                        value=""
-                                        onValueChange={(val) => setMessage(val)}
-                                    >
-                                        <SelectTrigger className="w-full h-9 text-sm">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-1">Use Template</Label>
+                                    <Select value="" onValueChange={(val) => setMessage(val)}>
+                                        <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-muted">
                                             <SelectValue placeholder="Select a template..." />
                                         </SelectTrigger>
                                         <SelectContent>
-
                                             {(templates as any[])?.map((t: any) => (
                                                 <SelectItem key={t.id} value={t.sms_body}>{t.name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="flex-1">
-                                    <Label htmlFor="schedule" className="mb-1 block text-sm">Schedule (Optional)</Label>
-                                    <Input
-                                        type="datetime-local"
-                                        id="schedule"
-                                        value={scheduledFor}
-                                        onChange={(e) => setScheduledFor(e.target.value)}
-                                        min={new Date().toISOString().slice(0, 16)}
-                                        className="h-9 text-sm"
-                                    />
+                                <div className="space-y-2">
+                                    <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-1">Schedule (Optional)</Label>
+                                    <div className="relative">
+                                        <Input
+                                            type="datetime-local"
+                                            value={scheduledFor}
+                                            onChange={(e) => setScheduledFor(e.target.value)}
+                                            min={new Date().toISOString().slice(0, 16)}
+                                            className="h-11 rounded-xl bg-muted/20 border-muted pr-10"
+                                        />
+                                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex justify-end">
-                                <Button onClick={handleSend} disabled={isSending || recipients.length === 0 || !message} size="sm" className="h-9">
-                                    {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (scheduledFor ? <Clock className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />)}
-                                    {scheduledFor ? 'Schedule' : 'Send'} Message ({recipients.length})
+                            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-muted-foreground hover:text-foreground h-10 px-0"
+                                    disabled={isSending}
+                                >
+                                    <Paperclip className="h-4 w-4 mr-2" />
+                                    Attach Image (MMS)
+                                </Button>
+                                <Button 
+                                    onClick={handleSend} 
+                                    disabled={isSending || recipients.length === 0 || !message} 
+                                    className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all shadow-md active:scale-95 w-full sm:w-auto"
+                                >
+                                    {isSending ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Send className="mr-2 h-4 w-4" />
+                                    )}
+                                    {scheduledFor ? 'Schedule' : 'Send Message'} {recipients.length > 0 && `(${recipients.length})`}
                                 </Button>
                             </div>
-                        </CardContent>
+                        </div>
                     </Card>
 
-                    {/* Right Column: Recipients */}
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Recipients</CardTitle>
-                            <CardDescription className="text-xs">Add recipients manually or from customers.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {/* Unified Recipient Selector */}
-                            <div className="space-y-1">
+                    {/* Right Column: Recipients Sidebar */}
+                    <Card className="shadow-sm border-muted/60 rounded-xl glass-card">
+                        <div className="p-4 lg:p-6 space-y-4 h-full flex flex-col">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 font-semibold text-foreground">
+                                    <Users className="h-4 w-4 text-primary" />
+                                    <span>Recipients</span>
+                                </div>
+                                <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-none">
+                                    {recipients.length}
+                                </Badge>
+                            </div>
+
+                            <div className="relative group">
                                 <RecipientSelector
                                     customers={customers}
                                     onSelect={handleAddRecipient}
-                                    placeholder="Search Customer or Type Phone..."
+                                    placeholder="Add customer..."
                                 />
                             </div>
 
-                            <Separator className="my-2" />
-
-                            {/* Add Customer Button (Legacy/Bulk) */}
-
-                            {/* Add Customer Button */}
-                            <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-full">
-                                        <UserPlus className="mr-2 h-4 w-4" /> Select Customers
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
-                                    <DialogHeader>
-                                        <DialogTitle>Select Customers</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="px-6 pb-4">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                                            <Input
-                                                type="text"
-                                                placeholder="Search customers by name, email, or phone..."
-                                                value={customerSearch}
-                                                onChange={(e) => setCustomerSearch(e.target.value)}
-                                                className="pl-10"
-                                            />
+                            <ScrollArea className="flex-1 min-h-[350px] pr-2">
+                                {recipients.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-3 opacity-60">
+                                        <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center">
+                                            <Users className="h-8 w-8 text-muted-foreground" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-sm">No recipients added</p>
+                                            <p className="text-xs text-muted-foreground mt-1 max-w-[180px] mx-auto">
+                                                Search and select customers to start messaging.
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="flex-1 overflow-auto px-6">
-                                        <DataTable
-                                            columns={customerColumns}
-                                            data={customers.filter((c: Customer) => {
-                                                if (!customerSearch) return true;
-                                                const search = customerSearch.toLowerCase();
-                                                return (
-                                                    c.first_name?.toLowerCase().includes(search) ||
-                                                    c.last_name?.toLowerCase().includes(search) ||
-                                                    c.company_name?.toLowerCase().includes(search) ||
-                                                    c.email?.toLowerCase().includes(search) ||
-                                                    c.phone?.toLowerCase().includes(search)
-                                                );
-                                            })}
-                                        />
-                                    </div>
-                                    <DialogFooter className="flex justify-between items-center">
-                                        <div className="text-sm text-muted-foreground">
-                                            {selectedCustomerIds.length > 0 && `${selectedCustomerIds.length} selected`}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {selectedCustomerIds.length > 0 && (
-                                                <Button onClick={handleAddSelectedCustomers} variant="default">
-                                                    Add Selected ({selectedCustomerIds.length})
-                                                </Button>
-                                            )}
-                                            <Button onClick={() => { setIsCustomerDialogOpen(false); setSelectedCustomerIds([]); }} variant="outline">Close</Button>
-                                        </div>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-
-                            <Separator />
-
-                            {/* List */}
-                            <div className="relative">
-                                <div className="absolute top-0 right-0">
-                                    <Badge variant="secondary">{recipients.length}</Badge>
-                                </div>
-                                <h4 className="text-sm font-medium mb-2">Recipients List</h4>
-                                <ScrollArea className="h-[300px] border rounded-md p-2">
-                                    {recipients.length === 0 ? (
-                                        <div className="text-center text-muted-foreground text-sm py-8">
-                                            No recipients added.
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {recipients.map((r, i) => (
-                                                <div key={i} className="flex justify-between items-center bg-muted/50 p-2 rounded text-sm">
-                                                    <div className="flex items-center gap-2 overflow-hidden">
-                                                        {r.type === 'user' ? <Users className="h-3 w-3 text-primary shrink-0" /> : <Phone className="h-3 w-3 text-green-500 shrink-0" />}
-                                                        <span className="truncate" title={r.name}>{r.name}</span>
-                                                    </div>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRemoveRecipient(i)}>
-                                                        <X className="h-3 w-3" />
-                                                    </Button>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {recipients.map((r, i) => (
+                                            <div 
+                                                key={i} 
+                                                className="group flex items-center gap-3 bg-muted/20 p-2.5 rounded-xl border border-transparent hover:border-muted/50 hover:bg-muted/40 transition-all"
+                                            >
+                                                <Avatar className="h-9 w-9 rounded-lg border">
+                                                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold rounded-lg uppercase">
+                                                        {r.name?.substring(0, 2) || 'U'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate">{r.name}</p>
+                                                    <p className="text-[10px] text-muted-foreground truncate">{r.type === 'phone' ? 'Direct Phone' : 'Customer Account'}</p>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </ScrollArea>
-                                {recipients.length > 0 && (
-                                    <Button variant="link" size="sm" className="w-full mt-1 text-red-500 h-auto p-0" onClick={() => setRecipients([])}>
-                                        Clear All
-                                    </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-500 rounded-lg"
+                                                    onClick={() => handleRemoveRecipient(i)}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
+                            </ScrollArea>
+
+                            {recipients.length > 0 && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold"
+                                    onClick={() => setRecipients([])}
+                                >
+                                    Clear All Recipients
+                                </Button>
+                            )}
+
+                            <div className="mt-auto pt-2">
+                                <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="w-full h-11 rounded-xl border-dashed border-2 hover:border-primary/50 transition-all font-medium text-sm">
+                                            <UserPlus className="mr-2 h-4 w-4" /> Select from Contacts
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl h-[80vh] flex flex-col rounded-2xl overflow-hidden p-0">
+                                        <DialogHeader className="p-6 pb-2">
+                                            <DialogTitle>Select Customers</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="px-6 pb-4">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Search by name, email, or phone..."
+                                                    value={customerSearch}
+                                                    onChange={(e) => setCustomerSearch(e.target.value)}
+                                                    className="pl-10 h-11 rounded-xl bg-muted/20 border-muted"
+                                                />
+                                            </div>
+                                        </div>
+                                        <ScrollArea className="flex-1 px-6">
+                                            <div className="space-y-2">
+                                                {customers.filter((c: Customer) => {
+                                                    if (!customerSearch) return true;
+                                                    const search = customerSearch.toLowerCase();
+                                                    return (
+                                                        c.first_name?.toLowerCase().includes(search) ||
+                                                        c.last_name?.toLowerCase().includes(search) ||
+                                                        c.company_name?.toLowerCase().includes(search) ||
+                                                        c.email?.toLowerCase().includes(search) ||
+                                                        c.phone?.toLowerCase().includes(search)
+                                                    );
+                                                }).map((c: Customer) => (
+                                                    <div 
+                                                        key={c.id} 
+                                                        className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 border border-transparent hover:border-muted-foreground/10 transition-all cursor-pointer"
+                                                        onClick={() => handleToggleCustomerSelection(c.id)}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={cn(
+                                                                "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                                                                selectedCustomerIds.includes(c.id) ? "bg-primary border-primary text-white" : "border-muted-foreground/30"
+                                                            )}>
+                                                                {selectedCustomerIds.includes(c.id) && <CheckCircle2 className="h-3 w-3" />}
+                                                            </div>
+                                                            <Avatar className="h-9 w-9 rounded-lg border">
+                                                                <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold rounded-lg uppercase">
+                                                                    {c.company_name ? c.company_name.substring(0, 2) : `${c.first_name?.[0] || ''}${c.last_name?.[0] || ''}` || 'C'}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-semibold truncate">{c.company_name || `${c.first_name} ${c.last_name}`}</p>
+                                                                <p className="text-xs text-muted-foreground">{c.phone}</p>
+                                                            </div>
+                                                        </div>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            disabled={recipients.some(r => r.value === c.id.toString() && r.type === 'user')}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const name = c.company_name || `${c.first_name} ${c.last_name}`;
+                                                                handleAddRecipient({
+                                                                    type: 'user',
+                                                                    value: c.id.toString(),
+                                                                    name: `${name} (${c.phone})`
+                                                                });
+                                                            }}
+                                                        >
+                                                            Add
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                        <DialogFooter className="p-6 bg-muted/20 border-t items-center justify-between">
+                                            <div className="text-sm font-medium text-foreground">
+                                                {selectedCustomerIds.length > 0 && `${selectedCustomerIds.length} selected`}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button onClick={() => { setIsCustomerDialogOpen(false); setSelectedCustomerIds([]); }} variant="ghost">Cancel</Button>
+                                                {selectedCustomerIds.length > 0 && (
+                                                    <Button onClick={handleAddSelectedCustomers} variant="default" className="rounded-xl px-6">
+                                                        Add {selectedCustomerIds.length} Selected
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
                             </div>
-                        </CardContent>
+                        </div>
                     </Card>
                 </div>
 
-                {/* History Section */}
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <History className="h-4 w-4" /> Recent History
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                        <DataTable
-                            columns={historyColumns}
-                            data={history || []}
-                        />
-                    </CardContent>
+                
+                <Card className="shadow-sm border-muted/60 rounded-xl overflow-hidden glass-card">
+                    <div className="p-4 lg:p-6 border-b border-muted flex items-center justify-between bg-muted/10">
+                        <div className="flex items-center gap-2 font-semibold text-foreground">
+                            <History className="h-4 w-4 text-primary" />
+                            <span>Recent History</span>
+                        </div>
+                        <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/5 font-semibold text-xs h-8">
+                            View Full Logs
+                        </Button>
+                    </div>
+                    <div className="p-0 overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
+                            <thead className="bg-muted/30 border-b">
+                                <tr>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Recipient</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Message</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Date & Time</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-center">Status</th>
+                                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-wider w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-muted/50">
+                                {history?.map((row: SMSHistoryItem) => (
+                                    <tr key={row.id} className="hover:bg-muted/10 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-10 w-10 rounded-full border bg-white shadow-sm ring-2 ring-transparent group-hover:ring-primary/10 transition-all">
+                                                    <AvatarFallback className="bg-muted/50 text-muted-foreground text-xs font-bold uppercase transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                                                        {row.recipient_initials || 'U'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-sm font-semibold text-foreground truncate">{row.recipient_name}</span>
+                                                    <span className="text-[11px] text-muted-foreground font-medium">{row.recipient_phone}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-sm text-muted-foreground line-clamp-1 max-w-[300px]" title={row.message}>
+                                                {row.message}
+                                            </p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium text-foreground">
+                                                    {(() => {
+                                                        const date = new Date(row.created_at);
+                                                        const today = new Date();
+                                                        if (date.toDateString() === today.toDateString()) return 'Today';
+                                                        const yesterdayObj = new Date();
+                                                        yesterdayObj.setDate(today.getDate() - 1);
+                                                        if (date.toDateString() === yesterdayObj.toDateString()) return 'Yesterday';
+                                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                                    })()}
+                                                </span>
+                                                <span className="text-[11px] text-muted-foreground font-medium">
+                                                    {new Date(row.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <StatusBadge status={row.status} />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="rounded-xl shadow-lg border-muted">
+                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1">Resend Message</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1">View Details</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1 text-red-500 hover:text-red-600 focus:text-red-500">Delete Log</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {(!history || history.length === 0) && (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-20 text-center">
+                                            <div className="flex flex-col items-center justify-center space-y-3 opacity-40">
+                                                <History className="h-12 w-12 text-muted-foreground" />
+                                                <p className="text-sm font-medium">No recent history found</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </Card>
             </div>
         </PermissionGuard>
+    );
+
+    function handleToggleCustomerSelection(customerId: number) {
+        setSelectedCustomerIds(prev =>
+            prev.includes(customerId)
+                ? prev.filter(id => id !== customerId)
+                : [...prev, customerId]
+        );
+    }
+
+    function handleAddSelectedCustomers() {
+        const selected = customers.filter((c: Customer) => selectedCustomerIds.includes(c.id));
+        let addedCount = 0;
+        selected.forEach((customer: Customer) => {
+            if (!customer.phone) return;
+            if (recipients.some(r => r.value === customer.id.toString() && r.type === 'user')) return;
+            const name = customer.company_name || `${customer.first_name} ${customer.last_name}`;
+            setRecipients(prev => [...prev, { type: 'user', value: customer.id.toString(), name: `${name} (${customer.phone})` }]);
+            addedCount++;
+        });
+        if (addedCount > 0) {
+            toast({ title: 'Added', description: `${addedCount} customer(s) added.` });
+        }
+        setSelectedCustomerIds([]);
+        setIsCustomerDialogOpen(false);
+    }
+}
+
+
+function StatCard({ label, value, icon, iconBg, symbol = "", variant = "default" }: { 
+    label: string, 
+    value: string | number, 
+    icon: React.ReactNode, 
+    iconBg: string,
+    symbol?: string,
+    variant?: "default" | "primary" | "danger"
+}) {
+    return (
+        <Card className="shadow-sm border-muted/60 hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden glass-card">
+            <CardContent className="p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-2">{label}</p>
+                        <div className="flex items-baseline gap-1">
+                            {symbol && <span className="text-sm font-semibold text-muted-foreground">{symbol}</span>}
+                            <p className={cn(
+                                "text-2xl lg:text-3xl font-black tracking-tight",
+                                variant === "primary" && "text-primary",
+                                variant === "danger" && "text-red-500",
+                                variant === "default" && "text-foreground"
+                            )}>{value}</p>
+                        </div>
+                    </div>
+                    <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner", iconBg)}>
+                        {icon}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function StatusBadge({ status }: { status: string }) {
+    const s = status.toLowerCase();
+    let config = { 
+        label: status.toUpperCase(), 
+        dot: "bg-gray-400", 
+        bg: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200" 
+    };
+
+    if (s === 'sent' || s === 'delivered') {
+        config = { label: "SENT", dot: "bg-green-500", bg: "bg-green-50 shadow-sm text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200/50" };
+    } else if (s === 'failed') {
+        config = { label: "FAILED", dot: "bg-red-500", bg: "bg-red-50 shadow-sm text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200/50" };
+    } else if (s === 'scheduled' || s === 'pending') {
+        config = { label: "SCHEDULED", dot: "bg-blue-500", bg: "bg-blue-50 shadow-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/50" };
+    }
+
+    return (
+        <Badge variant="outline" className={cn("rounded-full px-3 py-1 font-bold text-[10px] tracking-wide gap-1.5 border min-w-[100px] justify-center", config.bg)}>
+            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", config.dot)} />
+            {config.label}
+        </Badge>
     );
 }

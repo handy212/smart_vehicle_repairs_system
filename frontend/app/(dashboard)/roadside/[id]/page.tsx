@@ -4,18 +4,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi } from "@/lib/api/roadside";
 import { adminApi } from "@/lib/api/admin";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     ArrowLeft, Truck, User as UserIcon, Phone,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    MapPin, Clock, CheckCircle, XCircle,
+    MapPin, CheckCircle, XCircle,
     Wrench, Navigation,
     ExternalLink, MessageSquare, ShieldCheck,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Car, Mail, Sparkles, RefreshCcw
+    Mail, Sparkles
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -32,8 +29,7 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const RoadsideMap = dynamic(() => import("@/components/roadside/RoadsideMap"), {
     ssr: false,

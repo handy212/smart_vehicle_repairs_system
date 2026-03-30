@@ -1245,8 +1245,8 @@ class TillViewSet(viewsets.ModelViewSet):
         
         if not till:
             return Response(
-                {'message': 'No open till found'},
-                status=status.HTTP_404_NOT_FOUND
+                {'message': 'No open till found', 'id': None},
+                status=status.HTTP_200_OK
             )
         
         return Response(CashierTillSerializer(till).data)

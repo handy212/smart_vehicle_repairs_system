@@ -1,11 +1,7 @@
 "use client";
 
 import React from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { LazyMotion, domAnimation, m } from "framer-motion";
-import { AdvancedWidget } from "./AdvancedWidget";
 import { PremiumIcons } from "@/components/ui/icons";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 interface ShopPulseProps {
@@ -23,32 +19,35 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
             id: "intake",
             label: "Intake",
             keys: ["intake", "inspection"],
-            color: "text-blue-500",
-            bg: "bg-blue-500/10",
-            icon: "Calendar"
+            color: "#3b82f6", // Blue
+            icon: "Car"
         },
         {
             id: "diagnosis",
             label: "Diagnosis",
             keys: ["diagnosis", "awaiting_approval"],
-            color: "text-amber-500",
-            bg: "bg-amber-500/10",
+            color: "#94a3b8", // Gray/Slate
             icon: "Stethoscope"
         },
         {
             id: "repair",
             label: "Repair",
             keys: ["assigned", "in_progress", "additional_work_found"],
-            color: "text-primary",
-            bg: "bg-primary/10",
+            color: "#64748b", // Harder Gray
             icon: "Wrench"
         },
         {
             id: "qc",
-            label: "QC & Ready",
-            keys: ["quality_check", "completed"],
-            color: "text-emerald-500",
-            bg: "bg-emerald-500/10",
+            label: "QC",
+            keys: ["quality_check"],
+            color: "#22c55e", // Green
+            icon: "ClipboardList"
+        },
+        {
+            id: "ready",
+            label: "Ready",
+            keys: ["completed"],
+            color: "#16a34a", // Deep Green
             icon: "CheckCircle"
         },
     ];
@@ -60,119 +59,50 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
             .reduce((acc, curr) => acc + curr.count, 0);
     };
 
-    const activeBayStatuses = ["in_progress", "diagnosis", "inspection", "quality_check"];
-    const activeJobs = workOrderStats?.by_status
-        ?.filter(s => activeBayStatuses.includes(s.status))
-        .reduce((sum, item) => sum + item.count, 0) || 0;
-
-    const totalBays = 12; // Capacity
-    const occupancyRate = (activeJobs / totalBays) * 100;
-
-    const avgCycleHours = workOrderStats?.summary?.average_completion_hours || 0;
-    const avgCycleDays = avgCycleHours > 0 ? (avgCycleHours / 24).toFixed(1) : "N/A";
-
     return (
-        <AdvancedWidget
-            title="Real-time Shop Pulse"
-            icon="Dashboard"
-            className="h-full"
-            headerAction={
-                <Link
-                    href="/workorders"
-                    className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 flex items-center gap-1 transition-all"
-                >
-                    Live Board
-                    <PremiumIcons.ChevronDown className="w-3 h-3 -rotate-90" />
-                </Link>
-            }
-        >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative">
-                {/* Visual Flow Connectors */}
-                <div className="absolute top-[38px] left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-blue-500/20 via-primary/20 to-emerald-500/20 -z-0 hidden md:block" />
-
-                {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
+        <div className="precision-card p-8 relative overflow-hidden">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-8 px-4">Real-Time Shop Pulse</h3>
+            
+            <div className="flex items-center justify-between gap-2 max-w-5xl mx-auto relative px-4">
                 {statusGroups.map((group, idx) => {
                     const count = getGroupCount(group.keys);
                     const Icon = PremiumIcons[group.icon as keyof typeof PremiumIcons];
 
                     return (
-                        <Link
-                            key={group.id}
-                            href={`/workorders?group=${group.id}`}
-                            className="relative flex flex-col items-center group/stage z-10"
-                        >
-                            <m.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className={cn(
-                                    "w-20 h-20 rounded-2xl flex flex-col items-center justify-center transition-all duration-300 border mb-3",
-                                    count > 0
-                                        ? cn("bg-card border-white/10 shadow-premium", group.bg)
-                                        : "bg-muted/30 border-transparent opacity-50"
-                                )}
-                            >
-                                <div className={cn("p-1.5 rounded-lg mb-1", count > 0 ? group.bg : "bg-muted/50")}>
-                                    <Icon className={cn("w-4 h-4", count > 0 ? group.color : "text-muted-foreground")} />
-                                </div>
-                                <span className={cn(
-                                    "text-2xl font-black tracking-tighter leading-none",
-                                    count > 0 ? group.color : "text-muted-foreground"
-                                )}>
-                                    {count}
-                                </span>
-                            </m.div>
+                        <React.Fragment key={group.id}>
+                            <div className="flex flex-col items-center gap-3 relative z-10">
+                                <Link 
+                                    href={`/workorders?group=${group.id}`}
+                                    className="flex flex-col items-center group"
+                                >
+                                    <div 
+                                        className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                                        style={{ backgroundColor: group.color, boxShadow: `0 0 20px ${group.color}33` }}
+                                    >
+                                        <Icon className="w-6 h-6 text-white" />
+                                    </div>
+                                    
+                                    <div className="mt-3 text-center">
+                                        <p className="text-[11px] font-bold text-foreground uppercase tracking-wider mb-0.5">{group.label}</p>
+                                        <p className="text-[10px] text-gray-400 font-medium">({count} Job{count !== 1 ? 's' : ''})</p>
+                                    </div>
 
-                            <div className="text-center">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover/stage:text-primary transition-colors">
-                                    {group.label}
-                                </p>
-                                <div className="flex items-center justify-center gap-1 mt-0.5">
-                                    {count > 0 && (
-                                        <span className="relative flex h-1.5 w-1.5">
-                                            <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", group.color.replace('text', 'bg'))}></span>
-                                            <span className={cn("relative inline-flex rounded-full h-1.5 w-1.5", group.color.replace('text', 'bg'))}></span>
-                                        </span>
-                                    )}
-                                    <p className="text-[9px] text-muted-foreground font-medium">
-                                        {count} {count === 1 ? 'Job' : 'Jobs'}
-                                    </p>
-                                </div>
+                                    <div className="mt-2 px-3 py-1 rounded-full bg-muted text-[9px] font-black uppercase tracking-widest text-foreground group-hover:bg-primary group-hover:text-white transition-all flex items-center gap-1">
+                                        {count} Job{count !== 1 ? 's' : ''}
+                                        <PremiumIcons.ChevronRight className="w-2.5 h-2.5" />
+                                    </div>
+                                </Link>
                             </div>
-                        </Link>
+
+                            {idx < statusGroups.length - 1 && (
+                                <div className="flex-1 flex justify-center items-center py-4">
+                                    <PremiumIcons.ChevronRight className="w-6 h-6 text-blue-500/20" />
+                                </div>
+                            )}
+                        </React.Fragment>
                     );
                 })}
             </div>
-
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10">
-                        <PremiumIcons.Clock className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                        <p className="text-[10px] uppercase font-bold text-primary/60 tracking-wider">Avg. Cycle Time</p>
-                        <p className="text-sm font-bold text-foreground">
-                            {avgCycleDays} {avgCycleHours > 0 ? 'Days' : ''}
-                        </p>
-                    </div>
-                </div>
-                <div className="p-3 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-indigo-500/10">
-                        <PremiumIcons.Users className="w-4 h-4 text-indigo-500" />
-                    </div>
-                    <div>
-                        <p className="text-[10px] uppercase font-bold text-indigo-500/60 tracking-wider">Bays Occupied</p>
-                        <p className="text-sm font-bold text-foreground">
-                            {activeJobs} / {totalBays}
-                            <span className={cn(
-                                "text-[10px] font-medium ml-2",
-                                occupancyRate >= 80 ? "text-amber-500" : "text-emerald-500"
-                            )}>
-                                {occupancyRate >= 80 ? "Heavy Load" : "Available"}
-                            </span>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </AdvancedWidget>
+        </div>
     );
 }

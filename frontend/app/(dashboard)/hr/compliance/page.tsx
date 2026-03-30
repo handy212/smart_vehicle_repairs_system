@@ -4,8 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hrApi, ComplianceDocument } from "@/lib/api/hr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Shield, AlertTriangle, FileText, Upload, Calendar, Search, Filter, Download, Pencil, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
+import { Shield, AlertTriangle, FileText, Upload, Search, Download, Pencil, Trash2, MoreHorizontal, Loader2 } from "lucide-react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
@@ -21,8 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { format } from "date-fns";
 
 export default function CompliancePage() {
     return (

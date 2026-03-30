@@ -1,25 +1,12 @@
 "use client";
 
-import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { diagnosisApi, Diagnosis } from "@/lib/api/diagnosis";
+import { useQuery } from "@tanstack/react-query";
+import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Textarea } from "@/components/ui/textarea";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/lib/hooks/useToast";
 import {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  AlertCircle,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  CheckCircle,
   Clock,
   DollarSign,
   Edit,
@@ -38,17 +25,8 @@ interface DiagnosisTabProps {
   onRefresh?: () => void;
 }
 
-export default function DiagnosisTab({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  workOrderId, workOrder, onRefresh }: DiagnosisTabProps) {
+export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
   const { formatCurrency } = useCurrency();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { toast } = useToast();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [editing, setEditing] = useState(false);
 
   // Fetch diagnosis for this work order
   const { data: diagnosis, isLoading } = useQuery({
@@ -56,12 +34,6 @@ export default function DiagnosisTab({
     queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
     enabled: !!workOrderId,
   });
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const refreshData = () => {
-    queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-    onRefresh?.();
-  };
 
   if (isLoading) {
     return (

@@ -13,12 +13,24 @@ export interface SendSMSResponse {
     details?: Record<string, unknown>;
 }
 
+export interface SMSHistoryItem {
+    id: number;
+    created_at: string;
+    recipient_name: string;
+    recipient_phone: string;
+    recipient_initials: string;
+    message: string;
+    status: string;
+    scheduled_for?: string;
+    error_message?: string;
+}
+
 export interface BulkSendSMSResponse {
     message: string;
     results: Record<string, unknown>[];
     total: number;
     successful: number;
-    failed?: number; // Added in backend response
+    failed?: number;
 }
 
 const smsApi = {
@@ -36,7 +48,13 @@ const smsApi = {
 
     // Get SMS History
     getHistory: async () => {
-        const response = await api.get('/notifications/sms-console/history/');
+        const response = await api.get<SMSHistoryItem[]>('/notifications/sms-console/history/');
+        return response.data;
+    },
+
+    // AI Assist
+    aiAssist: async (prompt: string) => {
+        const response = await api.post<{ suggestion: string }>('/notifications/sms-console/ai_assist/', { prompt });
         return response.data;
     },
 

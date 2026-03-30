@@ -17,7 +17,7 @@ import Link from "next/link";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { cn } from "@/lib/utils/cn";
+import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { branchesApi, adminApi, type Branch, type SystemSetting } from "@/lib/api/admin";
 import { useBranchStore } from "@/store/branchStore";
@@ -134,10 +134,6 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
     previousBranchIdRef.current = activeBranchId ?? null;
   }, [activeBranchId, queryClient, router]);
 
-
-
-
-
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 border-b border-border/50 shadow-sm backdrop-blur-xl">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -147,7 +143,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {/* Mobile Menu Toggle */}
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Toggle menu"
             >
               {isSidebarOpen ? (
@@ -161,7 +157,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground  hover:bg-muted hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
+                className="hidden lg:block p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
@@ -224,7 +220,6 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 flex-shrink-0">
-
             {/* Theme Toggle */}
             <ThemeToggle />
 
@@ -235,9 +230,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             <UserMenu />
           </div>
         </div>
-
       </div>
     </nav>
   );
 }
-

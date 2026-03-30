@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { vehiclesApi } from "@/lib/api/vehicles";
+import { servicesApi } from "@/lib/api/services";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,23 +37,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+import { cn } from "@/lib/utils/cn";
+import { VehicleStats } from "./components/VehicleStats";
+import React from "react";
+import { VehicleTable } from "./components/VehicleTable";
+import { ServiceDueTable } from "./components/ServiceDueTable";
 
 export default function VehiclesPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
+  const [vehicleStatus, setVehicleStatus] = useState("all");
   const [showImportDialog, setShowImportDialog] = useState(false);
-  // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { hasPermission } = usePermissions();
 
-  // Advanced filter options
   const filterOptions: FilterOption[] = [
     {
       key: "status",
@@ -66,30 +70,10 @@ export default function VehiclesPage() {
         { value: "inactive", label: "Inactive" },
       ],
     },
-    {
-      key: "make",
-      label: "Make",
-      type: "text",
-      placeholder: "e.g., Toyota, Ford",
-    },
-    {
-      key: "model",
-      label: "Model",
-      type: "text",
-      placeholder: "e.g., Camry, F-150",
-    },
-    {
-      key: "year_from",
-      label: "Year From",
-      type: "number",
-      placeholder: "e.g., 2020",
-    },
-    {
-      key: "year_to",
-      label: "Year To",
-      type: "number",
-      placeholder: "e.g., 2024",
-    },
+    { key: "make", label: "Make", type: "text", placeholder: "e.g., Toyota" },
+    { key: "model", label: "Model", type: "text", placeholder: "e.g., Camry" },
+    { key: "year_from", label: "Year From", type: "number" },
+    { key: "year_to", label: "Year To", type: "number" },
     {
       key: "engine_type",
       label: "Engine Type",
@@ -99,26 +83,43 @@ export default function VehiclesPage() {
         { value: "diesel", label: "Diesel" },
         { value: "electric", label: "Electric" },
         { value: "hybrid", label: "Hybrid" },
-        { value: "plug_in_hybrid", label: "Plug-in Hybrid" },
-      ],
-    },
-    {
-      key: "transmission_type",
-      label: "Transmission Type",
-      type: "select",
-      options: [
-        { value: "automatic", label: "Automatic" },
-        { value: "manual", label: "Manual" },
-        { value: "cvt", label: "CVT" },
-        { value: "dual_clutch", label: "Dual Clutch" },
       ],
     },
     {
       key: "created_at",
-      label: "Created Date",
+      label: "Added Date",
       type: "daterange",
     },
   ];
+
+  const { data: serviceTypesData } = useQuery({
+    queryKey: ["service-types", "active"],
+    queryFn: () => servicesApi.listServiceTypes({ is_active: true }),
+  });
+
+  const activeFilterOptions = [...filterOptions];
+  if (vehicleStatus === "services_due") {
+    activeFilterOptions.push(
+      { 
+        key: "days_ahead", 
+        label: "Days Ahead", 
+        type: "select", 
+        options: [
+          { value: "7", label: "7 days" },
+          { value: "14", label: "14 days" },
+          { value: "30", label: "30 days" },
+          { value: "60", label: "60 days" },
+          { value: "90", label: "90 days" },
+        ] 
+      },
+      {
+        key: "service_due_type",
+        label: "Service Due Type",
+        type: "select",
+        options: serviceTypesData?.results.map(st => ({ value: st.id.toString(), label: st.name })) || []
+      }
+    );
+  }
 
   const quickFilters: QuickFilter[] = [
     {
@@ -129,80 +130,49 @@ export default function VehiclesPage() {
         created_at_to: new Date().toISOString().split("T")[0],
       },
     },
-    {
-      label: "This Month",
-      value: "this_month",
-      filters: {
-        created_at_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
-        created_at_to: new Date().toISOString().split("T")[0],
-      },
-    },
-    {
-      label: "Active Vehicles",
-      value: "active",
-      filters: {
-        status: "active",
-      },
-    },
-    {
-      label: "In Service",
-      value: "in_service",
-      filters: {
-        status: "in_service",
-      },
-    },
+    { label: "Active", value: "active", filters: { status: "active" } },
+    { label: "In Service", value: "in_service", filters: { status: "in_service" } },
   ];
 
-  const handleSort = (field: string) => {
-    setSortConfig((current) => {
-      if (current?.field === field) {
-        if (current.direction === "asc") {
-          return { field, direction: "desc" };
-        } else if (current.direction === "desc") {
-          return null; // Clear sort
-        }
-      }
-      return { field, direction: "asc" };
-    });
-    setPage(1);
-  };
-
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["vehicle-dashboard-stats"],
     queryFn: () => vehiclesApi.dashboardStats(),
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["vehicles", page, debouncedSearch, advancedFilters, sortConfig],
-    queryFn: () => {
+    queryKey: ["vehicles", page, debouncedSearch, advancedFilters, sortConfig, vehicleStatus],
+    queryFn: async () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
-        : undefined;
+        : "-created_at";
 
-      // Build year range filters
-      const yearFrom = advancedFilters.year_from ? parseInt(advancedFilters.year_from) : undefined;
-      const yearTo = advancedFilters.year_to ? parseInt(advancedFilters.year_to) : undefined;
-
-      return vehiclesApi.list({
+      const response = await vehiclesApi.list({
         page,
         search: debouncedSearch || undefined,
-        status: advancedFilters.status || undefined,
+        status: (vehicleStatus === "all" || vehicleStatus === "services_due") ? (advancedFilters.status || undefined) : vehicleStatus,
+        due_service: vehicleStatus === "services_due" ? true : undefined,
         make: advancedFilters.make || undefined,
         model: advancedFilters.model || undefined,
-        year__gte: yearFrom,
-        year__lte: yearTo,
+        year__gte: advancedFilters.year_from || undefined,
+        year__lte: advancedFilters.year_to || undefined,
         engine_type: advancedFilters.engine_type || undefined,
-        transmission_type: advancedFilters.transmission_type || undefined,
         created_at__gte: advancedFilters.created_at_from || undefined,
         created_at__lte: advancedFilters.created_at_to || undefined,
-        owner: advancedFilters.owner ? parseInt(advancedFilters.owner) : undefined,
+        days_ahead: vehicleStatus === "services_due" ? (advancedFilters.days_ahead ? parseInt(advancedFilters.days_ahead) : undefined) : undefined,
+        service_due_type: vehicleStatus === "services_due" ? (advancedFilters.service_due_type ? parseInt(advancedFilters.service_due_type) : undefined) : undefined,
         ordering,
       });
+      return response;
     },
+    // Reset to page 1 if 404
+    retry: (failureCount, error: any) => {
+      if (error.response?.status === 404 && page > 1) {
+        setPage(1);
+        return true;
+      }
+      return failureCount < 3;
+    }
   });
-
-  const vehicles = data?.results || [];
-  const bulkSelection = useBulkSelection(vehicles);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => vehiclesApi.delete(id),
@@ -211,265 +181,46 @@ export default function VehiclesPage() {
       queryClient.invalidateQueries({ queryKey: ["vehicle-dashboard-stats"] });
       toast({ title: "Success", description: "Vehicle deleted successfully" });
     },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to delete vehicle",
-        variant: "destructive",
-      });
-    },
   });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: number[]) => {
-      await Promise.all(ids.map((id) => vehiclesApi.delete(id)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-      queryClient.invalidateQueries({ queryKey: ["vehicle-dashboard-stats"] });
-      bulkSelection.clearSelection();
-      toast({ title: "Success", description: `${bulkSelection.selectedCount} vehicles deleted successfully` });
-    },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to delete vehicles",
-        variant: "destructive",
-      });
-    },
-  });
-
 
   const handleDelete = (vehicle: any) => {
-    if (confirm(`Are you sure you want to delete vehicle "${vehicle.make} ${vehicle.model} ${vehicle.year}" (${vehicle.vin})? This action cannot be undone.`)) {
+    if (confirm(`Are you sure you want to delete vehicle "${vehicle.make} ${vehicle.model}"?`)) {
       deleteMutation.mutate(vehicle.id);
     }
   };
 
-  const handleBulkDelete = () => {
-    if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} vehicle(s)? This action cannot be undone.`)) {
-      bulkDeleteMutation.mutate(bulkSelection.selectedIds);
-    }
-  };
-
   const handleExport = () => {
-    if (!data?.results || data.results.length === 0) {
-      toast({
-        title: "No Data",
-        description: "No vehicles to export",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    exportToCSV(
-      data.results,
-      "vehicles",
-      [
-        { key: "vin", label: "VIN" },
-        { key: "make", label: "Make" },
-        { key: "model", label: "Model" },
-        { key: "year", label: "Year" },
-        { key: "license_plate", label: "License Plate" },
-        { key: "current_mileage", label: "Mileage" },
-        { key: "status", label: "Status" },
-        { key: "owner_name", label: "Owner" },
-      ]
-    );
-
-    toast({ title: "Success", description: "Vehicles exported successfully" });
+    if (!data?.results?.length) return;
+    exportToCSV(data.results, "vehicles_export", [
+      { key: "vin", label: "VIN" },
+      { key: "make", label: "Make" },
+      { key: "model", label: "Model" },
+      { key: "year", label: "Year" },
+      { key: "license_plate", label: "License Plate" },
+      { key: "status", label: "Status" },
+    ]);
   };
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "active":
-        return "success";
-      case "in_service":
-        return "warning";
-      case "sold":
-        return "secondary";
-      default:
-        return "default";
-    }
-  };
-
-  // Stats Grid Component
-  const StatsGrid = () => (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-      <Card className="shadow-sm border bg-card">
-        <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
-          <span className="text-lg font-bold text-foreground">{stats?.total_vehicles || 0}</span>
-        </CardContent>
-      </Card>
-      <Card className="shadow-sm border bg-card">
-        <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
-          <span className="text-lg font-bold text-primary">{stats?.active_vehicles || 0}</span>
-        </CardContent>
-      </Card>
-      <Card className="shadow-sm border bg-card">
-        <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">In Service</span>
-          <span className="text-lg font-bold text-primary">{stats?.in_service_vehicles || 0}</span>
-        </CardContent>
-      </Card>
-      <Card className="shadow-sm border bg-card">
-        <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Due Service</span>
-          <span className="text-lg font-bold text-red-600 dark:text-red-400">{stats?.due_service_vehicles || 0}</span>
-        </CardContent>
-      </Card>
-      <Card className="shadow-sm border bg-card">
-        <CardContent className="p-3 flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sold</span>
-          <span className="text-lg font-bold text-muted-foreground">{stats?.sold_vehicles || 0}</span>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  if (error) {
-    return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-        Error loading vehicles. Please try again.
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-5">
-      {/* Header with Stats */}
+    <div className="space-y-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
       <DynamicPageTitle title="Vehicles" />
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Vehicles</h1>
-        </div>
 
-        <StatsGrid />
-      </div>
-
-      {/* Unified Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card/50 p-1 rounded-lg">
-        <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative flex-1 md:flex-none md:w-64">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-9 h-9 text-sm bg-muted border-none focus:ring-1 transition-all"
-            />
-          </div>
-
-          {/* Advanced Filters Button */}
-          <AdvancedFilters
-            filters={filterOptions}
-            quickFilters={quickFilters}
-            activeFilters={advancedFilters}
-            onFiltersChange={(filters) => {
-              setAdvancedFilters(filters);
-              setPage(1);
-            }}
-            onClear={() => {
-              setAdvancedFilters({});
-              setPage(1);
-            }}
-            title="Filter"
-          />
-
-          {/* Clear Filters (Icon only for compactness) */}
-          {(search || Object.keys(advancedFilters).length > 0) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearch("");
-                setAdvancedFilters({});
-                setPage(1);
-              }}
-              className="h-9 w-9 p-0 text-muted-foreground hover:text-red-600"
-              title="Clear all filters"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          )}
-
-          {/* Active Filter Badges */}
-          <div className="hidden lg:flex flex-wrap items-center gap-1.5 ml-2">
-            {Object.entries(advancedFilters).map(([key, value]) => {
-              if (!value || (typeof value === 'string' && value === '')) return null;
-              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
-              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
-              if (key.includes("_to")) return null;
-
-              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
-              const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
-                ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
-                : String(value);
-
-              return (
-                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
-                  {displayLabel}: {displayValue}
-                  <X
-                    className="w-3 h-3 cursor-pointer hover:text-red-500"
-                    onClick={() => {
-                      const newFilters = { ...advancedFilters };
-                      if (key.includes("_from")) {
-                        delete newFilters[key];
-                        delete newFilters[key.replace("_from", "_to")];
-                      } else {
-                        delete newFilters[key];
-                      }
-                      setAdvancedFilters(newFilters);
-                      setPage(1);
-                    }}
-                  />
-                </Badge>
-              );
-            })}
+      {/* Precision Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Fleet Management</h1>
+            <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-bold bg-muted/50 border-border/50">
+              {data?.count || 0} VEHICLES
+            </Badge>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9">
-                Actions
-                <ChevronDown className="w-3.5 h-3.5 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <PermissionGuard permission="import_vehicles">
-                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
-                </DropdownMenuItem>
-              </PermissionGuard>
-              <PermissionGuard permission="export_vehicles">
-                <DropdownMenuItem onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { if (data?.results) exportVehiclesForImport(data.results); }} disabled={!data?.results || data.results.length === 0}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export for Import
-                </DropdownMenuItem>
-              </PermissionGuard>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
+        <div className="flex items-center gap-2">
           <PermissionGuard permission="create_vehicles">
             <Link href="/vehicles/new">
-              <Button size="sm" className="h-9">
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
+              <Button size="sm" className="h-9 shadow-sm hover:scale-[1.02] transition-all duration-300">
+                <Plus className="w-4 h-4 mr-2" />
                 Add Vehicle
               </Button>
             </Link>
@@ -477,244 +228,177 @@ export default function VehiclesPage() {
         </div>
       </div>
 
-      {/* Bulk Action Toolbar */}
-      <BulkActionToolbar
-        selectedCount={bulkSelection.selectedCount}
-        onClearSelection={bulkSelection.clearSelection}
-        onBulkDelete={handleBulkDelete}
-      />
+      {/* KPI Stats Section */}
+      <VehicleStats stats={stats} isLoading={statsLoading} />
 
-      {/* Vehicles Table */}
-      <Card className="border-t shadow-sm bg-muted border-border">
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6">
-              <TableSkeleton rows={8} columns={8} />
+      {/* Unified Precision Toolbar */}
+      <div className="flex flex-col space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          {/* Quick Filters - Precision Tabs */}
+          <div className="flex p-1 bg-muted/50 rounded-lg border border-border/50 w-full md:w-auto overflow-x-auto no-scrollbar">
+            {["all", "active", "services_due", "in_service"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  setVehicleStatus(tab);
+                  setPage(1);
+                }}
+                className={cn(
+                  "px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all duration-300 whitespace-nowrap",
+                  vehicleStatus === tab
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                {tab.replace("_", " ")}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            {/* Unified Search */}
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Find a vehicle..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9 h-9 border-border/50 bg-muted/30 focus-visible:ring-primary/20 focus-visible:bg-background transition-all"
+              />
             </div>
-          ) : data?.results && data.results.length > 0 ? (
-            <div className="rounded-md">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-muted/50 hover:bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left w-12 h-10">
-                      <input
-                        type="checkbox"
-                        checked={bulkSelection.isAllSelected}
-                        ref={(input) => {
-                          if (input) input.indeterminate = bulkSelection.isIndeterminate;
-                        }}
-                        onChange={bulkSelection.toggleSelectAll}
-                        className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
-                      />
-                    </th>
-                    <th className="px-4 h-10 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Customer
-                    </th>
-                    <th className="px-4 h-10 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      License Plate
-                    </th>
-                    <SortableHeader
-                      field="make"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
-                    >
-                      Make/Model
-                    </SortableHeader>
-                    <SortableHeader
-                      field="vin"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
-                    >
-                      VIN
-                    </SortableHeader>
-                    <SortableHeader
-                      field="year"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
-                    >
-                      Year
-                    </SortableHeader>
-                    <SortableHeader
-                      field="status"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
-                    >
-                      Status
-                    </SortableHeader>
-                    <SortableHeader
-                      field="created_at"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
-                    >
-                      Created
-                    </SortableHeader>
-                    <th className="px-4 h-10 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
-                  {data.results.map((vehicle) => (
-                    <tr key={vehicle.id} className="group hover:bg-muted/80 hover:bg-muted/50 transition-colors duration-150 cursor-pointer" onDoubleClick={() => router.push(`/vehicles/${vehicle.id}`)}>
-                      <td className="px-4 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={bulkSelection.isSelected(vehicle.id)}
-                          onChange={() => bulkSelection.toggleSelection(vehicle.id)}
-                          className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
-                        />
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
 
-                        {(vehicle as any).owner_name || (typeof vehicle.owner === "object" ? `${(vehicle.owner as any).user?.first_name || ""} ${(vehicle.owner as any).user?.last_name || ""}`.trim() : "-") || "-"}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
-                        {vehicle.license_plate || "-"}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-foreground">
-                        <div className="flex items-center space-x-2">
-                          <Car className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {vehicle.make || ""} {vehicle.model || ""}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                        {vehicle.vin || "-"}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-foreground">
-                        {vehicle.year || "-"}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap">
+            <AdvancedFilters
+              filters={activeFilterOptions}
+              quickFilters={quickFilters}
+              activeFilters={advancedFilters}
+              onFiltersChange={(f) => {
+                setAdvancedFilters(f);
+                setPage(1);
+              }}
+              onClear={() => {
+                setAdvancedFilters({});
+                setPage(1);
+              }}
+              title="Fleet Filters"
+            />
 
-                        <Badge variant={getStatusVariant(vehicle.status) as any} className="text-[10px] px-2 py-0.5 h-5 capitalize font-medium">
-                          {vehicle.status?.replace(/_/g, " ") || vehicle.status || "-"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm text-muted-foreground">
-                        {vehicle.created_at ? new Date(vehicle.created_at).toLocaleDateString() : "-"}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors focus-visible:ring-1"
-                                  aria-label="Vehicle actions"
-                                >
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">
-                              <p>Actions</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/vehicles/${vehicle.id}`} className="flex items-center">
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <PermissionGuard permission="edit_vehicles">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/vehicles/${vehicle.id}/edit`} className="flex items-center">
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit Vehicle
-                                </Link>
-                              </DropdownMenuItem>
-                            </PermissionGuard>
-                            <PermissionGuard permission="view_service_history">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/vehicles/${vehicle.id}/history`} className="flex items-center">
-                                  <History className="w-4 h-4 mr-2" />
-                                  Service History
-                                </Link>
-                              </DropdownMenuItem>
-                            </PermissionGuard>
-                            <DropdownMenuSeparator />
-                            <PermissionGuard permission="create_work_orders">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/workorders/new?vehicle=${vehicle.id}`} className="flex items-center">
-                                  <Wrench className="w-4 h-4 mr-2" />
-                                  Create Work Order
-                                </Link>
-                              </DropdownMenuItem>
-                            </PermissionGuard>
-                            <PermissionGuard permission="create_appointments">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/appointments/new?vehicle=${vehicle.id}`} className="flex items-center">
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  Schedule Appointment
-                                </Link>
-                              </DropdownMenuItem>
-                            </PermissionGuard>
-                            <DropdownMenuSeparator />
-                            <PermissionGuard permission="delete_vehicles">
-                              <DropdownMenuItem onClick={() => { if (window.confirm(`Delete vehicle "${vehicle.make} ${vehicle.model}" (${vehicle.vin})?`)) handleDelete(vehicle); }} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete Vehicle
-                              </DropdownMenuItem>
-                            </PermissionGuard>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 border-dashed">
+                  <ChevronDown className="w-3.5 h-3.5 mr-2 opacity-50" />
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExport}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Fleet
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Table Section */}
+      {isLoading ? (
+        <div className="precision-card p-8">
+          <TableSkeleton rows={8} columns={6} />
+        </div>
+      ) : error ? (
+        <div className="precision-card p-12 text-center text-rose-500 border-rose-100 bg-rose-50/50">
+          Error loading vehicle data. Please try again or contact support.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {vehicleStatus === "services_due" ? (
+            <ServiceDueTable
+              vehicles={data?.results || []}
+              sortConfig={sortConfig}
+              onSort={(field) => {
+                setSortConfig(prev => ({
+                  field,
+                  direction: prev?.field === field && prev.direction === "asc" ? "desc" : "asc"
+                }));
+                setPage(1);
+              }}
+            />
           ) : (
-            <div className="text-center py-12">
-              <Car className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No vehicles found.</p>
-              <Link href="/vehicles/new">
-                <Button className="mt-4" variant="secondary">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Vehicle
-                </Button>
-              </Link>
-            </div>
+            <VehicleTable
+              vehicles={data?.results || []}
+              onDelete={handleDelete}
+              sortConfig={sortConfig}
+              onSort={(field) => {
+                setSortConfig(prev => ({
+                  field,
+                  direction: prev?.field === field && prev.direction === "asc" ? "desc" : "asc"
+                }));
+                setPage(1);
+              }}
+            />
           )}
 
-          {/* Pagination */}
+          {/* Pagination & Summary */}
           {data && data.count > 0 && (
-            <div className="p-4 border-t border-border flex items-center justify-between">
-              <div className="text-sm text-card-foreground">
-                Showing page {page} of {Math.ceil(data.count / 10)}
-              </div>
-              <div className="flex space-x-2">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-2">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.1em]">
+                Showing {(page - 1) * 10 + 1}-{Math.min(page * 10, data.count)} of {data.count} vehicles
+              </span>
+
+              <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={!data.previous}
+                  className="h-8 w-8 p-0"
                 >
-                  Previous
+                  <ChevronDown className="w-4 h-4 rotate-90" />
                 </Button>
+
+                {/* Numbered Pagination */}
+                {Array.from({ length: Math.ceil(data.count / 10) }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === Math.ceil(data.count / 10) || (p >= page - 1 && p <= page + 1))
+                  .map((p, i, arr) => (
+                    <React.Fragment key={p}>
+                      {i > 0 && arr[i - 1] !== p - 1 && (
+                        <span className="text-muted-foreground px-1">...</span>
+                      )}
+                      <Button
+                        variant={page === p ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setPage(p)}
+                        className={cn(
+                          "h-8 w-8 p-0 text-[11px] font-bold",
+                          page === p ? "shadow-sm" : "text-muted-foreground"
+                        )}
+                      >
+                        {p}
+                      </Button>
+                    </React.Fragment>
+                  ))}
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => setPage(p => p + 1)}
                   disabled={!data.next}
+                  className="h-8 w-8 p-0"
                 >
-                  Next
+                  <ChevronDown className="w-4 h-4 -rotate-90" />
                 </Button>
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
       {/* Import Dialog */}
       <ImportDialog
@@ -725,10 +409,10 @@ export default function VehiclesPage() {
           queryClient.invalidateQueries({ queryKey: ["vehicles"] });
           return result;
         }}
-        title="Import Vehicles"
-        description="Upload a CSV file with vehicle data. Required columns: vin, make, model, year, owner (customer ID or email)."
+        title="Import Fleet"
+        description="Upload a CSV file with vehicle data. Required columns: vin, make, model, year, and owner CID."
         onDownloadTemplate={downloadVehicleTemplate}
       />
-    </div >
+    </div>
   );
 }

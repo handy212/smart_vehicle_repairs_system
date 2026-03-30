@@ -34,10 +34,19 @@ class Customer(models.Model):
         ('mail', 'Mail'),
     ]
     
+    DEFAULT_PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('momo', 'MoMo'),
+        ('card', 'Card'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('check', 'Check'),
+    ]
+    
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('inactive', 'Inactive'),
         ('suspended', 'Suspended'),
+        ('blacklisted', 'Blacklisted'),
     ]
     
     # Link to User model
@@ -83,6 +92,23 @@ class Customer(models.Model):
         verbose_name="Tax ID / EIN",
         help_text="Tax identification number or EIN"
     )
+    contact_person_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Primary contact person at the company"
+    )
+    company_email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="General contact email for the company"
+    )
+    company_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="General contact phone for the company"
+    )
     
     # Customer classification
     customer_type = models.CharField(
@@ -95,11 +121,12 @@ class Customer(models.Model):
     # Service address (can be different from billing address)
     service_address = models.TextField(
         blank=True,
+        null=True,
         help_text="Primary service/pickup address"
     )
-    service_city = models.CharField(max_length=100, blank=True)
-    service_state = models.CharField(max_length=50, blank=True)
-    service_zip_code = models.CharField(max_length=20, blank=True)
+    service_city = models.CharField(max_length=100, blank=True, null=True)
+    service_state = models.CharField(max_length=50, blank=True, null=True)
+    service_zip_code = models.CharField(max_length=20, blank=True, null=True)
     
     # Billing address (inherited from User model, but can override)
     billing_address = models.TextField(
@@ -115,6 +142,8 @@ class Customer(models.Model):
         max_length=20,
         choices=PAYMENT_TERMS_CHOICES,
         default='due_on_receipt',
+        blank=True,
+        null=True,
         help_text="Default payment terms for this customer"
     )
     credit_limit = models.DecimalField(
@@ -130,12 +159,22 @@ class Customer(models.Model):
         default=0.00,
         help_text="Current outstanding balance"
     )
+    default_payment_method = models.CharField(
+        max_length=20,
+        choices=DEFAULT_PAYMENT_METHOD_CHOICES,
+        default='cash',
+        blank=True,
+        null=True,
+        help_text="Default payment method preferred by the customer"
+    )
     
     # Contact preferences
     preferred_contact_method = models.CharField(
         max_length=20,
         choices=CONTACT_METHOD_CHOICES,
         default='email',
+        blank=True,
+        null=True,
         help_text="Preferred method of contact"
     )
     
@@ -177,6 +216,28 @@ class Customer(models.Model):
     )
     insurance_policy_number = models.CharField(max_length=100, blank=True)
     insurance_phone = models.CharField(max_length=20, blank=True)
+    
+    # Extended profile information
+    alternative_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Alternative contact phone number"
+    )
+    occupation = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Customer's occupation or job title"
+    )
+    assigned_manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='managed_customers',
+        help_text="Staff member assigned to manage this account"
+    )
     
     # Additional information
     notes = models.TextField(
@@ -233,24 +294,56 @@ class Customer(models.Model):
         if not self.customer_number:
             from django.db import transaction
             with transaction.atomic():
+                # Find the most recent customer with a CUST- style number to increment
                 last_customer = (
                     Customer.objects
                     .select_for_update()
-                    .order_by('-id')
+                    .filter(customer_number__startswith='CUST-')
+                    .order_by('-customer_number')
                     .first()
                 )
-                if last_customer and last_customer.customer_number.startswith('CUST'):
+                
+                if last_customer:
                     try:
-                        # Handle both formats: CUST-00006 and CUST000001
-                        number_part = last_customer.customer_number.replace('CUST-', '').replace('CUST', '')
-                        last_number = int(number_part)
-                        self.customer_number = f"CUST-{last_number + 1:05d}"
-                    except ValueError:
-                        # Fallback to ID-based numbering
+                        # Extract the numeric part after 'CUST-'
+                        # Using regex or simpler split to get the last numeric part if possible
+                        import re
+                        match = re.search(r'(\d+)$', last_customer.customer_number)
+                        if match:
+                            last_number = int(match.group(1))
+                            self.customer_number = f"CUST-{last_number + 1:05d}"
+                        else:
+                            raise ValueError("No numeric part found")
+                    except (ValueError, TypeError):
+                        # Fallback if numeric part is not cleanly extractable
                         next_id = Customer.objects.count() + 1
                         self.customer_number = f"CUST-{next_id:05d}"
                 else:
+                    # If no CUST- numbers exist, start from 00001
                     self.customer_number = "CUST-00001"
+                
+                # FINAL SAFETY CHECK: Ensure the generated number is TRULY unique
+                # This handles cases where numbers might be out of sync or manually entered
+                attempts = 0
+                while Customer.objects.filter(customer_number=self.customer_number).exists() and attempts < 100:
+                    attempts += 1
+                    try:
+                        import re
+                        match = re.search(r'(\d+)$', self.customer_number)
+                        if match:
+                            num = int(match.group(1))
+                            self.customer_number = f"CUST-{num + 1:05d}"
+                        else:
+                            import uuid
+                            self.customer_number = f"CUST-{uuid.uuid4().hex[:6].upper()}"
+                    except:
+                        import uuid
+                        self.customer_number = f"CUST-{uuid.uuid4().hex[:6].upper()}"
+                
+                # Ultimate fallback to UUID if loop fails
+                if attempts >= 100:
+                    import uuid
+                    self.customer_number = f"CUST-{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
     
     @property

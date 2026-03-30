@@ -9,8 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { AxiosError } from "axios";
 
@@ -51,8 +49,6 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
   });
 
   const noteType = watch("note_type");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const isCustomerVisible = watch("is_customer_visible");
 
   const createMutation = useMutation({
     mutationFn: (data: NoteFormData) =>

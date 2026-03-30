@@ -26,7 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'username', 'first_name', 'last_name', 'full_name',
-            'phone', 'role', 'profile_picture', 'date_of_birth',
+            'phone', 'role', 'profile_picture', 'gender', 'date_of_birth',
             'address', 'city', 'state', 'zip_code', 'country',
             'email_notifications', 'sms_notifications',
             'is_active', 'created_at', 'updated_at', 'customer_profile',
@@ -326,7 +326,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'first_name', 'last_name', 'phone', 'profile_picture',
+            'first_name', 'last_name', 'phone', 'profile_picture', 'gender',
             'date_of_birth', 'address', 'city', 'state', 'zip_code', 'country',
             'email_notifications', 'sms_notifications', 'role', 'is_active',
             'branch', 'managed_branches', 'employee_id', 'hire_date', 'hourly_rate',

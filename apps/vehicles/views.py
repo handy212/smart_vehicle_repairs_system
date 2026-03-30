@@ -78,6 +78,39 @@ class VehicleViewSet(viewsets.ModelViewSet):
         if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
             queryset = queryset.filter(owner=user.customer_profile)
         
+        # Handle due_service filter for unified fleet view
+        due_service = self.request.query_params.get('due_service')
+        if due_service and due_service.lower() == 'true':
+            today = timezone.now().date()
+            days_ahead = self.request.query_params.get('days_ahead')
+            target_date = today
+            if days_ahead:
+                try:
+                    target_date = today + timezone.timedelta(days=int(days_ahead))
+                except (ValueError, TypeError):
+                    pass
+            
+            # Base filters for due service
+            q_filter = Q(service_schedules__next_service_due_date__lte=target_date) | Q(service_schedules__next_service_due_mileage__lte=F('current_mileage'))
+            
+            # Optional service type filter (filtering vehicles that have schedules of this type due)
+            service_type_id = self.request.query_params.get('service_due_type')
+            if service_type_id:
+                # We filter vehicles that have an active schedule of this type that is due
+                from .models import VehicleServiceSchedule
+                due_schedules = VehicleServiceSchedule.objects.filter(
+                    service_type_id=service_type_id,
+                    is_active=True
+                ).filter(
+                    Q(next_service_due_date__lte=target_date) | 
+                    Q(next_service_due_mileage__lte=F('current_mileage'))
+                )
+                queryset = queryset.filter(id__in=due_schedules.values_list('vehicle_id', flat=True))
+            else:
+                queryset = queryset.filter(q_filter)
+                
+            queryset = queryset.filter(status='active').distinct()
+            
         return queryset
     
     def get_serializer_class(self):
@@ -312,14 +345,32 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 from apps.inventory.models import ServiceBundle
                 bundle = ServiceBundle.objects.filter(service_type=first_service, is_active=True).first()
                 
-                return Response({
+                response_data = {
                     'suggested_service_id': first_service.id,
                     'suggested_service_name': first_service.name,
                     'suggested_bundle_id': bundle.id if bundle else None,
                     'reason': "No previous routine service history found.",
                     'last_service_name': None,
                     'is_repeat': False
-                })
+                }
+                
+                # 3. Add Predictive Smart Suggestions
+                smart_suggestions = []
+                for schedule in vehicle.service_schedules.filter(is_active=True):
+                    if schedule.service_type.id == first_service.id:
+                        continue
+                    if schedule.is_due or schedule.is_due_soon:
+                        smart_suggestions.append({
+                            'id': schedule.id,
+                            'service_type_id': schedule.service_type.id,
+                            'service_type_name': schedule.service_type.name,
+                            'is_due': schedule.is_due,
+                            'is_due_soon': schedule.is_due_soon,
+                            'estimated_due_date': schedule.estimated_due_date,
+                            'days_until_due': schedule.days_until_due
+                        })
+                response_data['smart_suggestions'] = smart_suggestions
+                return Response(response_data)
             return Response({'message': 'No routine service types defined.'}, status=status.HTTP_404_NOT_FOUND)
 
         # 2. Determine the next service in progression
@@ -338,7 +389,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
         from apps.inventory.models import ServiceBundle
         bundle = ServiceBundle.objects.filter(service_type=next_service, is_active=True).first()
             
-        return Response({
+        response_data = {
             'suggested_service_id': next_service.id,
             'suggested_service_name': next_service.name,
             'suggested_bundle_id': bundle.id if bundle else None,
@@ -347,7 +398,28 @@ class VehicleViewSet(viewsets.ModelViewSet):
             'last_service_name': latest_schedule.service_type.name,
             'last_service_date': latest_schedule.last_service_date,
             'is_repeat': False
-        })
+        }
+        
+        # 3. Add Predictive Smart Suggestions
+        smart_suggestions = []
+        for schedule in vehicle.service_schedules.filter(is_active=True):
+            # Skip the progression service if it's already the primary suggestion
+            if schedule.service_type.id == next_service.id:
+                continue
+                
+            if schedule.is_due or schedule.is_due_soon:
+                smart_suggestions.append({
+                    'id': schedule.id,
+                    'service_type_id': schedule.service_type.id,
+                    'service_type_name': schedule.service_type.name,
+                    'is_due': schedule.is_due,
+                    'is_due_soon': schedule.is_due_soon,
+                    'estimated_due_date': schedule.estimated_due_date,
+                    'days_until_due': schedule.days_until_due
+                })
+        response_data['smart_suggestions'] = smart_suggestions
+        
+        return Response(response_data)
 
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):

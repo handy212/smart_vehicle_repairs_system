@@ -62,6 +62,20 @@ class Vehicle(models.Model):
         help_text="Vehicle owner"
     )
     
+    # Relationship
+    RELATIONSHIP_CHOICES = [
+        ('owner', 'Owner'),
+        ('driver', 'Driver'),
+        ('fleet_manager', 'Fleet Manager'),
+        ('other', 'Other'),
+    ]
+    relationship = models.CharField(
+        max_length=20,
+        choices=RELATIONSHIP_CHOICES,
+        default='owner',
+        help_text="Primary relationship between the customer and this vehicle"
+    )
+    
     # Vehicle Identification
     vin = models.CharField(
         max_length=17,
@@ -236,6 +250,21 @@ class Vehicle(models.Model):
         help_text="Comma-separated tags"
     )
     
+    # Predictive Analytics
+    health_score = models.IntegerField(
+        default=100,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Calculated health score (0-100) based on recent repair history"
+    )
+    is_high_risk = models.BooleanField(
+        default=False,
+        help_text="Flagged if vehicle has had excessive repairs recently"
+    )
+    average_daily_mileage = models.FloatField(
+        default=0.0,
+        help_text="Calculated Average Daily Mileage (ADM) based on history"
+    )
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -281,6 +310,51 @@ class Vehicle(models.Model):
         from django.utils import timezone
         return self.warranty_expiry_date > timezone.now().date()
 
+    @property
+    def total_maintenance_cost(self):
+        """Calculate total historical spending on completed work orders"""
+        completed_wos = self.work_orders.filter(status='completed')
+        return sum(wo.actual_total or 0 for wo in completed_wos)
+
+    def update_health_score(self, months_back=3, risk_threshold=3):
+        """
+        Dynamically calculate the health score based on frequency of recent repairs.
+        A vehicle starts at 100. Each completed repair in the last X months drops the score.
+        If repairs > threshold, it is flagged as high risk.
+        """
+        from django.utils import timezone
+        from dateutil.relativedelta import relativedelta
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            cutoff_date = timezone.now() - relativedelta(months=months_back)
+            
+            # Count completed work orders in the timeframe
+            recent_repairs_count = self.work_orders.filter(
+                status='completed',
+                completed_at__gte=cutoff_date
+            ).count()
+            
+            # Base logic: start at 100, drop 15 points per recent repair (minimum 0)
+            new_score = max(0, 100 - (recent_repairs_count * 15))
+            
+            # High risk flag
+            is_risk = recent_repairs_count >= risk_threshold
+            
+            # Only save if changed to avoid unnecessary DB writes
+            if self.health_score != new_score or self.is_high_risk != is_risk:
+                self.health_score = new_score
+                self.is_high_risk = is_risk
+                self.save(update_fields=['health_score', 'is_high_risk'])
+                logger.info(f"Updated health score for Vehicle {self.id}: Score={new_score}, Risk={is_risk}")
+                
+            return new_score, is_risk
+        except Exception as e:
+            logger.error(f"Error calculating health score for Vehicle {self.id}: {str(e)}")
+            return self.health_score, self.is_high_risk
+
     def update_mileage(self, mileage, user=None, notes=""):
         """Update vehicle mileage, create history record, and check service schedules"""
         if mileage is None:
@@ -305,6 +379,19 @@ class Vehicle(models.Model):
                 recorded_by=user,
                 notes=notes
             )
+            
+            # Update ADM
+            try:
+                # Use the oldest history record to find long-term average
+                first_record = self.mileage_history.order_by('recorded_date').first()
+                if first_record and first_record.recorded_date < timezone.now().date():
+                    days_passed = (timezone.now().date() - first_record.recorded_date).days
+                    if days_passed > 0:
+                        self.average_daily_mileage = (mileage - first_record.mileage) / days_passed
+                        self.save(update_fields=['average_daily_mileage'])
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to calculate ADM for {self.id}: {e}")
             
             # Check for due services
             self.check_service_schedules_due()
@@ -710,6 +797,36 @@ class VehicleServiceSchedule(models.Model):
         
         return False
     
+    @property
+    def is_due_soon(self):
+        """Check if service is due within 14 days or 500 miles, but not yet due"""
+        if self.is_due:
+            return False
+            
+        from django.utils import timezone
+        today = timezone.now().date()
+        current_mileage = self.vehicle.current_mileage or 0
+        
+        # Check date-based (within 14 days)
+        if self.next_service_due_date:
+            days_left = (self.next_service_due_date - today).days
+            if 0 < days_left <= 14:
+                return True
+                
+        # Check mileage-based (within 500 miles)
+        if self.next_service_due_mileage:
+            miles_left = self.next_service_due_mileage - current_mileage
+            if 0 < miles_left <= 500:
+                return True
+                
+        return False
+
+    @property
+    def estimated_due_date(self):
+        """Return the next service due date or an estimated date based on mileage (if possible)"""
+        # For now, return the explicitly set/calculated next due date
+        return self.next_service_due_date
+
     @property
     def days_until_due(self):
         """Calculate days until service is due (returns negative if overdue)"""

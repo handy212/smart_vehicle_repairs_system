@@ -353,13 +353,16 @@ def get_sms_balance():
     config = _get_hubtel_config()
     
     try:
-        # Hubtel balance endpoint
-        balance_url = 'https://smsc.hubtel.com/v1/account/balance'
+        # Hubtel balance endpoint (use api.hubtel.com as fallback)
+        balance_url = 'https://api.hubtel.com/v1/merchantaccount/balance'
+        
+        # Log attempting balance check
+        logger.debug(f"Attempting to fetch SMS balance from {balance_url}")
         
         response = requests.get(
             balance_url,
             auth=(config['client_id'], config['client_secret']),
-            timeout=10
+            timeout=3  # Reduced timeout to prevents blocking workers
         )
         
         if response.status_code == 200:
@@ -371,13 +374,25 @@ def get_sms_balance():
                 'currency': data.get('Currency', 'GHS')
             }
         else:
-            logger.error(f"Failed to get SMS balance: {response.status_code} - {response.text}")
+            # Avoid logging large HTML error bodies
+            error_text = response.text[:200]
+            if '<!DOCTYPE' in error_text or '<html' in error_text:
+                error_text = "[HTML Error Page (likely 404 or Maintenance)]"
+                
+            logger.error(f"Failed to get SMS balance: {response.status_code} - {error_text}")
             return {
                 'success': False,
                 'error': f'API error: {response.status_code}',
                 'balance': 0
             }
             
+    except requests.exceptions.Timeout:
+        logger.warning("Hubtel SMS balance request timed out after 3s")
+        return {
+            'success': False,
+            'error': 'Request timeout',
+            'balance': 0
+        }
     except requests.exceptions.RequestException as e:
         logger.error(f"Failed to get SMS balance: {str(e)}")
         return {

@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { User, Car, DollarSign, Calendar, Wrench, AlertCircle, Link as LinkIcon, FileText, Edit2, Save, X, Sparkles, TrendingUp, AlertTriangle, ShieldCheck, Microscope } from "lucide-react";
+import { User, Car, Calendar, AlertCircle, Link as LinkIcon, FileText, Edit2, Save, X, Sparkles, TrendingUp, ShieldCheck, Microscope } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -47,8 +46,7 @@ export default function WorkOrderOverviewTab({
   });
 
   // Fetch AI Service Prediction
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: prediction, isLoading: isPredicting } = useQuery({
+  const { data: prediction } = useQuery({
     queryKey: ["workorder-prediction", workOrderId],
     queryFn: () => workordersApi.predictService(workOrderId),
     enabled: !!workOrderId && !!workOrder?.vehicle?.id,

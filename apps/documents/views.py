@@ -391,8 +391,31 @@ class DocumentViewSet(viewsets.ModelViewSet):
             notes=f'Shared with {share.shared_with_email or "anyone"}'
         )
         
-        # TODO: Send email if send_email is True and email provided
-        
+        if serializer.validated_data.get('send_email', True) and share.shared_with_email:
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings as django_settings
+                from apps.accounts.settings_utils import get_setting
+                site_url = get_setting('site_url', 'http://localhost:3000')
+                share_url = f"{site_url}/portal/documents/{share.share_token}"
+                company_name = get_setting('company_name', 'Vehicle Repairs')
+                send_mail(
+                    subject=f"{company_name} – Document Shared: {document.title}",
+                    message=(
+                        f"Hello,\n\n"
+                        f"{request.user.get_full_name() or request.user.email} has shared a document with you.\n\n"
+                        f"Document: {document.title}\n"
+                        f"Access link: {share_url}\n"
+                        + (f"Access code required: {share.access_code}\n" if share.access_code else "")
+                        + f"\nThis link expires on {share.expires_at.strftime('%Y-%m-%d %H:%M UTC') if share.expires_at else 'never'}.\n"
+                    ),
+                    from_email=django_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[share.shared_with_email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass  # Email failure must not block the API response
+
         response_serializer = DocumentShareSerializer(share)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
     
@@ -418,8 +441,32 @@ class DocumentViewSet(viewsets.ModelViewSet):
             requested_by=request.user
         )
         
-        # TODO: Send email if send_email is True
-        
+        if serializer.validated_data.get('send_email', True):
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings as django_settings
+                from apps.accounts.settings_utils import get_setting
+                site_url = get_setting('site_url', 'http://localhost:3000')
+                sign_url = f"{site_url}/portal/sign/{signature.request_token}"
+                company_name = get_setting('company_name', 'Vehicle Repairs')
+                send_mail(
+                    subject=f"{company_name} – Signature Requested: {document.title}",
+                    message=(
+                        f"Hello {signature.signer_name},\n\n"
+                        f"Your signature has been requested on the following document:\n\n"
+                        f"Document: {document.title}\n"
+                        f"Requested by: {request.user.get_full_name() or request.user.email}\n"
+                        f"Sign here: {sign_url}\n"
+                        + (f"Notes: {signature.notes}\n" if signature.notes else "")
+                        + f"\nThis request expires on {signature.expires_at.strftime('%Y-%m-%d %H:%M UTC')}.\n"
+                    ),
+                    from_email=django_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[signature.signer_email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass  # Email failure must not block the API response
+
         response_serializer = DocumentSignatureSerializer(signature)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
     

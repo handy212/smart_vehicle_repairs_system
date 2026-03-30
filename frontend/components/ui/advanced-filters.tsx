@@ -8,6 +8,7 @@ import { Label } from "./label";
 import { DateRangePicker } from "./date-range-picker";
 import { X, Filter, Calendar, CheckCircle } from "lucide-react";
 import { Badge } from "./badge";
+import { cn } from "@/lib/utils/cn";
 
 export interface FilterOption {
   key: string;
@@ -141,9 +142,15 @@ export function AdvancedFilters({
               {/* Filter Fields */}
               <div className="space-y-4">
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Filter Options</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   {filters.map((filter) => (
-                    <div key={filter.key} className="space-y-2">
+                    <div 
+                      key={filter.key} 
+                      className={cn(
+                        "space-y-2.5",
+                        (filter.type === "daterange" || filter.type === "text") && "md:col-span-2"
+                      )}
+                    >
                       <Label htmlFor={filter.key} className="text-sm font-medium text-foreground">
                         {filter.label}
                       </Label>
@@ -162,7 +169,7 @@ export function AdvancedFilters({
                           id={filter.key}
                           value={localFilters[filter.key] || ""}
                           onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex h-9 w-full rounded-md border border-input bg-muted/30 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">All {filter.label}</option>
                           {filter.options?.map((option) => (

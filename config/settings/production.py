@@ -39,6 +39,19 @@ USE_X_FORWARDED_HOST = True
 # Frame options
 X_FRAME_OPTIONS = 'DENY'
 
+# Content Security Policy
+# Restricts where the browser can load resources from.
+# Adjust script-src / style-src if you add third-party CDNs.
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; "
+    "font-src 'self' data:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none';"
+)
+
 # CORS Settings - restrictive for production
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
@@ -171,3 +184,11 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
 # Disable debug toolbar and extensions in production
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in ['debug_toolbar', 'django_extensions']]
 MIDDLEWARE = [mw for mw in MIDDLEWARE if 'debug_toolbar' not in mw]
+
+# Insert CSP middleware immediately after SecurityMiddleware
+_csp = 'config.middleware.ContentSecurityPolicyMiddleware'
+if _csp not in MIDDLEWARE:
+    _sec_idx = next(
+        (i for i, m in enumerate(MIDDLEWARE) if 'SecurityMiddleware' in m), 0
+    )
+    MIDDLEWARE.insert(_sec_idx + 1, _csp)

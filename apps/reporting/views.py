@@ -1472,7 +1472,15 @@ def service_due_report(request):
                         'license_plate': vehicle.license_plate or '',
                         'vehicle_info': vehicle_info,
                         'last_service_date': last_service_date.isoformat() if last_service_date else None,
-                        'next_service_due': None,  # TODO: Calculate based on service schedule
+                        'next_service_due': (
+                            vehicle.service_schedules.filter(
+                                is_active=True,
+                                next_service_due_date__isnull=False
+                            ).order_by('next_service_due_date')
+                            .values_list('next_service_due_date', flat=True)
+                            .first()
+                            or None
+                        ),
                         'mileage': vehicle.current_mileage if vehicle.current_mileage else None
                     })
             except Exception as e:

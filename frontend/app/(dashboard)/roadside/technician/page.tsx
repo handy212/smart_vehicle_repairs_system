@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     Truck, MapPin, Phone, Navigation,
     CheckCircle, Clock, ExternalLink,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    AlertCircle, Wrench, PlayCircle
+    Wrench
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";

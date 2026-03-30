@@ -676,10 +676,4 @@ export const inventoryApi = {
   deleteBundle: async (id: number): Promise<void> => {
     await apiClient.delete(`/inventory/service-bundles/${id}/`);
   },
-
-
-  getBundleForecast: async (branchId: number): Promise<any[]> => {
-    const response = await apiClient.get(`/inventory/service-bundles/forecast/?branch=${branchId}`);
-    return response.data;
-  },
 };

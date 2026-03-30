@@ -1,8 +1,6 @@
 "use client";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,8 +25,11 @@ export function ProfileView({ customer }: ProfileViewProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Primary Contact Information */}
                 <Card className="shadow-sm border border-border">
-                    <CardHeader className="bg-muted/30 bg-muted/20 pb-4 border-b border-border">
+                    <CardHeader className="bg-muted/30 bg-muted/20 pb-4 border-b border-border flex flex-row items-center justify-between space-y-0">
                         <CardTitle className="text-base font-semibold">Primary Contact</CardTitle>
+                        <Badge variant={customer.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                            {customer.status}
+                        </Badge>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-4">
                         <div className="group flex items-start space-x-3">
@@ -67,49 +68,133 @@ export function ProfileView({ customer }: ProfileViewProps) {
                     </CardContent>
                 </Card>
 
-                {/* Address & Business Info */}
+                {/* Extended Details */}
                 <Card className="shadow-sm border border-border">
                     <CardHeader className="bg-muted/30 bg-muted/20 pb-4 border-b border-border">
-                        <CardTitle className="text-base font-semibold">Address & Details</CardTitle>
+                        <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                             Details & Attributes
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                        <div className="group flex items-start space-x-3">
-                            <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
-                            <div className="flex-1">
-                                <p className="text-sm font-medium text-muted-foreground">Billing Address</p>
-                                <p className="text-sm text-foreground whitespace-pre-line">{customer.billing_address || customer.user?.address || "-"}</p>
-                            </div>
+                    <CardContent className="pt-6 grid grid-cols-2 gap-y-6 gap-x-4">
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Customer ID</p>
+                            <p className="text-sm font-mono font-bold text-primary">{customer.customer_number}</p>
                         </div>
-
-                        <div className="group flex items-start space-x-3">
-                            <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
-                            <div className="flex-1">
-                                <p className="text-sm font-medium text-muted-foreground">Shipping Address</p>
-                                <p className="text-sm text-foreground whitespace-pre-line">{customer.shipping_address || "-"}</p>
-                            </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Gender</p>
+                            <p className="text-sm text-foreground capitalize">{customer.user?.gender?.replace(/_/g, " ") || "-"}</p>
                         </div>
-
-                        <div className="group flex items-start space-x-3">
-                            <CreditCard className="w-4 h-4 text-muted-foreground mt-1" />
-                            <div className="flex-1">
-                                <p className="text-sm font-medium text-muted-foreground">Currency & Terms</p>
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="font-normal">{customer.currency || currency || "USD"}</Badge>
-                                    <Badge variant="outline" className="font-normal capitalize">{customer.payment_terms?.replace(/_/g, " ")}</Badge>
-                                </div>
-                            </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Date of Birth</p>
+                            <p className="text-sm text-foreground">{customer.user?.date_of_birth || "-"}</p>
                         </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Occupation</p>
+                            <p className="text-sm text-foreground">{customer.occupation || "-"}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Alt. Phone</p>
+                            <p className="text-sm text-foreground">{customer.alternative_phone || "-"}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Customer Type</p>
+                            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest">{customer.customer_type}</Badge>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                        {customer.customer_type !== "individual" && (
-                            <div className="group flex items-start space-x-3">
-                                <Building className="w-4 h-4 text-muted-foreground mt-1" />
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-muted-foreground">Company Details</p>
-                                    <p className="text-sm text-foreground font-medium">{customer.company_name}</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">VAT: {customer.vat_number || "-"}</p>
-                                </div>
+                {/* Address Info */}
+                <Card className="shadow-sm border border-border">
+                    <CardHeader className="bg-muted/30 bg-muted/20 pb-4 border-b border-border">
+                        <CardTitle className="text-base font-semibold flex items-center gap-2">
+                            <MapPin className="w-4 h-4" />
+                            Locations
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-6">
+                        <div className="space-y-1.5">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Service Address</p>
+                            <p className="text-sm text-foreground">
+                                {customer.service_address || "-"}
+                                {(customer.service_city || customer.service_state) && (
+                                    <span className="block text-xs text-muted-foreground mt-0.5">
+                                        {[customer.service_city, customer.service_state, customer.service_zip_code].filter(Boolean).join(", ")}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                        <div className="space-y-1.5">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Billing Address</p>
+                            <p className="text-sm text-foreground">
+                                {customer.billing_address || customer.user?.address || "-"}
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Business Info (Conditional) */}
+                {(customer.customer_type === "business" || customer.customer_type === "fleet") && (
+                    <Card className="shadow-sm border border-primary/20 bg-primary/5">
+                        <CardHeader className="bg-primary/10 pb-4 border-b border-primary/20">
+                            <CardTitle className="text-base font-bold text-primary flex items-center gap-2">
+                                <Building className="w-4 h-4" />
+                                Business & Fleet Info
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6 grid grid-cols-2 gap-y-6 gap-x-4">
+                            <div className="col-span-2 space-y-1 text-center border-b border-primary/10 pb-4">
+                                <p className="text-lg font-black tracking-tight text-foreground uppercase">{customer.company_name}</p>
+                                <p className="text-xs font-bold text-primary tracking-widest uppercase">{customer.business_type || "General Business"}</p>
                             </div>
-                        )}
+                            <div className="space-y-1">
+                                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Contact Person</p>
+                                <p className="text-sm font-bold text-foreground">{customer.contact_person_name || "-"}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Tax ID</p>
+                                <p className="text-sm font-mono text-foreground">{customer.tax_id || "-"}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Business Email</p>
+                                <p className="text-sm text-foreground">{customer.company_email || "-"}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Business Phone</p>
+                                <p className="text-sm text-foreground">{customer.company_phone || "-"}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Billing & Terms */}
+                <Card className="shadow-sm border border-border md:col-span-2">
+                    <CardHeader className="bg-muted/30 bg-muted/20 pb-4 border-b border-border">
+                        <CardTitle className="text-base font-semibold flex items-center gap-2">
+                            <CreditCard className="w-4 h-4" />
+                            Financial Details
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Currency</p>
+                            <Badge variant="outline" className="font-bold">{customer.currency || currency || "USD"}</Badge>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Payment Method</p>
+                            <Badge variant="secondary" className="font-bold uppercase tracking-wider text-[10px]">
+                                {customer.default_payment_method?.replace(/_/g, " ") || "-"}
+                            </Badge>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Payment Terms</p>
+                            <Badge variant="outline" className="font-bold uppercase tracking-widest text-[10px] border-primary/20 text-primary">
+                                {customer.payment_terms?.replace(/_/g, " ") || "-"}
+                            </Badge>
+                        </div>
+                        <div className="space-y-1 text-right">
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Credit Limit</p>
+                            <p className="text-sm font-black text-foreground">{customer.available_credit ? `${currency} ${parseFloat(customer.available_credit).toLocaleString()}` : "-"}</p>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

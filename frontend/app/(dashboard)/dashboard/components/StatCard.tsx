@@ -1,8 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { memo } from "react";
-import { LucideIcon, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { Sparkline } from "./Sparkline";
 
 interface StatCardProps {
   title: string;
@@ -10,14 +13,7 @@ interface StatCardProps {
   icon: LucideIcon;
   color: string;
   link?: string;
-  alert?: boolean;
-  subtitle?: string;
-  trend?: {
-    value: number;
-    label: string;
-    positive?: boolean;
-  };
-  badge?: string | number;
+  trendData?: number[];
 }
 
 export const StatCard = memo(function StatCard({
@@ -26,116 +22,36 @@ export const StatCard = memo(function StatCard({
   icon: Icon,
   color,
   link,
-  alert,
-  subtitle,
-  trend,
-  badge,
+  trendData,
 }: StatCardProps) {
-  // Extract color classes for gradient effect
-  const isColorClass = color.includes("bg-");
-  const colorVariant = isColorClass ? color : "bg-gray-500";
-
   const cardContent = (
     <Card
       className={cn(
-        "relative overflow-hidden transition-all duration-200 group",
-        link && "cursor-pointer hover:shadow-lg hover:-translate-y-1",
-        alert && "border-2 border-red-300 dark:border-red-700",
-        !alert && !link && "hover:shadow-md"
+        "precision-card h-32 relative overflow-hidden group transition-all duration-300",
+        link && "cursor-pointer hover:shadow-xl hover:-translate-y-1"
       )}
     >
-      // Decorative gradient background
-      <div
-        className={cn(
-          "absolute top-0 right-0 w-24 h-24 rounded-full opacity-10 blur-2xl -translate-y-1/2 translate-x-1/2",
-          colorVariant
-        )}
-      />
-
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 relative z-10">
-        <div className="flex-1 min-w-0 pr-2">
-          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
-            {title}
-          </CardTitle>
-          {subtitle && (
-            <p className="text-xs text-muted-foreground truncate">
-              {subtitle}
-            </p>
-          )}
-        </div>
-        <div className="relative flex-shrink-0">
-          <div
-            className={cn(
-              "p-2.5 sm:p-3 rounded-xl shadow-sm transition-transform duration-200",
-              link && "group-hover:scale-110",
-              colorVariant
-            )}
-          >
-            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+      <CardContent className="p-5 flex h-full items-center justify-between gap-4">
+        <div className="flex flex-col justify-between h-full z-10 min-w-0">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-1">{title}</p>
+            <h3 className="text-2xl font-bold tracking-tighter text-foreground">
+              {value}
+            </h3>
           </div>
-          {badge !== undefined && (
-            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {badge}
+          
+           <div className="flex items-center gap-2">
+            <div className={cn("p-1.5 rounded-lg", "bg-muted")}>
+              <Icon className="w-3.5 h-3.5" style={{ color }} />
             </div>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="relative z-10 pt-0">
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="text-xl sm:text-2xl font-bold text-foreground truncate">
-              {typeof value === "number" && !isNaN(value)
-                ? value.toLocaleString()
-                : value}
-            </div>
-            {trend && (
-              <div
-                className={cn(
-                  "flex items-center gap-1 mt-2 text-xs font-medium",
-                  trend.positive !== false
-                    ? "text-success"
-                    : "text-red-600 dark:text-red-400"
-                )}
-              >
-                {trend.positive !== false ? (
-                  <TrendingUp className="w-3 h-3" />
-                ) : (
-                  <TrendingDown className="w-3 h-3" />
-                )}
-                <span>{trend.value > 0 ? "+" : ""}</span>
-                <span>
-                  {typeof trend.value === "number"
-                    ? trend.value.toLocaleString()
-                    : trend.value}
-                </span>
-                {trend.label && (
-                  <span className="text-muted-foreground">
-                    {trend.label}
-                  </span>
-                )}
-              </div>
-            )}
+            {link && <span className="text-[9px] font-black uppercase tracking-widest text-primary opacity-60">Live View</span>}
           </div>
-          {link && (
-            <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform group-hover:translate-x-1" />
-          )}
         </div>
 
-        {alert && (
-          <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-800">
-            <p className="text-xs font-medium text-red-600 dark:text-red-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-red-600 dark:bg-red-400 rounded-full animate-pulse" />
-              Action required
-            </p>
-          </div>
-        )}
+        <div className="flex-1 h-16 max-w-[140px] relative z-0">
+          {trendData && <Sparkline data={trendData} color={color} />}
+        </div>
       </CardContent>
-
-      // Hover effect overlay
-      {link && (
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
-      )}
     </Card>
   );
 

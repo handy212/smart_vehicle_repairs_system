@@ -475,9 +475,10 @@ class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
                 {'error': 'notification_id is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        logs = self.get_queryset().filter(notification_id=notification_id)
         serializer = self.get_serializer(logs, many=True)
-        
+
         return Response(serializer.data)
 
 
@@ -604,13 +605,8 @@ class SMSConsoleViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def history(self, request):
         """
-        Get recent SMS history (last 50)
+        Get recent SMS history (last 50) with structured recipient data
         """
-        # Filter notifications:
-        # 1. Channel is SMS
-        # 2. Type is 'custom' (sent from console) OR has logs with 'sms'
-        # For simplicity, we track 'custom' type sent via console
-        
         recent = Notification.objects.filter(
             channel='sms',
             notification_type='custom'
@@ -618,36 +614,41 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         
         data = []
         for n in recent:
-            # Get recipient name with proper fallbacks
-            try:
-                if n.recipient:
-                    # Try full name first
-                    recipient_name = n.recipient.get_full_name()
-                    # If no full name, try customer profile company_name
-                    if not recipient_name or recipient_name.strip() == '':
-                        try:
-                            if hasattr(n.recipient, 'customer_profile') and n.recipient.customer_profile.company_name:
-                                recipient_name = n.recipient.customer_profile.company_name
-                        except:
-                            pass
-                    # If no customer name, try username (but skip AnonymousUser)
-                    if (not recipient_name or recipient_name.strip() == '') and n.recipient.username not in ['AnonymousUser', '']:
-                        recipient_name = n.recipient.username
-                    # If still nothing, use email
-                    if not recipient_name or recipient_name.strip() == '':
-                        recipient_name = n.recipient.email or f"User #{n.recipient.id}"
-                    # Add phone if available
-                    if n.recipient.phone:
-                        recipient_name += f" ({n.recipient.phone})"
-                else:
-                    recipient_name = "Unknown Recipient"
-            except Exception as e:
-                recipient_name = "Unknown Recipient"
+            recipient_name = "Unknown"
+            recipient_phone = ""
+            recipient_initials = "U"
+            
+            if n.recipient:
+                # Name
+                full_name = n.recipient.get_full_name()
+                if not full_name:
+                    try:
+                        if hasattr(n.recipient, 'customer_profile') and n.recipient.customer_profile.company_name:
+                            full_name = n.recipient.customer_profile.company_name
+                    except:
+                        pass
                 
+                recipient_name = full_name or n.recipient.username or n.recipient.email or f"User #{n.recipient.id}"
+                
+                # Phone
+                recipient_phone = n.recipient.phone or ""
+                
+                # Initials
+                if full_name:
+                    parts = full_name.split()
+                    if len(parts) >= 2:
+                        recipient_initials = (parts[0][0] + parts[-1][0]).upper()
+                    else:
+                        recipient_initials = parts[0][:2].upper()
+                else:
+                    recipient_initials = recipient_name[:2].upper()
+            
             data.append({
                 'id': n.id,
                 'created_at': n.created_at,
-                'recipient': recipient_name,
+                'recipient_name': recipient_name,
+                'recipient_phone': recipient_phone,
+                'recipient_initials': recipient_initials,
                 'message': n.message,
                 'status': n.status,
                 'scheduled_for': n.scheduled_for,
@@ -655,6 +656,34 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             })
             
         return Response(data)
+
+    @action(detail=False, methods=['post'])
+    def ai_assist(self, request):
+        """
+        Mock AI Assist for message completion
+        """
+        prompt = request.data.get('prompt', '').lower()
+        
+        # Simple rule-based mock for AI completions
+        suggestions = [
+            "Your vehicle service is complete and ready for pickup.",
+            "Reminder: You have an appointment tomorrow at 10:00 AM.",
+            "Invoice #INV-123 is now available for payment. Thank you!",
+            "We've noticed your brake pads need replacement. Would you like to schedule a service?",
+            "Your parts order has arrived. Please visit our shop for installation."
+        ]
+        
+        import random
+        suggested = random.choice(suggestions)
+        
+        if 'appointment' in prompt:
+            suggested = "Reminder: Your appointment at Antigravity Garage is confirmed for tomorrow."
+        elif 'ready' in prompt or 'complete' in prompt:
+            suggested = "Good news! Your vehicle service is now complete and ready for collection."
+        elif 'payment' in prompt or 'invoice' in prompt:
+            suggested = "Hello, your invoice is ready. You can view and pay online at your convenience."
+            
+        return Response({'suggestion': suggested})
 
     @action(detail=False, methods=['get'])
     def stats(self, request):

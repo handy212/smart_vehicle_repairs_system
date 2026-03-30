@@ -38,6 +38,7 @@ export const vehicleSchema = z.object({
     owner: z.number().min(1, "Owner is required"),
     status: z.enum(["active", "in_service", "sold", "totaled", "inactive"]),
     vehicle_type: z.enum(["saloon", "suv", "pickup", "minivan", "motorcycle", "truck", "other"]),
+    relationship: z.enum(["owner", "driver", "fleet_manager"]),
 });
 
 export type VehicleFormData = z.infer<typeof vehicleSchema>;
@@ -84,6 +85,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
             current_mileage: 0,
             year: new Date().getFullYear(),
             vehicle_type: "saloon",
+            relationship: "owner",
             ...initialData,
         },
     });
@@ -97,6 +99,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                 vehicle_type: "saloon",
                 current_mileage: 0,
                 year: new Date().getFullYear(),
+                relationship: "owner",
                 ...initialData,
                 owner: initialData.owner || (customerId ? parseInt(customerId) : undefined),
             });
@@ -485,6 +488,23 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                     </SelectContent>
                                 </Select>
                                 {errors.owner && <p className="text-xs text-red-500">{errors.owner.message}</p>}
+                            </div>
+
+                            <div className="space-y-2 mt-4">
+                                <label className="text-sm font-medium">Relationship</label>
+                                <Select
+                                    value={watch("relationship")}
+                                    onValueChange={(val) => setValue("relationship", val as any)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select relationship" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="owner">Owner</SelectItem>
+                                        <SelectItem value="driver">Driver</SelectItem>
+                                        <SelectItem value="fleet_manager">Fleet Manager</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </CardContent>
                     </Card>

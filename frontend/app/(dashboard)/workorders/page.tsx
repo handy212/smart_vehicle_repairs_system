@@ -2,14 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Plus, Search, Wrench, LayoutGrid, Trash2, Download, X, ChevronDown, MoreVertical, MoreHorizontal, Eye, Edit, FileText, Printer, Calendar, Clock, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { Plus, Search, Wrench, Trash2, Download, X, ChevronDown, LayoutGrid, MoreHorizontal, Eye, Edit, FileText, Printer } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -21,16 +19,11 @@ import { exportToCSV } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
-import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { StaffStatsGrid } from "@/components/shared/StaffStatsGrid";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,8 +48,6 @@ export default function WorkOrdersPage() {
   const { openPrintWindow } = usePrint();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("in_progress");
@@ -67,9 +58,6 @@ export default function WorkOrdersPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { hasPermission } = usePermissions();
-
   const filterOptions: FilterOption[] = [
     {
       key: "status",
@@ -383,7 +371,6 @@ export default function WorkOrdersPage() {
               }}
               onClear={() => {
                 setAdvancedFilters({});
-                setStatusFilter("");
                 setPage(1);
               }}
               title="Filter"
@@ -398,7 +385,6 @@ export default function WorkOrdersPage() {
               onClick={() => {
                 setSearch("");
                 setAdvancedFilters({});
-                setStatusFilter("");
                 setPage(1);
               }}
               className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"

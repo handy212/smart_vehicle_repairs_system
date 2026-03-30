@@ -6,23 +6,32 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Backgrounds & Surfaces */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  /* Tonal Architecture from DESIGN.md */
+  --surface: #f7f9fb;
+  --surface-container-low: #f2f4f6;
+  --surface-container-lowest: #ffffff;
+  --surface-bright: #f7f9fb;
+  
+  --on-surface: #191c1e;
+  --on-surface-variant: #44474c;
+  --outline-variant: rgba(196, 198, 205, 0.15);
+
+  --background: var(--surface);
+  --foreground: var(--on-surface);
+  --card: var(--surface-container-lowest);
+  --card-foreground: var(--on-surface);
+  --popover: var(--surface-container-lowest);
+  --popover-foreground: var(--on-surface);
 
   /* Borders & Inputs */
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #e2e8f0;
+  --input: #f1f5f9;
+  --ring: #0230a1;
 
-  /* Brand Colors - Orange Theme */
-  --primary: oklch(0.627 0.184 37.698);
-  /* Vibrant Orange */
-  --primary-foreground: oklch(1 0 0);
+  /* Brand Colors */
+  --primary: #0230a1;
+  --primary-container: #2a4ab8;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
 
@@ -66,15 +75,16 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Command Center Premium Palette */
-  --dashboard-bg: oklch(0.12 0.02 250);
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-accent: rgba(249, 115, 22, 0.1);
-  --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.05) 100%);
+  /* Premium Glassmorphism (Light Mode) */
+  --dashboard-bg: oklch(0.98 0.01 250);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-accent: rgba(249, 115, 22, 0.05);
+  --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0.4) 100%);
 
   --shadow-premium: 0 10px 40px -15px rgba(0, 0, 0, 0.3);
   --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  --shadow-precision: 0 4px 20px rgba(25, 28, 30, 0.06);
 }
 
 .dark {
@@ -140,6 +150,25 @@
   --sidebar-accent-foreground: oklch(0.97 0 0);
   --sidebar-border: oklch(0.35 0 0);
   --sidebar-ring: oklch(0.627 0.184 37.698);
+
+  /* Tonal Architecture Dark Mode */
+  --surface: oklch(0.165 0 0);
+  --surface-container-low: oklch(0.19 0 0);
+  --surface-container-lowest: oklch(0.215 0 0);
+  --surface-bright: oklch(0.24 0 0);
+  
+  --on-surface: oklch(0.97 0 0);
+  --on-surface-variant: oklch(0.8 0 0);
+  --outline-variant: rgba(255, 255, 255, 0.1);
+
+  /* Premium Glassmorphism (Dark Mode) */
+  --dashboard-bg: oklch(0.14 0.02 250);
+  --glass-bg: rgba(20, 20, 25, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-accent: rgba(249, 115, 22, 0.15);
+  --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0.05) 100%);
+  
+  --shadow-precision: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* stylelint-disable-next-line at-rule-no-unknown -- Tailwind CSS v4 directive */
@@ -232,6 +261,18 @@
 
   .interactive-glow:hover::after {
     opacity: 1;
+  }
+
+  .premium-shadow {
+    box-shadow: var(--shadow-premium);
+  }
+
+  .precision-card {
+    background: var(--surface-container-lowest);
+    border: 1px solid var(--outline-variant);
+    box-shadow: var(--shadow-precision);
+    border-radius: 0.75rem;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
   .bento-grid {

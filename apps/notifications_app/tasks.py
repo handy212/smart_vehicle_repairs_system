@@ -10,6 +10,8 @@ def process_scheduled_notifications():
     """
     Process notifications that are scheduled for delivery.
     """
+    from .services import NotificationService
+
     now = timezone.now()
     # Find notifications that are pending and scheduled for now or anytime in the past
     pending_notifications = Notification.objects.filter(
@@ -20,14 +22,11 @@ def process_scheduled_notifications():
     count = pending_notifications.count()
     if count > 0:
         logger.info(f"Processing {count} scheduled notifications")
-        
+        service = NotificationService()
+
         for notification in pending_notifications:
             try:
-                # In a real system, here we would trigger the actual sending logic (Email, SMS, etc.)
-                # For now, we'll mark them as 'sent' and set the sent_at timestamp
-                notification.status = 'sent'
-                notification.sent_at = timezone.now()
-                notification.save(update_fields=['status', 'sent_at'])
+                service.send_notification(notification)
                 logger.info(f"Processed scheduled notification {notification.id}")
             except Exception as e:
                 logger.error(f"Failed to process notification {notification.id}: {str(e)}")
@@ -105,7 +104,7 @@ def send_service_reminders(days_ahead=7):
                 continue
             
             # Send reminder via notification triggers
-            notification_triggers.service_due_reminder(schedule)
+            notification_triggers.service_due(schedule)
             reminders_sent += 1
             logger.info(f"Sent service reminder for {schedule.vehicle} - {schedule.service_type.name}")
             
@@ -123,11 +122,29 @@ def send_service_reminders(days_ahead=7):
 @shared_task
 def cleanup_old_notifications():
     """
-    Placeholder for cleanup task
+    Delete read in-app notifications older than 90 days and
+    failed/expired notifications older than 30 days.
     """
-    logger.info("Cleanup old notifications task started")
-    # Logic to delete old/read notifications
-    return "Cleanup completed"
+    from datetime import timedelta
+
+    now = timezone.now()
+    cutoff_read = now - timedelta(days=90)
+    cutoff_failed = now - timedelta(days=30)
+
+    read_deleted, _ = Notification.objects.filter(
+        channel='in_app',
+        is_read=True,
+        created_at__lt=cutoff_read,
+    ).delete()
+
+    failed_deleted, _ = Notification.objects.filter(
+        status='failed',
+        created_at__lt=cutoff_failed,
+    ).delete()
+
+    result = f"Cleanup completed: {read_deleted} read, {failed_deleted} failed/expired notifications deleted"
+    logger.info(result)
+    return result
 
 @shared_task
 def send_bulk_sms_async(recipients, message, scheduled_for=None):

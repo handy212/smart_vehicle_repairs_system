@@ -4,11 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { servicesApi, VehicleServiceSchedule } from "@/lib/api/services";
 import { inventoryApi, ServiceBundle } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ServiceScheduleForm } from "../ServiceScheduleForm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Plus, Edit, Check, Calendar, AlertCircle, Trash2, Clock, Settings } from "lucide-react";
+import { Plus, Edit, Check, Calendar, AlertCircle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { useState } from "react";
@@ -34,9 +34,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Separator } from "@/components/ui/separator";
-
 interface VehicleServicesViewProps {
   vehicleId: number;
 }
@@ -77,19 +74,9 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     queryFn: () => servicesApi.listServiceSchedules({ vehicle: vehicleId }),
   });
 
-  const { data: serviceTypesData } = useQuery({
-    queryKey: ["service-types", "active"],
-    queryFn: () => servicesApi.listServiceTypes({ is_active: true }),
-  });
-
-  const { data: bundlesData } = useQuery({
-    queryKey: ["service-bundles"],
-    queryFn: () => inventoryApi.listBundles({ is_active: true }),
-  });
 
   const schedules = schedulesData?.results || [];
 
-  const bundles = (Array.isArray(bundlesData) ? bundlesData : (bundlesData as any)?.results || []) as ServiceBundle[];
 
   const createMutation = useMutation({
 
@@ -165,25 +152,12 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     },
   });
 
-  const handleSaveService = (formData: FormData) => {
-    const serviceTypeId = formData.get("service_type");
-    const lastServiceDate = formData.get("last_service_date");
-    const lastServiceMileage = formData.get("last_service_mileage");
-    const intervalMonths = formData.get("interval_months");
-    const intervalMiles = formData.get("interval_miles");
-    const notes = formData.get("notes");
-
-    const payload = {
-      vehicle: vehicleId,
-      service_type: parseInt(serviceTypeId as string),
-      last_service_date: lastServiceDate || undefined,
-      last_service_mileage: lastServiceMileage ? parseInt(lastServiceMileage as string) : undefined,
-      interval_months: intervalMonths ? parseInt(intervalMonths as string) : undefined,
-      interval_miles: intervalMiles ? parseInt(intervalMiles as string) : undefined,
-      notes: notes as string,
-      is_active: true,
-    };
-
+  const handleSaveService = (payload: any) => {
+    payload.vehicle = vehicleId;
+    
+    // Clean up empty strings to null/undefined for API
+    if (payload.last_service_date === "") payload.last_service_date = null;
+    
     if (editingSchedule) {
       updateMutation.mutate({ id: editingSchedule.id, data: payload });
     } else {
@@ -222,7 +196,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Service Schedule</h2>
+          <h2 className="text-xl font-bold text-foreground">Maintenance Service</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Manage scheduled maintenance services and intervals
           </p>
@@ -230,7 +204,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
         <PermissionGuard permission="edit_vehicles">
           <Button onClick={openAddDialog}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Schedule
+            Add Maintenance
           </Button>
         </PermissionGuard>
       </div>
@@ -245,7 +219,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead className="font-semibold text-card-foreground">Service Type</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Maintenance Type</TableHead>
                   <TableHead className="font-semibold text-card-foreground">Last Service</TableHead>
                   <TableHead className="font-semibold text-card-foreground">Next Due</TableHead>
                   <TableHead className="font-semibold text-card-foreground">Interval Settings</TableHead>
@@ -373,142 +347,24 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
         </Card>
       )}
 
-      {/* Service Bundles Section */}
-      <div className="pt-6">
-        <h2 className="text-xl font-bold text-foreground mb-4">Available Service Bundles</h2>
-        {bundles.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bundles.map((bundle) => (
-              <Card key={bundle.id} className="border border-border">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-base font-semibold">{bundle.name}</CardTitle>
-                    <Badge variant="outline" className="text-xs">
-                      {bundle.service_type_name}
-                    </Badge>
-                  </div>
-                  <CardDescription>{bundle.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm">
-                  <div className="mb-2 font-medium text-card-foreground">Included Parts:</div>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                    {bundle.items.slice(0, 3).map((item) => (
-                      <li key={item.id} className="truncate">
-                        {item.quantity}x {item.part_name}
-                      </li>
-                    ))}
-                    {bundle.items.length > 3 && (
-                      <li className="list-none text-xs text-muted-foreground pt-1">
-                        + {bundle.items.length - 3} more items
-                      </li>
-                    )}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground bg-muted/50 rounded-lg border border-dashed">
-            No service bundles available.
-          </div>
-        )}
-      </div>
-
       {/* Add/Edit Service Dialog */}
       <Dialog open={showAddEditDialog} onOpenChange={setShowAddEditDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingSchedule ? "Edit Service Schedule" : "Add Service Schedule"}</DialogTitle>
+            <DialogTitle>{editingSchedule ? "Edit Maintenance Service" : "Add Maintenance Service"}</DialogTitle>
             <DialogDescription>
               {editingSchedule
-                ? "Update service details for this maintenance item."
-                : "Create a new maintenance schedule."}
+                ? "Update maintenance details for this maintenance item."
+                : "Create a new maintenance service."}
             </DialogDescription>
           </DialogHeader>
-          <form
-            action={(formData) => handleSaveService(formData)}
-            className="space-y-4 py-2"
-          >
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="service_type">Service Type <span className="text-red-500">*</span></Label>
-                <Select name="service_type" required defaultValue={editingSchedule?.service_type.toString()}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serviceTypesData?.results.map((st) => (
-                      <SelectItem key={st.id} value={st.id.toString()}>
-                        {st.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="last_service_date">Last Service Date</Label>
-                  <Input
-                    type="date"
-                    name="last_service_date"
-                    defaultValue={editingSchedule?.last_service_date || new Date().toISOString().split("T")[0]}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="last_service_mileage">Last Mileage</Label>
-                  <Input
-                    type="number"
-                    name="last_service_mileage"
-                    placeholder="e.g. 50000"
-                    defaultValue={editingSchedule?.last_service_mileage?.toString()}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="interval_months">Interval (Months)</Label>
-                  <Input
-                    type="number"
-                    name="interval_months"
-                    placeholder="Default"
-                    defaultValue={editingSchedule?.interval_months?.toString()}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="interval_miles">Interval (Miles)</Label>
-                  <Input
-                    type="number"
-                    name="interval_miles"
-                    placeholder="Default"
-                    defaultValue={editingSchedule?.interval_miles?.toString()}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Input
-                  name="notes"
-                  placeholder="Optional notes"
-                  defaultValue={editingSchedule?.notes || ""}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="ghost" onClick={() => setShowAddEditDialog(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                {createMutation.isPending || updateMutation.isPending
-                  ? "Saving..."
-                  : editingSchedule ? "Update" : "Create"
-                }
-              </Button>
-            </DialogFooter>
-          </form>
+          <ServiceScheduleForm
+            vehicleId={vehicleId}
+            initialData={editingSchedule}
+            onSubmit={handleSaveService}
+            onCancel={() => setShowAddEditDialog(false)}
+            isSubmitting={createMutation.isPending || updateMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
 

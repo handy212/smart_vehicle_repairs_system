@@ -1,140 +1,91 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { memo, useMemo } from "react";
-import { PremiumIcons } from "@/components/ui/icons";
 
 interface WorkOrderPieChartProps {
   data: Array<{ status: string; count: number }>;
 }
 
-// Status colors with semantic meaning
-const STATUS_COLORS: Record<string, string> = {
-  draft: "#94A3B8", // Gray
-  inspection: "#F59E0B", // Amber
-  intake: "#3B82F6", // Blue
-  assigned: "#8B5CF6", // Purple
-  diagnosis: "#06B6D4", // Cyan
-  awaiting_approval: "#F97316", // Orange
-  approved: "#10B981", // Green
-  in_progress: "#3B82F6", // Blue
-  additional_work_found: "#EF4444", // Red
-  paused: "#F59E0B", // Amber
-  quality_check: "#8B5CF6", // Purple
-  completed: "#10B981", // Green
-  invoiced: "#6366F1", // Indigo
-  closed: "#64748B", // Slate
-};
+const COLORS = ["#f97316", "#fbbf24", "#22c55e", "#3b82f6", "#ef4444"];
 
-// Human-readable status labels
 const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
   inspection: "Inspection",
-  intake: "Intake",
-  assigned: "Assigned",
-  diagnosis: "Diagnosis",
-  awaiting_approval: "Awaiting Approval",
-  approved: "Approved",
-  in_progress: "In Progress",
-  additional_work_found: "Additional Work",
-  paused: "Paused",
-  quality_check: "Quality Check",
+  repair: "Repair",
   completed: "Completed",
-  invoiced: "Invoiced",
-  closed: "Closed",
+  in_progress: "In Progress",
+  diagnosis: "Diagnosis",
 };
-
 
 const WorkOrderPieChart = memo(function WorkOrderPieChart({ data }: WorkOrderPieChartProps) {
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
-
+    
+    // Group common statuses to match the image categories if needed, or just use top 3-4
     return data
-      .map(item => {
-        const statusKey = item.status.toLowerCase();
-        return {
-          ...item,
-          status: statusKey,
-          label: STATUS_LABELS[statusKey] || item.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          color: STATUS_COLORS[statusKey] || "#94A3B8",
-        };
-      })
-      .sort((a, b) => b.count - a.count);
+      .map((item, index) => ({
+        name: STATUS_LABELS[item.status.toLowerCase()] || item.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        value: item.count,
+        color: COLORS[index % COLORS.length]
+      }))
+      .sort((a, b) => b.value - a.value);
   }, [data]);
 
   const totalCount = useMemo(() => {
-    return processedData.reduce((sum, item) => sum + item.count, 0);
+    return processedData.reduce((sum, item) => sum + item.value, 0);
   }, [processedData]);
 
   if (!data || data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[240px] text-muted-foreground bg-white/5 rounded-3xl border border-dashed border-white/10">
-        <PremiumIcons.Dashboard className="w-10 h-10 mb-2 opacity-20" />
-        <p className="text-xs font-bold uppercase tracking-widest opacity-40">No operational data</p>
-      </div>
-    );
+    return <div className="h-[200px] flex items-center justify-center text-muted-foreground">No distribution data</div>;
   }
 
   return (
-    <div className="relative h-[240px] flex items-center justify-center">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={processedData}
-            cx="50%"
-            cy="50%"
-            innerRadius={65}
-            outerRadius={85}
-            paddingAngle={6}
-            dataKey="count"
-            stroke="none"
-            animationBegin={0}
-            animationDuration={1500}
-            animationEasing="ease-out"
-          >
-            {processedData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.color}
-                className="hover:opacity-80 transition-opacity cursor-pointer"
-                style={{ filter: `drop-shadow(0 0 8px ${entry.color}40)` }}
+    <div className="precision-card p-6 h-full flex flex-col">
+      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-6">Workload Distribution</h3>
+      
+      <div className="flex items-center justify-between w-full flex-1 min-h-[200px]">
+        <div className="relative w-1/2 h-full min-h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={processedData}
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={2}
+                dataKey="value"
+                stroke="none"
+                animationDuration={1000}
+              >
+                {processedData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
-            ))}
-          </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'rgba(0,0,0,0.8)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              fontSize: '10px',
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '1px'
-            }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-
-      {/* Central Vital Metric */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-3xl font-black text-foreground tracking-tighter">{totalCount}</span>
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Active Jobs</span>
-      </div>
-
-      {/* Simplified Side Legend (Integrated) */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden xl:flex flex-col gap-2">
-        {processedData.slice(0, 4).map((item, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="w-1.5 h-4 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{item.label}</span>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-4xl font-bold tracking-tighter text-foreground">{totalCount}</span>
           </div>
-        ))}
+        </div>
+
+        <div className="flex flex-col gap-3 pr-4 w-1/2">
+          {processedData.slice(0, 4).map((item, index) => (
+            <div key={index} className="flex items-center justify-between group">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.color }} />
+                <span className="text-xs font-medium text-gray-500 group-hover:text-foreground transition-colors">
+                  {item.name}
+                </span>
+              </div>
+              <span className="text-xs font-bold text-foreground">({item.value})</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 });
 
 export default WorkOrderPieChart;
-

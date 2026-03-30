@@ -13,6 +13,7 @@ class VehicleListSerializer(serializers.ModelSerializer):
     owner_number = serializers.CharField(source='owner.customer_number', read_only=True)
     display_name = serializers.CharField(read_only=True)
     is_due_for_service = serializers.BooleanField(read_only=True)
+    due_service_name = serializers.SerializerMethodField()
     warranty_active = serializers.BooleanField(read_only=True)
     
     class Meta:
@@ -20,9 +21,17 @@ class VehicleListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'vin', 'year', 'make', 'model', 'trim', 'vehicle_type', 'license_plate',
             'current_mileage', 'mileage_unit', 'status', 'owner', 'owner_name',
-            'owner_number', 'display_name', 'is_due_for_service', 'warranty_active',
-            'last_service_date', 'next_service_due_date', 'created_at'
+            'owner_number', 'display_name', 'is_due_for_service', 'due_service_name', 
+            'warranty_active', 'last_service_date', 'next_service_due_date', 
+            'health_score', 'is_high_risk', 'average_daily_mileage', 'relationship', 'created_at', 'image'
         ]
+
+    def get_due_service_name(self, obj):
+        """Get the name of the most urgent due service"""
+        due_schedule = obj.service_schedules.filter(is_active=True).order_by('next_service_due_date', 'next_service_due_mileage').first()
+        if due_schedule and due_schedule.is_due:
+            return due_schedule.service_type.name
+        return None
 
 
 class VehicleDetailSerializer(serializers.ModelSerializer):
@@ -32,11 +41,12 @@ class VehicleDetailSerializer(serializers.ModelSerializer):
     display_name = serializers.CharField(read_only=True)
     is_due_for_service = serializers.BooleanField(read_only=True)
     warranty_active = serializers.BooleanField(read_only=True)
+    total_maintenance_cost = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     
     class Meta:
         model = Vehicle
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'health_score', 'is_high_risk', 'average_daily_mileage']
 
 
 class VehicleCreateSerializer(serializers.ModelSerializer):
@@ -65,7 +75,7 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
             'current_mileage', 'mileage_unit', 'engine_type', 'engine_size',
             'transmission_type', 'fuel_tank_capacity', 'tire_size',
             'condition_rating', 'purchase_date', 'warranty_expiry_date',
-            'warranty_type', 'warranty_coverage', 'status', 'notes', 'tags',
+            'warranty_type', 'warranty_coverage', 'status', 'relationship', 'notes', 'tags',
             'image', 'auto_decode_vin'
         ]
         read_only_fields = ['id']
@@ -361,7 +371,7 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
             'fuel_tank_capacity', 'tire_size', 'condition_rating',
             'warranty_expiry_date', 'warranty_type', 'warranty_coverage',
             'last_service_date', 'next_service_due_date', 'next_service_due_mileage',
-            'status', 'notes', 'tags', 'image'
+            'status', 'relationship', 'notes', 'tags', 'image'
         ]
     
     def validate_license_plate(self, value):
@@ -485,6 +495,8 @@ class VehicleServiceScheduleSerializer(serializers.ModelSerializer):
     customer_phone = serializers.CharField(source='vehicle.owner.user.phone', read_only=True)
     customer_email = serializers.CharField(source='vehicle.owner.user.email', read_only=True)
     is_due = serializers.BooleanField(read_only=True)
+    is_due_soon = serializers.BooleanField(read_only=True)
+    estimated_due_date = serializers.DateField(read_only=True)
     days_until_due = serializers.IntegerField(read_only=True)
     miles_until_due = serializers.IntegerField(read_only=True)
     current_mileage = serializers.IntegerField(source='vehicle.current_mileage', read_only=True)
@@ -497,7 +509,8 @@ class VehicleServiceScheduleSerializer(serializers.ModelSerializer):
             'next_service_due_mileage', 'interval_months', 'interval_miles',
             'is_active', 'notes', 'created_at', 'updated_at',
             'customer_name', 'customer_phone', 'customer_email',
-            'is_due', 'days_until_due', 'miles_until_due', 'current_mileage'
+            'is_due', 'is_due_soon', 'estimated_due_date', 
+            'days_until_due', 'miles_until_due', 'current_mileage'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -508,6 +521,8 @@ class VehicleServiceScheduleListSerializer(serializers.ModelSerializer):
     vehicle_display = serializers.CharField(source='vehicle.display_name', read_only=True)
     customer_name = serializers.CharField(source='vehicle.owner.user.get_full_name', read_only=True)
     is_due = serializers.BooleanField(read_only=True)
+    is_due_soon = serializers.BooleanField(read_only=True)
+    estimated_due_date = serializers.DateField(read_only=True)
     days_until_due = serializers.IntegerField(read_only=True)
     
     class Meta:
@@ -515,7 +530,7 @@ class VehicleServiceScheduleListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'vehicle', 'vehicle_display', 'service_type', 'service_type_name',
             'next_service_due_date', 'next_service_due_mileage',
-            'customer_name', 'is_due', 'days_until_due'
+            'customer_name', 'is_due', 'is_due_soon', 'estimated_due_date', 'days_until_due'
         ]
 
 

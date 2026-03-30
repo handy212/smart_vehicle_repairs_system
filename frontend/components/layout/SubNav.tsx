@@ -318,7 +318,6 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Suppliers", href: "/inventory/suppliers", permission: "view_suppliers", icon: Truck },
     { name: "Purchase Orders", href: "/inventory/purchase-orders", permission: "view_purchase_orders", icon: FileText },
     { name: "Service Bundles", href: "/inventory/bundles", permission: "view_inventory", icon: Boxes },
-    { name: "Forecasting", href: "/inventory/forecasting", permission: "view_inventory", icon: TrendingUp },
     { name: "Transfers", href: "/inventory/transfers", permission: "view_transfers", icon: ArrowLeftRight },
   ],
   billing: [

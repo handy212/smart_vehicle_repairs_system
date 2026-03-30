@@ -8,10 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Vehicle, vehiclesApi } from "@/lib/api/vehicles";
 import Image from "next/image";
 import Link from "next/link";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Separator } from "@/components/ui/separator";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Gauge, Fuel, Calendar, FileText, ArrowUpRight, Car, ShieldCheck, User, MapPin, Hash, Activity, Cog, History, ArrowRight } from "lucide-react";
+import { getMediaUrl } from "@/lib/api/utils";
+import { Calendar, FileText, ArrowUpRight, Car, User, History, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,7 +78,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                             <div className="w-full md:w-1/3 relative bg-muted bg-background group cursor-pointer" onClick={() => vehicle.image && setShowImageModal(true)}>
                                 {vehicle.image ? (
                                     <Image
-                                        src={vehicle.image}
+                                        src={getMediaUrl(vehicle.image)}
                                         alt={`${vehicle.make} ${vehicle.model}`}
                                         fill
                                         className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -111,6 +109,12 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                         <Badge variant="outline" className="text-muted-foreground font-mono text-xs">{vehicle.license_plate || "No Plate"}</Badge>
                                         <span className="text-gray-300">|</span>
                                         <span className="text-sm text-muted-foreground font-mono">{vehicle.vin || "No VIN"}</span>
+                                        {vehicle.is_high_risk && (
+                                            <>
+                                                <span className="text-gray-300">|</span>
+                                                <Badge variant="danger" className="animate-pulse">HIGH RISK</Badge>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -134,6 +138,22 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                             ) : "-"
                                         }
                                         icon={null}
+                                    />
+                                    <DataField
+                                        label="Health Score"
+                                        value={
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-bold ${vehicle.health_score && vehicle.health_score < 50 ? 'text-red-500' : vehicle.health_score && vehicle.health_score < 80 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                                    {vehicle.health_score || 100}%
+                                                </span>
+                                            </div>
+                                        }
+                                        icon={HeartPulse}
+                                    />
+                                    <DataField
+                                        label="Total Repair Cost"
+                                        value={formatCurrency(Number(vehicle.total_maintenance_cost || 0))}
+                                        icon={DollarSign}
                                     />
                                     <DataField
                                         label="Mileage"
@@ -242,9 +262,16 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                             {vehicle.owner_name?.charAt(0) || <User className="w-5 h-5" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
-                                                {vehicle.owner_name}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                                                    {vehicle.owner_name}
+                                                </p>
+                                                {vehicle.relationship && (
+                                                    <Badge variant="outline" className="text-[9px] h-4 py-0 leading-none bg-muted/50 border-border/50 font-bold uppercase tracking-tight text-muted-foreground">
+                                                        {vehicle.relationship.replace(/_/g, " ")}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-muted-foreground flex items-center mt-0.5">
                                                 View Profile <ArrowUpRight className="w-3 h-3 ml-1" />
                                             </p>
@@ -316,11 +343,11 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                     <div className="relative w-[95vw] h-[85vh] flex items-center justify-center pointer-events-none">
                         {vehicle.image && (
                             <Image
-                                src={vehicle.image}
+                                src={getMediaUrl(vehicle.image)}
                                 alt="Vehicle Full Size"
                                 fill
                                 className="object-contain pointer-events-auto cursor-default"
-                                unoptimized={vehicle.image.startsWith("http")}
+                                unoptimized={vehicle.image.startsWith("http") || !vehicle.image.startsWith("http")}
                                 priority
                                 onClick={(e) => e.stopPropagation()}
                             />

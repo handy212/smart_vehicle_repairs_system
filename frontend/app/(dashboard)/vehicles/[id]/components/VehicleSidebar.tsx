@@ -1,10 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { User, FileText, Wrench, Search, Truck, Clock, Calendar } from "lucide-react";
+import { User, FileText, Truck, Clock, Calendar } from "lucide-react";
 
 interface VehicleSidebarProps {
     vehicleId: number;
@@ -13,9 +11,6 @@ interface VehicleSidebarProps {
 }
 
 export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleSidebarProps) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const pathname = usePathname();
-
     const menuItems = [
         {
             id: "profile",
@@ -31,7 +26,7 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
         },
         {
             id: "services",
-            label: "Service Schedule",
+            label: "Maintenance Service",
             icon: Calendar,
             href: `/vehicles/${vehicleId}?view=services`,
         },

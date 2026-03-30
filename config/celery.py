@@ -42,6 +42,10 @@ app.conf.beat_schedule = {
         'task': 'apps.notifications_app.tasks.process_scheduled_notifications',
         'schedule': crontab(minute='*'),  # Run every minute
     },
+    'calculate-fleet-health-scores-daily': {
+        'task': 'apps.vehicles.tasks.calculate_fleet_health_scores',
+        'schedule': crontab(hour=0, minute=0),  # Run daily at midnight
+    },
 }
 
 @app.task(bind=True)

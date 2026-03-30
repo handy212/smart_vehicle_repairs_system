@@ -46,6 +46,7 @@ def get_setting(key, default='', use_cache=True):
         'twilio_account_sid': 'TWILIO_ACCOUNT_SID',
         'twilio_auth_token': 'TWILIO_AUTH_TOKEN',
         'twilio_phone_number': 'TWILIO_PHONE_NUMBER',
+        'sms_enabled': 'HUBTEL_SMS_ENABLED',
         'quickbooks_client_id': 'QUICKBOOKS_CLIENT_ID',
         'quickbooks_client_secret': 'QUICKBOOKS_CLIENT_SECRET',
         'quickbooks_sandbox_enabled': 'QUICKBOOKS_SANDBOX_ENABLED',

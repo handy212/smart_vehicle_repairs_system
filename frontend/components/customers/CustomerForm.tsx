@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { AlertCircle, CheckCircle2, RefreshCw, Copy, Eye, EyeOff, Building2, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, RefreshCw, Copy, Eye, EyeOff, Building2, User, Car, Phone, Mail, UserPlus, Briefcase, Calendar } from "lucide-react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -22,7 +22,11 @@ export const customerSchema = z.object({
     first_name: z.string().min(1, "First name is required"),
     last_name: z.string().min(1, "Last name is required"),
     phone: z.string().optional(),
+    alternative_phone: z.string().optional(),
+    gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
+    occupation: z.string().optional(),
     password: z.string().optional(),
+    date_of_birth: z.string().optional(), // Using string for date input
 
     // Portal access
     grant_portal_access: z.boolean().optional(),
@@ -31,10 +35,21 @@ export const customerSchema = z.object({
     // Customer fields
     customer_type: z.enum(["individual", "business", "fleet"]),
     company_name: z.string().optional(),
+    contact_person_name: z.string().optional(),
+    company_email: z.string().email("Invalid company email").or(z.literal("")).optional(),
+    company_phone: z.string().optional(),
     business_type: z.string().optional(),
     tax_id: z.string().optional(),
     payment_terms: z.enum(["due_on_receipt", "net_15", "net_30", "net_60", "prepaid"]).optional(),
-    status: z.enum(["active", "inactive", "suspended"]),
+    default_payment_method: z.enum(["cash", "momo", "card", "bank_transfer", "check"]).optional(),
+    status: z.enum(["active", "inactive", "suspended", "blacklisted"]),
+    service_address: z.string().optional(),
+    service_city: z.string().optional(),
+    service_state: z.string().optional(),
+    service_zip_code: z.string().optional(),
+    preferred_contact_method: z.enum(["email", "phone", "sms", "mail"]).optional(),
+    notes: z.string().optional(),
+    
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
 }).refine((data) => {
     // If portal access is granted, password is required (or will be auto-generated)
@@ -52,9 +67,10 @@ interface CustomerFormProps {
     isSubmitting: boolean;
     mode: "create" | "edit";
     onCancel?: () => void;
+    hidePortalAccess?: boolean;
 }
 
-export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCancel }: CustomerFormProps) {
+export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCancel, hidePortalAccess = false }: CustomerFormProps) {
     const { toast } = useToast();
     const [passwordCopied, setPasswordCopied] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -73,6 +89,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
             status: "active",
             customer_type: "individual",
             payment_terms: "due_on_receipt",
+            default_payment_method: "cash",
             grant_portal_access: false,
             send_welcome_email: false,
             ...initialData,
@@ -169,12 +186,86 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                 {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="phone">Phone</Label>
+                                <Label htmlFor="phone">Primary Phone</Label>
                                 <Input
                                     id="phone"
                                     type="tel"
                                     placeholder="(555) 123-4567"
                                     {...register("phone")}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="alternative_phone">Alternative Phone</Label>
+                                <Input
+                                    id="alternative_phone"
+                                    type="tel"
+                                    placeholder="(555) 987-6543"
+                                    {...register("alternative_phone")}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gender">Gender</Label>
+                                <Select
+                                    value={watch("gender")}
+                                    onValueChange={(val) => setValue("gender", val as any)}
+                                >
+                                    <SelectTrigger id="gender">
+                                        <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="male">Male</SelectItem>
+                                        <SelectItem value="female">Female</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="date_of_birth">Date of Birth</Label>
+                                <Input
+                                    id="date_of_birth"
+                                    type="date"
+                                    {...register("date_of_birth")}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="occupation">Occupation</Label>
+                                <Input
+                                    id="occupation"
+                                    placeholder="e.g. Engineer"
+                                    {...register("occupation")}
+                                />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="service_address">Service Address</Label>
+                                <Input
+                                    id="service_address"
+                                    placeholder="123 Main St, Area"
+                                    {...register("service_address")}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="service_city">City</Label>
+                                <Input
+                                    id="service_city"
+                                    placeholder="Accra"
+                                    {...register("service_city")}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="service_state">State / Region</Label>
+                                <Input
+                                    id="service_state"
+                                    placeholder="Greater Accra"
+                                    {...register("service_state")}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="service_zip_code">Zip Code / Postcode</Label>
+                                <Input
+                                    id="service_zip_code"
+                                    placeholder="00233"
+                                    {...register("service_zip_code")}
                                 />
                             </div>
                         </CardContent>
@@ -201,6 +292,14 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                     {errors.company_name && <p className="text-xs text-red-500">{errors.company_name.message}</p>}
                                 </div>
                                 <div className="space-y-2">
+                                    <Label htmlFor="contact_person_name">Contact Person</Label>
+                                    <Input
+                                        id="contact_person_name"
+                                        placeholder="Jane Smith"
+                                        {...register("contact_person_name")}
+                                    />
+                                </div>
+                                <div className="space-y-2">
                                     <Label htmlFor="business_type">Business Type</Label>
                                     <Input
                                         id="business_type"
@@ -209,7 +308,25 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="tax_id">Tax ID</Label>
+                                    <Label htmlFor="company_email">Company Email</Label>
+                                    <Input
+                                        id="company_email"
+                                        type="email"
+                                        placeholder="billing@acme.com"
+                                        {...register("company_email")}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="company_phone">Company Phone</Label>
+                                    <Input
+                                        id="company_phone"
+                                        type="tel"
+                                        placeholder="(555) 000-1111"
+                                        {...register("company_phone")}
+                                    />
+                                </div>
+                                <div className="space-y-2 sm:col-span-2">
+                                    <Label htmlFor="tax_id">Tax ID / Registration Number</Label>
                                     <Input
                                         id="tax_id"
                                         placeholder="XX-XXXXXXX"
@@ -220,77 +337,113 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                         </Card>
                     )}
 
-                    {/* Portal Access */}
-                    <Card className="border-l-4 border-l-green-500">
+                    <Card className="border-l-4 border-l-blue-500">
                         <CardHeader className="pb-3 border-b border-border">
-                            <CardTitle className="text-base font-medium">Portal Access</CardTitle>
+                            <CardTitle className="text-base font-medium">Preferences & Notes</CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-4 space-y-4">
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    type="checkbox"
-                                    id="grant_portal_access"
-                                    {...register("grant_portal_access")}
-                                    className="rounded border-border text-primary focus:ring-primary w-4 h-4"
-                                />
-                                <Label htmlFor="grant_portal_access" className="font-normal cursor-pointer">
-                                    Grant portal access to customer
-                                </Label>
+                        <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="preferred_contact_method">Preferred Contact Method</Label>
+                                <Select
+                                    value={watch("preferred_contact_method") || "email"}
+                                    onValueChange={(val) => setValue("preferred_contact_method", val as any)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="email">Email</SelectItem>
+                                        <SelectItem value="phone">Phone Call</SelectItem>
+                                        <SelectItem value="sms">SMS / Text</SelectItem>
+                                        <SelectItem value="mail">Physical Mail</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-
-                            {grantPortalAccess && (
-                                <div className="space-y-4 pt-4 border-t border-dashed">
-                                    <div>
-                                        <Label htmlFor="password">Password {passwordValue ? "" : "(Auto-generated if empty)"}</Label>
-                                        <div className="flex gap-2 mt-1">
-                                            <div className="relative flex-1">
-                                                <Input
-                                                    id="password"
-                                                    type={showPassword ? "text" : "password"}
-                                                    placeholder="Enter password"
-                                                    {...register("password")}
-                                                    className="pr-10"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                                                >
-                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
-                                            <Button type="button" variant="secondary" onClick={generatePassword} title="Generate">
-                                                <RefreshCw className="w-4 h-4" />
-                                            </Button>
-                                            {passwordValue && (
-                                                <Button type="button" variant="secondary" onClick={handleCopyPassword} title="Copy">
-                                                    {passwordCopied ? <span className="text-xs text-green-600">Copied</span> : <Copy className="w-4 h-4" />}
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <input
-                                            type="checkbox"
-                                            id="send_welcome_email"
-                                            {...register("send_welcome_email")}
-                                            className="rounded border-border text-primary focus:ring-primary w-4 h-4"
-                                        />
-                                        <Label htmlFor="send_welcome_email" className="font-normal cursor-pointer text-sm text-muted-foreground">
-                                            Send welcome email with login details
-                                        </Label>
-                                    </div>
-                                </div>
-                            )}
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="notes">Internal Notes</Label>
+                                <textarea
+                                    id="notes"
+                                    className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-sans"
+                                    placeholder="Special instructions, behavior, etc."
+                                    {...register("notes")}
+                                />
+                            </div>
                         </CardContent>
                     </Card>
+
+                    {/* Portal Access */}
+                    {!hidePortalAccess && (
+                        <Card className="border-l-4 border-l-green-500">
+                            <CardHeader className="pb-3 border-b border-border">
+                                <CardTitle className="text-base font-medium">Portal Access</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-4 space-y-4">
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        id="grant_portal_access"
+                                        {...register("grant_portal_access")}
+                                        className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                                    />
+                                    <Label htmlFor="grant_portal_access" className="font-normal cursor-pointer">
+                                        Grant portal access to customer
+                                    </Label>
+                                </div>
+
+                                {grantPortalAccess && (
+                                    <div className="space-y-4 pt-4 border-t border-dashed">
+                                        <div>
+                                            <Label htmlFor="password">Password {passwordValue ? "" : "(Auto-generated if empty)"}</Label>
+                                            <div className="flex gap-2 mt-1">
+                                                <div className="relative flex-1">
+                                                    <Input
+                                                        id="password"
+                                                        type={showPassword ? "text" : "password"}
+                                                        placeholder="Enter password"
+                                                        {...register("password")}
+                                                        className="pr-10"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                                                    >
+                                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                                <Button type="button" variant="secondary" onClick={generatePassword} title="Generate">
+                                                    <RefreshCw className="w-4 h-4" />
+                                                </Button>
+                                                {passwordValue && (
+                                                    <Button type="button" variant="secondary" onClick={handleCopyPassword} title="Copy">
+                                                        {passwordCopied ? <span className="text-xs text-green-600">Copied</span> : <Copy className="w-4 h-4" />}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                id="send_welcome_email"
+                                                {...register("send_welcome_email")}
+                                                className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                                            />
+                                            <Label htmlFor="send_welcome_email" className="font-normal cursor-pointer text-sm text-muted-foreground">
+                                                Send welcome email with login details
+                                            </Label>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Sidebar Column */}
                 <div className="space-y-6">
                     <Card>
                         <CardHeader className="pb-3 border-b border-border">
-                            <CardTitle className="text-base font-medium">Configuration</CardTitle>
+                            <CardTitle className="text-base font-medium">Account Setup</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4 space-y-4">
                             <div className="space-y-2">
@@ -324,6 +477,25 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                         <SelectItem value="active">Active</SelectItem>
                                         <SelectItem value="inactive">Inactive</SelectItem>
                                         <SelectItem value="suspended">Suspended</SelectItem>
+                                        <SelectItem value="blacklisted">Blacklisted</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="default_payment_method">Default Payment Method</Label>
+                                <Select
+                                    value={watch("default_payment_method")}
+                                    onValueChange={(val) => setValue("default_payment_method", val as any)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="cash">Cash / Physical</SelectItem>
+                                        <SelectItem value="momo">MoMo / Digital</SelectItem>
+                                        <SelectItem value="card">Credit/Debit Card</SelectItem>
+                                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                        <SelectItem value="check">Company Check</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

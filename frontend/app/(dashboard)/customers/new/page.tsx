@@ -21,11 +21,7 @@ export default function NewCustomerPage() {
     mutationFn: (data: CustomerFormData) => customersApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
-      toast({
-        title: "Success",
-        description: "Customer created successfully",
-      });
-      router.push("/customers");
+      // We don't redirect here anymore, we do it in onSubmit to handle vehicle creation
     },
 
     onError: (error: any) => {
@@ -77,7 +73,15 @@ export default function NewCustomerPage() {
         }
       }
 
-      await createMutation.mutateAsync(data);
+      // Create customer
+      const customer = await createMutation.mutateAsync(data);
+
+      toast({
+        title: "Success",
+        description: "Customer created successfully",
+      });
+
+      router.push(`/customers/${customer.id}`);
     } catch (error) {
       console.error("Error creating customer:", error);
 
@@ -100,7 +104,7 @@ export default function NewCustomerPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="max-w-[1700px] mx-auto p-4 md:p-6 space-y-8 pb-12">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/customers">

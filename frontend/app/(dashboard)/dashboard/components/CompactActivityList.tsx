@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PremiumIcons } from "@/components/ui/icons";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -17,9 +16,9 @@ interface Appointment {
 
 interface WorkOrder {
     id: number;
-    wo_number: string;      // From dashboard API recent_activity
-    customer?: string;      // From dashboard API recent_activity
-    vehicle?: string;       // From dashboard API recent_activity
+    wo_number: string;
+    customer?: string;
+    vehicle?: string;
     status: string;
 }
 
@@ -32,116 +31,97 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
     const [activeTab, setActiveTab] = useState<'appointments' | 'work_orders'>('appointments');
 
     return (
-        <div className="space-y-4">
+        <div className="precision-card h-full flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-primary shadow-sm">
+                        <PremiumIcons.Activity className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Activity</h3>
+                        <p className="text-[11px] font-medium text-gray-400">Workshop pulse</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Tab Switcher */}
-            <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/5">
+            <div className="flex items-center p-1 bg-muted rounded-xl mb-6">
                 <button
                     onClick={() => setActiveTab('appointments')}
                     className={cn(
-                        "flex-1 flex items-center justify-center gap-2 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all",
-                        activeTab === 'appointments' ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                        "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                        activeTab === 'appointments' ? "bg-background text-primary shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
                     )}
                 >
-                    <PremiumIcons.Calendar className="w-3 h-3" />
                     Agenda
                 </button>
                 <button
                     onClick={() => setActiveTab('work_orders')}
                     className={cn(
-                        "flex-1 flex items-center justify-center gap-2 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all",
-                        activeTab === 'work_orders' ? "bg-purple-500/20 text-purple-400 shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                        "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                        activeTab === 'work_orders' ? "bg-background text-primary shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
                     )}
                 >
-                    <PremiumIcons.Wrench className="w-3 h-3" />
                     Recent Jobs
                 </button>
             </div>
 
-            {/* Content Area */}
-            <div className="min-h-[200px]">
-                {activeTab === 'appointments' && (
-                    <div className="space-y-2">
-                        {appointments && appointments.length > 0 ? (
-                            appointments.slice(0, 5).map((apt) => (
-                                <Link
-                                    key={apt.id}
-                                    href={`/appointments/${apt.id}`}
-                                    className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-primary/20 transition-all group"
-                                >
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[11px] font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                                            {apt.customer_name || "Guest Customer"}
+            <div className="flex-1 space-y-3 overflow-hidden">
+                {activeTab === 'appointments' ? (
+                    appointments && appointments.length > 0 ? (
+                        appointments.slice(0, 4).map((apt) => (
+                            <Link key={apt.id} href={`/appointments/${apt.id}`} className="block group">
+                                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-all">
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-bold text-foreground truncate uppercase tracking-tight group-hover:text-primary transition-colors">
+                                            {apt.customer_name || "Guest"}
                                         </p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <div className="flex items-center gap-1 text-[9px] text-muted-foreground uppercase tracking-tight font-bold">
-                                                <PremiumIcons.Clock className="w-2.5 h-2.5" />
-                                                {apt.appointment_time || "TBD"}
-                                            </div>
-                                            <span className="text-[9px] text-muted-foreground truncate max-w-[120px] opacity-60">
-                                                • {apt.vehicle_display || apt.vehicle_info || "No Vehicle"}
-                                            </span>
-                                        </div>
+                                        <p className="text-[9px] font-medium text-gray-400 opacity-70 truncate">{apt.vehicle_display || "No Vehicle"}</p>
                                     </div>
-                                    <Badge
-                                        variant="outline"
-                                        className={cn(
-                                            "bg-transparent border-0 font-black uppercase text-[8px] tracking-widest",
-                                            apt.status === "confirmed" ? "text-emerald-500" : apt.status === "pending" ? "text-amber-500" : "text-muted-foreground"
-                                        )}
-                                    >
-                                        {apt.status}
-                                    </Badge>
-                                </Link>
-                            ))
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
-                                <PremiumIcons.Calendar className="w-8 h-8 mb-2" />
-                                <p className="text-[10px] uppercase tracking-widest">No appointments today</p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {activeTab === 'work_orders' && (
-                    <div className="space-y-2">
-                        {workOrders && workOrders.length > 0 ? (
-                            workOrders.slice(0, 5).map((wo) => (
-                                <Link
-                                    key={wo.id}
-                                    href={`/workorders/${wo.id}`}
-                                    className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-purple-500/20 transition-all group"
-                                >
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-[9px] font-black text-purple-400">
-                                                #{wo.wo_number}
-                                            </span>
-                                            <p className="text-[11px] font-bold text-foreground truncate group-hover:text-purple-400 transition-colors">
+                                    <div className="text-right flex flex-col items-end">
+                                        <span className="text-[10px] font-bold text-primary font-mono">{apt.appointment_time}</span>
+                                        <div className={cn(
+                                            "w-1 h-1 rounded-full mt-1",
+                                            apt.status === "confirmed" ? "bg-emerald-500" : "bg-amber-500"
+                                        )} />
+                                    </div>
+                                </div>
+                            </Link>
+                        ))
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-10 opacity-30 text-center">
+                            <p className="text-[10px] font-black uppercase tracking-widest">No appointments</p>
+                        </div>
+                    )
+                ) : (
+                    workOrders && workOrders.length > 0 ? (
+                        workOrders.slice(0, 4).map((wo) => (
+                            <Link key={wo.id} href={`/workorders/${wo.id}`} className="block group">
+                                <div className="flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-all">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                            <span className="text-[10px] font-black text-primary font-mono opacity-50">#{wo.wo_number.slice(-4)}</span>
+                                            <p className="text-[11px] font-bold text-foreground truncate uppercase tracking-tight group-hover:text-primary transition-colors">
                                                 {wo.customer || "N/A"}
                                             </p>
                                         </div>
-                                        <p className="text-[9px] text-muted-foreground mt-0.5 truncate uppercase tracking-tight font-medium opacity-60">
-                                            {wo.vehicle || "No Vehicle Info"}
-                                        </p>
+                                        <p className="text-[9px] font-medium text-gray-400 opacity-70 truncate">{wo.vehicle || "No Info"}</p>
                                     </div>
-                                    <div className="flex items-center">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{wo.status.replace(/_/g, " ")}</span>
                                         <div className={cn(
-                                            "w-1.5 h-1.5 rounded-full mr-2",
-                                            wo.status === "in_progress" ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"
+                                            "w-1.5 h-1.5 rounded-full",
+                                            wo.status === "in_progress" ? "bg-emerald-500 animate-pulse" : "bg-gray-300"
                                         )} />
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
-                                            {wo.status.replace(/_/g, " ")}
-                                        </span>
                                     </div>
-                                </Link>
-                            ))
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center opacity-40">
-                                <PremiumIcons.Wrench className="w-8 h-8 mb-2" />
-                                <p className="text-[10px] uppercase tracking-widest">No recent activity</p>
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            </Link>
+                        ))
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-10 opacity-30 text-center">
+                            <p className="text-[10px] font-black uppercase tracking-widest">No recent jobs</p>
+                        </div>
+                    )
                 )}
             </div>
         </div>

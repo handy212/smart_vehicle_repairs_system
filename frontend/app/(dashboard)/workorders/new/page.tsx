@@ -14,15 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, AlertCircle, Check, User, XCircle, AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertCircle, User, XCircle, AlertTriangle, CheckCircle, HeartPulse, PlusCircle } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { AxiosError } from "axios";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -163,6 +162,10 @@ export default function NewWorkOrderPage() {
   const [showActiveWorkOrderDialog, setShowActiveWorkOrderDialog] = useState(false);
   const [activeWorkOrderBranch, setActiveWorkOrderBranch] = useState<string | null>(null);
 
+  // Refs to prevent infinite loops and track initialization
+  const isInitialSyncRef = useRef(false);
+  const skipCustomerEffectRef = useRef(false);
+
   // Repeat visit detection
   const [repeatVisitMatches, setRepeatVisitMatches] = useState<Array<{
     work_order_id: number;
@@ -215,6 +218,15 @@ export default function NewWorkOrderPage() {
     last_service_id?: number;
     last_service_name?: string;
     last_service_date?: string;
+    smart_suggestions?: Array<{
+        id: number;
+        service_type_id: number;
+        service_type_name: string;
+        is_due: boolean;
+        is_due_soon: boolean;
+        estimated_due_date: string | null;
+        days_until_due: number | null;
+    }>;
   } | null>(null);
   const [progressionWarning, setProgressionWarning] = useState<string | null>(null);
 
@@ -252,13 +264,15 @@ export default function NewWorkOrderPage() {
     ? vehiclesData.results.find((v) => v.id === vehicle) || null
     : null;
 
-  // Update selected customer when form value changes
+  // 1. CONSOLIDATED: Update selected customer when form value changes
   useEffect(() => {
+    if (skipCustomerEffectRef.current) {
+      skipCustomerEffectRef.current = false;
+      return;
+    }
+
     if (customer && customer !== selectedCustomer) {
       setSelectedCustomer(customer);
-
-      setValue("vehicle", undefined as any); // Reset vehicle when customer changes
-      setValue("odometer_in", 0); // Reset odometer when vehicle changes
 
       // Find and store selected customer data
       const customerData = customersData?.results?.find((c) => c.id === customer);
@@ -274,8 +288,15 @@ export default function NewWorkOrderPage() {
       } else {
         setSelectedCustomerData(null);
       }
+
+      // Reset vehicle and odometer ONLY if not in initial sync
+      if (isInitialSyncRef.current) {
+        setValue("vehicle", undefined as any);
+        setValue("odometer_in", 0);
+      }
     } else if (!customer) {
       setSelectedCustomerData(null);
+      setSelectedCustomer(null);
     }
   }, [customer, selectedCustomer, setValue, customersData]);
 
@@ -289,22 +310,28 @@ export default function NewWorkOrderPage() {
     }
   }, [vehicle, vehiclesData, odometerIn, setValue]);
 
-  // Pre-fill from appointment if available
+  // 2. Sync from appointment
   useEffect(() => {
-    if (appointment && !customer) {
-      const customerId = typeof appointment.customer === 'object' && appointment.customer !== null
+    if (appointment && !isInitialSyncRef.current) {
+      const apptCustomerId = typeof appointment.customer === 'object' && appointment.customer !== null
         ? appointment.customer.id
         : appointment.customer;
-      const vehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null
+      const apptVehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null
         ? appointment.vehicle.id
         : appointment.vehicle;
 
-      setValue("customer", customerId);
-      setValue("vehicle", vehicleId);
+      if (apptCustomerId) {
+        skipCustomerEffectRef.current = true;
+        setValue("customer", apptCustomerId);
+        setSelectedCustomer(apptCustomerId);
+      }
+      if (apptVehicleId) {
+        setValue("vehicle", apptVehicleId);
+      }
       setValue("appointment", appointment.id);
-      setSelectedCustomer(customerId);
+      isInitialSyncRef.current = true;
     }
-  }, [appointment, customer, setValue]);
+  }, [appointment, setValue]);
 
   // Update vehicle for recent work orders query when vehicle changes
   useEffect(() => {
@@ -375,49 +402,21 @@ export default function NewWorkOrderPage() {
     }
   }, [selectedRelatedWorkOrder, recentWorkOrders]);
 
-  // Auto-fill customer and vehicle when vehicle is provided in URL
+  // 3. Sync from URL Vehicle ID
   useEffect(() => {
-    if (vehicleFromUrl && vehicleId) {
-      // Extract owner/customer from vehicle
+    if (vehicleFromUrl && vehicleId && !isInitialSyncRef.current) {
       const ownerId = typeof vehicleFromUrl.owner === 'object' && vehicleFromUrl.owner !== null
         ? vehicleFromUrl.owner.id
         : vehicleFromUrl.owner;
 
-      // Only auto-fill if customer is not already set (from URL params or form)
-      if (ownerId && (!customer || customer === 0)) {
+      if (ownerId) {
+        skipCustomerEffectRef.current = true;
         setValue("customer", ownerId);
-        setValue("vehicle", vehicleFromUrl.id);
         setSelectedCustomer(ownerId);
 
-        // Set customer data if available
-        if (customersData?.results) {
-          const customerData = customersData.results.find((c) => c.id === ownerId);
-          if (customerData) {
-            setSelectedCustomerData({
-              id: customerData.id,
-              full_name: customerData.full_name,
-              email: customerData.email,
-              phone: customerData.phone,
-              customer_type: customerData.customer_type,
-              customer_number: customerData.customer_number,
-            });
-          }
-        }
-      } else if (ownerId && customer && customer !== ownerId) {
-        // If customer is already set but doesn't match vehicle owner, still set the vehicle
-        // (user might have selected a different customer, but we should still set the vehicle)
-        setValue("vehicle", vehicleFromUrl.id);
-      }
-    }
-  }, [vehicleFromUrl, vehicleId, customer, setValue, customersData]);
-
-  // Initialize customer data from URL params or when customersData loads
-  useEffect(() => {
-    if (customersData?.results && (customerId || customer)) {
-      const targetCustomerId = customer || (customerId ? parseInt(customerId) : null);
-      if (targetCustomerId) {
-        const customerData = customersData.results.find((c) => c.id === targetCustomerId);
-        if (customerData && (!selectedCustomerData || selectedCustomerData.id !== customerData.id)) {
+        // Find and set customer data
+        const customerData = customersData?.results?.find(c => c.id === ownerId);
+        if (customerData) {
           setSelectedCustomerData({
             id: customerData.id,
             full_name: customerData.full_name,
@@ -428,8 +427,15 @@ export default function NewWorkOrderPage() {
           });
         }
       }
+
+      setValue("vehicle", vehicleFromUrl.id);
+      if (vehicleFromUrl.current_mileage) {
+        setValue("odometer_in", vehicleFromUrl.current_mileage);
+      }
+
+      isInitialSyncRef.current = true;
     }
-  }, [customerId, customer, customersData, selectedCustomerData]);
+  }, [vehicleFromUrl, vehicleId, setValue, customersData]);
 
   // Check for repeat visits when vehicle and concerns are filled
   useEffect(() => {
@@ -734,22 +740,22 @@ export default function NewWorkOrderPage() {
       </Dialog>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             {/* Customer & Vehicle */}
-            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-card/40 bg-muted/40 backdrop-blur-sm border-b border-border/50">
-                <CardTitle className="flex items-center gap-2">
-                  <PremiumIcons.Users className="w-5 h-5 text-muted-foreground" />
+            <Card className="border-0 overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <PremiumIcons.Users className="w-5 h-5 text-primary/80" />
                   Customer & Vehicle
                 </CardTitle>
                 <CardDescription>Select customer and vehicle</CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4">
                 {/* Grid layout — 1 column on mobile, 2 columns on md+ */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                   {/* Customer */}
                   <div className="space-y-3">
@@ -805,32 +811,10 @@ export default function NewWorkOrderPage() {
 
                     {/* Customer Info Display */}
                     {selectedCustomerData && (
-                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                          Customer Information
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          {selectedCustomerData.phone && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Phone:</span>
-                              <span className="text-foreground">{selectedCustomerData.phone}</span>
-                            </div>
-                          )}
-                          {selectedCustomerData.email && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Email:</span>
-                              <span className="text-foreground break-words">{selectedCustomerData.email}</span>
-                            </div>
-                          )}
-                          {selectedCustomerData.customer_type && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-20 flex-shrink-0">Type:</span>
-                              <span className="text-foreground capitalize">
-                                {selectedCustomerData.customer_type.replace('_', ' ')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                      <div className="text-xs text-muted-foreground mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                        {selectedCustomerData.phone && <span>📞 {selectedCustomerData.phone}</span>}
+                        {selectedCustomerData.email && <span className="truncate max-w-[200px]" title={selectedCustomerData.email}>✉️ {selectedCustomerData.email}</span>}
+                        {selectedCustomerData.customer_type && <span className="capitalize">🏷️ {selectedCustomerData.customer_type.replace('_', ' ')}</span>}
                       </div>
                     )}
                   </div>
@@ -877,30 +861,10 @@ export default function NewWorkOrderPage() {
 
                     {/* Vehicle Info Display */}
                     {selectedVehicle && (
-                      <div className="p-3 bg-muted rounded-md border border-border space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                          Vehicle Info
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start">
-                            <span className="font-medium text-card-foreground w-24 flex-shrink-0">Make/Model:</span>
-                            <span className="text-foreground">
-                              {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
-                            </span>
-                          </div>
-                          {selectedVehicle.license_plate && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">License:</span>
-                              <span className="text-foreground">{selectedVehicle.license_plate}</span>
-                            </div>
-                          )}
-                          {selectedVehicle.vin && (
-                            <div className="flex items-start">
-                              <span className="font-medium text-card-foreground w-24 flex-shrink-0">VIN:</span>
-                              <span className="text-foreground font-mono text-xs break-all">{selectedVehicle.vin}</span>
-                            </div>
-                          )}
-                        </div>
+                      <div className="text-xs text-muted-foreground mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                        <span className="font-medium text-foreground">🚗 {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}</span>
+                        {selectedVehicle.license_plate && <span>#️⃣ {selectedVehicle.license_plate}</span>}
+                        {selectedVehicle.vin && <span>VIN: <span className="font-mono">{selectedVehicle.vin}</span></span>}
                       </div>
                     )}
                   </div>
@@ -909,16 +873,66 @@ export default function NewWorkOrderPage() {
               </CardContent>
             </Card>
 
-
+            {/* Smart Preventive Suggestions */}
+            {suggestedService?.smart_suggestions && suggestedService.smart_suggestions.length > 0 && (
+              <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20 shadow-sm animate-in fade-in slide-in-from-top-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-amber-800 dark:text-amber-300 flex items-center gap-2 text-md">
+                    <HeartPulse className="w-5 h-5 animate-pulse" />
+                    Smart Preventive Suggestions
+                  </CardTitle>
+                  <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
+                    Based on the vehicle's unique usage history, the following services are due or due very soon.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {suggestedService.smart_suggestions.map((service) => (
+                      <li key={service.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-background/50 rounded-md border text-sm gap-2 hover:bg-background transition-colors">
+                        <div>
+                          <span className="font-semibold text-foreground flex items-center gap-2">
+                            {service.service_type_name}
+                            {service.is_due ? (
+                              <Badge variant="danger" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none">OVERDUE</Badge>
+                            ) : service.is_due_soon ? (
+                              <Badge variant="warning" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none bg-amber-500 text-amber-950">DUE SOON</Badge>
+                            ) : null}
+                          </span>
+                          <span className="text-muted-foreground font-mono text-xs mt-1 block">
+                            {service.estimated_due_date ? `Estimated Due: ${format(new Date(service.estimated_due_date), "MMM d, yyyy")}` : `Due in ${service.days_until_due} days`}
+                          </span>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          type="button" 
+                          className="shrink-0 bg-background"
+                          onClick={() => {
+                            const currentConcerns = watch("customer_concerns");
+                            const newConcern = `Perform ${service.service_type_name}`;
+                            if (!currentConcerns.includes(newConcern)) {
+                              setValue("customer_concerns", currentConcerns ? `${currentConcerns}\n${newConcern}` : newConcern);
+                            }
+                          }}
+                        >
+                          <PlusCircle className="w-4 h-4 mr-1" />
+                          Add to Request
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Work Order Details */}
-            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
-              <CardHeader className="bg-card/40 bg-muted/40 backdrop-blur-sm border-b border-border/50">
-                <CardTitle className="flex items-center gap-2">
-                  <PremiumIcons.FileText className="w-5 h-5 text-muted-foreground" />
+            <Card className="border-0 overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <PremiumIcons.FileText className="w-5 h-5 text-primary/80" />
                   Work Order Details
                 </CardTitle>
-                <CardDescription>Priority and description</CardDescription>
+                <CardDescription>Priority and description for this job</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -1034,57 +1048,59 @@ export default function NewWorkOrderPage() {
                     </Select>
                   </div>
                   {watch("maintenance_type") !== "routine" && (
-                    <div>
-                      <label className="block text-sm font-medium text-card-foreground mb-2">
-                        Quick Select Common Concerns
-                      </label>
-                      <div className="max-h-32 overflow-y-auto border border-border rounded-lg p-2 bg-muted/20">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                          {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
-                            <label
-                              key={concern.value}
-                              className="flex items-center space-x-2 cursor-pointer hover:bg-muted hover:bg-muted p-1.5 rounded"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedConcerns.includes(concern.value)}
-                                onChange={(e) => {
-                                  const isChecked = e.target.checked;
-                                  let updatedConcerns: string[];
+                    <div className="flex items-end">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" type="button" className="text-xs h-9 w-full justify-start text-muted-foreground">
+                            + Quick Select Common Concerns
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="start">
+                          <div className="max-h-60 overflow-y-auto p-2">
+                            <div className="flex flex-col gap-1">
+                              {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
+                                <label
+                                  key={concern.value}
+                                  className="flex items-center space-x-2 cursor-pointer hover:bg-muted p-1.5 rounded"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedConcerns.includes(concern.value)}
+                                    onChange={(e) => {
+                                      const isChecked = e.target.checked;
+                                      let updatedConcerns: string[];
 
-                                  if (isChecked) {
-                                    if (concern.value === "Other (describe below)") {
-                                      // Clear other selections when "Other" is selected
-                                      updatedConcerns = [concern.value];
-                                      setValue("customer_concerns", "");
-                                    } else {
-                                      // Add to selection, but remove "Other" if it was selected
-                                      updatedConcerns = selectedConcerns
-                                        .filter(c => c !== "Other (describe below)")
-                                        .concat(concern.value);
-                                    }
-                                  } else {
-                                    // Remove from selection
-                                    updatedConcerns = selectedConcerns.filter(c => c !== concern.value);
-                                  }
+                                      if (isChecked) {
+                                        if (concern.value === "Other (describe below)") {
+                                          updatedConcerns = [concern.value];
+                                          setValue("customer_concerns", "");
+                                        } else {
+                                          updatedConcerns = selectedConcerns
+                                            .filter(c => c !== "Other (describe below)")
+                                            .concat(concern.value);
+                                        }
+                                      } else {
+                                        updatedConcerns = selectedConcerns.filter(c => c !== concern.value);
+                                      }
 
-                                  setSelectedConcerns(updatedConcerns);
+                                      setSelectedConcerns(updatedConcerns);
 
-                                  // Update textarea with selected concerns (excluding "Other")
-                                  const concernsToAdd = updatedConcerns.filter(c => c !== "Other (describe below)");
-                                  if (concernsToAdd.length > 0) {
-                                    setValue("customer_concerns", concernsToAdd.join("\n"));
-                                  } else {
-                                    setValue("customer_concerns", "");
-                                  }
-                                }}
-                                className="rounded border-border text-primary focus:ring-primary"
-                              />
-                              <span className="text-sm text-card-foreground">{concern.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
+                                      const concernsToAdd = updatedConcerns.filter(c => c !== "Other (describe below)");
+                                      if (concernsToAdd.length > 0) {
+                                        setValue("customer_concerns", concernsToAdd.join("\n"));
+                                      } else {
+                                        setValue("customer_concerns", "");
+                                      }
+                                    }}
+                                    className="rounded border-border text-primary focus:ring-primary"
+                                  />
+                                  <span className="text-xs text-card-foreground">{concern.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   )}
                 </div>
@@ -1129,27 +1145,25 @@ export default function NewWorkOrderPage() {
 
           {/* Sidebar Actions */}
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            <div className="glass-card rounded-2xl border-white/10 dark:border-white/5 premium-shadow p-5 space-y-4 sticky top-6 transition-all duration-300">
+              <h3 className="font-semibold text-xs tracking-wide uppercase text-muted-foreground">Actions</h3>
+              <div className="space-y-3">
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? "Creating..." : "Create JobCard"}
                 </Button>
-                <Link href="/workorders">
+                <Link href="/workorders" className="block w-full">
                   <Button type="button" variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Return/Rework Section (Compact) */}
-            <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-card/60 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
-              <CardContent className="p-0">
+            <div className={`transition-all duration-300 rounded-2xl overflow-hidden glass-card ${isWarrantyRework ? 'border-primary/40 premium-shadow' : 'border-border/40 hover:border-border/80 hover:shadow-sm'}`}>
+              <div className="p-0">
                 {/* Header / Toggle Area */}
-                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted hover:bg-muted/50 border border-dashed border-border'}`}
+                <div className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted/50'}`}
                   onClick={() => {
                     const newState = !isWarrantyRework;
                     setIsWarrantyRework(newState);
@@ -1285,8 +1299,8 @@ export default function NewWorkOrderPage() {
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </form>

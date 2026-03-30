@@ -1043,7 +1043,7 @@ Please review the parts required and provide an estimate.
              'balance_due': str(invoice.amount_due or invoice.total),
              'work_order_number': invoice.work_order.work_order_number if invoice.work_order else "N/A",
              'invoice_date': str(invoice.invoice_date),
-             'amount_paid': '0.00',  # TODO: Calculate from payments
+             'amount_paid': str(invoice.amount_paid),
              'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}',
         })
         

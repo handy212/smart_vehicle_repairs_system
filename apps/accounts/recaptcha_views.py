@@ -9,7 +9,13 @@ import requests
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
+from rest_framework.throttling import AnonRateThrottle
 from django.conf import settings
+
+
+class LoginRateThrottle(AnonRateThrottle):
+    """10 login attempts per minute per IP — prevents brute-force attacks."""
+    scope = 'login'
 
 logger = logging.getLogger(__name__)
 
@@ -95,5 +101,6 @@ class RecaptchaTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class RecaptchaTokenObtainPairView(TokenObtainPairView):
-    """Custom token view with reCAPTCHA verification"""
+    """Custom token view with reCAPTCHA verification and login-rate throttle."""
     serializer_class = RecaptchaTokenObtainPairSerializer
+    throttle_classes = [LoginRateThrottle]

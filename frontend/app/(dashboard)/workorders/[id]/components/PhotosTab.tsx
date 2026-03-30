@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workOrderPhotosApi, WorkOrderPhoto } from "@/lib/api/workorder-photos";
+import { getMediaUrl } from "@/lib/api/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Plus, Trash2, Image as ImageIcon, X, Eye, Sparkles, Loader2, Info } from "lucide-react";
+import { Plus, Trash2, Image as ImageIcon, Eye, Sparkles, Loader2, Info } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -228,7 +228,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                     >
                       <div className="aspect-square bg-muted relative">
                         <img
-                          src={photo.photo}
+                          src={getMediaUrl(photo.photo)}
                           alt={photo.caption || "Work order photo"}
                           className="w-full h-full object-cover cursor-pointer"
                           onClick={() => handleViewPhoto(photo)}
@@ -311,7 +311,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
               <div className="space-y-4">
                 <div className="relative">
                   <img
-                    src={previewUrl}
+                    src={getMediaUrl(previewUrl)}
                     alt={selectedPhoto.caption || "Work order photo"}
                     className="w-full h-auto rounded-lg"
                   />
@@ -526,7 +526,7 @@ function UploadPhotoDialog({
               {previewUrl && (
                 <div className="mt-2">
                   <img
-                    src={previewUrl}
+                    src={getMediaUrl(previewUrl)}
                     alt="Preview"
                     className="w-full h-48 object-cover rounded-lg border border-border"
                   />

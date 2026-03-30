@@ -48,6 +48,12 @@ class User(AbstractUser):
     phone = models.CharField(_('phone number'), max_length=20, blank=True)
     role = models.CharField(_('role'), max_length=20, choices=ROLE_CHOICES, default='customer')
     profile_picture = models.ImageField(_('profile picture'), upload_to='profiles/', blank=True, null=True)
+    gender = models.CharField(_('gender'), max_length=20, choices=[
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+        ('prefer_not_to_say', 'Prefer not to say'),
+    ], blank=True, null=True)
     date_of_birth = models.DateField(_('date of birth'), blank=True, null=True)
     address = models.TextField(_('address'), blank=True)
     city = models.CharField(_('city'), max_length=100, blank=True)

@@ -15,7 +15,7 @@ class CustomerUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'username', 'first_name', 'last_name', 
-                  'full_name', 'phone', 'is_active']
+                  'full_name', 'phone', 'gender', 'date_of_birth', 'is_active']
         read_only_fields = ['id']
 
 
@@ -89,6 +89,8 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    gender = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    date_of_birth = serializers.DateField(write_only=True, required=False, allow_null=True)
     grant_portal_access = serializers.BooleanField(write_only=True, required=False, default=False)
     send_welcome_email = serializers.BooleanField(write_only=True, required=False, default=False)
     
@@ -98,20 +100,39 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             'id', 'customer_number',
             # User fields
             'email', 'username', 'password', 'first_name', 'last_name', 'phone',
-            'grant_portal_access', 'send_welcome_email',
+            'gender', 'date_of_birth', 'grant_portal_access', 'send_welcome_email',
             # Customer fields
             'company_name', 'business_type', 'tax_id', 'customer_type',
-            'status',
+            'status', 'contact_person_name', 'company_email', 'company_phone',
             'service_address', 'service_city', 'service_state', 'service_zip_code',
             'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
-            'payment_terms', 'credit_limit', 'preferred_contact_method',
+            'payment_terms', 'credit_limit', 'default_payment_method',
+            'preferred_contact_method',
             'emergency_contact_name', 'emergency_contact_phone', 
             'emergency_contact_relationship', 'insurance_provider',
             'insurance_policy_number', 'insurance_phone', 'notes', 'tags',
-            'referred_by', 'marketing_emails', 'marketing_sms'
+            'referred_by', 'marketing_emails', 'marketing_sms',
+            'alternative_phone', 'occupation', 'assigned_manager'
         ]
         read_only_fields = ['id', 'customer_number']
     
+    def to_internal_value(self, data):
+        # Convert empty strings to None for nullable fields
+        # Convert empty strings to None only for fields that require it (Dates, Choices, ForeginKeys)
+        nullable_fields = [
+            'gender', 'date_of_birth', 
+            'payment_terms', 'default_payment_method', 'preferred_contact_method'
+        ]
+        
+        if hasattr(data, 'copy'):
+            data = data.copy()
+        
+        for field in nullable_fields:
+            if field in data and data[field] == '':
+                data[field] = None
+                
+        return super().to_internal_value(data)
+
     def validate_email(self, value):
         """Validate that email is unique"""
         if User.objects.filter(email=value).exists():
@@ -139,6 +160,8 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         first_name = validated_data.pop('first_name')
         last_name = validated_data.pop('last_name')
         phone = validated_data.pop('phone', '')
+        gender = validated_data.pop('gender', None)
+        date_of_birth = validated_data.pop('date_of_birth', None)
         grant_portal_access = validated_data.pop('grant_portal_access', False)
         send_welcome_email = validated_data.pop('send_welcome_email', False)
 
@@ -164,7 +187,9 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             last_name=last_name,
             phone=phone,
             role='customer',
-            is_active=grant_portal_access  # Only active if portal access is granted
+            is_active=grant_portal_access,  # Only active if portal access is granted
+            gender=gender,
+            date_of_birth=date_of_birth
         )
         
         # Set password if provided
@@ -198,27 +223,47 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
 class CustomerUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating customer information"""
     # User fields
-    first_name = serializers.CharField(required=False)
-    last_name = serializers.CharField(required=False)
-    email = serializers.EmailField(required=False)
-    phone = serializers.CharField(required=False, allow_blank=True)
+    first_name = serializers.CharField(source='user.first_name', required=False)
+    last_name = serializers.CharField(source='user.last_name', required=False)
+    email = serializers.EmailField(source='user.email', required=False)
+    phone = serializers.CharField(source='user.phone', required=False, allow_blank=True)
+    gender = serializers.CharField(source='user.gender', required=False, allow_blank=True, allow_null=True)
+    date_of_birth = serializers.DateField(source='user.date_of_birth', required=False, allow_null=True)
     
     class Meta:
         model = Customer
         fields = [
             # User fields
-            'first_name', 'last_name', 'email', 'phone',
+            'first_name', 'last_name', 'email', 'phone', 'gender', 'date_of_birth',
             # Customer fields
             'company_name', 'business_type', 'tax_id', 'customer_type',
             'service_address', 'service_city', 'service_state', 'service_zip_code',
             'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
             'payment_terms', 'credit_limit', 'current_balance', 'status',
+            'default_payment_method', 'contact_person_name', 'company_email', 
+            'company_phone', 'alternative_phone', 'occupation', 'assigned_manager',
             'preferred_contact_method', 'loyalty_points', 'loyalty_tier',
             'emergency_contact_name', 'emergency_contact_phone', 
             'emergency_contact_relationship', 'insurance_provider',
             'insurance_policy_number', 'insurance_phone', 'notes', 'tags',
             'marketing_emails', 'marketing_sms'
         ]
+
+    def to_internal_value(self, data):
+        # Convert empty strings to None only for fields that require it (Dates, Choices, ForeginKeys)
+        nullable_fields = [
+            'gender', 'date_of_birth', 
+            'payment_terms', 'default_payment_method', 'preferred_contact_method'
+        ]
+        
+        if hasattr(data, 'copy'):
+            data = data.copy()
+        
+        for field in nullable_fields:
+            if field in data and data[field] == '':
+                data[field] = None
+                
+        return super().to_internal_value(data)
 
     def validate_email(self, value):
         """Validate that email is unique, excluding current user"""
@@ -228,13 +273,8 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance, validated_data):
-        # Update user fields if present
-        user_fields = ['first_name', 'last_name', 'email', 'phone']
-        user_data = {}
-        for field in user_fields:
-            if field in validated_data:
-                user_data[field] = validated_data.pop(field)
-        
+        # Update user fields if present (they are in nested 'user' dict due to source)
+        user_data = validated_data.pop('user', {})
         if user_data:
             user = instance.user
             for key, value in user_data.items():

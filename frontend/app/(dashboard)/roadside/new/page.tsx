@@ -8,22 +8,16 @@ import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi } from "@/lib/api/roadside";
 import { customersApi } from "@/lib/api/customers";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { vehiclesApi } from "@/lib/api/vehicles";
 import { subscriptionsApi } from "@/lib/api/subscriptions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    ArrowLeft, MapPin, Phone, AlertCircle,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Search, Truck, User as UserIcon, Plus,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    MapPin, Phone, AlertCircle,
+    Truck, User as UserIcon, Plus,
     Info, Navigation, Check, X,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Car, Briefcase, Map as MapIcon,
+    Map as MapIcon,
     ArrowRight
 } from "lucide-react";
 import Link from "next/link";
@@ -31,8 +25,6 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils/cn";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 
@@ -98,8 +90,6 @@ export default function NewRoadsideRequestDashboardPage() {
     const selectedCustomerId = watch("customer");
     const selectedVehicleId = watch("vehicle");
     const serviceType = watch("service_type");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const towDistance = watch("tow_distance_km");
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: selectedCustomer, isLoading: isLoadingCustomer } = useQuery({
@@ -169,8 +159,7 @@ export default function NewRoadsideRequestDashboardPage() {
                     description: `Coordinates: ${lat}, ${lng}`
                 });
             },
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            (error) => {
+            (_error) => {
                 setIsLocating(false);
                 toast({
                     title: "Error",

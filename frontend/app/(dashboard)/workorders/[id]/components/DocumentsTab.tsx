@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { FileText, Plus, Trash2, Download, Mic, Play, Pause, AlertCircle, CheckCircle, Sparkles, Wand2, FileAudio } from "lucide-react";
+import { FileText, Plus, Trash2, Download, Mic, Sparkles, Wand2 } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
 
@@ -71,8 +70,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
 
     const processVoiceMutation = useMutation({
         mutationFn: (id: number) => documentsApi.processVoiceNote(id),
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        onSuccess: (data) => {
+        onSuccess: (_data) => {
             queryClient.invalidateQueries({ queryKey: ["workorder-documents", workOrderId] });
             toast({
                 title: "AI Analysis Complete",

@@ -139,7 +139,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
                 <div className="absolute z-50 w-full mt-1 bg-card bg-background text-foreground rounded-md border border-border shadow-lg animate-in fade-in-0 zoom-in-95">
                     <ScrollArea className="max-h-[300px]">
                         <div className="p-1 space-y-1">
-                            // Raw Phone Option
+                            {/* Raw Phone Option */}
                             {isValidPhone && (
                                 <button
                                     className="w-full flex items-center gap-2 p-2 rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-left text-sm"
@@ -155,12 +155,12 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
                                 </button>
                             )}
 
-                            // Divider if both exist
+                            {/* Divider if both exist */}
                             {isValidPhone && filteredCustomers.length > 0 && (
                                 <div className="h-px bg-border mx-2 my-1" />
                             )}
 
-                            // Customer Matches
+                            {/* Customer Matches */}
                             {filteredCustomers.length > 0 && (
                                 <>
                                     <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -184,7 +184,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
                                 </>
                             )}
 
-                            // No Results
+                            {/* No Results */}
                             {!isValidPhone && filteredCustomers.length === 0 && (
                                 <div className="p-4 text-center text-sm text-muted-foreground">
                                     No customers found. <br />

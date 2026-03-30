@@ -1,9 +1,6 @@
 "use client";
 
 import React from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { LazyMotion, domAnimation, m } from "framer-motion";
-import { AdvancedWidget } from "./AdvancedWidget";
 import { PremiumIcons } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -33,94 +30,80 @@ interface InventoryWatchlistProps {
 }
 
 export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps) {
-    const watchlist = items.slice(0, 5);
+    const watchlist = items.slice(0, 4);
 
     return (
-        <AdvancedWidget
-            title="Low Stock Alerts"
-            icon="Package"
-            headerAction={
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
-                    </span>
-                    <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">{items.length} Alerts</span>
-                </div>
-            }
-        >
-            {isLoading ? (
-                <div className="space-y-4 py-2">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-12 bg-white/5 animate-pulse rounded-2xl" />
-                    ))}
-                </div>
-            ) : items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-3">
-                        <PremiumIcons.CheckCircle className="w-6 h-6 text-emerald-500" />
+        <div className="precision-card h-full flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-primary shadow-sm">
+                        <PremiumIcons.Package className="w-5 h-5" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Supply Chain Healthy</p>
-                    <p className="text-[9px] text-muted-foreground mt-1">Direct replenishment not required.</p>
+                    <div>
+                        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Inventory</h3>
+                        <p className="text-[11px] font-medium text-gray-400">Stock monitor</p>
+                    </div>
                 </div>
-            ) : (
-                <div className="space-y-4">
-                    {watchlist.map((item, idx) => {
-                        const stockPercentage = (item.stock.current / item.stock.reorder_point) * 100;
-                        const isDanger = item.stock.current <= item.stock.reorder_point * 0.5;
+                {items.length > 0 && (
+                    <div className="px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">{items.length} Alerts</span>
+                    </div>
+                )}
+            </div>
 
+            <div className="flex-1 space-y-5">
+                {isLoading ? (
+                    [1, 2, 3].map((i) => (
+                        <div key={i} className="h-10 bg-muted animate-pulse rounded-lg" />
+                    ))
+                ) : items.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 opacity-30 text-center">
+                        <PremiumIcons.CheckCircle className="w-8 h-8 mb-2" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">All stock healthy</p>
+                    </div>
+                ) : (
+                    watchlist.map((item) => {
+                        const isCritical = item.stock.current <= item.stock.reorder_point * 0.5;
                         return (
-                            <m.div
-                                key={item.part.id}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="group/item relative"
-                            >
+                            <div key={item.part.id} className="group cursor-pointer">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="min-w-0">
-                                        <p className="text-xs font-black text-foreground truncate group-hover/item:text-primary transition-colors uppercase tracking-tight">
+                                        <p className="text-[11px] font-bold text-foreground truncate uppercase tracking-tight group-hover:text-primary transition-colors">
                                             {item.part.name}
                                         </p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[9px] font-bold text-muted-foreground/60">{item.part.part_number}</span>
-                                            {isDanger && (
-                                                <span className="text-[8px] font-black bg-rose-500 text-white px-1.5 py-0.5 rounded-full uppercase">Critical</span>
-                                            )}
-                                        </div>
+                                        <p className="text-[9px] font-medium text-gray-400 font-mono">{item.part.part_number}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className={cn(
-                                            "text-sm font-black tracking-tighter",
-                                            isDanger ? "text-rose-500" : "text-amber-500"
+                                        <span className={cn(
+                                            "text-xs font-bold tracking-tighter",
+                                            isCritical ? "text-rose-500" : "text-amber-500"
                                         )}>
-                                            {item.stock.current} <span className="text-[10px] text-muted-foreground opacity-40">/ {item.stock.reorder_point}</span>
-                                        </p>
+                                            {item.stock.current} / {item.stock.reorder_point}
+                                        </span>
                                     </div>
                                 </div>
-                                <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <m.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${Math.min(stockPercentage, 100)}%` }}
-                                        transition={{ duration: 1, ease: "easeOut" }}
+                                <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                    <div 
                                         className={cn(
-                                            "absolute inset-y-0 left-0 rounded-full",
-                                            isDanger ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]" : "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+                                            "h-full transition-all duration-1000",
+                                            isCritical ? "bg-rose-500" : "bg-amber-500"
                                         )}
+                                        style={{ width: `${Math.min((item.stock.current / item.stock.reorder_point) * 100, 100)}%` }}
                                     />
                                 </div>
-                            </m.div>
+                            </div>
                         );
-                    })}
+                    })
+                )}
+            </div>
 
-                    <Link
-                        href="/inventory"
-                        className="flex items-center justify-center w-full py-2.5 mt-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group"
-                    >
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground group-hover:text-foreground">Replenish Inventory</span>
-                    </Link>
-                </div>
-            )}
-        </AdvancedWidget>
+            <Link 
+                href="/inventory"
+                className="mt-6 flex items-center justify-center w-full py-3 rounded-xl bg-muted border border-transparent hover:border-primary/20 transition-all group"
+            >
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-hover:text-primary">Stock Details</span>
+                <PremiumIcons.ChevronRight className="w-3 h-3 ml-2 text-gray-300 group-hover:text-primary transition-colors" />
+            </Link>
+        </div>
     );
 }

@@ -19,6 +19,11 @@ export interface Vehicle {
   created_at: string;
   image?: string;
   vehicle_type?: "other" | "saloon" | "suv" | "pickup" | "minivan" | "motorcycle" | "truck" | string;
+  // Predictive Analytics
+  health_score?: number;
+  is_high_risk?: boolean;
+  total_maintenance_cost?: string | number;
+  relationship?: "owner" | "driver" | "fleet_manager" | string;
   // Legacy fields for backward compatibility
   color?: string;
   mileage?: number;
@@ -49,6 +54,9 @@ export const vehiclesApi = {
     created_at__lte?: string;
     ordering?: string;
     page_size?: number;
+    due_service?: boolean;
+    days_ahead?: number;
+    service_due_type?: number;
   }): Promise<VehicleListResponse> => {
     const response = await apiClient.get("/vehicles/vehicles/", { params });
     return response.data;
