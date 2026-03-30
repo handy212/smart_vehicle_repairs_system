@@ -5,6 +5,9 @@ from auditlog.context import set_actor
 from rest_framework.request import Request
 from rest_framework.authentication import TokenAuthentication
 
+
+ACCESS_TOKEN_COOKIE_NAME = "access_token"
+
 def get_user_from_jwt(request):
     """
     Attempt to authenticate using JWT
@@ -32,6 +35,13 @@ class AuditlogDRFMiddleware:
     def __call__(self, request):
         # If user is already authenticated (e.g. via session), do nothing
         if not hasattr(request, 'user') or request.user.is_anonymous:
+            # Support direct browser navigations to Django views by promoting the
+            # SPA's access token cookie into the header SimpleJWT expects.
+            if 'HTTP_AUTHORIZATION' not in request.META:
+                access_token = request.COOKIES.get(ACCESS_TOKEN_COOKIE_NAME)
+                if access_token:
+                    request.META['HTTP_AUTHORIZATION'] = f'Bearer {access_token}'
+
             # Check for Authorization header
             if 'HTTP_AUTHORIZATION' in request.META:
                 user = get_user_from_jwt(request)

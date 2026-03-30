@@ -191,8 +191,8 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except EmployeeProfile.DoesNotExist:
             return Response(
-                {'detail': 'Employee profile not found.'},
-                status=status.HTTP_404_NOT_FOUND,
+                {'detail': 'Employee profile not found. This feature is only available for accounts linked to an employee record.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
     @action(detail=False, methods=['get'])
@@ -371,14 +371,26 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        try:
-            profile = EmployeeProfile.objects.get(user=self.request.user)
-            serializer.save(employee=profile)
-        except EmployeeProfile.DoesNotExist:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError(
-                {'employee': 'Employee profile not found.'}
-            )
+        from apps.accounts.permissions import user_has_permission
+        user = self.request.user
+        requested_employee = serializer.validated_data.get('employee')
+
+        # Check if the user is allowed to apply on behalf of others
+        can_manage = user_has_permission(user, 'manage_leave') or user_has_permission(user, 'approve_leave')
+
+        if requested_employee and can_manage:
+            # Use the employee specified in the request
+            serializer.save()
+        else:
+            # Force to self-application
+            try:
+                profile = EmployeeProfile.objects.get(user=user)
+                serializer.save(employee=profile)
+            except EmployeeProfile.DoesNotExist:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    {'employee': 'Employee profile not found. You must have an employee profile to apply for leave, or have management permissions to apply on behalf of others.'}
+                )
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -557,21 +569,16 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             profile = EmployeeProfile.objects.get(user=request.user)
         except EmployeeProfile.DoesNotExist:
             return Response(
-                {'detail': 'Employee profile not found.'},
-                status=status.HTTP_404_NOT_FOUND,
+                {'detail': 'Employee profile not found. Personal attendance tracking is only available for accounts linked to an employee record.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         today = timezone.now().date()
-        branch = request.user.branch
-
-        if not branch:
-            # Check managed branches (for managers/admins)
-            if hasattr(request.user, 'managed_branches') and request.user.managed_branches.exists():
-                branch = request.user.managed_branches.first()
+        branch = resolve_branch_for_user(request)
 
         if not branch:
             return Response(
-                {'detail': 'No branch assigned.'},
+                {'detail': 'No active branch assigned. Please contact HR to link your account to a branch.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -620,8 +627,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             profile = EmployeeProfile.objects.get(user=request.user)
         except EmployeeProfile.DoesNotExist:
             return Response(
-                {'detail': 'Employee profile not found.'},
-                status=status.HTTP_404_NOT_FOUND,
+                {'detail': 'Employee profile not found. Personal attendance tracking is only available for accounts linked to an employee record.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         today = timezone.now().date()
@@ -1123,8 +1130,8 @@ class TrainingProgramViewSet(viewsets.ModelViewSet):
             employee = EmployeeProfile.objects.get(id=employee_id)
         except EmployeeProfile.DoesNotExist:
             return Response(
-                {'detail': 'Employee not found.'},
-                status=status.HTTP_404_NOT_FOUND,
+                {'detail': 'Staff member not found with the provided ID.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         enrollment, created = EmployeeTraining.objects.get_or_create(

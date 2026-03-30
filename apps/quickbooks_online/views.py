@@ -2,13 +2,14 @@ from django.shortcuts import redirect, render
 from django.conf import settings
 from django.views import View
 from django.http import HttpResponse, JsonResponse
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from urllib.parse import urlencode
 from .models import QBOConfig, QBOToken, QBOSyncLog
 from .services import QuickBooksService
 from .tasks import task_full_inbound_sync
@@ -16,11 +17,70 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+FRONTEND_QBO_PATH = "/admin/integrations"
+
+
+def build_frontend_url(path, query=None):
+    base_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+    url = f"{base_url}{path}"
+    if query:
+        query_string = urlencode({key: value for key, value in query.items() if value is not None})
+        if query_string:
+            url = f"{url}?{query_string}"
+    return url
+
+
+def build_qbo_integrations_url(**query):
+    params = {"category": "accounting"}
+    params.update(query)
+    return build_frontend_url(FRONTEND_QBO_PATH, params)
+
+
+def build_frontend_login_url():
+    return build_frontend_url("/login", {"next": f"{FRONTEND_QBO_PATH}?category=accounting"})
+
+
+def request_wants_json(request):
+    accept = request.headers.get("Accept", "")
+    requested_with = request.headers.get("X-Requested-With", "")
+    return (
+        "application/json" in accept
+        or request.content_type == "application/json"
+        or requested_with == "XMLHttpRequest"
+    )
+
+
+class FrontendAccessRedirectMixin(AccessMixin):
+    permission_denied_message = "You do not have permission to manage QuickBooks."
+
+    def handle_no_permission(self):
+        if request_wants_json(self.request):
+            if self.request.user.is_authenticated:
+                return JsonResponse(
+                    {"detail": self.get_permission_denied_message()},
+                    status=403,
+                )
+            return JsonResponse(
+                {
+                    "detail": "Authentication required.",
+                    "login_url": build_frontend_login_url(),
+                },
+                status=401,
+            )
+
+        if self.request.user.is_authenticated:
+            messages.error(self.request, self.get_permission_denied_message())
+            return redirect(build_qbo_integrations_url(qbo_status="forbidden"))
+
+        return redirect(build_frontend_login_url())
+
+
 class SuperUserRequiredMixin(UserPassesTestMixin):
     def test_func(self):
         return self.request.user.is_superuser
 
-class QBOConnectView(LoginRequiredMixin, SuperUserRequiredMixin, View):
+
+class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     Initiates the OAuth2 flow with QuickBooks Online.
     """
@@ -28,7 +88,13 @@ class QBOConnectView(LoginRequiredMixin, SuperUserRequiredMixin, View):
         logger.info("QBOConnectView.get called - attempting to fetch config")
         config = QuickBooksService.get_config(active_only=False)
         if not config or not config.client_id or not config.client_secret:
-            return HttpResponse("QBO Configuration missing. Please set up Client ID and Secret in Admin Settings (Integrations section).", status=400)
+            if request_wants_json(request):
+                return JsonResponse(
+                    {"detail": "QuickBooks configuration is incomplete."},
+                    status=400,
+                )
+            messages.error(request, "QuickBooks configuration is incomplete.")
+            return redirect(build_qbo_integrations_url(qbo_status="missing_config"))
             
         auth_client = QuickBooksService.get_auth_client(config)
         
@@ -54,7 +120,7 @@ class QBOConnectView(LoginRequiredMixin, SuperUserRequiredMixin, View):
         return redirect(auth_url)
 
 
-class QBOCallbackView(LoginRequiredMixin, SuperUserRequiredMixin, View):
+class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     Handles the callback from QBO after user approves access.
     """
@@ -64,7 +130,8 @@ class QBOCallbackView(LoginRequiredMixin, SuperUserRequiredMixin, View):
         realm_id = request.GET.get('realmId')
         
         if not code or not realm_id:
-            return HttpResponse("Invalid callback parameters.", status=400)
+            messages.error(request, "Invalid QuickBooks callback parameters.")
+            return redirect(build_qbo_integrations_url(qbo_status="invalid_callback"))
             
         # Verify state
         saved_state = request.session.get('qbo_state')
@@ -107,17 +174,15 @@ class QBOCallbackView(LoginRequiredMixin, SuperUserRequiredMixin, View):
             )
             
             messages.success(request, f"Successfully connected to QuickBooks Company ID: {realm_id}")
-            
-            # Redirect back to frontend integrations page
-            frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3000')
-            return redirect(f"{frontend_url}/admin/integrations")
+            return redirect(build_qbo_integrations_url(qbo_status="connected"))
             
         except Exception as e:
             logger.error(f"Error during QBO callback: {e}")
-            return HttpResponse(f"Error connecting to QuickBooks: {str(e)}", status=500)
+            messages.error(request, "Error connecting to QuickBooks.")
+            return redirect(build_qbo_integrations_url(qbo_status="error"))
 
 
-class QBORefreshView(LoginRequiredMixin, SuperUserRequiredMixin, View):
+class QBORefreshView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     Manually triggers a token refresh.
     """
@@ -131,18 +196,13 @@ class QBORefreshView(LoginRequiredMixin, SuperUserRequiredMixin, View):
             else:
                 messages.error(request, "No active connection to refresh.")
             
-            if config:
-                return redirect(reverse('admin:quickbooks_online_qboconfig_change', args=[config.id]))
-            return redirect('/admin/')
+            return redirect(build_qbo_integrations_url(qbo_status="refreshed" if config else "not_connected"))
             
         except Exception as e:
             messages.error(request, f"Error refreshing token: {e}")
-            config = QuickBooksService.get_config()
-            if config:
-                return redirect(reverse('admin:quickbooks_online_qboconfig_change', args=[config.id]))
-            return redirect('/admin/')
+            return redirect(build_qbo_integrations_url(qbo_status="refresh_error"))
 
-class QBODisconnectView(LoginRequiredMixin, SuperUserRequiredMixin, View):
+class QBODisconnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     Disconnects from QBO.
     """
@@ -153,18 +213,14 @@ class QBODisconnectView(LoginRequiredMixin, SuperUserRequiredMixin, View):
     def post(self, request):
         QuickBooksService.disconnect()
         
-        if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
+        if request_wants_json(request):
             return JsonResponse({'status': 'success', 'message': 'Disconnected from QuickBooks Online.'})
 
         messages.success(request, "Disconnected from QuickBooks Online.")
-        
-        config = QuickBooksService.get_config()
-        if config:
-            return redirect(reverse('admin:quickbooks_online_qboconfig_change', args=[config.id]))
-        return redirect('/admin/')
+        return redirect(build_qbo_integrations_url(qbo_status="disconnected"))
 
 
-class QBOInboundSyncView(LoginRequiredMixin, SuperUserRequiredMixin, View):
+class QBOInboundSyncView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     Manually triggers a full inbound sync (QBO → local) in the background.
     Accessible only to superusers.
@@ -175,59 +231,78 @@ class QBOInboundSyncView(LoginRequiredMixin, SuperUserRequiredMixin, View):
 
     def get(self, request):
         """
-        Renders a simple confirmation page for triggering the sync.
-        Useful when accessing via browser.
+        Redirect browser requests back to the frontend integrations screen.
         """
         config = QuickBooksService.get_config()
         if not config:
             messages.error(request, "QuickBooks is not configured.")
-            return redirect('/admin/')
-            
-        return HttpResponse(f"""
-            <html>
-                <body style="font-family: sans-serif; padding: 20px;">
-                    <h2>QuickBooks Inbound Synchronization</h2>
-                    <p>This will pull Vendors, Invoices, and Bills from QBO to update your local records.</p>
-                    <form method="post">
-                        <input type="hidden" name="csrfmiddlewaretoken" value="{request.COOKIES.get('csrftoken', '')}">
-                        <button type="submit" style="padding: 10px 20px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            Trigger Full Inbound Sync Now
-                        </button>
-                    </form>
-                    <p><a href="/admin/">Back to Admin</a></p>
-                </body>
-            </html>
-        """)
+            return redirect(build_qbo_integrations_url(qbo_status="missing_config"))
+
+        return redirect(build_qbo_integrations_url(qbo_status="sync_ready"))
 
     def post(self, request):
-        try:
-            # Dispatch to Celery in background so request doesn't block
-            task_full_inbound_sync.delay(triggered_by_id=request.user.id)
-            
-            if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
-                return JsonResponse({
-                    'status': 'success', 
-                    'message': 'Inbound sync triggered! Data is being pulled from QuickBooks in the background.'
-                })
+        config = QuickBooksService.get_config()
+        if not config:
+            if request_wants_json(request):
+                return JsonResponse(
+                    {'status': 'error', 'message': 'QuickBooks is not configured.'},
+                    status=400,
+                )
+            messages.error(request, "QuickBooks is not configured.")
+            return redirect(build_qbo_integrations_url(qbo_status="missing_config"))
 
-            messages.success(
-                request,
-                "Inbound sync triggered! Vendors, Invoices, and Bills are being pulled from QuickBooks. "
-                "Check the QBO Sync Logs in the admin panel to monitor progress."
-            )
+        try:
+            # Prefer the background worker, but allow a direct fallback so
+            # manual sync still works when Celery/Redis is unavailable.
+            try:
+                task_full_inbound_sync.delay(triggered_by_id=request.user.id)
+                message = 'Inbound sync triggered! Data is being pulled from QuickBooks in the background.'
+
+                if request_wants_json(request):
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': message,
+                        'queued': True,
+                    })
+
+                messages.success(
+                    request,
+                    "Inbound sync triggered! Vendors, Invoices, and Bills are being pulled from QuickBooks. "
+                    "Check the QBO Sync Logs in the admin panel to monitor progress."
+                )
+            except Exception as queue_error:
+                logger.warning(
+                    "Celery dispatch for QBO inbound sync failed, falling back to inline execution: %s",
+                    queue_error,
+                )
+                task_full_inbound_sync(triggered_by_id=request.user.id)
+                message = (
+                    "Inbound sync completed directly because the background worker was unavailable."
+                )
+
+                if request_wants_json(request):
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': message,
+                        'queued': False,
+                    })
+
+                messages.warning(request, message)
+
+            if request_wants_json(request):
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Inbound sync started.',
+                })
         except Exception as e:
-            logger.error(f"Failed to trigger inbound sync: {e}")
-            if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
+            logger.error(f"Failed to trigger inbound sync: {e}", exc_info=True)
+            if request_wants_json(request):
                 return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
             messages.error(request, f"Failed to trigger inbound sync: {e}")
 
-        # Redirect back to admin or a sensible page
-        config = QuickBooksService.get_config()
-        if config:
-            return redirect(reverse('admin:quickbooks_online_qboconfig_change', args=[config.id]))
-        return redirect('/admin/')
+        return redirect(build_qbo_integrations_url(qbo_status="sync_started"))
 
-class QBOStatusView(LoginRequiredMixin, SuperUserRequiredMixin, View):
+class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRequiredMixin, View):
     """
     Returns the current connection status and basic stats for QBO.
     """

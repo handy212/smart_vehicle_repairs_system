@@ -228,13 +228,13 @@ export function RecommendationDialog({
                             />
                         </div>
 
-                        <div className="bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 rounded-lg p-3 flex gap-3">
+                        <div className="flex gap-3 rounded-lg border border-primary/15 bg-primary/5 p-3">
                             <div className="shrink-0 mt-0.5">
                                 <Package className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                                <h4 className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-0.5">Parts & Labor</h4>
-                                <p className="text-xs text-primary dark:text-orange-300 leading-relaxed">
+                                <h4 className="mb-0.5 text-sm font-medium text-primary">Parts & Labor</h4>
+                                <p className="text-xs leading-relaxed text-primary">
                                     {formData.parts_needed.length > 0 ? (
                                         <span className="font-semibold">
                                             Included: {formData.parts_needed.length} parts and {formData.estimated_labor_hours} hours labor.

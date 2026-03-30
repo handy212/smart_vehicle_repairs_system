@@ -1,5 +1,6 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from unittest.mock import patch, MagicMock
+from django.urls import reverse
 from apps.customers.models import Customer
 from apps.inventory.models import Supplier, PurchaseOrder, PurchaseOrderItem, Part, PartCategory
 from apps.billing.models import Invoice, InvoiceLineItem
@@ -11,6 +12,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.contrib.contenttypes.models import ContentType
 from apps.accounts.models import User
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class QuickBooksIntegrationTests(TestCase):
     def setUp(self):
@@ -419,3 +421,99 @@ class QuickBooksIntegrationTests(TestCase):
         
         po.refresh_from_db()
         self.assertEqual(po.status, 'received')
+
+
+@override_settings(FRONTEND_BASE_URL="http://frontend.test")
+class QuickBooksAuthFlowTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            email="admin-flow@example.com",
+            username="adminflow",
+            password="password",
+            first_name="Admin",
+            last_name="Flow",
+        )
+        self.config = QBOConfig.objects.create(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            realm_id="realm-123",
+            is_active=True,
+        )
+
+    @patch("apps.quickbooks_online.views.QuickBooksService.get_auth_client")
+    @patch("apps.quickbooks_online.views.QuickBooksService.get_config")
+    def test_connect_view_accepts_access_token_cookie(self, mock_get_config, mock_get_auth_client):
+        config = MagicMock(client_id="client-id", client_secret="client-secret")
+        mock_get_config.return_value = config
+
+        auth_client = MagicMock()
+        auth_client.state_token = "state-123"
+        auth_client.get_authorization_url.return_value = "https://example.intuit.test/oauth"
+        mock_get_auth_client.return_value = auth_client
+
+        access_token = str(RefreshToken.for_user(self.admin_user).access_token)
+        self.client.cookies["access_token"] = access_token
+
+        response = self.client.get(reverse("quickbooks_online:connect"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "https://example.intuit.test/oauth")
+        self.assertEqual(self.client.session["qbo_state"], "state-123")
+
+    def test_unauthenticated_connect_redirects_to_frontend_login(self):
+        response = self.client.get(reverse("quickbooks_online:connect"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            "http://frontend.test/login?next=%2Fadmin%2Fintegrations%3Fcategory%3Daccounting",
+        )
+
+    def test_status_view_returns_json_401_for_api_requests(self):
+        response = self.client.get(
+            reverse("quickbooks_online:status"),
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["login_url"], "http://frontend.test/login?next=%2Fadmin%2Fintegrations%3Fcategory%3Daccounting")
+
+    def test_disconnect_redirects_to_frontend_when_not_json(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(reverse("quickbooks_online:disconnect"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            "http://frontend.test/admin/integrations?category=accounting&qbo_status=disconnected",
+        )
+
+    @patch("apps.quickbooks_online.views.task_full_inbound_sync.delay")
+    def test_sync_inbound_returns_json_for_api_requests(self, mock_delay):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.post(
+            reverse("quickbooks_online:sync_inbound"),
+            HTTP_ACCEPT="application/json, text/plain, */*",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertTrue(response.json()["queued"])
+        mock_delay.assert_called_once_with(triggered_by_id=self.admin_user.id)
+
+    @patch("apps.quickbooks_online.views.task_full_inbound_sync")
+    def test_sync_inbound_falls_back_to_inline_execution(self, mock_task):
+        self.client.force_login(self.admin_user)
+        mock_task.delay.side_effect = Exception("broker unavailable")
+
+        response = self.client.post(
+            reverse("quickbooks_online:sync_inbound"),
+            HTTP_ACCEPT="application/json, text/plain, */*",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertFalse(response.json()["queued"])
+        mock_task.assert_called_once_with(triggered_by_id=self.admin_user.id)

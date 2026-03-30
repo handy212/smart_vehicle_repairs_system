@@ -226,7 +226,7 @@ export function NotificationDropdown() {
                                 e.preventDefault();
                                 markAllAsReadMutation.mutate();
                             }}
-                            className="h-7 text-xs text-primary hover:text-orange-700 text-primary dark:hover:text-orange-300"
+                            className="h-7 text-xs text-primary hover:bg-primary/10"
                         >
                             Mark all read
                         </Button>
@@ -246,8 +246,8 @@ export function NotificationDropdown() {
                                 <DropdownMenuItem
                                     key={notification.id}
                                     className={cn(
-                                        "px-3 py-3 cursor-pointer focus:bg-muted dark:focus:bg-gray-800 outline-none",
-                                        isUnread && "bg-primary/5 dark:bg-orange-950/20"
+                                        "cursor-pointer px-3 py-3 outline-none focus:bg-muted",
+                                        isUnread && "bg-primary/5"
                                     )}
                                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                     onClick={(e) => {
@@ -263,7 +263,7 @@ export function NotificationDropdown() {
                                     <div className="flex items-start gap-3 w-full text-left">
                                         {/* Unread indicator */}
                                         {isUnread && (
-                                            <div className="w-2 h-2 rounded-full bg-primary dark:bg-orange-400 mt-1.5 flex-shrink-0" />
+                                            <div className="mt-1.5 w-2 h-2 flex-shrink-0 rounded-full bg-primary" />
                                         )}
                                         {!isUnread && <div className="w-2 flex-shrink-0" />}
 
@@ -294,7 +294,7 @@ export function NotificationDropdown() {
                                                     e.preventDefault();
                                                     markAsReadMutation.mutate(notification.id);
                                                 }}
-                                                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/20 flex-shrink-0 cursor-pointer"
+                                                className="h-7 w-7 flex-shrink-0 cursor-pointer rounded-full flex items-center justify-center hover:bg-primary/10"
                                                 title="Mark as read"
                                             >
                                                 <PremiumIcons.CheckCircle className="w-4 h-4 text-primary" />
@@ -308,7 +308,7 @@ export function NotificationDropdown() {
                         <div className="px-4 py-8 text-center">
                             <PremiumIcons.Bell className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-3" />
                             <p className="text-sm text-muted-foreground font-medium">No notifications</p>
-                            <p className="text-xs text-muted-foreground mt-1">You're all caught up!</p>
+                            <p className="text-xs text-muted-foreground mt-1">You&apos;re all caught up!</p>
                         </div>
                     )}
                 </div>
@@ -318,7 +318,7 @@ export function NotificationDropdown() {
                 <DropdownMenuItem asChild>
                     <Link
                         href="/notifications"
-                        className="w-full text-center py-2.5 text-sm font-medium text-primary hover:text-orange-700 dark:hover:text-orange-300 hover:bg-primary/10 dark:hover:bg-orange-950/20 cursor-pointer"
+                        className="w-full cursor-pointer py-2.5 text-center text-sm font-medium text-primary hover:bg-primary/10"
                     >
                         View all notifications →
                     </Link>

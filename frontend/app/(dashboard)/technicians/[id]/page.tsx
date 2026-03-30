@@ -9,17 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    ArrowLeft,
     MapPin,
     Mail,
     Phone,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Calendar,
     Award,
     Briefcase,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Clock,
     Map as MapIcon,
     Loader2,
     Edit,
@@ -72,47 +67,71 @@ function TechnicianProfileContent() {
         );
     }
 
+    const displayName = technician.user_details?.full_name || `${technician.user_details?.first_name} ${technician.user_details?.last_name}`.trim();
+
     const getStatusColor = (status: Technician['current_status']) => {
         switch (status) {
-            case 'available': return "text-success bg-green-100 dark:bg-green-900/30 dark:text-green-400";
-            case 'busy': return "text-primary bg-orange-100 dark:bg-orange-900/30 text-primary";
-            case 'break': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400";
-            case 'offline': return "text-muted-foreground bg-border text-muted-foreground";
+            case 'available': return "border-success/20 bg-success/10 text-success";
+            case 'busy': return "border-primary/20 bg-primary/10 text-primary";
+            case 'break': return "border-warning/20 bg-warning/15 text-warning-foreground";
+            case 'offline': return "border-border bg-muted text-muted-foreground";
             default: return "";
         }
     };
 
+    const technicianTabClass = "h-8 px-2.5 text-xs sm:text-sm";
+
     return (
-        <div className="space-y-4 max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl space-y-4">
             {/* Breadcrumbs */}
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <div className="mb-1 flex items-center space-x-2 text-sm text-muted-foreground">
                 <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
                 <span>/</span>
                 <Link href="/technicians" className="hover:text-foreground transition-colors">Technicians</Link>
                 <span>/</span>
                 <span className="text-foreground font-medium">
-                    {technician.user_details?.full_name || `${technician.user_details?.first_name} ${technician.user_details?.last_name}`}
+                    {displayName}
                 </span>
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
+            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                    <Avatar className="h-14 w-14">
                         <AvatarImage src={technician.user_details?.profile_picture} />
                         <AvatarFallback className="text-sm">
                             {technician.user_details?.first_name?.[0]}{technician.user_details?.last_name?.[0]}
                         </AvatarFallback>
                     </Avatar>
-                    <div>
-                        <h1 className="text-xl font-bold text-foreground tracking-tight">
-                            {technician.user_details?.full_name || `${technician.user_details?.first_name} ${technician.user_details?.last_name}`}
-                        </h1>
-                        <p className="text-sm text-muted-foreground">ID: #{technician.id}</p>
+                    <div className="space-y-2">
+                        <div>
+                            <h1 className="text-xl font-bold tracking-tight text-foreground">
+                                {displayName}
+                            </h1>
+                            <p className="text-sm text-muted-foreground">
+                                Technician ID #{technician.id}
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5">
+                                <Mail className="h-3.5 w-3.5" />
+                                {technician.user_details?.email}
+                            </span>
+                            {technician.user_details?.phone && (
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Phone className="h-3.5 w-3.5" />
+                                    {technician.user_details?.phone}
+                                </span>
+                            )}
+                            <span className="inline-flex items-center gap-1.5">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {technician.user_details?.branch_name || "No Branch Assigned"}
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={cn("capitalize text-xs px-2 py-0.5", getStatusColor(technician.current_status))}>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className={cn("px-2.5 py-1 text-xs capitalize", getStatusColor(technician.current_status))}>
                         {technician.current_status}
                     </Badge>
                     {technician.staff_id && (
@@ -132,49 +151,38 @@ function TechnicianProfileContent() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {/* Left Column: Info Card */}
-                <div className="md:col-span-1 space-y-6">
-                    <Card className="overflow-hidden">
-                        <div className="h-32 bg-gradient-to-r from-primary to-indigo-600 relative">
-                            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
-                                <Avatar className="h-24 w-24 border-4 border-white dark:border-gray-950 shadow-lg">
-                                    <AvatarImage src={technician.user_details?.profile_picture} />
-                                    <AvatarFallback className="text-2xl font-bold bg-card text-primary">
-                                        {technician.user_details?.first_name?.[0]}{technician.user_details?.last_name?.[0]}
-                                    </AvatarFallback>
-                                </Avatar>
+                <div className="space-y-4 md:col-span-1">
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base">Profile</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm">
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Experience</span>
+                                <span className="font-medium">{technician.years_of_experience} Years</span>
                             </div>
-                        </div>
-                        <CardContent className="pt-16 pb-6 text-center space-y-2">
-                            <h2 className="text-xl font-bold">
-                                {technician.user_details?.full_name || `${technician.user_details?.first_name} ${technician.user_details?.last_name}`}
-                            </h2>
-                            <Badge variant="outline" className={cn("capitalize px-3 py-1", getStatusColor(technician.current_status))}>
-                                {technician.current_status}
-                            </Badge>
-
-                            <div className="pt-4 flex flex-col gap-2 text-sm text-muted-foreground items-center">
-                                <div className="flex items-center gap-2">
-                                    <Mail className="h-4 w-4" />
-                                    <span>{technician.user_details?.email}</span>
-                                </div>
-                                {technician.user_details?.phone && (
-                                    <div className="flex items-center gap-2">
-                                        <Phone className="h-4 w-4" />
-                                        <span>{technician.user_details?.phone}</span>
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4" />
-                                    <span>{technician.user_details?.branch_name || "No Branch Assigned"}</span>
-                                </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Joined</span>
+                                <span className="inline-flex items-center gap-1.5 font-medium">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    {format(new Date(technician.created_at), "MMM d, yyyy")}
+                                </span>
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Branch</span>
+                                <span className="font-medium text-right">
+                                    {technician.user_details?.branch_name || "No Branch Assigned"}
+                                </span>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-center gap-2">
                                 <Award className="h-4 w-4 text-primary" />
                                 Skills & Expertise
@@ -182,9 +190,9 @@ function TechnicianProfileContent() {
                         </CardHeader>
                         <CardContent>
                             {technician.skills.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5">
                                     {technician.skills.map(skill => (
-                                        <Badge key={skill.id} variant="secondary">
+                                        <Badge key={skill.id} variant="secondary" className="px-2 py-0.5">
                                             {skill.name}
                                         </Badge>
                                     ))}
@@ -196,21 +204,23 @@ function TechnicianProfileContent() {
                     </Card>
 
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-center gap-2">
                                 <Briefcase className="h-4 w-4 text-primary" />
                                 Work Summary
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-3">
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground">Experience</span>
-                                <span className="font-medium">{technician.years_of_experience} Years</span>
+                                <span className="text-muted-foreground">Staff Linked</span>
+                                <span className="font-medium">{technician.staff_id ? "Yes" : "No"}</span>
                             </div>
                             <Separator />
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-muted-foreground">Joined</span>
-                                <span className="font-medium">{format(new Date(technician.created_at), "MMM d, yyyy")}</span>
+                                <span className="text-muted-foreground">Current Status</span>
+                                <Badge variant="outline" className={cn("px-2 py-0.5 text-[11px] capitalize", getStatusColor(technician.current_status))}>
+                                    {technician.current_status}
+                                </Badge>
                             </div>
                         </CardContent>
                     </Card>
@@ -218,42 +228,42 @@ function TechnicianProfileContent() {
 
                 {/* Right Column: Main Content */}
                 <div className="md:col-span-2">
-                    <Tabs defaultValue="overview" className="space-y-6">
-                        <TabsList>
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <Tabs defaultValue="overview" className="space-y-4">
+                        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
+                            <TabsTrigger value="overview" className={technicianTabClass}>Overview</TabsTrigger>
                             <PermissionGuard permission="view_technician_performance">
-                                <TabsTrigger value="performance">Performance</TabsTrigger>
+                                <TabsTrigger value="performance" className={technicianTabClass}>Performance</TabsTrigger>
                             </PermissionGuard>
                             <PermissionGuard permission="manage_technician_skills">
-                                <TabsTrigger value="certifications">Certifications</TabsTrigger>
+                                <TabsTrigger value="certifications" className={technicianTabClass}>Certifications</TabsTrigger>
                             </PermissionGuard>
                             <PermissionGuard permission="manage_technician_schedules">
-                                <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                                <TabsTrigger value="schedule" className={technicianTabClass}>Schedule</TabsTrigger>
                             </PermissionGuard>
-                            <TabsTrigger value="history">Job History</TabsTrigger>
-                            <TabsTrigger value="location">Live Location</TabsTrigger>
+                            <TabsTrigger value="history" className={technicianTabClass}>Job History</TabsTrigger>
+                            <TabsTrigger value="location" className={technicianTabClass}>Live Location</TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="overview" className="space-y-6">
+                        <TabsContent value="overview" className="space-y-4">
                             {/* Active Jobs Card (Placeholder) */}
                             <Card>
-                                <CardHeader>
+                                <CardHeader className="pb-3">
                                     <CardTitle>Current Status</CardTitle>
                                     <CardDescription>Real-time activity overview</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <div className="bg-primary/10 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800">
-                                            <div className="text-2xl font-bold text-primary">0</div>
-                                            <div className="text-sm text-primary dark:text-orange-300">Active Jobs</div>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                        <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
+                                            <div className="text-xl font-bold text-primary">0</div>
+                                            <div className="text-sm text-primary">Active Jobs</div>
                                         </div>
-                                        <div className="bg-success/10 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
-                                            <div className="text-2xl font-bold text-green-700 dark:text-green-400">0</div>
-                                            <div className="text-sm text-success dark:text-green-300">Completed This Week</div>
+                                        <div className="rounded-xl border border-success/20 bg-success/10 p-4">
+                                            <div className="text-xl font-bold text-success">0</div>
+                                            <div className="text-sm text-success">Completed This Week</div>
                                         </div>
-                                        <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800">
-                                            <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">0%</div>
-                                            <div className="text-sm text-purple-600 dark:text-purple-300">Utilization Rate</div>
+                                        <div className="rounded-xl border border-info/20 bg-info/10 p-4">
+                                            <div className="text-xl font-bold text-info">0%</div>
+                                            <div className="text-sm text-info">Utilization Rate</div>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -262,7 +272,7 @@ function TechnicianProfileContent() {
                             {/* Bio */}
                             {technician.bio && (
                                 <Card>
-                                    <CardHeader>
+                                    <CardHeader className="pb-3">
                                         <CardTitle>Biography</CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -284,7 +294,7 @@ function TechnicianProfileContent() {
 
                         <TabsContent value="schedule">
                             <Card>
-                                <CardHeader>
+                                <CardHeader className="pb-3">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <CardTitle>Schedule</CardTitle>
@@ -300,7 +310,7 @@ function TechnicianProfileContent() {
 
                         <TabsContent value="history">
                             <Card>
-                                <CardHeader>
+                                <CardHeader className="pb-3">
                                     <CardTitle>Job History</CardTitle>
                                     <CardDescription>Past completed work orders and repairs</CardDescription>
                                 </CardHeader>
@@ -312,7 +322,7 @@ function TechnicianProfileContent() {
 
                         <TabsContent value="location">
                             <Card>
-                                <CardHeader>
+                                <CardHeader className="pb-3">
                                     <CardTitle>Last Known Location</CardTitle>
                                     <CardDescription>
                                         Updated: {technician.last_location_update ? format(new Date(technician.last_location_update), "Pp") : "Never"}
@@ -320,10 +330,9 @@ function TechnicianProfileContent() {
                                 </CardHeader>
                                 <CardContent>
                                     {technician.last_latitude && technician.last_longitude ? (
-                                        <div className="bg-border h-64 rounded-lg flex items-center justify-center">
-                                            // Map placeholder
+                                        <div className="flex h-64 items-center justify-center rounded-lg border border-border bg-muted/40">
                                             <div className="text-center">
-                                                <MapIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                <MapIcon className="mx-auto mb-2 h-8 w-8 opacity-50" />
                                                 <p className="text-sm font-mono">{technician.last_latitude}, {technician.last_longitude}</p>
                                             </div>
                                         </div>

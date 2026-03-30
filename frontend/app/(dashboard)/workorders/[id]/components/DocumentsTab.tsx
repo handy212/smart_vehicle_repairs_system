@@ -125,7 +125,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
                     <h3 className="text-lg font-semibold text-foreground">Documents & Voice Notes</h3>
                     <p className="text-sm text-muted-foreground tracking-tight">Manage attachments and AI-powered voice diagnostics</p>
                 </div>
-                <Button onClick={() => setIsUploadDialogOpen(true)} className="bg-primary hover:bg-primary/90 shadow-sm border-orange-200">
+                <Button onClick={() => setIsUploadDialogOpen(true)} className="shadow-sm">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Document
                 </Button>
@@ -154,10 +154,10 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {documents.map((doc) => (
-                        <Card key={doc.id} className="overflow-hidden border-none shadow-sm ring-1 ring-gray-900/5 hover:ring-primary/20 transition-all duration-200 bg-card/60 backdrop-blur-md">
+                        <Card key={doc.id} className="overflow-hidden border border-border bg-card shadow-sm ring-1 ring-gray-900/5 hover:ring-primary/20 transition-all duration-200">
                             <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-start justify-between space-y-0">
                                 <div className="flex items-center space-x-3">
-                                    <div className={`p-2 rounded-lg ${isAudioFile(doc) ? 'bg-orange-100 dark:bg-orange-900/30 text-primary' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600'}`}>
+                                    <div className={`p-2 rounded-lg ${isAudioFile(doc) ? 'bg-primary/10 text-primary' : 'bg-info/10 text-info'}`}>
                                         {isAudioFile(doc) ? <Mic className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                                     </div>
                                     <div className="flex flex-col min-w-0">
@@ -195,7 +195,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
                             <CardContent className="px-4 pb-4">
                                 {doc.description && (
                                     <p className="text-xs text-muted-foreground line-clamp-2 mb-3 bg-muted/50 p-2 rounded-md italic ring-1 ring-inset ring-black/5">
-                                        "{doc.description}"
+                                        &ldquo;{doc.description}&rdquo;
                                     </p>
                                 )}
 
@@ -217,7 +217,7 @@ export default function DocumentsTab({ workOrderId }: DocumentsTabProps) {
                                         <Button
                                             size="sm"
                                             variant={doc.tags?.includes('ai_transcribed') ? "outline" : "default"}
-                                            className={`w-full h-8 text-[11px] font-bold ${doc.tags?.includes('ai_transcribed') ? 'border-orange-200' : 'bg-primary hover:bg-primary/90'}`}
+                                            className={`w-full h-8 text-[11px] font-bold ${doc.tags?.includes('ai_transcribed') ? 'border-primary/20' : ''}`}
                                             disabled={processingId === doc.id || processVoiceMutation.isPending}
                                             onClick={() => handleProcessVoice(doc.id)}
                                         >

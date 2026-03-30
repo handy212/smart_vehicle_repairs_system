@@ -9,6 +9,7 @@ import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fixedAssetsApi } from "@/lib/api/fixed-assets";
 import { branchesApi } from "@/lib/api/branches";
+import { hrApi } from "@/lib/api/hr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ const formSchema = z.object({
     depreciation_method: z.string(),
     status: z.enum(["active", "inactive", "disposed", "sold", "retired"]),
     location: z.string().optional(),
+    assigned_to: z.string().optional(),
     manufacturer: z.string().optional(),
     model_number: z.string().optional(),
     serial_number: z.string().optional(),
@@ -76,6 +78,7 @@ function NewFixedAssetContent() {
             depreciation_method: "straight_line",
             status: "active" as const,
             location: "",
+            assigned_to: "none",
             manufacturer: "",
             model_number: "",
             serial_number: "",
@@ -92,9 +95,18 @@ function NewFixedAssetContent() {
         queryFn: () => branchesApi.list({ is_active: true }),
     });
 
+    const { data: staffResponse } = useQuery({
+        queryKey: ["staff-list"],
+        queryFn: async () => (await hrApi.staff.list({ employment_status: "active" })).data,
+    });
+
     const branches = Array.isArray(branchesResponse)
         ? branchesResponse
         : branchesResponse?.results || [];
+
+    const staffMembers = Array.isArray(staffResponse)
+        ? staffResponse
+        : staffResponse?.results || [];
 
     const createMutation = useMutation({
 
@@ -144,6 +156,7 @@ function NewFixedAssetContent() {
             ...values,
             category: parseInt(values.category),
             branch: parseInt(values.branch),
+            assigned_to: values.assigned_to && values.assigned_to !== "none" ? parseInt(values.assigned_to) : null,
             depreciation_start_date: values.acquisition_date, // Default to acquisition date
         });
     }
@@ -459,6 +472,32 @@ function NewFixedAssetContent() {
                                             <FormControl>
                                                 <Input placeholder="e.g. Building A, Room 101" {...field} />
                                             </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="assigned_to"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Assigned To</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select staff member" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="none">Unassigned</SelectItem>
+                                                    {staffMembers.map((s: any) => (
+                                                        <SelectItem key={s.id} value={s.id.toString()}>
+                                                            {s.full_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}

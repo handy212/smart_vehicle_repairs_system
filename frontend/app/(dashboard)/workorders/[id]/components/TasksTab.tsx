@@ -139,8 +139,8 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
       <TableRow
         key={task.id}
         className={`
-          ${isWorkflow ? "bg-primary/5 dark:bg-orange-900/10" : ""}
-          ${isCurrentPhase ? "ring-2 ring-primary dark:ring-orange-400" : ""}
+          ${isWorkflow ? "bg-primary/5" : ""}
+          ${isCurrentPhase ? "ring-2 ring-primary/20" : ""}
         `}
       >
         <TableCell>
@@ -311,7 +311,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                     </div>
                     <span>•</span>
                     <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-orange-500" />
+                      <Clock className="w-3 h-3 text-primary" />
                       <span>In Progress: {workflowTasks.filter(t => t.status === 'in_progress').length}</span>
                     </div>
                     <span>•</span>
@@ -413,4 +413,3 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
     </>
   );
 }
-

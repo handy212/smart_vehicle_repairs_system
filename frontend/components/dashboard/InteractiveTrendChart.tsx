@@ -1,51 +1,66 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Brush } from "recharts";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useState } from "react";
 import { format } from "date-fns";
 
-interface InteractiveTrendChartProps {
+type TrendChartPoint = {
+    date: string;
+    revenue: number;
+    expense: number;
+    cash_flow: number;
+};
 
-    data: any[];
+type TooltipPayloadEntry = {
+    color?: string;
+    name?: string;
+    value?: number | string;
+};
+
+type TrendTooltipProps = {
+    active?: boolean;
+    payload?: TooltipPayloadEntry[];
+    label?: string;
+    formatCurrency: (value: number) => string;
+};
+
+interface InteractiveTrendChartProps {
+    data: TrendChartPoint[];
     title: string;
+}
+
+function TrendTooltip({ active, payload, label, formatCurrency }: TrendTooltipProps) {
+    if (!active || !payload?.length || !label) {
+        return null;
+    }
+
+    return (
+        <div className="rounded-lg border bg-background p-3 text-sm shadow-sm">
+            <p className="mb-2 font-semibold">{format(new Date(label), "MMM d, yyyy")}</p>
+            {payload.map((entry, index) => (
+                <div key={`${entry.name}-${index}`} className="mb-1 flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className="capitalize text-muted-foreground">{entry.name}:</span>
+                    <span className="font-mono font-medium">{formatCurrency(Number(entry.value ?? 0))}</span>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProps) {
     const { formatCurrency } = useCurrency();
     const [activeTab, setActiveTab] = useState("profitability");
 
-    // Custom Tooltip
-
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg p-3 text-sm">
-                    <p className="font-semibold mb-2">{format(new Date(label), "MMM d, yyyy")}</p>
-
-                    {payload.map((entry: any, index: number) => (
-                        <div key={index} className="flex items-center gap-2 mb-1">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                            <span className="text-muted-foreground capitalize">{entry.name}:</span>
-                            <span className="font-mono font-medium">{formatCurrency(entry.value)}</span>
-                        </div>
-                    ))}
-                </div>
-            );
-        }
-        return null;
-    };
-
     return (
-        <Card className="col-span-full lg:col-span-2 shadow-sm border-none ring-1 ring-gray-200 dark:ring-gray-800">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="col-span-full lg:col-span-2">
+            <CardHeader className="flex flex-col gap-3 pb-2 md:flex-row md:items-center md:justify-between">
                 <CardTitle className="text-base font-medium">{title}</CardTitle>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
-                    <TabsList className="grid w-full grid-cols-3 h-8">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-[340px]">
+                    <TabsList className="grid h-8 w-full grid-cols-3">
                         <TabsTrigger value="profitability" className="text-xs">Profitability</TabsTrigger>
                         <TabsTrigger value="cashflow" className="text-xs">Cash Flow</TabsTrigger>
                         <TabsTrigger value="revenue" className="text-xs">Revenue</TabsTrigger>
@@ -53,7 +68,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                 </Tabs>
             </CardHeader>
             <CardContent className="pt-4">
-                <div style={{ height: '350px', width: '100%', minWidth: 0 }}>
+                <div style={{ height: "340px", width: "100%", minWidth: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         {activeTab === "profitability" ? (
                             <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -81,7 +96,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     axisLine={false}
                                 />
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
-                                <Tooltip content={<CustomTooltip />} />
+                                <Tooltip content={<TrendTooltip formatCurrency={formatCurrency} />} />
                                 <Area
                                     type="monotone"
                                     dataKey="revenue"
@@ -123,7 +138,7 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     axisLine={false}
                                 />
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
-                                <Tooltip content={<CustomTooltip />} />
+                                <Tooltip content={<TrendTooltip formatCurrency={formatCurrency} />} />
                                 <ReferenceLine y={0} stroke="#000" strokeOpacity={0.2} />
                                 <Area
                                     type="monotone"
@@ -139,8 +154,8 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                             <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorRevOnly" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <XAxis
@@ -157,12 +172,12 @@ export function InteractiveTrendChart({ data, title }: InteractiveTrendChartProp
                                     axisLine={false}
                                 />
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
-                                <Tooltip content={<CustomTooltip />} />
+                                <Tooltip content={<TrendTooltip formatCurrency={formatCurrency} />} />
                                 <Area
                                     type="monotone"
                                     dataKey="revenue"
                                     name="Total Revenue"
-                                    stroke="#8b5cf6"
+                                    stroke="#3b82f6"
                                     fillOpacity={1}
                                     fill="url(#colorRevOnly)"
                                     strokeWidth={2}

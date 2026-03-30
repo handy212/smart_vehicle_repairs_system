@@ -182,12 +182,12 @@ export function ImportDialog({
           )}
 
           {(downloadTemplateUrl || onDownloadTemplate) && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-primary/10 border border-orange-200 rounded-md">
+            <div className="flex flex-col gap-3 rounded-md border border-primary/15 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-2 flex-1">
                 <FileText className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-orange-900 block">Download CSV Template</span>
-                  <span className="text-xs text-orange-700">Includes sample data and required column structure</span>
+                  <span className="block text-sm font-medium text-primary">Download CSV Template</span>
+                  <span className="text-xs text-primary/80">Includes sample data and required column structure</span>
                 </div>
               </div>
               <Button
@@ -356,4 +356,3 @@ export function ImportDialog({
     </Dialog>
   );
 }
-

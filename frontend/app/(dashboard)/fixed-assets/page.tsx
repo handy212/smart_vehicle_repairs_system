@@ -15,7 +15,8 @@ import {
     Package,
     DollarSign,
     ArrowLeft,
-    Building2
+    Building2,
+    User
 } from "lucide-react";
 import { useState } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -157,6 +158,19 @@ function FixedAssetsContent() {
                     </span>
                     <span className="text-[10px] text-muted-foreground">
                         {asset.depreciation_percent.toFixed(1)}%
+                    </span>
+                </div>
+            ),
+        },
+        {
+            header: "Assigned To",
+            accessor: "assigned_to_name" as const,
+            className: "w-40",
+            cell: (asset: FixedAsset) => (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
+                    <User className="w-3.5 h-3.5" />
+                    <span className="truncate max-w-[140px] font-medium">
+                        {asset.assigned_to_name || "Unassigned"}
                     </span>
                 </div>
             ),

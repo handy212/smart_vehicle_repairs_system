@@ -246,7 +246,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                               variant="secondary"
                               size="sm"
                               title="Smart Scan"
-                              className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200"
+                              className="border-primary/20 bg-primary/10 text-primary hover:bg-primary/15"
                               onClick={() => {
                                 handleViewPhoto(photo);
                                 analyzeMutation.mutate(photo.id);
@@ -401,7 +401,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                             </div>
                           </div>
 
-                          <div className="p-3 rounded-lg border bg-white border-purple-50">
+                          <div className="rounded-lg border border-border bg-card p-3">
                             <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
                               Suggested Severity
                             </p>
@@ -410,9 +410,9 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                               className={
                                 analysisResult.suggested_severity === "critical"
                                   ? "bg-red-50 text-red-700 border-red-200"
-                                  : analysisResult.suggested_severity === "major"
-                                    ? "bg-orange-50 text-orange-700 border-orange-200"
-                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                                : analysisResult.suggested_severity === "major"
+                                    ? "bg-warning/15 text-warning-foreground border-warning/20"
+                                    : "bg-info/10 text-info border-info/20"
                               }
                             >
                               {analysisResult.suggested_severity.toUpperCase()}

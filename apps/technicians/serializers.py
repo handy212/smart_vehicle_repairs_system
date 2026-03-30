@@ -89,8 +89,11 @@ class TechnicianSerializer(serializers.ModelSerializer):
             profile_picture=profile_picture
         )
 
-        # Create Technician
-        technician = Technician.objects.create(user=user, **validated_data)
+        # Create Technician (or update if already created by signal)
+        technician, created = Technician.objects.update_or_create(
+            user=user,
+            defaults=validated_data
+        )
         
         # Set Skills
         technician.skills.set(skills)

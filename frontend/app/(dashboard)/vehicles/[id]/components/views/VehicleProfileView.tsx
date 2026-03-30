@@ -9,7 +9,7 @@ import { Vehicle, vehiclesApi } from "@/lib/api/vehicles";
 import Image from "next/image";
 import Link from "next/link";
 import { getMediaUrl } from "@/lib/api/utils";
-import { Calendar, FileText, ArrowUpRight, Car, User, History, ArrowRight } from "lucide-react";
+import { Calendar, FileText, ArrowUpRight, Car, User, History, ArrowRight, HeartPulse, DollarSign, Gauge, Cog, Fuel, Activity } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

@@ -533,8 +533,8 @@ function CodeDialog({
                   </Button>
                 </div>
                 {libraryResults.length > 0 && (
-                  <div className="mt-2 border border-orange-200 rounded-lg bg-primary/5 max-h-48 overflow-y-auto shadow-sm">
-                    <div className="p-2 text-xs font-medium text-orange-800 border-b border-orange-200 bg-orange-100/50">
+                  <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-primary/15 bg-primary/5 shadow-sm">
+                    <div className="border-b border-primary/15 bg-primary/10 p-2 text-xs font-medium text-primary">
                       {libraryResults.length} matching code{libraryResults.length !== 1 ? 's' : ''} found:
                     </div>
 
@@ -543,11 +543,11 @@ function CodeDialog({
                         key={libCode.id}
                         type="button"
                         onClick={() => handleSelectLibraryCode(libCode)}
-                        className="w-full text-left p-3 hover:bg-orange-100 border-b border-orange-200 last:border-b-0 transition-colors group"
+                        className="group w-full border-b border-primary/10 p-3 text-left transition-colors hover:bg-primary/10 last:border-b-0"
                       >
                         <div className="flex items-start gap-2">
                           <div className="flex-1">
-                            <div className="font-mono font-semibold text-sm text-orange-900 group-hover:text-primary">
+                            <div className="font-mono text-sm font-semibold text-foreground group-hover:text-primary">
                               {libCode.code_number}
                             </div>
                             <div className="text-xs text-foreground mt-0.5 line-clamp-1 font-medium">
@@ -666,5 +666,4 @@ function CodeDialog({
     </Dialog>
   );
 }
-
 

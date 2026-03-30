@@ -70,7 +70,7 @@ class FixedAssetListSerializer(serializers.ModelSerializer):
 
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
-            return obj.assigned_to.user.get_full_name() or obj.assigned_to.user.username
+            return obj.assigned_to.full_name
         return None
 
 
@@ -85,6 +85,7 @@ class FixedAssetDetailSerializer(serializers.ModelSerializer):
     depreciable_amount = serializers.SerializerMethodField()
     is_fully_depreciated = serializers.BooleanField(read_only=True)
     remaining_useful_life_months = serializers.IntegerField(read_only=True)
+    assigned_to_name = serializers.SerializerMethodField()
     
     class Meta:
         model = FixedAsset
@@ -93,6 +94,11 @@ class FixedAssetDetailSerializer(serializers.ModelSerializer):
             'accumulated_depreciation', 'net_book_value', 'last_depreciation_date',
             'created_at', 'updated_at'
         ]
+    
+    def get_assigned_to_name(self, obj):
+        if obj.assigned_to:
+            return obj.assigned_to.full_name
+        return None
     
     def get_created_by_name(self, obj):
         if obj.created_by:

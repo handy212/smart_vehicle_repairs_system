@@ -193,7 +193,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         <div key={note.id} className="relative flex items-start">
                                             <div
                                                 className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${note.note_type === "customer"
-                                                    ? "bg-orange-400"
+                                                    ? "bg-primary"
                                                     : note.is_important
                                                         ? "bg-red-500"
                                                         : "bg-gray-400"

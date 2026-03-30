@@ -156,7 +156,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     <>
       {/* Mobile: Horizontal scrollable tab bar */}
       <div
-        className="fixed top-16 left-0 right-0 z-20 lg:hidden bg-background/90 backdrop-blur-xl border-b border-border/60 shadow-sm"
+        className="fixed top-16 left-0 right-0 z-20 border-b border-border bg-background shadow-sm lg:hidden"
       >
         <nav className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-none">
           {items.filter(item => 
@@ -209,9 +209,9 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
       {/* Desktop: Vertical sidebar (unchanged) */}
       <aside
         className={cn(
-          "fixed top-16 bottom-0 z-10 transition-all duration-300",
+          "fixed top-16 bottom-0 z-10 transition-all duration-200",
           "hidden lg:block",
-          "bg-card/80 bg-background/80 backdrop-blur-xl border-r border-border/60 border-border/60 shadow-lg",
+          "border-r border-border bg-background shadow-sm",
           isCollapsed ? "w-12" : "w-52"
         )}
         style={{ left: `${sidebarLeft}px` }}
@@ -252,7 +252,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
                     "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
                     isActive
                       ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                      : "text-muted-foreground hover:bg-card/60 hover:bg-muted/50 hover:text-foreground ",
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground ",
                     isCollapsed && "justify-center"
                   )}
                   style={isActive ? {

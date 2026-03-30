@@ -206,7 +206,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
 
                 {/* Left Col: Image Upload */}
                 <Card className="lg:col-span-1 overflow-hidden h-fit">
-                    <div className="aspect-video bg-muted bg-background/50 relative flex items-center justify-center border-b border-border">
+                    <div className="relative aspect-video border-b border-border bg-muted/40 flex items-center justify-center">
                         {imagePreview ? (
                             <>
                                 <Image
@@ -511,9 +511,9 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
 
                     {/* VIN Decoded Information Block */}
                     {vinOtherInfo && (
-                        <Card className="border-orange-100 dark:border-orange-900 bg-primary/5 dark:bg-orange-900/10">
+                        <Card className="border-primary/15 bg-primary/5">
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-300">
+                                <CardTitle className="text-sm font-medium text-primary">
                                     Additional VIN Details
                                 </CardTitle>
                             </CardHeader>

@@ -25,7 +25,7 @@ export function Toast({ id, title, message, type = "info", onClose }: ToastProps
     success: "bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700 text-green-900 dark:text-green-100",
     error: "bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700 text-red-900 dark:text-red-100",
     warning: "bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100",
-    info: "bg-orange-100 dark:bg-orange-900 border-orange-300 dark:border-orange-700 text-orange-900 dark:text-orange-100",
+    info: "bg-info/10 border-info/20 text-info dark:bg-info/15 dark:border-info/30",
   };
 
   const Icon = icons[type];
@@ -33,7 +33,7 @@ export function Toast({ id, title, message, type = "info", onClose }: ToastProps
   return (
     <div
       className={cn(
-        "flex items-start space-x-3 p-4 rounded-lg border-2 shadow-xl backdrop-blur-sm max-w-md animate-in slide-in-from-top-2 duration-300",
+        "flex max-w-md items-start space-x-3 rounded-lg border p-4 shadow-lg animate-in slide-in-from-top-2 duration-300",
         styles[type]
       )}
     >
@@ -68,4 +68,3 @@ export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
     </div>
   );
 }
-

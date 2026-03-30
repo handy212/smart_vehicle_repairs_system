@@ -108,9 +108,9 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
 
       <aside
         className={cn(
-          "fixed left-0 top-16 bottom-0 overflow-y-auto z-40 transition-all duration-300 ease-out",
+          "fixed left-0 top-16 bottom-0 z-40 overflow-y-auto transition-all duration-200 ease-out",
           "lg:translate-x-0",
-          "bg-card/80 bg-background/80 backdrop-blur-xl border-r border-border/60 border-border/60 shadow-xl", // Premium glass effect
+          "border-r border-border bg-background shadow-sm",
           isOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-20" : "w-72" // Slightly wider for premium feel
         )}
@@ -141,11 +141,11 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                         }
                       }}
                       className={cn(
-                        "group flex items-center rounded-xl transition-all duration-300 relative mx-2 mb-1 overflow-hidden",
-                        isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
+                        "group relative mx-2 mb-1 flex items-center overflow-hidden rounded-xl transition-colors duration-200",
+                        isCollapsed ? "justify-center px-2 py-2.5" : "px-3.5 py-2.5",
                         isActive
                           ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
-                          : "text-muted-foreground hover:bg-muted/80 hover:bg-muted/50 hover:text-foreground "
+                          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground "
                       )}
                       style={isActive ? {
                         backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
@@ -157,9 +157,9 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
                     >
                       <Icon
                         className={cn(
-                          "transition-transform duration-300 flex-shrink-0",
+                          "flex-shrink-0 transition-colors duration-200",
                           isCollapsed ? "w-6 h-6" : "w-5 h-5 mr-3.5",
-                          isActive ? "scale-110" : "group-hover:scale-110 text-muted-foreground group-hover:text-muted-foreground dark:group-hover:text-gray-300"
+                          isActive ? "" : "text-muted-foreground group-hover:text-foreground"
                         )}
                         style={isActive ? { color: branding.primary_color } : undefined}
                       />
@@ -182,7 +182,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
 
         {/* Footer section with user info when expanded */}
         {!isCollapsed && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-muted bg-background/50">
+          <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-background p-4">
             {/* <div className="text-xs text-muted-foreground text-center">
               <p>Version 1.0</p>
             </div> */}
@@ -192,4 +192,3 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: P
     </>
   );
 }
-

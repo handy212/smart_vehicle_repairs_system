@@ -43,8 +43,8 @@ export function AdditionalWorkForm({
                             className="w-full bg-muted border-border text-foreground"
                         />
                     </div>
-                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                        <p className="text-sm text-orange-800 dark:text-orange-400">
+                    <div className="rounded-lg border border-warning/20 bg-warning/15 p-3">
+                        <p className="text-sm text-warning-foreground">
                             <AlertCircle className="w-4 h-4 inline mr-1.5" />
                             This will pause the work order and require customer approval before continuing.
                         </p>

@@ -7,27 +7,39 @@ import { ArrowRight, AlertTriangle, CheckCircle, FileText, Plus } from "lucide-r
 import Link from "next/link";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
+type Insight = {
+    type: "danger" | "warning" | "info";
+    title: string;
+    message: string;
+    action_link?: string;
+};
+
+type TopJob = {
+    work_order_id: number | string;
+    customer: string;
+    vehicle: string;
+    gross_profit: number;
+    margin_percent: number;
+};
+
 interface OperationalGridProps {
-
-    insights: any[];
-
-    topJobs: any[];
+    insights: Insight[];
+    topJobs: TopJob[];
 }
 
 export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
     const { formatCurrency } = useCurrency();
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Insights / Action Required */}
-            <Card className="shadow-sm border-none ring-1 ring-gray-200 dark:ring-gray-800 h-full">
-                <CardHeader>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Card className="h-full">
+                <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-amber-500" />
                         Insights & Actions
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                     {insights.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
                             <CheckCircle className="w-8 h-8 mb-2 text-emerald-500 opacity-50" />
@@ -37,10 +49,13 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                         insights.map((insight, idx) => (
                             <div
                                 key={idx}
-                                className={`p-3 rounded-lg border text-sm ${insight.type === 'danger' ? 'bg-rose-50 border-rose-100 text-rose-800' :
-                                    insight.type === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-800' :
-                                        'bg-primary/10 border-orange-100 text-orange-800'
-                                    }`}
+                                className={`rounded-lg border p-3 text-sm ${
+                                    insight.type === "danger"
+                                        ? "border-destructive/20 bg-destructive/10 text-destructive"
+                                        : insight.type === "warning"
+                                            ? "border-warning/20 bg-warning/10 text-warning-foreground"
+                                            : "border-primary/20 bg-primary/10 text-primary"
+                                }`}
                             >
                                 <p className="font-semibold mb-1">{insight.title}</p>
                                 <p className="opacity-90 mb-2 text-xs">{insight.message}</p>
@@ -55,16 +70,15 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                 </CardContent>
             </Card>
 
-            {/* Top Jobs */}
-            <Card className="shadow-sm border-none ring-1 ring-gray-200 dark:ring-gray-800 h-full">
-                <CardHeader>
+            <Card className="h-full">
+                <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                         <FileText className="w-4 h-4 text-primary" />
                         Top Performing Jobs
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {topJobs.map((job) => (
                             <div key={job.work_order_id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
                                 <div>
@@ -72,7 +86,7 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                                     <p className="text-xs text-muted-foreground">{job.vehicle}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="font-mono text-sm font-medium text-emerald-600">
+                                    <p className="font-mono text-sm font-medium text-success">
                                         {formatCurrency(job.gross_profit)}
                                     </p>
                                     <Badge variant="outline" className="text-[10px] h-4">
@@ -90,32 +104,31 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                 </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card className="shadow-sm border-none ring-1 ring-gray-200 dark:ring-gray-800 h-full bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-                <CardHeader>
+            <Card className="h-full">
+                <CardHeader className="pb-3">
                     <CardTitle className="text-base">Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-3">
                     <Link href="/accounting/journal-entries/new">
-                        <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:border-primary hover:text-primary hover:bg-primary/10 transition-all">
+                        <Button variant="outline" className="h-16 w-full flex-col gap-1.5">
                             <FileText className="w-5 h-5" />
                             <span className="text-xs">New Journal Entry</span>
                         </Button>
                     </Link>
                     <Link href="/accounting/banking/reconciliation">
-                        <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+                        <Button variant="outline" className="h-16 w-full flex-col gap-1.5">
                             <CheckCircle className="w-5 h-5" />
                             <span className="text-xs">Reconcile Bank</span>
                         </Button>
                     </Link>
                     <Link href="/accounting/reports/profit-loss">
-                        <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                        <Button variant="outline" className="h-16 w-full flex-col gap-1.5">
                             <FileText className="w-5 h-5" />
                             <span className="text-xs">View P&L</span>
                         </Button>
                     </Link>
                     <Link href="/accounting/budgets">
-                        <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:border-amber-500 hover:text-amber-600 hover:bg-amber-50 transition-all">
+                        <Button variant="outline" className="h-16 w-full flex-col gap-1.5">
                             <Plus className="w-5 h-5" />
                             <span className="text-xs">New Budget</span>
                         </Button>

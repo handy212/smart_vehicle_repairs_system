@@ -8,6 +8,7 @@ import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fixedAssetsApi } from "@/lib/api/fixed-assets";
 import { branchesApi } from "@/lib/api/branches";
+import { hrApi } from "@/lib/api/hr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ const formSchema = z.object({
     depreciation_method: z.string().default("straight_line"),
     status: z.enum(["active", "inactive", "disposed", "sold", "retired"]).default("active"),
     location: z.string().optional(),
+    assigned_to: z.string().optional(),
     manufacturer: z.string().optional(),
     model_number: z.string().optional(),
     serial_number: z.string().optional(),
@@ -78,6 +80,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
             depreciation_method: "straight_line",
             status: "active",
             location: "",
+            assigned_to: "none",
             manufacturer: "",
             model_number: "",
             serial_number: "",
@@ -101,9 +104,19 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
         queryFn: () => branchesApi.list({ is_active: true }),
     });
 
+    const { data: staffResponse } = useQuery({
+        queryKey: ["staff-list"],
+        queryFn: async () => (await hrApi.staff.list({ employment_status: "active" })).data,
+    });
+
+
     const branches = Array.isArray(branchesResponse)
         ? branchesResponse
         : branchesResponse?.results || [];
+
+    const staffMembers = Array.isArray(staffResponse)
+        ? staffResponse
+        : staffResponse?.results || [];
 
     // Pre-fill form when asset data is loaded
     useEffect(() => {
@@ -121,6 +134,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                 depreciation_method: asset.depreciation_method,
                 status: asset.status,
                 location: asset.location || "",
+                assigned_to: asset.assigned_to?.toString() || "none",
                 manufacturer: asset.manufacturer || "",
                 model_number: asset.model_number || "",
                 serial_number: asset.serial_number || "",
@@ -155,6 +169,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
             ...values,
             category: parseInt(values.category),
             branch: parseInt(values.branch),
+            assigned_to: values.assigned_to && values.assigned_to !== "none" ? parseInt(values.assigned_to) : null,
         });
     }
 
@@ -473,6 +488,32 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                             <FormControl>
                                                 <Input placeholder="e.g. Building A, Room 101" {...field} />
                                             </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="assigned_to"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Assigned To</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select staff member" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="none">Unassigned</SelectItem>
+                                                    {staffMembers.map((s: any) => (
+                                                        <SelectItem key={s.id} value={s.id.toString()}>
+                                                            {s.full_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}

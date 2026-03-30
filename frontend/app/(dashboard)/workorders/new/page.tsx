@@ -598,9 +598,9 @@ export default function NewWorkOrderPage() {
       </div>
 
       {appointment && (
-        <Card className="bg-primary/10 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+        <Card className="border-primary/15 bg-primary/5">
           <CardContent className="pt-6">
-            <p className="text-sm text-orange-800 text-primary">
+            <p className="text-sm text-primary">
               Creating work order from appointment: <strong>{appointment.appointment_number}</strong>
             </p>
           </CardContent>
@@ -659,7 +659,7 @@ export default function NewWorkOrderPage() {
                 </h4>
                 {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
                 {repeatVisitMatches.map((match, index) => (
-                  <Card key={match.work_order_id} className="border-orange-200 dark:border-orange-800">
+                  <Card key={match.work_order_id} className="border-primary/15">
                     <CardContent className="pt-4">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -1130,8 +1130,8 @@ export default function NewWorkOrderPage() {
                       <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customer_concerns.message}</p>
                     )}
                     {repeatVisitMatches.length > 0 && !showRepeatVisitDialog && (
-                      <div className="mt-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
-                        <p className="text-sm text-orange-800 dark:text-orange-400">
+                      <div className="mt-2 rounded-md border border-primary/15 bg-primary/5 p-3">
+                        <p className="text-sm text-primary">
                           <AlertCircle className="w-4 h-4 inline mr-1" />
                           Similar concerns detected from recent work order(s). Check the alert dialog for details.
                         </p>
@@ -1145,7 +1145,7 @@ export default function NewWorkOrderPage() {
 
           {/* Sidebar Actions */}
           <div className="space-y-6">
-            <div className="glass-card rounded-2xl border-white/10 dark:border-white/5 premium-shadow p-5 space-y-4 sticky top-6 transition-all duration-300">
+            <div className="sticky top-6 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition-colors duration-200">
               <h3 className="font-semibold text-xs tracking-wide uppercase text-muted-foreground">Actions</h3>
               <div className="space-y-3">
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -1160,10 +1160,10 @@ export default function NewWorkOrderPage() {
             </div>
 
             {/* Return/Rework Section (Compact) */}
-            <div className={`transition-all duration-300 rounded-2xl overflow-hidden glass-card ${isWarrantyRework ? 'border-primary/40 premium-shadow' : 'border-border/40 hover:border-border/80 hover:shadow-sm'}`}>
+            <div className={`overflow-hidden rounded-2xl border bg-card transition-colors duration-200 ${isWarrantyRework ? 'border-primary/30 shadow-sm' : 'border-border hover:border-border/80 hover:shadow-sm'}`}>
               <div className="p-0">
                 {/* Header / Toggle Area */}
-                <div className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-muted/50'}`}
+                <div className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${isWarrantyRework ? 'bg-primary/5' : 'bg-transparent hover:bg-muted/50'}`}
                   onClick={() => {
                     const newState = !isWarrantyRework;
                     setIsWarrantyRework(newState);
@@ -1174,11 +1174,11 @@ export default function NewWorkOrderPage() {
                     }
                   }}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-primary dark:bg-orange-900/50 dark:text-orange-400' : 'bg-muted text-muted-foreground bg-muted text-muted-foreground'}`}>
+                    <div className={`rounded-full p-2 ${isWarrantyRework ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                       <AlertCircle className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className={`font-semibold text-base ${isWarrantyRework ? 'text-orange-900 dark:text-orange-100' : 'text-card-foreground'}`}>
+                      <h3 className={`text-base font-semibold ${isWarrantyRework ? 'text-primary' : 'text-card-foreground'}`}>
                         Return / Rework Job?
                       </h3>
                       <p className="text-sm text-muted-foreground">
@@ -1189,13 +1189,13 @@ export default function NewWorkOrderPage() {
 
                   <div className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isWarrantyRework} readOnly />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer bg-muted peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-border peer-checked:bg-primary"></div>
+                    <div className="w-11 h-6 rounded-full border border-border bg-muted peer bg-muted peer-checked:bg-primary peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border after:bg-card after:content-[''] after:transition-all"></div>
                   </div>
                 </div>
 
                 {isWarrantyRework && (
                   <div className="p-4 space-y-6 animate-in slide-in-from-top-2 duration-200">
-                    <Separator className="bg-orange-100 dark:bg-orange-800/30" />
+                    <Separator className="bg-primary/15" />
 
                     {/* Recent Work Orders List */}
                     {vehicle && (
@@ -1227,8 +1227,8 @@ export default function NewWorkOrderPage() {
                                   setShowWorkOrderSearch(false);
                                 }}
                                 className={`p-3 rounded-lg border text-left cursor-pointer transition-all hover:shadow-md ${selectedRelatedWorkOrder === wo.id
-                                  ? "border-primary bg-orange-50 dark:bg-orange-900/20 ring-1 ring-primary"
-                                  : "border-border hover:border-orange-300 bg-card"
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                  : "border-border bg-card hover:border-primary/20"
                                   }`}
                               >
                                 <div className="flex justify-between items-start mb-1">
@@ -1353,7 +1353,7 @@ export default function NewWorkOrderPage() {
                     <div className="space-y-3">
 
                       {group.recommendations.map((rec: any) => (
-                        <div key={rec.id} className="border-l-4 border-l-orange-500 bg-card rounded p-3">
+                        <div key={rec.id} className="rounded border-l-4 border-l-primary bg-card p-3">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge
@@ -1438,4 +1438,3 @@ export default function NewWorkOrderPage() {
     </div>
   );
 }
-

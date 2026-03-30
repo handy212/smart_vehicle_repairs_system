@@ -495,8 +495,8 @@ export default function DiagnosisPage() {
             <div className="flex items-center gap-4">
               <Badge
                 variant="outline"
-                className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-primary border-orange-200' :
-                  diagnosis.status === 'paused' ? 'bg-orange-50 text-primary border-orange-200' :
+                className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-primary border-primary/20' :
+                  diagnosis.status === 'paused' ? 'bg-warning/15 text-warning-foreground border-warning/20' :
                     diagnosis.status === 'completed' ? 'bg-success/10 text-green-700 border-green-200' :
                       'bg-muted text-foreground border-border'
                   }`}
@@ -601,7 +601,7 @@ export default function DiagnosisPage() {
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Photos</span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-foreground">{photosCount}</span>
-              <Camera className="w-4 h-4 text-orange-500 mb-1" />
+              <Camera className="mb-1 h-4 w-4 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -1687,7 +1687,7 @@ function PhotosTab({
                     {/* Badge */}
                     {photo.photo_type && (
                       <div className="absolute top-2 left-2">
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-card/90 dark:bg-black/90 backdrop-blur-sm shadow-sm capitalize">
+                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] shadow-sm capitalize">
                           {photo.photo_type.replace('_', ' ')}
                         </Badge>
                       </div>
@@ -1850,7 +1850,7 @@ function PhotoUploadDialog({
                 required
               />
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-orange-200 bg-primary/5" : "border-border hover:border-orange-400 hover:bg-muted border-border dark:hover:border-primary hover:bg-muted"}`}
+                className={`group cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${preview ? "border-primary/20 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted"}`}
                 onClick={() => document.getElementById("photo")?.click()}
               >
                 {preview ? (
@@ -1882,7 +1882,7 @@ function PhotoUploadDialog({
                   </div>
                 ) : (
                   <div className="py-4">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 transition-transform duration-200 group-hover:scale-110">
                       <Camera className="w-8 h-8 text-primary" />
                     </div>
                     <div className="space-y-1">
@@ -2085,7 +2085,7 @@ function SummaryTab({
         <CardContent className="pt-6">
           <div className="grid grid-cols-3 gap-6">
             <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
-              <div className="p-2 mb-3 rounded-full bg-primary/10 dark:bg-orange-900/20 text-primary">
+              <div className="mb-3 rounded-full bg-primary/10 p-2 text-primary">
                 <Clock className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Time Spent</p>
@@ -2105,7 +2105,7 @@ function SummaryTab({
               </p>
             </div>
             <div className="flex flex-col items-center justify-center p-4 bg-card rounded-xl border border-border shadow-sm transition-all hover:shadow-md">
-              <div className="p-2 mb-3 rounded-full bg-orange-50 dark:bg-orange-900/20 text-primary">
+              <div className="mb-3 rounded-full bg-primary/10 p-2 text-primary">
                 <Wrench className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Items</p>
@@ -2143,4 +2143,3 @@ function SummaryTab({
     </div>
   );
 }
-

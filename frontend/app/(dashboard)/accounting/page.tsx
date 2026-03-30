@@ -9,11 +9,49 @@ import { OperationalGrid } from "@/components/dashboard/OperationalGrid";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Download, Database } from "lucide-react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { addDays, startOfMonth, endOfMonth, format } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { cn } from "@/lib/utils";
+
+type TrendPoint = {
+    date: string;
+    revenue: number;
+    expense: number;
+    cash_flow: number;
+};
+
+type Insight = {
+    type: "danger" | "warning" | "info";
+    title: string;
+    message: string;
+    action_link?: string;
+};
+
+type TopJob = {
+    work_order_id: number | string;
+    customer: string;
+    vehicle: string;
+    gross_profit: number;
+    margin_percent: number;
+};
+
+type FinancialHealth = {
+    cash_on_hand: number;
+    runway_months: number;
+    net_profit: number;
+    net_profit_margin: number;
+    total_revenue: number;
+    total_expenses: number;
+    monthly_burn: number;
+};
+
+type AccountingSnapshot = {
+    financial_health: FinancialHealth;
+    trends: TrendPoint[];
+    insights: Insight[];
+    top_jobs: TopJob[];
+};
 
 export default function AccountingDashboardPage() {
     const { error: toastError, success: toastSuccess } = useToast();
@@ -28,7 +66,7 @@ export default function AccountingDashboardPage() {
             setIsSyncing(true);
             await quickbooksApi.syncInbound();
             toastSuccess("QuickBooks sync triggered successfully. Data will update in a few moments.");
-        } catch (err) {
+        } catch {
             toastError("Failed to trigger QuickBooks sync");
         } finally {
             setIsSyncing(false);
@@ -41,7 +79,7 @@ export default function AccountingDashboardPage() {
             return await accountingApi.getAnalyticsSnapshot({
                 start_date: format(dateRange.from!, 'yyyy-MM-dd'),
                 end_date: format(dateRange.to!, 'yyyy-MM-dd')
-            });
+            }) as AccountingSnapshot;
         },
         refetchInterval: 300000 // Refresh every 5 mins
     });
@@ -60,20 +98,19 @@ export default function AccountingDashboardPage() {
             link.click();
             link.remove();
             toastSuccess("Export complete");
-
-        } catch (err) {
+        } catch {
             toastError("Failed to export report");
         }
     };
 
     if (isLoading) {
         return (
-            <div className="p-8 space-y-8 animate-pulse">
-                <div className="h-12 w-1/3 bg-muted rounded"></div>
-                <div className="grid grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-muted rounded"></div>)}
+            <div className="max-w-[1600px] space-y-6 p-4 md:p-6 animate-pulse">
+                <div className="h-10 w-72 rounded bg-muted"></div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {[1, 2, 3, 4].map((i) => <div key={i} className="h-28 rounded-xl bg-muted" />)}
                 </div>
-                <div className="h-96 bg-muted rounded"></div>
+                <div className="h-80 rounded-xl bg-muted"></div>
             </div>
         );
     }
@@ -84,49 +121,42 @@ export default function AccountingDashboardPage() {
 
     const { financial_health, trends, insights, top_jobs } = data;
 
-    // Prepare sparkline data (simplified from trends)
-
-    const revenueSpark = trends.map((t: any) => ({ value: t.revenue }));
-
-    const expenseSpark = trends.map((t: any) => ({ value: t.expense }));
-
-    const profitSpark = trends.map((t: any) => ({ value: t.revenue - t.expense }));
-
-    const cashFlowSpark = trends.map((t: any) => ({ value: t.cash_flow }));
+    const revenueSpark = trends.map((t) => ({ value: t.revenue }));
+    const expenseSpark = trends.map((t) => ({ value: t.expense }));
+    const profitSpark = trends.map((t) => ({ value: t.revenue - t.expense }));
+    const cashFlowSpark = trends.map((t) => ({ value: t.cash_flow }));
 
     return (
-        <div className="p-4 md:p-6 space-y-6 max-w-[1600px]">
-            {/* Header Controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="max-w-[1600px] space-y-6 p-4 md:p-6">
+            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Financial Overview</h1>
-                    <p className="text-muted-foreground mt-1">
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Financial Overview</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Analytics for {format(dateRange.from!, "MMM d")} - {format(dateRange.to!, "MMM d, yyyy")}
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
                     <DateRangePicker
                         startDate={format(dateRange.from!, 'yyyy-MM-dd')}
                         endDate={format(dateRange.to!, 'yyyy-MM-dd')}
                         onStartDateChange={(date) => setDateRange(prev => ({ ...prev, from: new Date(date) }))}
                         onEndDateChange={(date) => setDateRange(prev => ({ ...prev, to: new Date(date) }))}
                     />
-                    <Button variant="outline" size="icon" onClick={() => refetch()}>
+                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetch()}>
                         <RefreshCw className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleQBOSync} disabled={isSyncing}>
+                    <Button variant="outline" size="sm" className="h-9" onClick={handleQBOSync} disabled={isSyncing}>
                         <Database className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
                         {isSyncing ? "Syncing..." : "Sync from QuickBooks"}
                     </Button>
-                    <Button onClick={handleExport}>
+                    <Button size="sm" className="h-9" onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />
                         Export Report
                     </Button>
                 </div>
             </div>
 
-            {/* Pulse Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <MetricCard
                     title="Cash on Hand"
                     value={financial_health.cash_on_hand}
@@ -135,7 +165,7 @@ export default function AccountingDashboardPage() {
                     data={cashFlowSpark}
                     dataKey="value"
                     trend={{
-                        value: 0, // Calculate MoM in backend for real trend
+                        value: 0,
                         isPositive: true,
                         label: `Runway: ${financial_health.runway_months.toFixed(1)} mo`
                     }}
@@ -173,12 +203,10 @@ export default function AccountingDashboardPage() {
                 />
             </div>
 
-            {/* Main Interactive Chart */}
             <div className="grid grid-cols-1">
                 <InteractiveTrendChart data={trends} title="Financial Performance Trends" />
             </div>
 
-            {/* Operational Grid */}
             <OperationalGrid
                 insights={insights}
                 topJobs={top_jobs}

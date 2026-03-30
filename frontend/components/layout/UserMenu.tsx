@@ -103,7 +103,7 @@ export function UserMenu() {
                             {user?.first_name} {user?.last_name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">{user?.email}</p>
-                        <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full font-medium capitalize">
+                        <span className="inline-block mt-1.5 rounded-full border border-primary/15 bg-primary/10 px-2 py-0.5 text-xs font-medium capitalize text-primary">
                             {user?.role}
                         </span>
                     </div>

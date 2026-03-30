@@ -149,6 +149,15 @@ class UserAuthenticationAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
+class LoginTemplateTest(TestCase):
+    """Regression tests for the staff login page."""
+
+    def test_login_page_renders(self):
+        response = self.client.get(reverse('login'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "Sign in")
+
+
 @pytest.mark.django_db
 class TestUserModel:
     """Pytest-style tests for User model."""

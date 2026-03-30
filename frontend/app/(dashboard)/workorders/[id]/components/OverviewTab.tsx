@@ -151,14 +151,14 @@ export default function WorkOrderOverviewTab({
                       {typeof workOrder.customer === "object" && workOrder.customer !== null ? (
                         <Link
                           href={`/customers/${workOrder.customer.id}`}
-                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
                         >
                           {workOrder.customer.full_name || workOrder.customer_name || "View Customer"}
                         </Link>
                       ) : (
                         <Link
                           href={`/customers/${workOrder.customer}`}
-                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
                         >
                           {workOrder.customer_name || "View Customer"}
                         </Link>
@@ -211,14 +211,14 @@ export default function WorkOrderOverviewTab({
                       {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null ? (
                         <Link
                           href={`/vehicles/${workOrder.vehicle.id}`}
-                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
                         >
                           {workOrder.vehicle.year} {workOrder.vehicle.make} {workOrder.vehicle.model}
                         </Link>
                       ) : (
                         <Link
                           href={`/vehicles/${workOrder.vehicle}`}
-                          className="text-primary hover:text-orange-800 text-primary dark:hover:text-orange-300 font-medium text-base"
+                          className="text-base font-medium text-primary transition-colors hover:text-primary/80"
                         >
                           {workOrder.vehicle_info || "View Vehicle"}
                         </Link>
@@ -310,7 +310,7 @@ export default function WorkOrderOverviewTab({
         {/* Related Work Orders / Warranty Rework */}
 
         {((workOrder as any).is_warranty_rework || (workOrder as any).related_work_order_detail || ((workOrder as any).rework_work_orders && (workOrder as any).rework_work_orders.length > 0)) && (
-          <Card className="border-orange-200 dark:border-orange-800">
+          <Card className="border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <AlertCircle className="w-5 h-5 text-primary" />
@@ -325,7 +325,7 @@ export default function WorkOrderOverviewTab({
               {/* Original Work Order (if this is a rework) */}
 
               {(workOrder as any).related_work_order_detail && (
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
+                <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <LinkIcon className="w-4 h-4 text-primary" />
@@ -335,7 +335,7 @@ export default function WorkOrderOverviewTab({
                     </div>
 
                     <Link href={`/workorders/${(workOrder as any).related_work_order_detail.id}`}>
-                      <Badge variant="secondary" className="cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-300 dark:border-orange-700">
+                      <Badge variant="secondary" className="cursor-pointer border border-primary/20 hover:bg-primary/10">
                         View
                       </Badge>
                     </Link>
@@ -359,7 +359,7 @@ export default function WorkOrderOverviewTab({
                   </div>
 
                   {(workOrder as any).warranty_reason && (
-                    <div className="mt-2 pt-2 border-t border-orange-200 dark:border-orange-800">
+                    <div className="mt-2 border-t border-primary/15 pt-2">
                       <p className="text-xs font-medium text-card-foreground mb-1">Warranty Reason:</p>
                       <p className="text-xs text-muted-foreground">
 
@@ -678,4 +678,3 @@ export default function WorkOrderOverviewTab({
     </div >
   );
 }
-

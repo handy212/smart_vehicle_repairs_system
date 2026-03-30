@@ -57,7 +57,7 @@ function GatePassSection({ workOrderId }: { workOrderId: number }) {
   }
 
   return (
-    <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+    <Card className="border border-border bg-card shadow-sm">
       <CardContent className="py-4 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -171,7 +171,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${stepStatus === 'completed'
                       ? 'bg-success/100 text-white'
                       : stepStatus === 'current'
-                        ? 'bg-primary text-white ring-2 ring-orange-200 dark:ring-orange-900'
+                        ? 'bg-primary text-white ring-2 ring-primary/20'
                         : 'bg-border text-muted-foreground'
                       }`}
                   >
@@ -357,7 +357,7 @@ export default function WorkOrderDetailPage() {
           </div>
           <div className="flex items-center space-x-2">
             {/* Work Order Number Badge */}
-            <div className="px-3 py-1.5 rounded-full bg-primary/10 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700/50 text-primary dark:text-orange-300 font-mono text-sm font-bold shadow-sm mr-2">
+            <div className="mr-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-mono text-sm font-bold text-primary shadow-sm">
               #{workOrder.work_order_number}
             </div>
 
@@ -367,7 +367,7 @@ export default function WorkOrderDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
-                className="flex items-center h-9 bg-muted text-foreground border-border backdrop-blur-sm"
+                className="flex h-9 items-center border-border bg-card text-foreground"
               >
                 <PremiumIcons.Receipt className="w-3.5 h-3.5 mr-2" />
                 Print
@@ -379,7 +379,7 @@ export default function WorkOrderDetailPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowUnapprovedRecommendationsDialog(true)}
-                  className="absolute right-full mr-2 min-w-max h-9 border-orange-200 text-primary bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                  className="absolute right-full mr-2 min-w-max h-9 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
                 >
                   <AlertTriangle className="w-3.5 h-3.5 mr-2" />
                   Unapproved Items
@@ -391,7 +391,7 @@ export default function WorkOrderDetailPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowPrintMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-card/90 backdrop-blur-xl bg-muted/90 rounded-xl shadow-xl border border-border/50 border-border/50 z-20 overflow-hidden ring-1 ring-black/5">
+                  <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg">
                     <div
                       className="block px-4 py-2 text-sm text-card-foreground hover:bg-muted  cursor-pointer"
                       onClick={() => {
@@ -457,7 +457,7 @@ export default function WorkOrderDetailPage() {
       </div>
 
       {/* Workflow Progress Indicator with Glass Effect */}
-      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md ring-1 ring-gray-900/5">
+      <Card className="border border-border bg-card shadow-sm">
         <CardContent className="py-4 px-4">
           <WorkflowProgressIndicator
             status={workOrder.status}
@@ -477,15 +477,15 @@ export default function WorkOrderDetailPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="overview" className="data-[state=active]:bg-card/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-card data-[state=active]:shadow-sm">
             <PremiumIcons.FileText className="w-4 h-4 mr-2" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="tasks" className="data-[state=active]:bg-card/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
+          <TabsTrigger value="tasks" className="data-[state=active]:bg-card data-[state=active]:shadow-sm" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
             {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <PremiumIcons.Wrench className="w-4 h-4 mr-2" />}
             Tasks ({tasks.length})
           </TabsTrigger>
-          <TabsTrigger value="parts" className="data-[state=active]:bg-card/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
+          <TabsTrigger value="parts" className="data-[state=active]:bg-card data-[state=active]:shadow-sm" disabled={!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status)}>
             {!workOrder.has_completed_inspection && ["draft", "inspection"].includes(workOrder.status) ? <LockIcon className="w-4 h-4 mr-2 text-muted-foreground" /> : <PremiumIcons.Package className="w-4 h-4 mr-2" />}
             Parts ({parts.length})
           </TabsTrigger>
@@ -632,7 +632,7 @@ function UnapprovedRecommendationsDialog({
             <div className="space-y-3">
 
               {unapprovedRecommendations.map((rec: any) => (
-                <div key={rec.id} className="border border-orange-200 dark:border-orange-800 rounded-md bg-orange-50/50 dark:bg-orange-900/10 p-3">
+                <div key={rec.id} className="rounded-md border border-primary/15 bg-primary/5 p-3">
                   <div className="flex items-start justify-between mb-1.5">
                     <div className="flex flex-col">
                       <span className="font-medium text-sm text-foreground">
@@ -641,7 +641,7 @@ function UnapprovedRecommendationsDialog({
                       <div className="flex items-center gap-2 mt-1">
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1.5 py-0 h-5 border-orange-300 text-primary"
+                          className="h-5 px-1.5 py-0 text-[10px] border-primary/20 text-primary"
                         >
                           {rec.priority_display || rec.priority}
                         </Badge>

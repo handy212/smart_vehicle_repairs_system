@@ -26,6 +26,19 @@ import { exportToExcel } from "@/lib/utils/excel-export";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { COMPANY_NAME } from "@/lib/constants";
 
+type ProfitLossLine = {
+    code: string;
+    name: string;
+    balance: number | string;
+};
+
+type ProfitLossReport = {
+    income?: ProfitLossLine[];
+    expenses?: ProfitLossLine[];
+};
+
+type ExportCell = string | number;
+
 export default function ProfitLossPage() {
     const { formatCurrency } = useCurrency();
     const { activeBranchId } = useBranchStore();
@@ -34,20 +47,19 @@ export default function ProfitLossPage() {
 
     const { data: report, isLoading } = useQuery({
         queryKey: ["accounting", "profit-loss", startDate, endDate, activeBranchId],
-        queryFn: () => accountingApi.getProfitLoss(startDate, endDate, activeBranchId || undefined),
+        queryFn: () => accountingApi.getProfitLoss(startDate, endDate, activeBranchId || undefined) as Promise<ProfitLossReport>,
     });
 
 
-    const totalIncome = report?.income?.reduce((sum: number, item: any) => sum + parseFloat(item.balance || 0), 0) || 0;
-
-    const totalExpenses = report?.expenses?.reduce((sum: number, item: any) => sum + parseFloat(item.balance || 0), 0) || 0;
+    const totalIncome = report?.income?.reduce((sum, item) => sum + parseFloat(String(item.balance || 0)), 0) || 0;
+    const totalExpenses = report?.expenses?.reduce((sum, item) => sum + parseFloat(String(item.balance || 0)), 0) || 0;
     const netIncome = totalIncome - totalExpenses;
 
     const handleExportCSV = () => {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: ExportCell[][] = [];
 
         // Add header info
         rows.push(['Profit & Loss Statement']);
@@ -57,7 +69,7 @@ export default function ProfitLossPage() {
         // Income section
         rows.push(['INCOME']);
 
-        report.income?.forEach((item: any) => {
+        report.income?.forEach((item) => {
             rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
         });
         rows.push(['', 'Total Income', totalIncome]);
@@ -66,7 +78,7 @@ export default function ProfitLossPage() {
         // Expenses section
         rows.push(['EXPENSES']);
 
-        report.expenses?.forEach((item: any) => {
+        report.expenses?.forEach((item) => {
             rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
         });
         rows.push(['', 'Total Expenses', totalExpenses]);
@@ -83,7 +95,7 @@ export default function ProfitLossPage() {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: ExportCell[][] = [];
 
         // Title and date
         rows.push(['Profit & Loss Statement']);
@@ -94,7 +106,7 @@ export default function ProfitLossPage() {
         rows.push(['INCOME', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report.income?.forEach((item: any) => {
+        report.income?.forEach((item) => {
             rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
         });
         rows.push(['', 'Total Income', totalIncome]);
@@ -104,7 +116,7 @@ export default function ProfitLossPage() {
         rows.push(['EXPENSES', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report.expenses?.forEach((item: any) => {
+        report.expenses?.forEach((item) => {
             rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
         });
         rows.push(['', 'Total Expenses', totalExpenses]);
@@ -137,7 +149,6 @@ export default function ProfitLossPage() {
 
     return (
         <div className="space-y-4">
-            {/* Compact Header */}
             <div className="flex justify-between items-center pt-2">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Profit & Loss</h1>
@@ -152,8 +163,7 @@ export default function ProfitLossPage() {
                 />
             </div>
 
-            {/* Filters - Compact */}
-            <Card className="border shadow-sm">
+            <Card>
                 <CardContent className="p-4">
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -186,14 +196,13 @@ export default function ProfitLossPage() {
                 </div>
             ) : (
                 <>
-                    {/* // Income Section - Compact */}
-                    <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                        <CardHeader className="pb-3 border-b border-border bg-success/10 dark:bg-green-900/10">
-                            <CardTitle className="text-base text-green-700 dark:text-green-400">Income</CardTitle>
+                    <Card className="overflow-hidden">
+                        <CardHeader className="border-b border-border bg-success/10 pb-3">
+                            <CardTitle className="text-base text-success">Income</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
-                                <TableHeader className="bg-muted/30">
+                                <TableHeader className="bg-muted/10">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Account</TableHead>
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Amount</TableHead>
@@ -201,8 +210,8 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
 
-                                    {report?.income?.map((item: any) => (
-                                        <TableRow key={item.code} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
+                                    {report?.income?.map((item) => (
+                                        <TableRow key={item.code} className="border-b border-border hover:bg-muted/20">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}
                                             </TableCell>
@@ -211,11 +220,11 @@ export default function ProfitLossPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    <TableRow className="bg-success/10 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800">
-                                        <TableCell className="px-4 py-2 text-sm font-bold text-green-700 dark:text-green-400">
+                                    <TableRow className="border-t border-success/20 bg-success/10">
+                                        <TableCell className="px-4 py-2 text-sm font-bold text-success">
                                             Total Income
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm font-bold text-green-700 dark:text-green-400 text-right font-mono">
+                                        <TableCell className="px-4 py-2 text-right font-mono text-sm font-bold text-success">
                                             {formatCurrency(totalIncome)}
                                         </TableCell>
                                     </TableRow>
@@ -224,14 +233,13 @@ export default function ProfitLossPage() {
                         </CardContent>
                     </Card>
 
-                    {/* // Expenses Section - Compact */}
-                    <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                        <CardHeader className="pb-3 border-b border-border bg-red-50/50 dark:bg-red-900/10">
-                            <CardTitle className="text-base text-red-700 dark:text-red-400">Expenses</CardTitle>
+                    <Card className="overflow-hidden">
+                        <CardHeader className="border-b border-border bg-destructive/10 pb-3">
+                            <CardTitle className="text-base text-destructive">Expenses</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
-                                <TableHeader className="bg-muted/30">
+                                <TableHeader className="bg-muted/10">
                                     <TableRow className="hover:bg-transparent border-none">
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Account</TableHead>
                                         <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4 text-right">Amount</TableHead>
@@ -239,8 +247,8 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
 
-                                    {report?.expenses?.map((item: any) => (
-                                        <TableRow key={item.code} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
+                                    {report?.expenses?.map((item) => (
+                                        <TableRow key={item.code} className="border-b border-border hover:bg-muted/20">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-foreground">
                                                 {item.name}
                                             </TableCell>
@@ -249,11 +257,11 @@ export default function ProfitLossPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    <TableRow className="bg-red-50/50 dark:bg-red-900/20 border-t-2 border-red-200 dark:border-red-800">
-                                        <TableCell className="px-4 py-2 text-sm font-bold text-red-700 dark:text-red-400">
+                                    <TableRow className="border-t border-destructive/20 bg-destructive/10">
+                                        <TableCell className="px-4 py-2 text-sm font-bold text-destructive">
                                             Total Expenses
                                         </TableCell>
-                                        <TableCell className="px-4 py-2 text-sm font-bold text-red-700 dark:text-red-400 text-right font-mono">
+                                        <TableCell className="px-4 py-2 text-right font-mono text-sm font-bold text-destructive">
                                             {formatCurrency(totalExpenses)}
                                         </TableCell>
                                     </TableRow>
@@ -262,14 +270,13 @@ export default function ProfitLossPage() {
                         </CardContent>
                     </Card>
 
-                    {/* // Net Income Summary - Compact */}
-                    <Card className={`border-2 ${netIncome >= 0 ? 'border-green-200 bg-success/10 dark:bg-green-900/20' : 'border-red-200 bg-red-50 dark:bg-red-900/20'}`}>
+                    <Card className={netIncome >= 0 ? "border-success/20 bg-success/10" : "border-destructive/20 bg-destructive/10"}>
                         <CardContent className="p-4">
                             <div className="flex justify-between items-center">
-                                <span className={`text-lg font-bold ${netIncome >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                <span className={`text-lg font-bold ${netIncome >= 0 ? "text-success" : "text-destructive"}`}>
                                     Net Income
                                 </span>
-                                <span className={`text-2xl font-bold font-mono ${netIncome >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                <span className={`text-2xl font-bold font-mono ${netIncome >= 0 ? "text-success" : "text-destructive"}`}>
                                     {formatCurrency(netIncome)}
                                 </span>
                             </div>

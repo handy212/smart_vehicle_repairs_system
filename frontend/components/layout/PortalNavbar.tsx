@@ -62,10 +62,10 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 border-b border-border/50 shadow-sm backdrop-blur-xl sticky-navbar">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background shadow-sm sticky-navbar">
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          // Left: Logo and Menu Toggle
+          {/* Left: Logo and Menu Toggle */}
           <div className="flex items-center space-x-4">
             <button
               onClick={onMenuToggle}
@@ -76,7 +76,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
               {isSidebarOpen ? <PremiumIcons.X className="w-6 h-6" /> : <PremiumIcons.Menu className="w-6 h-6" />}
             </button>
 
-            // Desktop Sidebar Toggle
+            {/* Desktop Sidebar Toggle */}
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
@@ -113,15 +113,15 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
             </Link>
           </div>
 
-          // Right: Actions
+          {/* Right: Actions */}
           <div className="flex items-center space-x-3">
-            // Notifications
+            {/* Notifications */}
             <NotificationDropdown />
 
-            // Theme Toggle
+            {/* Theme Toggle */}
             <ThemeToggle />
 
-            // User Menu
+            {/* User Menu */}
             <div className="relative ml-2" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
@@ -150,7 +150,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
                     <Link
                       href="/portal/profile"
                       onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-primary/10 dark:hover:bg-orange-900/20 hover:text-primary dark:hover:text-orange-400 rounded-lg transition-colors group"
+                      className="group flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                     >
                       <User className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       <span>My Profile</span>
@@ -180,4 +180,3 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
     </nav>
   );
 }
-

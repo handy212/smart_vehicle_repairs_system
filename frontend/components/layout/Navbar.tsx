@@ -135,7 +135,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
   }, [activeBranchId, queryClient, router]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 border-b border-border/50 shadow-sm backdrop-blur-xl">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background shadow-sm">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Menu Toggle + Logo/Brand */}
@@ -206,12 +206,12 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                 });
                 document.dispatchEvent(event);
               }}
-              className="group flex items-center gap-3 px-4 py-2 w-full bg-muted border border-border rounded-xl text-muted-foreground hover:bg-card transition-all text-sm shadow-sm hover:shadow-md"
+              className="group flex items-center gap-3 px-3.5 py-2 w-full rounded-xl border border-border bg-card text-muted-foreground text-sm shadow-sm transition-colors hover:border-primary/20 hover:bg-muted/70"
               aria-label="Open search (Ctrl+K)"
             >
               <PremiumIcons.Search className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               <span className="flex-1 text-left font-medium opacity-70">Search...</span>
-              <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-border dark:border-gray-600 bg-card group-hover:border-orange-200 dark:group-hover:border-orange-900 transition-colors shadow-none">
+              <div className="flex items-center gap-1.5 rounded border border-border bg-card px-1.5 py-0.5 shadow-none transition-colors group-hover:border-primary/20">
                 <span className="text-[10px] font-bold uppercase tracking-tighter">Ctrl K</span>
               </div>
             </button>

@@ -411,12 +411,12 @@ function TestDialog({
                     <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-6">
                         {/* Template Selection */}
                         {!test && (
-                            <div className="bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 rounded-lg p-4">
-                                <Label className="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2 block">
+                            <div className="rounded-lg border border-primary/15 bg-primary/5 p-4">
+                                <Label className="mb-2 block text-sm font-semibold text-primary">
                                     Quick Start from Template
                                 </Label>
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 text-orange-400 w-4 h-4" />
+                                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-primary/60" />
                                     <Input
                                         placeholder="Search test procedure library..."
                                         value={templateSearchQuery || formData.test_name}
@@ -426,7 +426,7 @@ function TestDialog({
                                                 setFormData({ ...formData, test_name: e.target.value });
                                             }
                                         }}
-                                        className="pl-9 border-orange-200 focus-visible:ring-primary bg-card"
+                                        className="bg-card pl-9 border-primary/20"
                                     />
                                     {isSearchingTemplates && (
                                         <div className="absolute right-3 top-2.5">
@@ -446,9 +446,9 @@ function TestDialog({
                                                     key={template.id}
                                                     type="button"
                                                     onClick={() => handleSelectTemplate(template)}
-                                                    className="w-full text-left p-3 hover:bg-primary/10 dark:hover:bg-orange-900/20 border-b border-gray-50 border-border last:border-b-0 transition-colors group"
+                                                    className="group w-full border-b border-border p-3 text-left transition-colors hover:bg-primary/10 last:border-b-0"
                                                 >
-                                                    <div className="font-semibold text-sm text-foreground group-hover:text-primary dark:group-hover:text-orange-300">
+                                                    <div className="text-sm font-semibold text-foreground group-hover:text-primary">
                                                         {template.name}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground mt-1 line-clamp-1">

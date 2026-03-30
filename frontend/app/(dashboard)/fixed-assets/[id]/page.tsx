@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fixedAssetsApi } from "@/lib/api/fixed-assets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Building2, Calendar, DollarSign, Tag, MapPin, Factory, Hash, Activity } from "lucide-react";
+import { ArrowLeft, Edit, Building2, Calendar, DollarSign, Tag, MapPin, Factory, Hash, Activity, User } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -128,6 +128,13 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.location || "Not specified"}</span>
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <span className="text-sm font-medium text-muted-foreground">Assigned To</span>
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-muted-foreground" />
+                                <span>{asset.assigned_to_name || "Unassigned"}</span>
                             </div>
                         </div>
                         {asset.description && (

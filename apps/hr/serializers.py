@@ -146,7 +146,10 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
                 setattr(user, attr, value)
             user.save()
 
-        profile = EmployeeProfile.objects.create(user=user, **validated_data)
+        profile, created = EmployeeProfile.objects.update_or_create(
+            user=user,
+            defaults=validated_data
+        )
         return profile
 
     def update(self, instance, validated_data):

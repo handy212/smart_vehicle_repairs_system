@@ -5,7 +5,6 @@ import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
@@ -37,14 +36,45 @@ import {
 import apiClient from "@/lib/api/client";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
+type AccountFormData = {
+    code: string;
+    name: string;
+    account_type: string;
+    balance_type: string;
+    description: string;
+    is_active: boolean;
+};
+
+type Account = {
+    id: number;
+    code: string;
+    name: string;
+    account_type: string;
+    balance_type: string;
+    description?: string | null;
+    is_active: boolean;
+    balance?: number;
+};
+
+type ApiError = {
+    response?: {
+        data?: {
+            error?: string;
+        };
+    };
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+    return (error as ApiError)?.response?.data?.error || fallback;
+}
+
 export default function ChartOfAccountsPage() {
     const { formatCurrency } = useCurrency();
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [dialogOpen, setDialogOpen] = useState(false);
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const [editingAccount, setEditingAccount] = useState<any>(null);
-    const [formData, setFormData] = useState({
+    const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+    const [formData, setFormData] = useState<AccountFormData>({
         code: "",
         name: "",
         account_type: "asset",
@@ -55,13 +85,11 @@ export default function ChartOfAccountsPage() {
 
     const { data: accounts, isLoading } = useQuery({
         queryKey: ["accounting", "accounts"],
-        queryFn: () => accountingApi.getAccounts(),
+        queryFn: () => accountingApi.getAccounts() as Promise<Account[]>,
     });
 
-    // Create account mutation
     const createMutation = useMutation({
-
-        mutationFn: async (data: any) => {
+        mutationFn: async (data: AccountFormData) => {
             const response = await apiClient.post("/accounting/accounts/", data);
             return response.data;
         },
@@ -70,17 +98,14 @@ export default function ChartOfAccountsPage() {
             setDialogOpen(false);
             resetForm();
         },
-
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             console.error("Failed to create account:", error);
-            alert(error?.response?.data?.error || "Failed to create account");
+            alert(getErrorMessage(error, "Failed to create account"));
         }
     });
 
-    // Update account mutation
     const updateMutation = useMutation({
-
-        mutationFn: async ({ id, data }: { id: number; data: any }) => {
+        mutationFn: async ({ id, data }: { id: number; data: AccountFormData }) => {
             const response = await apiClient.put(`/accounting/accounts/${id}/`, data);
             return response.data;
         },
@@ -90,14 +115,12 @@ export default function ChartOfAccountsPage() {
             setEditingAccount(null);
             resetForm();
         },
-
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             console.error("Failed to update account:", error);
-            alert(error?.response?.data?.error || "Failed to update account");
+            alert(getErrorMessage(error, "Failed to update account"));
         }
     });
 
-    // Delete account mutation
     const deleteMutation = useMutation({
         mutationFn: async (id: number) => {
             const response = await apiClient.delete(`/accounting/accounts/${id}/`);
@@ -106,10 +129,9 @@ export default function ChartOfAccountsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["accounting", "accounts"] });
         },
-
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             console.error("Failed to delete account:", error);
-            alert(error?.response?.data?.error || "Failed to delete account");
+            alert(getErrorMessage(error, "Failed to delete account"));
         }
     });
 
@@ -134,7 +156,7 @@ export default function ChartOfAccountsPage() {
     };
 
 
-    const handleEdit = (account: any) => {
+    const handleEdit = (account: Account) => {
         setEditingAccount(account);
         setFormData({
             code: account.code,
@@ -147,8 +169,7 @@ export default function ChartOfAccountsPage() {
         setDialogOpen(true);
     };
 
-
-    const handleDelete = (account: any) => {
+    const handleDelete = (account: Account) => {
         if (confirm(`Are you sure you want to delete account "${account.name}" (${account.code})?`)) {
             deleteMutation.mutate(account.id);
         }
@@ -160,14 +181,12 @@ export default function ChartOfAccountsPage() {
         setDialogOpen(true);
     };
 
-
-    const filteredAccounts = accounts?.filter((account: any) =>
+    const filteredAccounts = (accounts ?? []).filter((account) =>
         account.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         account.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
+    );
 
-
-    const accountsByType = filteredAccounts.reduce((acc: any, account: any) => {
+    const accountsByType = filteredAccounts.reduce<Record<string, Account[]>>((acc, account) => {
         if (!acc[account.account_type]) {
             acc[account.account_type] = [];
         }
@@ -204,7 +223,7 @@ export default function ChartOfAccountsPage() {
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label htmlFor="code" className="block text-sm font-medium text-foreground mb-2">Account Code *</label>
+                                    <Label htmlFor="code" className="mb-2 block text-sm font-medium">Account Code *</Label>
                                     <Input
                                         id="code"
                                         value={formData.code}
@@ -215,7 +234,7 @@ export default function ChartOfAccountsPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">Account Name *</label>
+                                    <Label htmlFor="name" className="mb-2 block text-sm font-medium">Account Name *</Label>
                                     <Input
                                         id="name"
                                         value={formData.name}
@@ -229,10 +248,10 @@ export default function ChartOfAccountsPage() {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label htmlFor="account_type" className="block text-sm font-medium text-foreground mb-2">Account Type *</label>
+                                    <Label htmlFor="account_type" className="mb-2 block text-sm font-medium">Account Type *</Label>
                                     <select
                                         id="account_type"
-                                        className="w-full border rounded px-3 py-2 h-9 text-sm"
+                                        className="h-9 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                                         value={formData.account_type}
                                         onChange={(e) => setFormData({ ...formData, account_type: e.target.value })}
                                     >
@@ -244,10 +263,10 @@ export default function ChartOfAccountsPage() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label htmlFor="balance_type" className="block text-sm font-medium text-foreground mb-2">Balance Type *</label>
+                                    <Label htmlFor="balance_type" className="mb-2 block text-sm font-medium">Balance Type *</Label>
                                     <select
                                         id="balance_type"
-                                        className="w-full border rounded px-3 py-2 h-9 text-sm"
+                                        className="h-9 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                                         value={formData.balance_type}
                                         onChange={(e) => setFormData({ ...formData, balance_type: e.target.value })}
                                     >
@@ -258,7 +277,7 @@ export default function ChartOfAccountsPage() {
                             </div>
 
                             <div>
-                                <label htmlFor="description" className="block text-sm font-medium text-foreground mb-2">Description (Optional)</label>
+                                <Label htmlFor="description" className="mb-2 block text-sm font-medium">Description (Optional)</Label>
                                 <Textarea
                                     id="description"
                                     value={formData.description}
@@ -277,7 +296,7 @@ export default function ChartOfAccountsPage() {
                                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                                     className="h-3.5 w-3.5"
                                 />
-                                <label htmlFor="is_active" className="text-sm font-medium text-foreground">Active</label>
+                                <Label htmlFor="is_active" className="text-sm font-medium">Active</Label>
                             </div>
                         </div>
 
@@ -294,18 +313,17 @@ export default function ChartOfAccountsPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Main Card - Compact */}
-            <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
-                <CardHeader className="pb-3 border-b border-border">
-                    <div className="flex items-center justify-between">
+            <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border bg-muted/10 pb-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <CardTitle className="text-base">All Accounts ({filteredAccounts.length})</CardTitle>
-                        <div className="relative w-64">
+                        <div className="relative w-full md:w-64">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search accounts..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 h-9 text-sm bg-muted border-none"
+                                className="h-9 bg-background pl-9 text-sm"
                             />
                         </div>
                     </div>
@@ -318,15 +336,15 @@ export default function ChartOfAccountsPage() {
                     ) : (
                         <div>
 
-                            {Object.entries(accountsByType).map(([type, typeAccounts]: [string, any]) => (
+                            {Object.entries(accountsByType).map(([type, typeAccounts]) => (
                                 <div key={type} className="border-b border-border last:border-b-0">
-                                    <div className="bg-muted/50 px-4 py-2 border-b border-border">
+                                    <div className="border-b border-border bg-muted/20 px-4 py-2">
                                         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                             {type} ({typeAccounts.length})
                                         </h3>
                                     </div>
                                     <Table>
-                                        <TableHeader className="bg-muted/30">
+                                        <TableHeader className="bg-muted/10">
                                             <TableRow className="hover:bg-transparent border-none">
                                                 <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Code</TableHead>
                                                 <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
@@ -338,8 +356,8 @@ export default function ChartOfAccountsPage() {
                                         </TableHeader>
                                         <TableBody>
 
-                                            {typeAccounts.map((account: any) => (
-                                                <TableRow key={account.id} className="hover:bg-muted/50 hover:bg-muted/50 border-b border-border">
+                                            {typeAccounts.map((account) => (
+                                                <TableRow key={account.id} className="border-b border-border hover:bg-muted/20">
                                                     <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                                                         {account.code}
                                                     </TableCell>
@@ -349,9 +367,9 @@ export default function ChartOfAccountsPage() {
                                                         {account.balance !== undefined ? formatCurrency(account.balance) : "-"}
                                                     </TableCell>
                                                     <TableCell className="px-4 py-2">
-                                                        <Badge variant="outline" className={`text-[10px] px-2 py-0 ${account.is_active
-                                                            ? "text-emerald-600 border-emerald-200 bg-emerald-50"
-                                                            : "text-muted-foreground border-border bg-muted"
+                                                        <Badge variant="outline" className={`px-2 py-0 text-[10px] ${account.is_active
+                                                            ? "border-success/20 bg-success/10 text-success"
+                                                            : "border-border bg-muted text-muted-foreground"
                                                             }`}>
                                                             {account.is_active ? "Active" : "Inactive"}
                                                         </Badge>

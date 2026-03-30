@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign In</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+        }
+        .page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: #ffffff;
+            border: 1px solid #dbe3ef;
+            border-radius: 14px;
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+            padding: 28px;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 1.5rem;
+        }
+        p {
+            margin: 0 0 20px;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+        label {
+            display: block;
+            margin: 0 0 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            background: #1d4ed8;
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .errorlist,
+        .notice {
+            margin: 0 0 16px;
+            padding: 12px 14px;
+            border-radius: 10px;
+        }
+        .errorlist {
+            list-style: none;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
+        .notice {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+        }
+        .footer {
+            margin-top: 16px;
+            font-size: 0.9rem;
+        }
+        .footer a {
+            color: #1d4ed8;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="card">
+            <h1>Sign in</h1>
+            <p>Continue to Smart Vehicle Repairs.</p>
+
+            {% if form.errors %}
+                {{ form.errors }}
+            {% endif %}
+
+            {% if next %}
+                <div class="notice">
+                    Sign in to continue to <strong>{{ next }}</strong>.
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <label for="id_username">{{ form.username.label }}</label>
+                {{ form.username }}
+
+                <label for="id_password">{{ form.password.label }}</label>
+                {{ form.password }}
+
+                <input type="hidden" name="next" value="{{ next }}">
+                <button type="submit">Sign in</button>
+            </form>
+
+            <div class="footer">
+                Prefer the SPA login page? <a href="/login">Open app login</a>.
+            </div>
+        </section>
+    </main>
+</body>
+</html>

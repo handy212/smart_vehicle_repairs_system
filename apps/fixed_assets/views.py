@@ -57,7 +57,10 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsModuleEnabled('fixed-assets')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'category', 'branch', 'depreciation_method', 'assigned_to']
-    search_fields = ['asset_number', 'name', 'description', 'serial_number', 'manufacturer']
+    search_fields = [
+        'asset_number', 'name', 'description', 'serial_number', 'manufacturer',
+        'assigned_to__user__first_name', 'assigned_to__user__last_name'
+    ]
     ordering_fields = [
         'asset_number', 'name', 'acquisition_date', 'acquisition_cost',
         'net_book_value', 'accumulated_depreciation', 'created_at'

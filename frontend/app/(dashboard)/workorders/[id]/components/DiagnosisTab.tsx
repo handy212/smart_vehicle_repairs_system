@@ -130,7 +130,7 @@ export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
           {diagnosis.root_cause && (
             <div>
               <Label className="text-sm font-semibold mb-2 block">Root Cause</Label>
-              <div className="p-3 bg-primary/10 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
+              <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
                 <p className="text-sm font-medium mb-1">{diagnosis.root_cause}</p>
                 {diagnosis.root_cause_explanation && (
                   <p className="text-sm text-muted-foreground">
@@ -207,7 +207,7 @@ export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
                 )}
               </div>
               {diagnosis.total_estimated_cost && (
-                <div className="mt-4 p-3 bg-primary/10 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
+                <div className="mt-4 rounded-md border border-primary/15 bg-primary/5 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">Total Estimated Cost</span>
                     <span className="text-lg font-bold text-primary">
@@ -223,4 +223,3 @@ export default function DiagnosisTab({ workOrderId }: DiagnosisTabProps) {
     </div>
   );
 }
-

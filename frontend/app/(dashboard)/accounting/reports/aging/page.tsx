@@ -27,6 +27,42 @@ import { exportToExcel } from "@/lib/utils/excel-export";
 import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { COMPANY_NAME } from "@/lib/constants";
 
+type AgingBucket = "current" | "1-30" | "31-60" | "61-90" | "90+";
+
+type AgingSummary = {
+    current: number;
+    "1-30": number;
+    "31-60": number;
+    "61-90": number;
+    "90+": number;
+    total: number;
+};
+
+type AgingDetail = {
+    id: number | string;
+    number: string;
+    entity: string;
+    date: string;
+    due_date?: string | null;
+    bucket: AgingBucket;
+    amount: number;
+};
+
+type AgingReport = {
+    summary: AgingSummary;
+    details: AgingDetail[];
+};
+
+type ExportCell = string | number;
+
+const bucketCardStyles = {
+    current: "border-border bg-muted/20 text-foreground",
+    soon: "border-warning/20 bg-warning/10 text-warning-foreground",
+    elevated: "border-primary/20 bg-primary/10 text-primary",
+    overdue: "border-destructive/15 bg-destructive/10 text-destructive",
+    critical: "border-destructive/20 bg-destructive/15 text-destructive",
+};
+
 export default function AgingReportPage() {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const [activeTab, setActiveTab] = useState("ar"); // 'ar' or 'ap'
@@ -34,14 +70,14 @@ export default function AgingReportPage() {
 
     const { data: report, isLoading, isError } = useQuery({
         queryKey: ["accounting", "aging", activeTab, date],
-        queryFn: () => accountingApi.getAgingReport(activeTab as 'ar' | 'ap', date),
+        queryFn: () => accountingApi.getAgingReport(activeTab as "ar" | "ap", date) as Promise<AgingReport>,
     });
 
     const handleExportCSV = () => {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: ExportCell[][] = [];
         rows.push([`${activeTab.toUpperCase()} Aging Report`]);
         rows.push([`As of: ${date}`]);
         rows.push([]);
@@ -59,8 +95,8 @@ export default function AgingReportPage() {
         // Details
         rows.push(['Details']);
 
-        report.details.forEach((item: any) => {
-            rows.push([item.number, item.entity, item.date, item.due_date || 'N/A', item.bucket, item.amount]);
+        report.details.forEach((item) => {
+            rows.push([item.number, item.entity, item.date, item.due_date || "N/A", item.bucket, item.amount]);
         });
 
         const filename = generateFilenameWithTimestamp(`aging-${activeTab}`, 'csv');
@@ -71,7 +107,7 @@ export default function AgingReportPage() {
         if (!report) return;
 
 
-        const rows: any[][] = [];
+        const rows: ExportCell[][] = [];
 
         // Summary section
         rows.push(['SUMMARY', '', '', '', '', '']);
@@ -88,8 +124,8 @@ export default function AgingReportPage() {
         rows.push(['DETAILS', '', '', '', '', '']);
         rows.push(['Number', 'Entity', 'Date', 'Due Date', 'Bucket', 'Amount']);
 
-        report.details.forEach((item: any) => {
-            rows.push([item.number, item.entity, item.date, item.due_date || 'N/A', item.bucket, item.amount]);
+        report.details.forEach((item) => {
+            rows.push([item.number, item.entity, item.date, item.due_date || "N/A", item.bucket, item.amount]);
         });
 
         const filename = generateFilenameWithTimestamp(`aging-${activeTab}`, 'xlsx');
@@ -110,27 +146,27 @@ export default function AgingReportPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+        <div className="space-y-4">
+            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+                <div className="flex items-center gap-3">
                     <Link href="/accounting">
                         <Button variant="ghost" size="icon">
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Aging Report</h1>
-                        <p className="text-muted-foreground">
+                        <h1 className="text-2xl font-semibold tracking-tight">Aging Report</h1>
+                        <p className="text-sm text-muted-foreground">
                             For {format(new Date(date), "MMMM d, yyyy")}
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                     <Input
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        className="w-40"
+                        className="w-full sm:w-40"
                     />
                     <ExportDropdown
                         onExportCSV={handleExportCSV}
@@ -155,61 +191,60 @@ export default function AgingReportPage() {
                         <div className="p-4 text-red-500">Error loading report</div>
                     ) : (
                         <>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                                <Card className="bg-muted border-border">
+                            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                                <Card className={bucketCardStyles.current}>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-muted-foreground">Current</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-bold">{formatCurrency(report.summary.current)}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report.summary.current)}</div>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-warning/10 border-yellow-200">
+                                <Card className={bucketCardStyles.soon}>
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-yellow-600">1-30 Days</CardTitle>
+                                        <CardTitle className="text-sm font-medium">1-30 Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-bold text-yellow-700">{formatCurrency(report.summary['1-30'])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["1-30"])}</div>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-orange-50 border-orange-200">
+                                <Card className={bucketCardStyles.elevated}>
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-primary">31-60 Days</CardTitle>
+                                        <CardTitle className="text-sm font-medium">31-60 Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-bold text-primary">{formatCurrency(report.summary['31-60'])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["31-60"])}</div>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-red-50 border-red-200">
+                                <Card className={bucketCardStyles.overdue}>
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-red-600">61-90 Days</CardTitle>
+                                        <CardTitle className="text-sm font-medium">61-90 Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-bold text-red-700">{formatCurrency(report.summary['61-90'])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["61-90"])}</div>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-red-100 border-red-300">
+                                <Card className={bucketCardStyles.critical}>
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-medium text-red-800">90+ Days</CardTitle>
+                                        <CardTitle className="text-sm font-medium">90+ Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-bold text-red-900">{formatCurrency(report.summary['90+'])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["90+"])}</div>
                                     </CardContent>
                                 </Card>
-                                <Card className="bg-muted border-border">
+                                <Card className={bucketCardStyles.current}>
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-sm font-medium text-foreground">Total</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-bold">{formatCurrency(report.summary.total)}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report.summary.total)}</div>
                                     </CardContent>
                                 </Card>
                             </div>
 
-                            {/* // Detailed Table */}
                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Details</CardTitle>
+                                <CardHeader className="border-b bg-muted/10">
+                                    <CardTitle className="text-base">Details</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
@@ -232,7 +267,7 @@ export default function AgingReportPage() {
                                                 </TableRow>
                                             ) : (
 
-                                                report.details.map((item: any) => (
+                                                report.details.map((item) => (
                                                     <TableRow key={item.id}>
                                                         <TableCell className="font-medium">{item.number}</TableCell>
                                                         <TableCell>{item.entity}</TableCell>
