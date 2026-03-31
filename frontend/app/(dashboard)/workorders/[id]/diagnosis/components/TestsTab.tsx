@@ -340,8 +340,7 @@ function TestDialog({
                     const query = templateSearchQuery || formData.test_name;
                     const results = await diagnosisApi.testProcedureLibrary.search(query, formData.category);
                     setTemplateResults(results.slice(0, 5)); // Show top 5 results
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                } catch (error) {
+                } catch (_error) {
                     setTemplateResults([]);
                 } finally {
                     setIsSearchingTemplates(false);

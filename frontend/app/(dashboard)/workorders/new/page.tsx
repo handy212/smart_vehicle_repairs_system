@@ -193,7 +193,6 @@ export default function NewWorkOrderPage() {
   }>>([]);
   const [workOrderSearchQuery, setWorkOrderSearchQuery] = useState<string>("");
   const [showWorkOrderSearch, setShowWorkOrderSearch] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedRelatedWorkOrderDetail, setSelectedRelatedWorkOrderDetail] = useState<{
     id: number;
     work_order_number: string;
@@ -657,8 +656,7 @@ export default function NewWorkOrderPage() {
                 <h4 className="font-semibold text-sm text-foreground">
                   Previous Work Order(s):
                 </h4>
-                {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-                {repeatVisitMatches.map((match, index) => (
+                {repeatVisitMatches.map((match) => (
                   <Card key={match.work_order_id} className="border-primary/15">
                     <CardContent className="pt-4">
                       <div className="space-y-2">

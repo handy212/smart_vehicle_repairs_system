@@ -4,14 +4,12 @@ import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tansta
 import { workordersApi, WorkOrder } from "@/lib/api/workorders";
 import { adminApi, User } from "@/lib/api/admin";
 import { useAuthStore } from "@/store/authStore";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PremiumIcons } from "@/components/ui/icons";
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
 import {
   DndContext,
@@ -22,10 +20,6 @@ import {
   useSensor,
   useSensors,
   closestCorners,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  pointerWithin,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  KeyboardSensor,
 } from "@dnd-kit/core";
 import {
   restrictToWindowEdges,
@@ -243,8 +237,6 @@ function WorkOrderCard({ workOrder }: { workOrder: WorkOrder }) {
 }
 
 export default function WorkOrderKanbanPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuthStore();

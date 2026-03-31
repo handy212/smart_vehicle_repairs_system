@@ -404,8 +404,7 @@ export default function WorkflowActions({
 
       return diagnosis;
     },
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    onSuccess: (diagnosis) => {
+    onSuccess: (_diagnosis) => {
       toast({
         title: "Success",
         description: "Diagnosis started. Redirecting to diagnosis page..."
@@ -860,8 +859,7 @@ export default function WorkflowActions({
 
       case "assigned":
         // Only Service Coordinator or managers/admins can trigger diagnosis
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const isServiceCoordinator = currentWorkOrder?.service_coordinator && (
+        const _isServiceCoordinator = currentWorkOrder?.service_coordinator && (
           typeof currentWorkOrder.service_coordinator === 'object'
 
             ? currentWorkOrder.service_coordinator.id === (currentWorkOrder as any).current_user_id
@@ -1108,8 +1106,7 @@ export default function WorkflowActions({
   // Determine if current workflow step is completed
   // "Other Actions" should only show when we're in a waiting/stable state,
   // not when actively working through a primary workflow step
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const isCurrentStepCompleted = (() => {
+  const _isCurrentStepCompleted = (() => {
     // These statuses indicate we're at a stable/waiting state where primary workflow step is done
     // and secondary actions are safe to show
     const completedStates = [

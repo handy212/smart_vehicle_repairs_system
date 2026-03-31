@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Calendar, DollarSign, Car } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

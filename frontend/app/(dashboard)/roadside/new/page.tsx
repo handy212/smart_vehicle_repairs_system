@@ -15,8 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
     MapPin, Phone, AlertCircle,
-    Truck, User as UserIcon, Plus,
-    Info, Navigation, Check, X,
+    Truck, User as UserIcon,
+    Info, Navigation, Check,
     Map as MapIcon,
     ArrowRight
 } from "lucide-react";
@@ -91,8 +91,7 @@ export default function NewRoadsideRequestDashboardPage() {
     const selectedVehicleId = watch("vehicle");
     const serviceType = watch("service_type");
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { data: selectedCustomer, isLoading: isLoadingCustomer } = useQuery({
+    const { data: selectedCustomer } = useQuery({
         queryKey: ["customer", selectedCustomerId],
         queryFn: () => customersApi.get(selectedCustomerId!),
         enabled: !!selectedCustomerId,

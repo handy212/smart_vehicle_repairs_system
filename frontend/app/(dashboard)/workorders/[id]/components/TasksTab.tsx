@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,6 @@ interface TasksTabProps {
 
 export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workOrder }: TasksTabProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const queryClient = useQueryClient();
 
   // Separate workflow tasks from manual tasks and sort them
   const { workflowTasks, manualTasks } = useMemo(() => {

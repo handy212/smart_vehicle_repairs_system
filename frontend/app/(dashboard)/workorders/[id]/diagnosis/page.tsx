@@ -4,20 +4,15 @@ import { useState } from "react";
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { diagnosisApi, Diagnosis, DiagnosticCode, DiagnosticTest, DiagnosisPhoto } from "@/lib/api/diagnosis";
+import { diagnosisApi, Diagnosis } from "@/lib/api/diagnosis";
 import { workordersApi } from "@/lib/api/workorders";
 import { inventoryApi } from "@/lib/api/inventory";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { billingApi } from "@/lib/api/billing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,14 +23,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useToast } from "@/lib/hooks/useToast";
 import {
   ArrowLeft,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  AlertCircle,
   CheckCircle,
   Clock,
   DollarSign,
@@ -43,8 +34,6 @@ import {
   Plus,
   Wrench,
   FileText,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  Settings,
   ListChecks,
   MessageSquare,
   Code,
@@ -52,16 +41,8 @@ import {
   Camera,
   Trash2,
   X,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  Search,
   ArrowRight,
   Printer,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ChevronRight,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  RefreshCw,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  Receipt,
   Package,
   Play,
   Pause,
@@ -80,7 +61,6 @@ import { PartsRequiredTab } from "./components/PartsRequiredTab";
 
 
 export default function DiagnosisPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
@@ -786,8 +766,8 @@ export default function DiagnosisPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */}
-              {diagnosis.time_logs.map((log: any, index: number) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {diagnosis.time_logs.map((log: any) => (
                 <div
                   key={log.id}
                   className="flex items-center justify-between p-3 bg-muted rounded-md border"
@@ -1022,8 +1002,7 @@ function RecommendationsTab({
   const approvedRecommendations = recommendations.filter((r: any) => r.customer_approved);
 
   // Inventory parts for part line items (active parts)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: inventoryParts } = useQuery({
+  useQuery({
     queryKey: ["inventory", "parts", "active"],
     queryFn: () => inventoryApi.list({ is_active: true }),
   });
@@ -1584,12 +1563,6 @@ function PhotosTab({
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["diagnosis-photos", diagnosisId] });
-    onRefresh();
-  };
-
   return (
     <>
       <Card className="border-none shadow-sm bg-muted/50">
@@ -1959,8 +1932,7 @@ function PhotoUploadDialog({
 // Summary Tab Component
 function SummaryTab({
   diagnosis,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  workOrder,
+  workOrder: _workOrder,
   onUpdate,
   isUpdating,
   isDisabled = false,

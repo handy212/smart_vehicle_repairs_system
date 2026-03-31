@@ -31,20 +31,13 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { getStatusVariant, getStatusLabel } from "@/lib/utils/workorder-status";
 import WorkOrderTimeline from "./components/WorkOrderTimeline";
 import WorkOrderDetailSkeleton from "./components/WorkOrderDetailSkeleton";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { diagnosisApi } from "@/lib/api/diagnosis";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
 // Gate Pass Section Component
 function GatePassSection({ workOrderId }: { workOrderId: number }) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const queryClient = useQueryClient();
 
   const { data: gatePass, isLoading } = useQuery({
     queryKey: ["gatepass", "workorder", workOrderId],
@@ -221,13 +214,9 @@ export default function WorkOrderDetailPage() {
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
   const queryClient = useQueryClient();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { hasPermission } = usePermissions();
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const { addRecentItem } = useRecentItems();
   const { toast } = useToast();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { formatCurrency } = useCurrency();
 
   const { data: workOrder, isLoading, error } = useQuery({
     queryKey: ["workorder", workOrderId],
@@ -578,8 +567,7 @@ function UnapprovedRecommendationsDialog({
   open,
   onOpenChange,
   workOrderId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  workOrder,
+  workOrder: _workOrder,
   onPrintRecommendations,
 }: {
   open: boolean;

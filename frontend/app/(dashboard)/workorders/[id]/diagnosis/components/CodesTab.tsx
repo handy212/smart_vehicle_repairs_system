@@ -4,8 +4,7 @@ import { useState } from "react";
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { diagnosisApi, DiagnosticCode } from "@/lib/api/diagnosis";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -14,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Plus, Edit, Trash2, Search, X, AlertTriangle, Info, AlertCircle as AlertCircleIcon, Code } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -39,18 +37,6 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
     queryKey: ["diagnosis-codes", diagnosisId],
     queryFn: () => diagnosisApi.codes.list({ diagnosis: diagnosisId }),
   });
-
-  // Helper to check if a code already exists
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const codeExists = (codeNumber: string, codeType: string) => {
-    if (!codeNumber || !codeType) return false;
-    const normalizedCode = codeNumber.trim().toUpperCase();
-    return codes.some(
-      (code) =>
-        code.code_number.toUpperCase() === normalizedCode &&
-        code.code_type === codeType
-    );
-  };
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<DiagnosticCode>) => diagnosisApi.codes.create(diagnosisId, data),
@@ -333,8 +319,7 @@ function CodeDialog({
     status: code?.status || "active",
     freeze_frame_data: code?.freeze_frame_data || {},
   });
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [librarySearchQuery, setLibrarySearchQuery] = useState("");
+
 
   const [libraryResults, setLibraryResults] = useState<any[]>([]);
   const [isSearchingLibrary, setIsSearchingLibrary] = useState(false);

@@ -10,8 +10,6 @@ import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertCircle } from "lucide-react";
@@ -69,19 +67,6 @@ const STATUS_LABELS: Record<string, string> = {
   'invoiced': 'Invoiced',
   'closed': 'Closed',
 };
-
-// Interface for Select items to handle both direct results and fallback from workOrder
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface CustomerSelectItem {
-  id: number;
-  full_name: string;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface VehicleSelectItem {
-  id: number;
-  label: string;
-}
 
 function getValidStatuses(currentStatus: string): string[] {
   // Always include current status

@@ -39,11 +39,8 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { cn } from "@/lib/utils";
 import { inventoryApi, Part } from "@/lib/api/inventory";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ChevronsUpDown, Check } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 // Debounce hook for search
 function useDebounce<T>(value: T, delay: number): T {
@@ -79,7 +76,6 @@ export function PartsRequiredTab({
     const [showAddDialog, setShowAddDialog] = useState(false);
 
     // Fetch parts for this work order
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: partsData, isLoading, error } = useQuery({
         queryKey: ["workorder-parts", workOrder?.id],
         queryFn: () => workordersApi.parts.list(workOrder?.id!),

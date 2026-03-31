@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { customersApi } from "@/lib/api/customers";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
