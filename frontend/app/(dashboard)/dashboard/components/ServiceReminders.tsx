@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import Link from "next/link";
 import { PremiumIcons } from "@/components/ui/icons";
 
 interface DueVehicle {
@@ -27,9 +27,28 @@ export function ServiceReminders({ vehicles, isLoading }: ServiceRemindersProps)
 
     return (
         <div className="precision-card p-6 h-full flex flex-col">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-6">Service Intelligence</h3>
+            <div className="mb-6 flex items-center justify-between gap-3">
+                <div>
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Service Intelligence</h3>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                        Vehicles likely due for a callback or maintenance touchpoint.
+                    </p>
+                </div>
+                <div className="rounded-full bg-muted px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    {vehicles.length} Due
+                </div>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+            {reminders.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-10 text-center">
+                    <PremiumIcons.CheckCircle className="mb-3 h-10 w-10 text-emerald-500" />
+                    <p className="text-sm font-semibold text-foreground">No service reminders need attention right now.</p>
+                    <p className="mt-2 max-w-sm text-xs leading-5 text-muted-foreground">
+                        When vehicles become overdue based on mileage or service history, they will appear here for quick follow-up.
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                 {reminders.map((vehicle) => {
                     // Calculate a dynamic status based on data presence
                     const isMissingMileage = !vehicle.mileage;
@@ -45,7 +64,11 @@ export function ServiceReminders({ vehicles, isLoading }: ServiceRemindersProps)
                         : 'text-amber-500';
 
                     return (
-                        <div key={vehicle.id} className="p-4 rounded-xl bg-muted flex flex-col justify-between border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
+                        <Link
+                            key={vehicle.id}
+                            href={`/vehicles/${vehicle.id}`}
+                            className="rounded-xl border border-transparent bg-muted p-4 transition-all group hover:border-gray-200 dark:hover:border-gray-700"
+                        >
                             <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
                                     <h4 className="text-[11px] font-bold text-foreground truncate uppercase tracking-tight">
@@ -62,10 +85,11 @@ export function ServiceReminders({ vehicles, isLoading }: ServiceRemindersProps)
                                     Service Due
                                 </div>
                             </div>
-                        </div>
+                        </Link>
                     );
                 })}
-            </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -58,6 +58,17 @@ MIDDLEWARE += [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
+DEBUG_TOOLBAR_CONFIG = {
+    # Preserve django-debug-toolbar's default disabled panels.
+    # ProfilingPanel is unsafe with concurrent requests on Python 3.12+
+    # and was causing 500s during login/media requests in development.
+    'DISABLE_PANELS': {
+        'debug_toolbar.panels.templates.TemplatesPanel',
+        'debug_toolbar.panels.profiling.ProfilingPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    },
+}
+
 INTERNAL_IPS = [
     '127.0.0.1',
     'localhost',

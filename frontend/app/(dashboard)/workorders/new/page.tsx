@@ -1303,16 +1303,16 @@ export default function NewWorkOrderPage() {
         </div>
       </form>
 
-      {/* Unapproved Recommendations Warning Dialog */}
+      {/* Open Recommendation Warning Dialog */}
       <Dialog open={showUnapprovedRecommendationsDialog} onOpenChange={setShowUnapprovedRecommendationsDialog}>
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <AlertTriangle className="w-5 h-5 text-primary" />
-              Unapproved Recommendations Found
+              Open Vehicle Recommendations Found
             </DialogTitle>
             <DialogDescription className="text-sm">
-              This vehicle has {unapprovedRecommendationsData?.count || 0} unapproved recommendation{unapprovedRecommendationsData?.count !== 1 ? 's' : ''} from previous work orders. Please review and acknowledge before proceeding.
+              This vehicle has {unapprovedRecommendationsData?.count || 0} pending or deferred recommendation{unapprovedRecommendationsData?.count !== 1 ? 's' : ''} from previous work orders. Please review and acknowledge before proceeding.
             </DialogDescription>
           </DialogHeader>
 
@@ -1369,16 +1369,19 @@ export default function NewWorkOrderPage() {
                               <Badge variant="outline" className="text-xs capitalize">
                                 {rec.recommendation_type_display}
                               </Badge>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {rec.approval_status_display}
+                              </Badge>
                             </div>
-                            {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                              <span className="text-sm font-bold text-foreground font-mono">
-                                ${Number(rec.estimated_total_cost).toFixed(2)}
-                              </span>
-                            )}
                           </div>
                           <p className="text-sm text-card-foreground mt-2">
                             {rec.description}
                           </p>
+                          {Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Parts listed: {rec.parts_needed.length}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1389,7 +1392,7 @@ export default function NewWorkOrderPage() {
               <div className="text-center py-6">
                 <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
                 <p className="font-medium text-foreground">
-                  No Unapproved Recommendations
+                  No Open Recommendations
                 </p>
               </div>
             )}
@@ -1405,7 +1408,7 @@ export default function NewWorkOrderPage() {
                   className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
                 />
                 <span className="text-card-foreground">
-                  I acknowledge these unapproved recommendations and wish to proceed
+                  I acknowledge these open vehicle recommendations and wish to proceed
                 </span>
               </label>
               <div className="flex gap-2 w-full sm:w-auto">

@@ -6,20 +6,19 @@ export function ThemeScript() {
           (function() {
             try {
               const stored = localStorage.getItem('theme');
-              const theme = stored || 'system';
+              const theme = stored || 'light';
               const root = document.documentElement;
-
-              const apply = (isDark) => {
-                root.classList[isDark ? 'add' : 'remove']('dark');
-              };
+              root.classList.remove('dark', 'classic', 'perfex');
 
               if (theme === 'dark') {
-                apply(true);
+                root.classList.add('dark');
+              } else if (theme === 'classic') {
+                root.classList.add('classic');
+              } else if (theme === 'perfex') {
+                root.classList.add('perfex');
               } else if (theme === 'system') {
                 const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                apply(isDark);
-              } else {
-                apply(false);
+                if (isDark) root.classList.add('dark');
               }
             } catch (_) {}
           })();

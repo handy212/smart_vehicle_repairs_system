@@ -32,6 +32,14 @@ interface InventoryWatchlistProps {
 export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps) {
     const watchlist = items.slice(0, 4);
 
+    const getStockLevelWidth = (current: number, reorderPoint: number) => {
+        if (reorderPoint <= 0) {
+            return current > 0 ? 100 : 0;
+        }
+
+        return Math.min((current / reorderPoint) * 100, 100);
+    };
+
     return (
         <div className="precision-card h-full flex flex-col">
             <div className="flex items-center justify-between mb-6">
@@ -63,7 +71,7 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                     </div>
                 ) : (
                     watchlist.map((item) => {
-                        const isCritical = item.stock.current <= item.stock.reorder_point * 0.5;
+                        const isCritical = item.is_critical;
                         return (
                             <div key={item.part.id} className="group cursor-pointer">
                                 <div className="flex items-center justify-between mb-2">
@@ -88,7 +96,7 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                                             "h-full transition-all duration-1000",
                                             isCritical ? "bg-rose-500" : "bg-amber-500"
                                         )}
-                                        style={{ width: `${Math.min((item.stock.current / item.stock.reorder_point) * 100, 100)}%` }}
+                                        style={{ width: `${getStockLevelWidth(item.stock.current, item.stock.reorder_point)}%` }}
                                     />
                                 </div>
                             </div>

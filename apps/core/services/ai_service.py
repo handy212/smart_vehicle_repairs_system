@@ -1,4 +1,7 @@
+import json
 import logging
+import typing_extensions as typing
+from django.conf import settings
 from django.utils import timezone
 from datetime import datetime
 
@@ -176,376 +179,428 @@ class AIService:
     @staticmethod
     def suggest_recommendations(diagnosis):
         """
-        Analyzes diagnostic data and suggests repair recommendations.
-        Looking at DTCs, findings, and complaints.
+        Analyzes diagnostic data and suggests repair recommendations using Gemini AI.
+        Returns an empty list and logs a warning if the API call fails.
         """
-        suggestions = []
-        
-        # 1. Analyze DTCs (Highest priority)
-        if hasattr(diagnosis, 'diagnostic_codes'):
-            dtcs = diagnosis.diagnostic_codes.all()
-            for code in dtcs:
-                # Try to find in library (Late import to avoid circular dependency)
-                from apps.diagnosis.models import DiagnosticCodeLibrary
-                library_entry = DiagnosticCodeLibrary.objects.filter(
-                    code_number__iexact=code.code_number,
-                    code_type=code.code_type,
-                    is_active=True
-                ).first()
-                
-                if library_entry:
-                    suggestions.append({
-                        'recommendation_type': 'repair',
-                        'description': f"Fix based on {code.code_number}: {library_entry.title}",
-                        'priority': AIService.map_priority(library_entry.severity),
-                        'parts_needed': library_entry.common_fixes or "Requires components inspection",
-                        'estimated_labor_hours': 1.5,
-                        'estimated_labor_cost': 150.0,
-                        'estimated_parts_cost': 250.0,
-                    })
-        
-        # 2. Analyze Findings
-        if hasattr(diagnosis, 'findings'):
-            findings = diagnosis.findings.all()
-            for finding in findings:
-                # Heuristic: Engine findings often need parts
-                if finding.category == 'engine':
-                    suggestions.append({
-                        'recommendation_type': 'repair',
-                        'description': f"Address Engine Issue: {finding.finding_title}",
-                        'priority': AIService.map_priority(finding.severity),
-                        'parts_needed': "Replacement parts based on teardown",
-                        'estimated_labor_hours': 2.0,
-                        'estimated_labor_cost': 200.0,
-                        'estimated_parts_cost': 350.0,
-                    })
-                elif finding.severity == 'critical':
-                    suggestions.append({
-                        'recommendation_type': 'repair',
-                        'description': f"CRITICAL REPAIR: {finding.finding_title}",
-                        'priority': 'critical',
-                        'parts_needed': "Check inventory for safety components",
-                        'estimated_labor_hours': 3.0,
-                        'estimated_labor_cost': 300.0,
-                        'estimated_parts_cost': 500.0,
-                    })
-        
-        # 3. Simple Keyword Matching (Complaint)
-        complaint = diagnosis.customer_complaint.lower() if diagnosis.customer_complaint else ""
-        if 'brake' in complaint or 'squeal' in complaint:
-            suggestions.append({
-                'recommendation_type': 'repair',
-                'description': "Inspect and Replace Front Brake Pads/Rotors",
-                'priority': 'necessary',
-                'parts_needed': "Brake Pads, Brake Fluid",
-                'estimated_labor_hours': 1.5,
-                'estimated_labor_cost': 150.0,
-                'estimated_parts_cost': 120.0,
-            })
-        elif 'oil' in complaint or 'service' in complaint:
-            suggestions.append({
-                'recommendation_type': 'service',
-                'description': "Full Service: Oil & Filter Change + Multi-point Inspection",
-                'priority': 'recommended',
-                'parts_needed': "Synthetic Oil, Oil Filter, Gasket",
-                'estimated_labor_hours': 1.0,
-                'estimated_labor_cost': 100.0,
-                'estimated_parts_cost': 85.0,
-            })
-        elif 'battery' in complaint or 'start' in complaint:
-            suggestions.append({
-                'recommendation_type': 'repair',
-                'description': "Battery Charging System Test & Potential Replacement",
-                'priority': 'recommended',
-                'parts_needed': "12V Battery, Terminals",
-                'estimated_labor_hours': 0.5,
-                'estimated_labor_cost': 50.0,
-                'estimated_parts_cost': 180.0,
-            })
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            logger.warning("GEMINI_API_KEY is not set. Skipping AI recommendations.")
+            return []
 
-        # Remove approximate duplicates by description
-        seen = set()
-        unique_suggestions = []
-        for s in suggestions:
-            if s['description'] not in seen:
-                unique_suggestions.append(s)
-                seen.add(s['description'])
+        try:
+            from google import genai
 
-        return unique_suggestions
+            dtc_list = []
+            if hasattr(diagnosis, 'diagnostic_codes'):
+                for code in diagnosis.diagnostic_codes.all():
+                    dtc_list.append(f"{code.code_number} ({code.get_code_type_display()})")
+
+            finding_list = []
+            if hasattr(diagnosis, 'findings'):
+                for f in diagnosis.findings.all():
+                    finding_list.append(
+                        f"{f.finding_title} — severity: {f.severity}, category: {f.category}"
+                    )
+
+            vehicle = diagnosis.work_order.vehicle
+            vehicle_info = f"{vehicle.year} {vehicle.make} {vehicle.model}"
+            if getattr(vehicle, 'mileage', None):
+                vehicle_info += f" ({vehicle.mileage:,} km)"
+
+            complaint = diagnosis.customer_complaint or "General vehicle inspection"
+
+            prompt = f"""You are an expert automotive technician. Analyze the following vehicle diagnostic data and return a JSON array of repair recommendations.
+
+Vehicle: {vehicle_info}
+Customer Complaint: {complaint}
+DTCs: {', '.join(dtc_list) if dtc_list else 'None'}
+Technician Findings: {'; '.join(finding_list) if finding_list else 'None'}
+
+Each recommendation must include:
+- recommendation_type: "repair" or "service"
+- description: clear, actionable description
+- priority: one of "critical", "necessary", "recommended", "advisory"
+- parts_needed: comma-separated parts required
+- estimated_labor_hours: realistic float
+- estimated_labor_cost: estimated USD cost as float
+- estimated_parts_cost: estimated USD parts cost as float
+
+Only include recommendations genuinely supported by the data above."""
+
+            class Recommendation(typing.TypedDict):
+                recommendation_type: str
+                description: str
+                priority: str
+                parts_needed: str
+                estimated_labor_hours: float
+                estimated_labor_cost: float
+                estimated_parts_cost: float
+
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model='gemini-flash-lite-latest',
+                contents=prompt,
+                config={
+                    'response_mime_type': 'application/json',
+                    'response_schema': list[Recommendation],
+                },
+            )
+
+            suggestions = json.loads(response.text or '[]')
+            for s in suggestions:
+                s['priority'] = AIService.map_priority(s.get('priority', 'recommended'))
+            return suggestions
+
+        except Exception as e:
+            logger.warning(f"Gemini AI recommendation failed: {e}")
+            return []
+
+    @staticmethod
+    def _gemini_text(prompt):
+        """Sends a plain text prompt to Gemini and returns the response string."""
+        from google import genai
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is not configured.")
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model='gemini-flash-lite-latest',
+            contents=prompt,
+        )
+        return response.text or ''
+
+    @staticmethod
+    def _gemini_json(prompt, schema):
+        """Sends a prompt to Gemini and returns a parsed JSON response."""
+        from google import genai
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is not configured.")
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model='gemini-flash-lite-latest',
+            contents=prompt,
+            config={
+                'response_mime_type': 'application/json',
+                'response_schema': schema,
+            },
+        )
+        return json.loads(response.text or '{}')
 
     @staticmethod
     def transcribe_audio(audio_file):
-        """
-        Transcribes audio to text.
-        In a real implementation, this would call an external API (Whisper, Google Cloud Speech, etc.).
-        For prototype, we simulate transcription based on file metadata.
-        """
-        # Simulate transcription based on content/filename if available
-        filename = getattr(audio_file, 'name', '').lower()
-        if 'brake' in filename:
-            return "Checking the vehicle because of a squeaky noise when braking. Customer says it happens mostly in the morning. I suspect the front pads are worn down to the wear indicators."
-        elif 'engine' in filename:
-            return "Found an oil leak around the valve cover gasket. The oil is dripping onto the exhaust manifold which explains the burning smell reported by the customer. Recommend replacing the gasket and cleaning the area."
-        else:
-            return "Technician voice note: inspected the vehicle suspension. Found that the rear shocks are leaking fluid. Recommend replacement."
+        """Transcribes a technician audio note using Gemini."""
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            logger.warning("GEMINI_API_KEY is not set. Cannot transcribe audio.")
+            return ""
+        try:
+            from google import genai
+            from google.genai import types
+
+            audio_bytes = audio_file.read()
+            filename = getattr(audio_file, 'name', 'audio.mp3').lower()
+            if filename.endswith('.wav'):
+                mime_type = 'audio/wav'
+            elif filename.endswith('.ogg'):
+                mime_type = 'audio/ogg'
+            else:
+                mime_type = 'audio/mpeg'
+
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model='gemini-flash-lite-latest',
+                contents=[
+                    types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
+                    "Transcribe this vehicle technician audio note verbatim. Return only the transcription text.",
+                ],
+            )
+            return response.text or ""
+        except Exception as e:
+            logger.warning(f"Gemini audio transcription failed: {e}")
+            return ""
 
     @staticmethod
     def analyze_voice_data(text):
-        """
-        Analyzes transcribed text for structured information extraction.
-        """
-        text_lower = text.lower()
-        analysis = {
-            'summary': text[:100] + "..." if len(text) > 100 else text,
-            'keywords': [],
-            'suggested_category': 'general',
-            'suggested_severity': 'info'
-        }
-        
-        categories = ['brake', 'engine', 'transmission', 'suspension', 'electrical']
-        for cat in categories:
-            if cat in text_lower:
-                analysis['suggested_category'] = cat
-                break
-        
-        if any(word in text_lower for word in ['critical', 'urgent', 'danger', 'leaking', 'failure']):
-            analysis['suggested_severity'] = 'critical'
-        elif any(word in text_lower for word in ['worn', 'noise', 'smell', 'replace']):
-            analysis['suggested_severity'] = 'warning'
-            
-        return analysis
+        """Analyzes transcribed technician text and extracts structured information."""
+        try:
+            class VoiceAnalysis(typing.TypedDict):
+                summary: str
+                keywords: list[str]
+                suggested_category: str
+                suggested_severity: str
+
+            return AIService._gemini_json(
+                f"""Analyze this automotive technician note and extract structured information.
+
+Note: "{text}"
+
+Return:
+- summary: one-sentence summary of the finding
+- keywords: key technical terms mentioned (list of strings)
+- suggested_category: one of "brake", "engine", "transmission", "suspension", "electrical", "general"
+- suggested_severity: one of "critical", "warning", "info"
+""",
+                VoiceAnalysis,
+            )
+        except Exception as e:
+            logger.warning(f"Gemini voice analysis failed: {e}")
+            return {'summary': text, 'keywords': [], 'suggested_category': 'general', 'suggested_severity': 'info'}
 
     @staticmethod
     def analyze_photo_damage(photo_url):
-        """
-        Simulates AI analysis of a diagnostic photo.
-        Returns detected issues and predicted severity.
-        """
-        # In a real scenario, this would use Vision models (e.g. Gemini Pro Vision)
-        # For prototype, we'll return simulated data
-        return {
-            'detected_issues': [
-                'Minor surface rust on subframe',
-                'Fluid residue visible near CV boot',
-                'Brake pad material thickness appears low'
-            ],
-            'confidence_score': 0.88,
-            'summary': 'Visual inspection suggests moderate wear on suspension and braking components.',
-            'suggested_severity': 'minor'
-        }
+        """Analyzes a vehicle damage photo using Gemini Vision."""
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            logger.warning("GEMINI_API_KEY is not set. Cannot analyze photo.")
+            return {'detected_issues': [], 'confidence_score': 0.0, 'summary': '', 'suggested_severity': 'info'}
+        try:
+            import requests as http_requests
+            from google import genai
+            from google.genai import types
+
+            class PhotoAnalysis(typing.TypedDict):
+                detected_issues: list[str]
+                confidence_score: float
+                summary: str
+                suggested_severity: str
+
+            img_response = http_requests.get(photo_url, timeout=10)
+            img_response.raise_for_status()
+            mime_type = img_response.headers.get('Content-Type', 'image/jpeg').split(';')[0]
+
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model='gemini-flash-lite-latest',
+                contents=[
+                    types.Part.from_bytes(data=img_response.content, mime_type=mime_type),
+                    "Analyze this vehicle photo for damage or wear. Return detected issues, a confidence score (0.0–1.0), a brief summary, and severity: minor, moderate, severe, or critical.",
+                ],
+                config={
+                    'response_mime_type': 'application/json',
+                    'response_schema': PhotoAnalysis,
+                },
+            )
+            return json.loads(response.text or '{}')
+        except Exception as e:
+            logger.warning(f"Gemini photo analysis failed: {e}")
+            return {'detected_issues': [], 'confidence_score': 0.0, 'summary': 'Analysis unavailable.', 'suggested_severity': 'info'}
 
     @staticmethod
     def predict_next_service(work_order_history):
-        """
-        Predicts next service date and odometer reading based on history.
-        Expects a list or queryset of WorkOrder objects.
-        """
+        """Predicts next service date and mileage based on work order history."""
         if not work_order_history:
             return None
-            
-        # Extract odometer readings and dates
+
         history = []
         for wo in work_order_history:
             if hasattr(wo, 'odometer_in') and wo.odometer_in and wo.created_at:
                 history.append((wo.created_at, float(wo.odometer_in)))
-        
+
         if not history:
             return None
-            
-        # Sort by date
+
         history.sort(key=lambda x: x[0])
-        
         latest_date, latest_odo = history[-1]
-        
+
         if len(history) >= 2:
-            # Calculate average km per day
             total_days = (history[-1][0] - history[0][0]).days
             total_km = history[-1][1] - history[0][1]
-            
-            if total_days > 0 and total_km > 0:
-                km_per_day = total_km / total_days
-            else:
-                km_per_day = 40.0 # Default fallback (average commute)
+            km_per_day = (total_km / total_days) if total_days > 0 and total_km > 0 else 40.0
         else:
-            km_per_day = 40.0 # Default fallback
-            
-        # Predict next 5,000 km service
-        days_to_service = 5000 / km_per_day
-        
+            km_per_day = 40.0
+
         from datetime import date, timedelta
+        days_to_service = 5000 / km_per_day
         predicted_date = latest_date.date() + timedelta(days=int(days_to_service))
-        
-        # Ensure predicted date is in the future
         if predicted_date <= date.today():
-            predicted_date = date.today() + timedelta(days=90) # Fallback to 3 months from now
-            
+            predicted_date = date.today() + timedelta(days=90)
+
+        confidence = 0.45 if len(history) < 3 else 0.85
+
+        try:
+            recommendation = AIService._gemini_text(
+                f"""A vehicle currently has {latest_odo:,.0f} km and is driven approximately {km_per_day:.1f} km/day.
+The next scheduled service is predicted around {predicted_date.strftime('%B %Y')} at {latest_odo + 5000:,.0f} km.
+Write one professional sentence recommending the next service to the vehicle owner."""
+            ).strip()
+        except Exception as e:
+            logger.warning(f"Gemini service prediction narrative failed: {e}")
+            recommendation = f"We recommend your next service around {predicted_date.strftime('%B %Y')}."
+
         return {
             'latest_odometer': latest_odo,
             'predicted_odometer': latest_odo + 5000,
             'predicted_date': predicted_date.strftime('%B %d, %Y'),
             'km_per_day': round(km_per_day, 1),
-            'confidence_score': 0.45 if len(history) < 3 else 0.85,
-            'recommendation': 'Based on your driving patterns, we recommend your next service around ' + predicted_date.strftime('%B %Y') + '.'
+            'confidence_score': confidence,
+            'recommendation': recommendation,
         }
 
     @staticmethod
     def generate_report_summary(diagnosis):
-        """
-        Generates a professional AI summary for the customer report.
-        """
-        findings_count = diagnosis.findings.count()
-        recs_count = diagnosis.repair_recommendations.count()
-        dtc_count = diagnosis.diagnostic_codes.count()
-        
+        """Generates a professional AI summary for the customer diagnostic report."""
         vehicle = diagnosis.work_order.vehicle
-        
-        summary = f"Comprehensive health assessment for your {vehicle.year} {vehicle.make} {vehicle.model}. "
-        
-        if dtc_count > 0:
-            summary += f"Our digital scan identified {dtc_count} system diagnostic code(s) requiring attention. "
-            
-        if findings_count > 0:
-            summary += f"Physical inspection revealed {findings_count} key point(s) of interest. "
-            
-        critical_recs = diagnosis.repair_recommendations.filter(priority='critical').count()
-        if critical_recs > 0:
-            summary += f"AI analysis highlights {critical_recs} CRITICAL safety issue(s) that should be addressed immediately. "
-        elif recs_count > 0:
-            summary += f"We have prepared {recs_count} recommended service item(s) to maintain vehicle reliability and performance."
-        else:
-            summary += "Your vehicle is in good health with no immediate repairs recommended at this time."
-            
-        return summary
+        findings_count = diagnosis.findings.count()
+        dtc_count = diagnosis.diagnostic_codes.count()
+        recs = list(diagnosis.repair_recommendations.values('priority', 'description'))
+
+        try:
+            return AIService._gemini_text(
+                f"""Write a professional vehicle health summary for a customer report. Be clear, concise, and non-technical.
+
+Vehicle: {vehicle.year} {vehicle.make} {vehicle.model}
+Diagnostic Codes Found: {dtc_count}
+Inspection Findings: {findings_count}
+Repair Recommendations: {recs}
+
+Write 2–3 sentences suitable for a customer-facing report."""
+            ).strip()
+        except Exception as e:
+            logger.warning(f"Gemini report summary failed: {e}")
+            return ""
 
     @staticmethod
     def decode_obd_code(code):
-        """
-        AI Proxy to decode an unknown OBD-II code.
-        In a production environment, this calls an LLM or an external OBD API
-        (like CarMD) to get the description, severity, and common fixes dynamically.
-        """
+        """Decodes a diagnostic trouble code using Gemini and caches the result in the library."""
         code = str(code).upper().strip()
-        
-        # Simulate AI identifying P-codes (Powertrain), C-codes (Chassis), B-codes (Body), U-codes (Network)
-        if code.startswith('P03'):
-            return {"description": f"Cylinder/Ignition Misfire Detected ({code})", "severity": "critical", "common_fixes": "Inspect Spark Plugs and Ignition Coils"}
-        elif code.startswith('P01'):
-            return {"description": f"Fuel/Air Metering Issue ({code})", "severity": "warning", "common_fixes": "Check MAF sensor and Vacuum Leaks"}
-        elif code.startswith('P04'):
-            return {"description": f"Auxiliary Emission Controls ({code})", "severity": "warning", "common_fixes": "Inspect Catalytic Converter and O2 Sensors"}
-        elif code.startswith('C'):
-            return {"description": f"Chassis/ABS System Fault ({code})", "severity": "critical", "common_fixes": "Check Wheel Speed Sensors"}
-        elif code.startswith('B'):
-            return {"description": f"Body Control Module Fault ({code})", "severity": "info", "common_fixes": "Check Interior Electronics/Sensors"}
-        elif code.startswith('U'):
-            return {"description": f"Network Communication Error ({code})", "severity": "warning", "common_fixes": "Check CAN Bus Connections"}
-            
-        # Generic AI fallback for any totally unknown code
-        return {
-            "description": f"Manufacturer Specific Diagnostic Code {code}",
-            "severity": "info",
-            "common_fixes": "Perform detailed component diagnosis"
-        }
+        try:
+            class OBDResult(typing.TypedDict):
+                title: str
+                description: str
+                severity: str
+                common_causes: list[str]
+                common_fixes: list[str]
+                code_type: str
+
+            result = AIService._gemini_json(
+                f"""Decode the diagnostic trouble code: {code}
+
+Return:
+- title: short name for this code (max 10 words)
+- description: full plain-English explanation of what this code means
+- severity: one of "critical", "warning", "info"
+- common_causes: list of typical causes (3-5 items)
+- common_fixes: list of typical repairs or checks (3-5 items)
+- code_type: one of "obd_ii", "manufacturer", "abs", "airbag", "transmission", "body", "chassis", "other"
+""",
+                OBDResult,
+            )
+
+            # Cache to local library so future lookups skip Gemini
+            AIService._cache_obd_to_library(code, result)
+            return result
+
+        except Exception as e:
+            logger.warning(f"Gemini OBD decode failed: {e}")
+            return {
+                'title': f'Diagnostic Code {code}',
+                'description': f'Diagnostic Code {code}',
+                'severity': 'info',
+                'common_causes': [],
+                'common_fixes': [],
+                'code_type': 'obd_ii',
+            }
+
+    @staticmethod
+    def _cache_obd_to_library(code_number, decoded):
+        """Saves a Gemini-decoded OBD result to DiagnosticCodeLibrary for future reuse."""
+        try:
+            from apps.diagnosis.models import DiagnosticCodeLibrary
+            DiagnosticCodeLibrary.objects.update_or_create(
+                code_number=code_number,
+                code_type=decoded.get('code_type', 'obd_ii'),
+                defaults={
+                    'title': decoded.get('title', code_number),
+                    'description': decoded.get('description', ''),
+                    'severity': decoded.get('severity', 'info'),
+                    'common_causes': decoded.get('common_causes', []),
+                    'common_fixes': decoded.get('common_fixes', []),
+                    'is_active': True,
+                },
+            )
+        except Exception as e:
+            logger.warning(f"Failed to cache OBD code {code_number} to library: {e}")
 
     @staticmethod
     def analyze_inspection_results(inspection):
-        """
-        AI Proxy to analyze inspection results and generate notes + recommendations.
-        """
+        """Generates AI notes and recommendations from multi-point inspection results."""
+        vehicle = inspection.vehicle
         pass_count = inspection.results.filter(result='pass').count()
         fail_count = inspection.results.filter(result='fail').count()
         advisory_count = inspection.results.filter(result='advisory').count()
-        attention_count = inspection.results.filter(needs_immediate_attention=True).count()
-        
-        vehicle = inspection.vehicle
-        
-        # AI generated summary
-        notes = f"AI Analysis: Vehicle Health Report for {vehicle.year} {vehicle.make} {vehicle.model}.\n\n"
-        notes += f"Overall Condition: The multi-point inspection recorded {pass_count} passed items, {fail_count} failed items, and {advisory_count} items requiring monitoring.\n\n"
-        
-        if fail_count > 0:
-            notes += f"Safety Alert: {fail_count} components failed inspection"
-            if attention_count > 0:
-                notes += f", including {attention_count} critical item(s) that pose an immediate safety risk."
-            else:
-                notes += "."
-        elif pass_count > 0:
-            notes += "The vehicle is generally in good health with no major safety failures."
-        
-        # AI generated recommendation
-        recommendations = "AI Generated Service Recommendations:\n"
-        if fail_count > 0:
-            failed_items = inspection.results.filter(result='fail').select_related('inspection_item')[:3]
-            recommendations += "- Immediate Repairs Required for Safety:\n"
-            for fail in failed_items:
-                recommendations += f"  • {fail.inspection_item.name}\n"
-            if fail_count > 3:
-                recommendations += f"  • ...and {fail_count - 3} other items.\n"
-        elif advisory_count > 0:
-            recommendations += "- Near-term Maintenance Advice: Monitor the items marked as 'advisory' and plan to replace them within the next routine service interval.\n"
-        else:
-            recommendations += "- Congratulations, your vehicle passed with flying colors. Continue adhering to the manufacturer's preventative maintenance schedule."
-            
-        return {
-            "notes": notes,
-            "recommendations": recommendations,
-        }
+
+        failed_items = list(
+            inspection.results.filter(result='fail')
+            .select_related('inspection_item')
+            .values_list('inspection_item__name', flat=True)
+        )
+        advisory_items = list(
+            inspection.results.filter(result='advisory')
+            .select_related('inspection_item')
+            .values_list('inspection_item__name', flat=True)
+        )
+
+        prompt = f"""You are writing a vehicle inspection report for a customer.
+
+Vehicle: {vehicle.year} {vehicle.make} {vehicle.model}
+Passed Items: {pass_count}
+Failed Items: {fail_count} — {', '.join(failed_items) if failed_items else 'None'}
+Advisory Items: {advisory_count} — {', '.join(advisory_items) if advisory_items else 'None'}
+
+Write two sections:
+1. Notes: A professional 2–3 sentence summary of the inspection outcome.
+2. Recommendations: A concise action list based on the failed and advisory items.
+
+Return as JSON with keys "notes" and "recommendations"."""
+
+        try:
+            class InspectionResult(typing.TypedDict):
+                notes: str
+                recommendations: str
+
+            return AIService._gemini_json(prompt, InspectionResult)
+        except Exception as e:
+            logger.warning(f"Gemini inspection analysis failed: {e}")
+            return {'notes': '', 'recommendations': ''}
 
     @staticmethod
     def suggest_initial_observations(work_order):
-        """
-        Generates professional initial observations based on work order data.
-        """
-        concerns = work_order.customer_concerns or "General vehicle checkup"
+        """Generates professional initial observations for a work order using Gemini."""
         vehicle = work_order.vehicle
-        mileage = f" at {work_order.odometer_in:,} miles" if work_order.odometer_in else ""
-        
-        # Professional opening
-        observations = f"Initial assessment for {vehicle.year} {vehicle.make} {vehicle.model}{mileage}.\n\n"
-        
-        # Address customer concerns
-        observations += f"Primary Consideration: The customer has reported the following concerns: '{concerns}'.\n\n"
-        
-        # Intelligence-based suggestions (Heuristics for now, simulating AI)
-        concerns_lower = concerns.lower()
-        if any(word in concerns_lower for word in ['noise', 'sound', 'squeak', 'rattle', 'clunk']):
-            observations += "Preliminary investigation will focus on identifying the source of reported noise. System checks for suspension components, wheel bearings, and brake hardware are recommended.\n"
-        elif any(word in concerns_lower for word in ['leak', 'drip', 'fluid', 'oil']):
-            observations += "Fluid system integrity check required. Will perform visual inspection of engine bay and undercarriage to locate potential leakage source and verify fluid levels.\n"
-        elif any(word in concerns_lower for word in ['light', 'check engine', 'warning', 'dash']):
-            observations += "Diagnostic system scan required to retrieve stored fault codes. Will analyze live data stream to verify sensor readings related to the reported warning light.\n"
-        elif any(word in concerns_lower for word in ['vibration', 'shaking', 'steering']):
-            observations += "Vehicle stability and drivetrain alignment check recommended. Will inspect tire condition, wheel balancing, and steering linkage for play or damage.\n"
-        else:
-            observations += "Will perform a standard multi-point inspection to assess overall vehicle condition and verify reported performance. Check of all major systems including fluids, filters, and safety components is scheduled.\n"
-            
-        return observations
+        mileage = f"{work_order.odometer_in:,} km" if work_order.odometer_in else "unknown mileage"
+        concerns = work_order.customer_concerns or "General vehicle checkup"
+
+        try:
+            return AIService._gemini_text(
+                f"""Write professional initial technician observations for a vehicle work order.
+
+Vehicle: {vehicle.year} {vehicle.make} {vehicle.model} at {mileage}
+Customer Concerns: {concerns}
+
+Write 2–3 sentences describing the planned inspection approach based on the reported concerns. Be specific and technical."""
+            ).strip()
+        except Exception as e:
+            logger.warning(f"Gemini initial observations failed: {e}")
+            return ""
+
     @staticmethod
     def suggest_qc_notes(work_order):
-        """
-        Generates professional Quality Check notes based on completed work.
-        """
-        tasks = work_order.tasks.filter(status='completed')
-        parts = work_order.parts.filter(status='installed')
-        
+        """Generates professional quality check notes for a completed work order using Gemini."""
         vehicle = work_order.vehicle
-        
-        notes = f"Quality Check Assessment for {vehicle.year} {vehicle.make} {vehicle.model}.\n\n"
-        
-        if tasks.exists():
-            notes += "Work Performed Verification:\n"
-            for task in tasks:
-                notes += f"  • {task.description}: Completed and verified.\n"
-            notes += "\n"
-        
-        if parts.exists():
-            notes += "Components Installed & Tested:\n"
-            for part in parts:
-                notes += f"  • {part.part_name}: Installed, fitment and operation confirmed.\n"
-            notes += "\n"
-            
-        notes += "Final Inspection Summary: All systems related to the reported concerns have been tested. "
-        notes += "Vehicle has been cleaned and is ready for customer delivery. "
-        notes += "No new defects or damage observed during the post-repair inspection."
-        
-        return notes
+        tasks = list(work_order.tasks.filter(status='completed').values_list('description', flat=True))
+        parts = list(work_order.parts.filter(status='installed').values_list('part_name', flat=True))
+
+        try:
+            return AIService._gemini_text(
+                f"""Write professional quality check notes for a completed vehicle service.
+
+Vehicle: {vehicle.year} {vehicle.make} {vehicle.model}
+Tasks Completed: {', '.join(tasks) if tasks else 'None'}
+Parts Installed: {', '.join(parts) if parts else 'None'}
+
+Write 3–4 sentences confirming the work was completed and the vehicle is ready for delivery. Be professional and specific."""
+            ).strip()
+        except Exception as e:
+            logger.warning(f"Gemini QC notes failed: {e}")
+            return ""

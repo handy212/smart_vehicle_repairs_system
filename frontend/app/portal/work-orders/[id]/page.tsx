@@ -116,7 +116,7 @@ export default function WorkOrderDetailPage() {
     });
 
     const approveRecommendationsMutation = useMutation({
-        mutationFn: (data: { recommendation_ids: number[]; approved: boolean }) => {
+        mutationFn: (data: { recommendation_ids: number[]; decision: "approved" | "deferred" | "declined"; decision_method?: string }) => {
             if (!diagnosis) throw new Error("No diagnosis found");
             return diagnosisApi.approveRecommendations(diagnosis.id, data);
         },
@@ -161,7 +161,8 @@ export default function WorkOrderDetailPage() {
 
         approveRecommendationsMutation.mutate({
             recommendation_ids: selectedRecommendations,
-            approved: true
+            decision: "approved",
+            decision_method: "portal",
         });
     };
 

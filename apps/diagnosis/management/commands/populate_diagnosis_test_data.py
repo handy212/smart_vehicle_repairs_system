@@ -19,6 +19,7 @@ from apps.diagnosis.models import (
     Diagnosis, DiagnosticCode, DiagnosticTest, DiagnosisFinding,
     DiagnosisPhoto, DiagnosticCodeLibrary, TestProcedureLibrary
 )
+from apps.diagnosis.services.baseline_test_procedures import seed_baseline_test_procedures
 
 
 class Command(BaseCommand):
@@ -336,75 +337,14 @@ class Command(BaseCommand):
 
     def populate_test_procedure_library(self):
         """Populate test procedure library with common diagnostic tests"""
-        procedures = [
-            {
-                'name': 'Compression Test',
-                'category': 'mechanical',
-                'description': 'Measure engine cylinder compression to check for internal engine problems',
-                'test_procedure': '1. Remove spark plugs\n2. Install compression gauge\n3. Crank engine 4-5 times\n4. Record pressure for each cylinder\n5. Compare readings',
-                'expected_result': 'All cylinders should read within 10% of each other and within manufacturer specs (typically 125-175 PSI)',
-                'tools_needed': 'Compression gauge, socket set, spark plug socket',
-                'measurement_fields': [
-                    {'name': 'Cylinder 1 Pressure', 'unit': 'PSI', 'min': 125, 'max': 175},
-                    {'name': 'Cylinder 2 Pressure', 'unit': 'PSI', 'min': 125, 'max': 175},
-                    {'name': 'Cylinder 3 Pressure', 'unit': 'PSI', 'min': 125, 'max': 175},
-                    {'name': 'Cylinder 4 Pressure', 'unit': 'PSI', 'min': 125, 'max': 175},
-                ]
-            },
-            {
-                'name': 'Battery Voltage Test',
-                'category': 'electrical',
-                'description': 'Check battery voltage and charging system',
-                'test_procedure': '1. Turn off engine\n2. Measure battery voltage with multimeter\n3. Start engine\n4. Measure voltage with engine running\n5. Check alternator output',
-                'expected_result': 'Battery should read 12.6V (off), 13.5-14.5V (running). Alternator output should be 13.5-14.5V',
-                'tools_needed': 'Digital multimeter',
-                'measurement_fields': [
-                    {'name': 'Battery Voltage (Off)', 'unit': 'V', 'min': 12.0, 'max': 12.8},
-                    {'name': 'Battery Voltage (Running)', 'unit': 'V', 'min': 13.5, 'max': 14.5},
-                    {'name': 'Alternator Output', 'unit': 'V', 'min': 13.5, 'max': 14.5},
-                ]
-            },
-            {
-                'name': 'Fuel Pressure Test',
-                'category': 'pressure',
-                'description': 'Check fuel system pressure to diagnose fuel delivery issues',
-                'test_procedure': '1. Locate fuel pressure test port\n2. Connect fuel pressure gauge\n3. Turn key to ON (engine off)\n4. Check pressure reading\n5. Start engine and check running pressure',
-                'expected_result': 'Pressure should match manufacturer specifications (typically 35-65 PSI for fuel injection)',
-                'tools_needed': 'Fuel pressure gauge, safety equipment',
-                'measurement_fields': [
-                    {'name': 'Fuel Pressure (Key On)', 'unit': 'PSI', 'min': 35, 'max': 65},
-                    {'name': 'Fuel Pressure (Running)', 'unit': 'PSI', 'min': 35, 'max': 65},
-                ]
-            },
-            {
-                'name': 'Ignition Coil Test',
-                'category': 'electrical',
-                'description': 'Test ignition coil primary and secondary resistance',
-                'test_procedure': '1. Disconnect ignition coil\n2. Measure primary resistance with multimeter\n3. Measure secondary resistance\n4. Compare to specifications',
-                'expected_result': 'Resistance should be within manufacturer specifications (typically 0.5-2.0 ohms primary, 5000-15000 ohms secondary)',
-                'tools_needed': 'Digital multimeter, service manual',
-                'measurement_fields': [
-                    {'name': 'Primary Resistance', 'unit': 'Ohms', 'min': 0.5, 'max': 2.0},
-                    {'name': 'Secondary Resistance', 'unit': 'Ohms', 'min': 5000, 'max': 15000},
-                ]
-            },
-        ]
-        
         technician = User.objects.filter(role__in=['technician', 'manager']).first()
-        
-        created_count = 0
-        for proc_data in procedures:
-            procedure, created = TestProcedureLibrary.objects.get_or_create(
-                name=proc_data['name'],
-                defaults={
-                    **proc_data,
-                    'created_by': technician,
-                }
+        result = seed_baseline_test_procedures(created_by=technician)
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Processed {result['total']} baseline test procedures: "
+                f"{result['created']} created, {result['existing']} already present"
             )
-            if created:
-                created_count += 1
-        
-        self.stdout.write(self.style.SUCCESS(f'Populated {created_count} new test procedures in library'))
+        )
 
     def create_work_orders(self, customers_vehicles, technician, branch):
         """Create work orders in diagnosis status"""
@@ -535,4 +475,3 @@ class Command(BaseCommand):
                 f'  Created diagnosis for WO {work_order.work_order_number} '
                 f'({len(codes_list)} codes, {len(tests_list)} tests, {diagnosis.findings.count()} findings)'
             ))
-

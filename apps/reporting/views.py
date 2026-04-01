@@ -234,7 +234,8 @@ def dashboard_overview(request):
                     'customer': customer_name,
                     'vehicle': vehicle_info,
                     'status': wo.status,
-                    'created_at': wo.created_at.isoformat()
+                    'created_at': wo.created_at.isoformat(),
+                    'diagnosis_notes': wo.diagnosis_notes,
                 })
             except Exception:
                 continue

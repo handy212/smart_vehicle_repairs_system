@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Branding images are admin-configured and may come from arbitrary external URLs. */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +45,11 @@ const registerSchema = z.object({
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
+type GoogleRegistrationUserData = ComponentProps<typeof CompleteRegistrationForm>["userData"];
+type GoogleRegistrationData = {
+    user_data: GoogleRegistrationUserData;
+    google_token_info: Record<string, unknown>;
+};
 
 const DEFAULT_HERO_IMAGE = "/images/login-hero.png";
 
@@ -64,7 +70,7 @@ export default function RegisterPage() {
 
     // Google Registration State
 
-    const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
+    const [regData, setRegData] = useState<GoogleRegistrationData | null>(null);
 
     // reCAPTCHA state
     const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
@@ -295,7 +301,7 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Right side: Registration Form */}
-                <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
+                <div className="flex items-start justify-center bg-muted/50 p-4 pt-10 lg:items-center lg:p-8">
                     <div className="w-full max-w-md space-y-4 lg:space-y-6 animate-in fade-in zoom-in-95 duration-500">
                         {regData ? (
                             <CompleteRegistrationForm
@@ -317,7 +323,7 @@ export default function RegisterPage() {
                                 </button>
 
                                 <div className="text-center lg:text-left">
-                                    <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{branding.site_name}</h2>
+                                    <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{branding.site_name}</h2>
                                     <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
                                         {currentStep === 'otp'
                                             ? `We sent a code to ${pendingData?.email}`
@@ -335,7 +341,7 @@ export default function RegisterPage() {
 
                                         {currentStep === 'form' ? (
                                             <form onSubmit={handleSubmit(onInitiate)} className="space-y-3 lg:space-y-4">
-                                                <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">First Name</label>
                                                         <Input
@@ -367,7 +373,7 @@ export default function RegisterPage() {
                                                     {errors.email && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.email.message}</p>}
                                                 </div>
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Phone</label>
                                                         <div className="relative">
@@ -384,7 +390,7 @@ export default function RegisterPage() {
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Account Type</label>
                                                         <Select
-                                                            onValueChange={(val) => setValue("customer_type", val as any)}
+                                                            onValueChange={(val) => setValue("customer_type", val as RegisterFormData["customer_type"])}
                                                             defaultValue="individual"
                                                         >
                                                             <SelectTrigger className="h-9 lg:h-10 rounded-xl border-border">
@@ -414,7 +420,7 @@ export default function RegisterPage() {
                                                     </div>
                                                 )}
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                                                     <div className="space-y-1">
                                                         <label className="text-xs lg:text-sm font-semibold text-foreground ml-1">Password</label>
                                                         <div className="relative">
@@ -506,7 +512,7 @@ export default function RegisterPage() {
                                                 </Button>
 
                                                 <p className="text-center text-sm text-muted-foreground">
-                                                    Didn't receive code? <button type="button" onClick={() => handleSubmit(onInitiate)()} className="text-primary font-semibold hover:underline">Resend</button>
+                                                    Didn&apos;t receive code? <button type="button" onClick={() => handleSubmit(onInitiate)()} className="text-primary font-semibold hover:underline">Resend</button>
                                                 </p>
                                             </form>
                                         )}
@@ -530,10 +536,14 @@ export default function RegisterPage() {
             </div>
 
             {/* Footer */}
-            <footer className="bg-card border-t border-border py-4 px-8">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-muted-foreground">
-                    <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.</p>
-                    <p>Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a></p>
+            <footer className="overflow-hidden bg-card border-t border-border px-4 py-4 sm:px-8">
+                <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
+                    <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
+                        © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.
+                    </p>
+                    <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
+                        Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a>
+                    </p>
                 </div>
             </footer>
         </div>

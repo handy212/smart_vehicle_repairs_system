@@ -534,19 +534,15 @@ class WorkOrderStateTransitionMixin:
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Check if estimate already exists (from diagnosis stage)
             estimate = None
             if hasattr(work_order, 'estimate') and work_order.estimate:
                 estimate = work_order.estimate
-                # Recalculate totals to ensure they're up to date
                 estimate.calculate_totals()
-                # Update existing estimate status to 'sent'
                 estimate.status = 'sent'
                 estimate.sent_by = request.user
                 estimate.sent_at = timezone.now()
                 estimate.save()
-            else:
-                # Create new estimate from work order data
+            elif work_order.estimated_total and work_order.estimated_total > 0:
                 estimate = Estimate.objects.create(
                     customer=work_order.customer,
                     vehicle=work_order.vehicle,
@@ -592,7 +588,6 @@ class WorkOrderStateTransitionMixin:
                             is_taxable=True,
                         )
                 
-                # Recalculate estimate totals from line items
                 estimate.calculate_totals()
                 estimate.save()
             
@@ -612,7 +607,11 @@ class WorkOrderStateTransitionMixin:
             return Response({
                 **serializer.data,
                 'estimate_number': estimate.estimate_number if estimate else None,
-                'message': f'Estimate #{estimate.estimate_number if estimate else "N/A"} submitted for customer approval'
+                'message': (
+                    f'Estimate #{estimate.estimate_number} submitted for customer approval'
+                    if estimate else
+                    'Diagnosis submitted for customer approval'
+                )
             })
         except ValidationError as e:
             return Response(
@@ -653,7 +652,7 @@ class WorkOrderStateTransitionMixin:
         work_order.diagnosis_by = request.user
         work_order.requires_approval = requires_approval
         
-        # Update estimates - convert to Decimal and handle None/empty values
+        # Update estimates when provided; diagnosis approval no longer requires pricing.
         from decimal import Decimal
         if estimated_labor_hours is not None:
             work_order.estimated_labor_hours = Decimal(str(estimated_labor_hours))
@@ -671,12 +670,6 @@ class WorkOrderStateTransitionMixin:
         # Determine next status using transition_to
         try:
             if requires_approval:
-                # Validate that estimated total is greater than 0 when approval is required
-                if work_order.estimated_total <= 0:
-                    return Response(
-                        {'error': 'Estimated total must be greater than 0 when customer approval is required. Please provide estimated labor cost and/or parts cost.'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
                 work_order.approval_requested_at = timezone.now()
                 work_order.transition_to('awaiting_approval', user=request.user)
             else:

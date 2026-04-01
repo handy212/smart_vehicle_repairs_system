@@ -14,6 +14,7 @@ from datetime import timedelta
 from apps.notifications_app.triggers import notification_triggers
 
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
+from apps.vehicles.models import Vehicle
 
 from .models import (
     WorkOrder, ServiceTask, WorkOrderPart,
@@ -199,9 +200,9 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def check_unapproved_recommendations(self, request):
         """
-        Check for unapproved recommendations for a vehicle from previous work orders.
+        Check for pending or deferred recommendations for a vehicle from previous work orders.
         Query params: vehicle_id (required)
-        Returns: List of unapproved recommendations with work order context
+        Returns: List of open recommendations with work order context
         """
         vehicle_id = request.query_params.get('vehicle_id')
         if not vehicle_id:
@@ -211,8 +212,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             )
         
         try:
-            from apps.diagnosis.models import Diagnosis, RepairRecommendation
-            from apps.vehicles.models import Vehicle
+            from apps.diagnosis.models import Diagnosis
             
             vehicle = Vehicle.objects.get(id=vehicle_id)
             
@@ -222,23 +222,27 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
                 status__in=['completed', 'invoiced', 'closed']
             ).select_related('customer', 'branch')
             
-            unapproved_recommendations = []
+            open_recommendations = []
             
             for wo in completed_work_orders:
                 diagnosis = Diagnosis.objects.filter(work_order=wo).first()
                 if diagnosis:
                     recommendations = diagnosis.repair_recommendations.filter(
-                        customer_approved=False
+                        approval_status__in=['pending_approval', 'deferred']
                     )
                     for rec in recommendations:
-                        unapproved_recommendations.append({
+                        open_recommendations.append({
                             'id': rec.id,
                             'description': rec.description,
                             'priority': rec.priority,
                             'priority_display': rec.get_priority_display(),
                             'recommendation_type': rec.recommendation_type,
                             'recommendation_type_display': rec.get_recommendation_type_display(),
-                            'estimated_total_cost': str(rec.estimated_total_cost),
+                            'approval_status': rec.approval_status,
+                            'approval_status_display': rec.get_approval_status_display(),
+                            'quotation_status': rec.quotation_status,
+                            'quotation_status_display': rec.get_quotation_status_display(),
+                            'parts_needed': rec.parts_needed,
                             'work_order_id': wo.id,
                             'work_order_number': wo.work_order_number,
                             'work_order_completed_at': wo.completed_at.isoformat() if wo.completed_at else None,
@@ -248,8 +252,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             return Response({
                 'vehicle_id': vehicle_id,
                 'vehicle_display': vehicle.display_name,
-                'count': len(unapproved_recommendations),
-                'recommendations': unapproved_recommendations
+                'count': len(open_recommendations),
+                'recommendations': open_recommendations
             })
         except Vehicle.DoesNotExist:
             return Response(

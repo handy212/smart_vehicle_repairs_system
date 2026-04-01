@@ -6,7 +6,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { diagnosisApi, Diagnosis } from "@/lib/api/diagnosis";
 import { workordersApi } from "@/lib/api/workorders";
-import { inventoryApi } from "@/lib/api/inventory";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,7 +48,7 @@ import {
   PlayCircle,
   CheckCircle2,
   User,
-  Sparkles,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -57,7 +56,6 @@ import { CodesTab } from "./components/CodesTab";
 import { ComplaintTab } from "./components/ComplaintTab";
 import { TestsTab } from "./components/TestsTab";
 import { RecommendationDialog } from "./components/RecommendationDialog";
-import { PartsRequiredTab } from "./components/PartsRequiredTab";
 
 
 export default function DiagnosisPage() {
@@ -80,55 +78,41 @@ export default function DiagnosisPage() {
   // Fetch or create diagnosis
   const { data: diagnosis, isLoading, error: diagnosisError } = useQuery({
     queryKey: ["diagnosis", "workorder", workOrderId],
-    queryFn: async () => {
-      try {
-        let existing = await diagnosisApi.getByWorkOrder(workOrderId);
-
-        if (!existing && workOrder) {
-          // Auto-create diagnosis if it doesn't exist
-          try {
-            existing = await diagnosisApi.create({
-              work_order: workOrderId,
-              customer_complaint: workOrder.customer_concerns || "",
-            });
-
-          } catch (error: any) {
-            console.error("Failed to create diagnosis:", error);
-            console.error("Error details:", error.response?.data || error.message);
-            throw error;
-          }
-        }
-
-        // If diagnosis exists but has no customer_complaint, update it from work order
-        if (existing && !existing.customer_complaint && workOrder?.customer_concerns) {
-          try {
-            existing = await diagnosisApi.update(existing.id, {
-              customer_complaint: workOrder.customer_concerns,
-            });
-
-          } catch (error: any) {
-            console.error("Failed to update customer complaint:", error);
-          }
-        }
-
-        return existing;
-
-      } catch (error: any) {
-        console.error("Error in diagnosis query:", error);
-        console.error("Error response:", error.response?.data);
-        console.error("Error status:", error.response?.status);
-        throw error;
-      }
-    },
+    queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
     enabled: !!workOrderId && !!workOrder,
     retry: 1,
     retryDelay: 1000,
   });
 
+  const createDiagnosisMutation = useMutation({
+    mutationFn: () => {
+      if (!workOrder) throw new Error("Work order not found");
+      return diagnosisApi.create({
+        work_order: workOrderId,
+        customer_complaint: workOrder.customer_concerns || "",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      toast({
+        title: "Diagnosis created",
+        description: "The diagnosis record is ready. Start it when the technician begins work.",
+        variant: "default",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create diagnosis",
+        description: error.response?.data?.detail || error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Get counts from diagnosis object (nested arrays included in detail serializer)
   const codesCount = Array.isArray(diagnosis?.diagnostic_codes) ? diagnosis.diagnostic_codes.length : 0;
   const testsCount = Array.isArray(diagnosis?.diagnostic_tests) ? diagnosis.diagnostic_tests.length : 0;
-  const photosCount = Array.isArray(diagnosis?.photos) ? diagnosis.photos.length : 0;
+  const findingsCount = Array.isArray(diagnosis?.findings) ? diagnosis.findings.length : 0;
   const recommendationsCount = Array.isArray(diagnosis?.repair_recommendations) ? diagnosis.repair_recommendations.length : 0;
 
   const updateDiagnosisMutation = useMutation({
@@ -238,19 +222,11 @@ export default function DiagnosisPage() {
         }
       }
 
-      if (response.prediction) {
-        toast({
-          title: "Diagnosis Completed & AI Route Predicted",
-          description: `Next projected service: ${response.prediction.predicted_date}. ${response.prediction.recommendation}`,
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Diagnosis completed",
-          description: message,
-          variant: "default"
-        });
-      }
+      toast({
+        title: "Diagnosis completed",
+        description: message,
+        variant: "default"
+      });
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -335,14 +311,34 @@ export default function DiagnosisPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground">No diagnosis found. This should be created automatically.</p>
-            <Button
-              variant="secondary"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] })}
-              className="mt-4"
-            >
-              Retry
-            </Button>
+            <div className="space-y-4">
+              <div>
+                <p className="font-semibold text-foreground">No diagnosis record yet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Create the diagnosis explicitly, then start it when the technician begins work.
+                </p>
+              </div>
+              {workOrder.customer_concerns && (
+                <div className="rounded-md border bg-muted/50 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Customer concern</p>
+                  <p className="text-sm text-foreground mt-1 whitespace-pre-wrap">{workOrder.customer_concerns}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => createDiagnosisMutation.mutate()}
+                  disabled={createDiagnosisMutation.isPending}
+                >
+                  {createDiagnosisMutation.isPending ? "Creating..." : "Create Diagnosis"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] })}
+                >
+                  Refresh
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -556,51 +552,11 @@ export default function DiagnosisPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-none shadow-sm bg-card border border-border">
-          <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Diagnostic Codes</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-foreground">{codesCount}</span>
-              <Code className="w-4 h-4 text-primary mb-1" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-card border border-border">
-          <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tests Run</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-foreground">{testsCount}</span>
-              <TestTube className="w-4 h-4 text-purple-500 mb-1" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-card border border-border">
-          <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Photos</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-foreground">{photosCount}</span>
-              <Camera className="mb-1 h-4 w-4 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-card border border-border">
-          <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recommendations</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-foreground">{recommendationsCount}</span>
-              <Wrench className="w-4 h-4 text-indigo-500 mb-1" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Tabs */}
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="border-b border-border mb-6">
-          <TabsList className="flex w-full h-auto p-0 bg-transparent gap-6">
+          <TabsList className="flex w-full h-auto flex-wrap gap-6 bg-transparent p-0">
             <TabsTrigger
               value="complaint"
               className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
@@ -633,23 +589,16 @@ export default function DiagnosisPage() {
               )}
             </TabsTrigger>
             <TabsTrigger
-              value="photos"
+              value="findings"
               className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
-              <Camera className="w-4 h-4 mr-2" />
-              Photos
-              {photosCount > 0 && (
+              <Search className="w-4 h-4 mr-2" />
+              Findings
+              {findingsCount > 0 && (
                 <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] min-w-5 justify-center">
-                  {photosCount}
+                  {findingsCount}
                 </Badge>
               )}
-            </TabsTrigger>
-            <TabsTrigger
-              value="parts"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              Parts Required
             </TabsTrigger>
             <TabsTrigger
               value="recommendations"
@@ -706,25 +655,12 @@ export default function DiagnosisPage() {
           />
         </TabsContent>
 
-        {/* Photos Tab */}
-        <TabsContent value="photos" className="mt-6">
-          <PhotosTab
-            diagnosisId={diagnosis.id}
-            onRefresh={() => {
-              queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-            }}
-            isDisabled={!diagnosisActive}
-          />
-        </TabsContent>
-
-        {/* Parts Tab */}
-        <TabsContent value="parts" className="mt-6">
-          <PartsRequiredTab
+        <TabsContent value="findings" className="mt-6">
+          <FindingsTab
             diagnosis={diagnosis}
-            workOrder={workOrder}
+            workOrderId={workOrderId}
             onRefresh={() => {
               queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
-              queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
             }}
             isDisabled={!diagnosisActive}
           />
@@ -816,6 +752,459 @@ export default function DiagnosisPage() {
 }
 
 
+function FindingsTab({
+  diagnosis,
+  workOrderId,
+  onRefresh,
+  isDisabled = false,
+}: {
+  diagnosis: Diagnosis;
+  workOrderId: number;
+  onRefresh: () => void;
+  isDisabled?: boolean;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingFinding, setEditingFinding] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    finding_title: "",
+    category: "other",
+    severity: "major",
+    description: "",
+    root_cause: "",
+    diagnostic_codes: [] as number[],
+    diagnostic_tests: [] as number[],
+    status: "identified",
+  });
+
+  const resetForm = (finding?: any) => {
+    if (finding) {
+      setFormData({
+        finding_title: finding.finding_title || "",
+        category: finding.category || "other",
+        severity: finding.severity || "major",
+        description: finding.description || "",
+        root_cause: finding.root_cause || "",
+        diagnostic_codes: Array.isArray(finding.diagnostic_codes) ? finding.diagnostic_codes.map((code: any) => code.id) : [],
+        diagnostic_tests: Array.isArray(finding.diagnostic_tests) ? finding.diagnostic_tests.map((test: any) => test.id) : [],
+        status: finding.status || "identified",
+      });
+      return;
+    }
+
+    setFormData({
+      finding_title: "",
+      category: "other",
+      severity: "major",
+      description: "",
+      root_cause: "",
+      diagnostic_codes: [],
+      diagnostic_tests: [],
+      status: "identified",
+    });
+  };
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => diagnosisApi.findings.create(diagnosis.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      onRefresh();
+      setShowDialog(false);
+      setEditingFinding(null);
+      resetForm();
+      toast({ title: "Finding added", variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to add finding",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => diagnosisApi.findings.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      onRefresh();
+      setShowDialog(false);
+      setEditingFinding(null);
+      resetForm();
+      toast({ title: "Finding updated", variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update finding",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => diagnosisApi.findings.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      onRefresh();
+      toast({ title: "Finding deleted", variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete finding",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const findings = diagnosis.findings || [];
+  const codes = diagnosis.diagnostic_codes || [];
+  const tests = diagnosis.diagnostic_tests || [];
+
+  const toggleLinkedItem = (field: "diagnostic_codes" | "diagnostic_tests", itemId: number, checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: checked
+        ? [...prev[field], itemId]
+        : prev[field].filter((id) => id !== itemId),
+    }));
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const payload = {
+      finding_title: formData.finding_title.trim(),
+      category: formData.category,
+      severity: formData.severity,
+      description: formData.description.trim(),
+      root_cause: formData.root_cause.trim(),
+      diagnostic_codes: formData.diagnostic_codes,
+      diagnostic_tests: formData.diagnostic_tests,
+      status: formData.status,
+    };
+
+    if (editingFinding) {
+      updateMutation.mutate({ id: editingFinding.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  return (
+    <>
+      <Card className="border-none shadow-sm bg-muted/50">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/50 pb-3">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Diagnosis Findings</CardTitle>
+            <CardDescription className="text-xs">
+              Turn codes and tests into clear technician findings before creating recommendations.
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            className="h-8"
+            disabled={isDisabled}
+            onClick={() => {
+              setEditingFinding(null);
+              resetForm();
+              setShowDialog(true);
+            }}
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            Add Finding
+          </Button>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {findings.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {findings.map((finding: any) => (
+                <div key={finding.id} className="rounded-lg border bg-card p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={finding.severity === "critical" ? "danger" : finding.severity === "major" ? "default" : "secondary"} className="capitalize">
+                        {finding.severity_display || finding.severity}
+                      </Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {finding.category_display || finding.category}
+                      </Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {finding.status_display || finding.status}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <h3 className="mt-3 text-sm font-semibold text-foreground">{finding.finding_title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{finding.description}</p>
+
+                  {(finding.diagnostic_codes?.length > 0 || finding.diagnostic_tests?.length > 0) && (
+                    <div className="mt-3 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      {finding.diagnostic_codes?.length > 0 && (
+                        <p>Codes: {finding.diagnostic_codes.map((code: any) => code.code_number).join(", ")}</p>
+                      )}
+                      {finding.diagnostic_tests?.length > 0 && (
+                        <p className={finding.diagnostic_codes?.length > 0 ? "mt-1" : ""}>
+                          Tests: {finding.diagnostic_tests.map((test: any) => test.test_name).join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {finding.root_cause && (
+                    <div className="mt-3 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      <p className="font-medium uppercase tracking-wide">Root Cause</p>
+                      <p className="mt-1">{finding.root_cause}</p>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8"
+                      disabled={isDisabled}
+                      onClick={() => {
+                        setEditingFinding(finding);
+                        resetForm(finding);
+                        setShowDialog(true);
+                      }}
+                    >
+                      <Edit className="mr-1.5 h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-red-600"
+                      disabled={deleteMutation.isPending || isDisabled}
+                      onClick={() => {
+                        if (confirm(`Delete finding: "${finding.finding_title}"?`)) {
+                          deleteMutation.mutate(finding.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed bg-card/60 py-14 text-center">
+              <Search className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+              <h3 className="text-sm font-medium text-foreground">No findings yet</h3>
+              <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
+                Summarize what the codes and tests mean, then connect those findings to recommendations.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showDialog}
+        onOpenChange={(open) => {
+          setShowDialog(open);
+          if (!open) {
+            setEditingFinding(null);
+            resetForm();
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl gap-0 p-0">
+          <DialogHeader className="border-b px-5 py-4">
+            <DialogTitle className="text-base font-semibold">
+              {editingFinding ? "Edit Finding" : "Add Finding"}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Record the technical finding that explains why a recommendation is needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="flex flex-col">
+            <div className="space-y-4 px-5 py-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="finding_title" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Finding Title
+                  </Label>
+                  <Input
+                    id="finding_title"
+                    value={formData.finding_title}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, finding_title: event.target.value }))}
+                    placeholder="e.g. Cylinder 1 misfire confirmed"
+                    className="h-9"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="finding_status" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </Label>
+                  <Select value={formData.status} onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}>
+                    <SelectTrigger id="finding_status" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="identified">Identified</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="fixed">Fixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="finding_category" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Category
+                  </Label>
+                  <Select value={formData.category} onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}>
+                    <SelectTrigger id="finding_category" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="engine">Engine</SelectItem>
+                      <SelectItem value="transmission">Transmission</SelectItem>
+                      <SelectItem value="electrical">Electrical</SelectItem>
+                      <SelectItem value="brakes">Brakes</SelectItem>
+                      <SelectItem value="suspension">Suspension</SelectItem>
+                      <SelectItem value="steering">Steering</SelectItem>
+                      <SelectItem value="exhaust">Exhaust</SelectItem>
+                      <SelectItem value="cooling">Cooling</SelectItem>
+                      <SelectItem value="fuel">Fuel</SelectItem>
+                      <SelectItem value="ac">AC</SelectItem>
+                      <SelectItem value="body">Body</SelectItem>
+                      <SelectItem value="interior">Interior</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="finding_severity" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Severity
+                  </Label>
+                  <Select value={formData.severity} onValueChange={(value) => setFormData((prev) => ({ ...prev, severity: value }))}>
+                    <SelectTrigger id="finding_severity" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="critical">Critical</SelectItem>
+                      <SelectItem value="major">Major</SelectItem>
+                      <SelectItem value="minor">Minor</SelectItem>
+                      <SelectItem value="advisory">Advisory</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="finding_description" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Description
+                </Label>
+                <Textarea
+                  id="finding_description"
+                  value={formData.description}
+                  onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
+                  placeholder="What did the diagnosis confirm?"
+                  className="min-h-[110px] resize-none"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="finding_root_cause" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Root Cause
+                </Label>
+                <Textarea
+                  id="finding_root_cause"
+                  value={formData.root_cause}
+                  onChange={(event) => setFormData((prev) => ({ ...prev, root_cause: event.target.value }))}
+                  placeholder="Optional explanation of why this problem happened."
+                  className="min-h-[90px] resize-none"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border bg-muted/30">
+                  <div className="border-b px-4 py-3">
+                    <p className="text-sm font-medium">Supporting Codes</p>
+                    <p className="text-xs text-muted-foreground">Link any DTCs that support this finding.</p>
+                  </div>
+                  <div className="space-y-2 p-4">
+                    {codes.length > 0 ? (
+                      codes.map((code: any) => (
+                        <label key={code.id} className="flex cursor-pointer items-start gap-3 rounded-md border bg-background p-3">
+                          <Checkbox
+                            checked={formData.diagnostic_codes.includes(code.id)}
+                            onCheckedChange={(checked) => toggleLinkedItem("diagnostic_codes", code.id, checked === true)}
+                            className="mt-0.5"
+                          />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">{code.code_number}</p>
+                            <p className="text-xs text-muted-foreground">{code.description}</p>
+                          </div>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No diagnostic codes recorded yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-muted/30">
+                  <div className="border-b px-4 py-3">
+                    <p className="text-sm font-medium">Supporting Tests</p>
+                    <p className="text-xs text-muted-foreground">Link the tests that confirmed this finding.</p>
+                  </div>
+                  <div className="space-y-2 p-4">
+                    {tests.length > 0 ? (
+                      tests.map((test: any) => (
+                        <label key={test.id} className="flex cursor-pointer items-start gap-3 rounded-md border bg-background p-3">
+                          <Checkbox
+                            checked={formData.diagnostic_tests.includes(test.id)}
+                            onCheckedChange={(checked) => toggleLinkedItem("diagnostic_tests", test.id, checked === true)}
+                            className="mt-0.5"
+                          />
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">{test.test_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {test.status_display || test.status}
+                              {test.actual_result ? ` • ${test.actual_result}` : ""}
+                            </p>
+                          </div>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No diagnostic tests recorded yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">
+              <Button type="button" variant="ghost" onClick={() => setShowDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Saving..."
+                  : editingFinding
+                    ? "Update Finding"
+                    : "Save Finding"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+
 // Recommendations Tab Component
 function RecommendationsTab({
   diagnosis,
@@ -831,63 +1220,12 @@ function RecommendationsTab({
   onRefresh: () => void;
   isDisabled?: boolean;
 }) {
-  const { formatCurrency } = useCurrency(); // Added to fix build error
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const router = useRouter();
   const [showAddDialog, setShowAddDialog] = useState(false);
-
   const [editingRecommendation, setEditingRecommendation] = useState<any>(null);
-  const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
-  const [showAiDialog, setShowAiDialog] = useState(false);
-
-  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
-
-  // AI Suggestion mutation
-  const getAiSuggestionsMutation = useMutation({
-    mutationFn: () => diagnosisApi.getAiSuggestions(diagnosis.id),
-    onSuccess: (data) => {
-      setAiSuggestions(data);
-      setShowAiDialog(true);
-      toast({ title: "AI suggestions generated", variant: "default" });
-    },
-
-    onError: (error: any) => {
-      toast({
-        title: "AI analysis failed",
-        description: error.response?.data?.message || error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Load line items from localStorage to check for linked items
-
-  const [lineItems, setLineItems] = React.useState<any[]>([]);
-  React.useEffect(() => {
-    const loadLineItems = () => {
-      try {
-        const key = `diagnosis_line_items_${diagnosis.id}`;
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          setLineItems(JSON.parse(stored));
-        } else {
-          setLineItems([]);
-        }
-      } catch (error) {
-        console.error("Failed to load line items from storage:", error);
-        setLineItems([]);
-      }
-    };
-
-    loadLineItems();
-    // Check for updates periodically (since storage event doesn't fire in same tab)
-    const interval = setInterval(loadLineItems, 1000);
-    return () => clearInterval(interval);
-  }, [diagnosis.id]);
 
   const createMutation = useMutation({
-
     mutationFn: (data: any) => diagnosisApi.addRecommendation(diagnosis.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -907,7 +1245,6 @@ function RecommendationsTab({
   });
 
   const updateMutation = useMutation({
-
     mutationFn: ({ id, data }: { id: number; data: any }) => diagnosisApi.updateRecommendation(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
@@ -943,26 +1280,71 @@ function RecommendationsTab({
     },
   });
 
-  const approveMutation = useMutation({
-    mutationFn: ({ recommendationIds, approved }: { recommendationIds: number[]; approved: boolean }) =>
+  const decisionMutation = useMutation({
+    mutationFn: ({ recommendationIds, decision }: { recommendationIds: number[]; decision: "approved" | "deferred" | "declined" }) =>
       diagnosisApi.approveRecommendations(diagnosis.id, {
         recommendation_ids: recommendationIds,
-        approved,
+        decision,
+        decision_method: "supervisor_instruction",
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
       onRefresh();
-      setSelectedRecommendations(new Set());
       toast({
-        title: `Recommendations ${variables.approved ? "approved" : "declined"}`,
+        title: `Recommendation ${variables.decision.replace("_", " ")}`,
         variant: "default",
       });
     },
-
     onError: (error: any) => {
       toast({
-        title: "Failed to update recommendations",
+        title: "Failed to update recommendation",
         description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const requestQuoteMutation = useMutation({
+    mutationFn: (recommendationIds: number[]) =>
+      diagnosisApi.submitRecommendationsForQuote(diagnosis.id, {
+        recommendation_ids: recommendationIds,
+      }),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      onRefresh();
+      toast({
+        title: "Sent to stores",
+        description: response.message,
+        variant: "default",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send recommendations",
+        description: error.response?.data?.message || error.response?.data?.error || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markQuotedMutation = useMutation({
+    mutationFn: (recommendationIds: number[]) =>
+      diagnosisApi.markRecommendationsQuoted(diagnosis.id, {
+        recommendation_ids: recommendationIds,
+      }),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      onRefresh();
+      toast({
+        title: "Quotation ready",
+        description: response.message,
+        variant: "default",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update quotation status",
+        description: error.response?.data?.message || error.response?.data?.error || error.message,
         variant: "destructive",
       });
     },
@@ -978,19 +1360,15 @@ function RecommendationsTab({
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
       queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
       onRefresh();
-      setSelectedRecommendations(new Set());
       toast({
-        title: "Recommendations converted to tasks",
+        title: "Task created",
         description: response.message,
         variant: "default",
       });
-      // Navigate to work order tasks
-      router.push(`/workorders/${workOrderId}`);
     },
-
     onError: (error: any) => {
       toast({
-        title: "Failed to convert recommendations",
+        title: "Failed to create task",
         description: error.response?.data?.message || error.response?.data?.error || error.message,
         variant: "destructive",
       });
@@ -998,64 +1376,178 @@ function RecommendationsTab({
   });
 
   const recommendations = diagnosis.repair_recommendations || [];
+  const pendingRecommendations = recommendations.filter((rec: any) => (rec.approval_status || "pending_approval") === "pending_approval" && !rec.converted_to_task_id);
+  const approvedRecommendations = recommendations.filter((rec: any) => rec.approval_status === "approved" && !rec.converted_to_task_id);
+  const deferredRecommendations = recommendations.filter((rec: any) => rec.approval_status === "deferred" && !rec.converted_to_task_id);
+  const declinedRecommendations = recommendations.filter((rec: any) => rec.approval_status === "declined" && !rec.converted_to_task_id);
+  const approvedAwaitingQuote = approvedRecommendations.filter((rec: any) => (rec.quotation_status || "not_requested") === "not_requested");
+  const quoteRequestedRecommendations = approvedRecommendations.filter((rec: any) => rec.quotation_status === "requested");
+  const quotedRecommendations = approvedRecommendations.filter((rec: any) => rec.quotation_status === "quoted");
+  const convertedRecommendations = recommendations.filter((rec: any) => !!rec.converted_to_task_id);
 
-  const approvedRecommendations = recommendations.filter((r: any) => r.customer_approved);
+  const renderMeta = (rec: any) => {
+    const partsCount = Array.isArray(rec.parts_needed) ? rec.parts_needed.filter((part: any) => part?.part_name).length : 0;
+    const findingCount = Array.isArray(rec.linked_findings) ? rec.linked_findings.length : 0;
 
-  // Inventory parts for part line items (active parts)
-  useQuery({
-    queryKey: ["inventory", "parts", "active"],
-    queryFn: () => inventoryApi.list({ is_active: true }),
-  });
-
-  const unapprovedRecommendations = recommendations.filter((r: any) => !r.customer_approved);
-
-  const convertedRecommendations = recommendations.filter((r: any) => r.converted_to_task_id);
-
-  // Check if work order is in a status that allows printing recommendations
-  const canPrintRecommendations = workOrder && ["completed", "invoiced", "closed"].includes(workOrder.status);
-
-  const handlePrintRecommendations = async () => {
-    try {
-      // Download PDF
-      const blob = await workordersApi.downloadRecommendationsPDF(workOrderId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `recommendations_${workOrder?.work_order_number || workOrderId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast({
-        title: "Success",
-        description: "Recommendations PDF downloaded successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to print recommendations",
-        variant: "destructive",
-      });
-    }
+    return (
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        {partsCount > 0 ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
+            <Package className="h-3 w-3" />
+            {partsCount} part{partsCount === 1 ? "" : "s"}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
+            <Package className="h-3 w-3" />
+            No parts listed
+          </span>
+        )}
+        {findingCount > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
+            <MessageSquare className="h-3 w-3" />
+            {findingCount} linked finding{findingCount === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+    );
   };
 
-  const handleToggleSelection = (recId: number) => {
-    const newSelection = new Set(selectedRecommendations);
-    if (newSelection.has(recId)) {
-      newSelection.delete(recId);
-    } else {
-      newSelection.add(recId);
-    }
-    setSelectedRecommendations(newSelection);
-  };
+  const renderRecommendationCard = (rec: any) => (
+    <div key={rec.id} className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={rec.priority === "critical" ? "danger" : rec.priority === "necessary" ? "default" : "secondary"} className="capitalize">
+            {rec.priority_display || rec.priority}
+          </Badge>
+          <Badge variant="outline" className="capitalize">
+            {rec.recommendation_type_display || rec.recommendation_type}
+          </Badge>
+          <Badge variant="outline" className="capitalize">
+            {rec.approval_status_display || "Pending Approval"}
+          </Badge>
+          {rec.approval_status === "approved" && (
+            <Badge variant="outline" className="capitalize">
+              {rec.quotation_status_display || "Not Requested"}
+            </Badge>
+          )}
+        </div>
+      </div>
 
-  const handleSelectAll = () => {
-    if (selectedRecommendations.size === unapprovedRecommendations.length) {
-      setSelectedRecommendations(new Set());
-    } else {
+      <p className="mt-3 text-sm leading-6 text-foreground">{rec.description}</p>
 
-      setSelectedRecommendations(new Set(unapprovedRecommendations.map((r: any) => r.id)));
+      <div className="mt-3">{renderMeta(rec)}</div>
+
+      {Array.isArray(rec.linked_findings) && rec.linked_findings.length > 0 && (
+        <div className="mt-3 rounded-md border bg-muted/30 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Supporting evidence</p>
+          <div className="mt-2 space-y-2">
+            {rec.linked_findings.map((finding: any) => (
+              <div key={finding.id} className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">{finding.finding_title}</p>
+                {Array.isArray(finding.diagnostic_codes) && finding.diagnostic_codes.length > 0 && (
+                  <p>Codes: {finding.diagnostic_codes.map((code: any) => code.code_number).join(", ")}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+        {rec.approval_status === "pending_approval" && (
+          <>
+            <Button size="sm" className="h-8" onClick={() => decisionMutation.mutate({ recommendationIds: [rec.id], decision: "approved" })} disabled={decisionMutation.isPending || isDisabled}>
+              <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+              Approve
+            </Button>
+            <Button size="sm" variant="outline" className="h-8" onClick={() => decisionMutation.mutate({ recommendationIds: [rec.id], decision: "deferred" })} disabled={decisionMutation.isPending || isDisabled}>
+              Defer
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 text-red-600" onClick={() => decisionMutation.mutate({ recommendationIds: [rec.id], decision: "declined" })} disabled={decisionMutation.isPending || isDisabled}>
+              Decline
+            </Button>
+          </>
+        )}
+
+        {rec.approval_status === "approved" && rec.quotation_status === "not_requested" && (
+          <Button size="sm" className="h-8" onClick={() => requestQuoteMutation.mutate([rec.id])} disabled={requestQuoteMutation.isPending || isDisabled}>
+            <FileText className="mr-1.5 h-3.5 w-3.5" />
+            Send to Stores
+          </Button>
+        )}
+
+        {rec.approval_status === "approved" && rec.quotation_status === "requested" && (
+          <Button size="sm" className="h-8" onClick={() => markQuotedMutation.mutate([rec.id])} disabled={markQuotedMutation.isPending || isDisabled}>
+            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+            Mark Quoted
+          </Button>
+        )}
+
+        {rec.approval_status === "approved" && rec.quotation_status === "quoted" && !rec.converted_to_task_id && (
+          <Button size="sm" className="h-8" onClick={() => convertToTasksMutation.mutate([rec.id])} disabled={convertToTasksMutation.isPending || isDisabled}>
+            <ListChecks className="mr-1.5 h-3.5 w-3.5" />
+            Create Task
+          </Button>
+        )}
+
+        {!rec.converted_to_task_id && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8"
+            onClick={() => {
+              setEditingRecommendation(rec);
+              setShowAddDialog(true);
+            }}
+            disabled={isDisabled}
+          >
+            <Edit className="mr-1.5 h-3.5 w-3.5" />
+            Edit
+          </Button>
+        )}
+
+        {!rec.converted_to_task_id && rec.approval_status !== "approved" && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 text-red-600"
+            onClick={() => {
+              if (confirm(`Delete recommendation: "${rec.description}"?`)) {
+                deleteMutation.mutate(rec.id);
+              }
+            }}
+            disabled={deleteMutation.isPending || isDisabled}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            Delete
+          </Button>
+        )}
+
+        {rec.converted_to_task_id && (
+          <Link href={`/workorders/${workOrderId}`} className="inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium text-primary hover:bg-muted">
+            View Task #{rec.converted_to_task_id}
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderSection = (title: string, items: any[], description: string) => {
+    if (!items.length) {
+      return null;
     }
+
+    return (
+      <div className="space-y-3">
+        <div className="border-b pb-2">
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {items.map(renderRecommendationCard)}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -1065,369 +1557,40 @@ function RecommendationsTab({
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Repair Recommendations</CardTitle>
             <CardDescription className="text-xs">
-              {recommendations.length} total • {approvedRecommendations.length} approved • {convertedRecommendations.length} converted to tasks
+              {recommendations.length} total • {pendingRecommendations.length} pending • {approvedAwaitingQuote.length} awaiting quotation • {quotedRecommendations.length} ready for work
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            {unapprovedRecommendations.length > 0 && selectedRecommendations.size > 0 && (
-              <>
-                <Button
-                  onClick={() => approveMutation.mutate({
-                    recommendationIds: Array.from(selectedRecommendations),
-                    approved: true,
-                  })}
-                  size="sm"
-                  className="h-8 bg-success hover:bg-green-700 text-white"
-                  disabled={approveMutation.isPending}
-                >
-                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                  Approve ({selectedRecommendations.size})
+            {quoteRequestedRecommendations.length > 0 && (
+              <Link href="/inventory/quotation-requests">
+                <Button size="sm" variant="outline" className="h-8">
+                  <FileText className="w-3.5 h-3.5 mr-1.5" />
+                  Stores Queue
                 </Button>
-                <Button
-                  onClick={() => approveMutation.mutate({
-                    recommendationIds: Array.from(selectedRecommendations),
-                    approved: false,
-                  })}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-red-600 border-red-200 hover:bg-red-50"
-                  disabled={approveMutation.isPending}
-                >
-                  <X className="w-3.5 h-3.5 mr-1.5" />
-                  Decline
-                </Button>
-              </>
-            )}
-            {approvedRecommendations.length > 0 && (
-              <Button
-                onClick={() => convertToTasksMutation.mutate(undefined)}
-                size="sm"
-                className="h-8"
-                variant="default"
-                disabled={convertToTasksMutation.isPending || convertedRecommendations.length === approvedRecommendations.length}
-              >
-                <ListChecks className="w-3.5 h-3.5 mr-1.5" />
-                Convert to Tasks
-              </Button>
-            )}
-            {canPrintRecommendations && unapprovedRecommendations.length > 0 && (
-              <Button
-                onClick={() => handlePrintRecommendations()}
-                size="sm"
-                variant="outline"
-                className="h-8"
-              >
-                <Printer className="w-3.5 h-3.5 mr-1.5" />
-                Print Recommendations (PDF)
-              </Button>
+              </Link>
             )}
             <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add
-            </Button>
-            <Button
-              onClick={() => getAiSuggestionsMutation.mutate()}
-              disabled={getAiSuggestionsMutation.isPending || isDisabled}
-              size="sm"
-              variant="outline"
-              className="h-8 border-primary/30 text-primary hover:bg-primary/5"
-            >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              {getAiSuggestionsMutation.isPending ? "Analyzing..." : "AI Suggest"}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="pt-4">
           {recommendations.length > 0 ? (
             <div className="space-y-6">
-              {/* Unapproved Recommendations */}
-              {unapprovedRecommendations.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-border pb-2">
-                    <h3 className="font-semibold text-sm text-foreground">Pending Approval ({unapprovedRecommendations.length})</h3>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedRecommendations.size === unapprovedRecommendations.length && unapprovedRecommendations.length > 0}
-                        onCheckedChange={handleSelectAll}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-xs text-muted-foreground">Select All</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                    {unapprovedRecommendations.map((rec: any) => (
-                      <div
-                        key={rec.id}
-                        className={`group p-4 bg-card border rounded-lg transition-all duration-200 hover:shadow-md ${selectedRecommendations.has(rec.id) ? "border-primary ring-1 ring-primary bg-primary/5" : "border-border"
-                          }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={selectedRecommendations.has(rec.id)}
-                            onCheckedChange={() => handleToggleSelection(rec.id)}
-                            className="mt-1 h-4 w-4"
-                          />
-                          <div className="flex-1 min-w-0 space-y-3">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant={rec.priority === 'critical' ? 'danger' : rec.priority === 'necessary' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 h-5 font-medium capitalize">
-                                  {rec.priority_display || rec.priority}
-                                </Badge>
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-muted-foreground capitalize">
-                                  {rec.recommendation_type_display || rec.recommendation_type}
-                                </Badge>
-                              </div>
-                              {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                                <span className="text-sm font-bold text-foreground font-mono">
-                                  {formatCurrency(Number(rec.estimated_total_cost))}
-                                </span>
-                              )}
-                            </div>
-
-                            <p className="text-sm text-card-foreground line-clamp-2 leading-relaxed">{rec.description}</p>
-
-                            {/* Parts and Labor Details */}
-                            {(() => {
-                              // Check for linked line items from Estimate tab
-
-                              const linkedItems = lineItems.filter((item: any) => item.recommendation_id === rec.id);
-
-                              const linkedParts = linkedItems.filter((item: any) => item.item_type === 'part');
-
-                              const linkedLabor = linkedItems.filter((item: any) => item.item_type === 'labor');
-
-                              const linkedPartsTotal = linkedParts.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
-
-                              const linkedLaborTotal = linkedLabor.reduce((sum: number, item: any) => {
-                                if (item.labor_hours && item.labor_rate) {
-                                  return sum + (item.labor_hours * item.labor_rate);
-                                }
-                                return sum + ((item.quantity || 0) * (item.unit_price || 0));
-                              }, 0);
-
-                              const linkedLaborHours = linkedLabor.reduce((sum: number, item: any) => sum + (item.labor_hours || item.quantity || 0), 0);
-
-                              const hasOldData = (rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) ||
-                                (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0);
-                              const hasLinkedData = linkedItems.length > 0;
-
-                              if (hasOldData || hasLinkedData) {
-                                return (
-                                  <div className="text-xs bg-muted/50 rounded p-2 text-muted-foreground space-y-1">
-                                    {/* Old parts_needed data */}
-                                    {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
-                                      <div className="flex items-center gap-1.5">
-                                        <Package className="w-3 h-3 text-muted-foreground" />
-                                        <span>{rec.parts_needed.length} part(s) • {formatCurrency(Number(rec.estimated_parts_cost || 0))}</span>
-                                      </div>
-                                    )}
-                                    {/* Linked parts from Estimate tab */}
-                                    {linkedParts.length > 0 && (
-                                      <div className="flex items-center gap-1.5">
-                                        <Package className="w-3 h-3 text-muted-foreground" />
-                                        <span>{linkedParts.length} part(s) • {formatCurrency(linkedPartsTotal)}</span>
-                                      </div>
-                                    )}
-                                    {/* Old labor data */}
-                                    {rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0 && (
-                                      <div className="flex items-center gap-1.5">
-                                        <Clock className="w-3 h-3 text-muted-foreground" />
-                                        <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h • {formatCurrency(Number(rec.estimated_labor_cost || 0))}</span>
-                                      </div>
-                                    )}
-                                    {/* Linked labor from Estimate tab */}
-                                    {linkedLabor.length > 0 && (
-                                      <div className="flex items-center gap-1.5">
-                                        <Clock className="w-3 h-3 text-muted-foreground" />
-                                        <span>{linkedLaborHours.toFixed(1)}h • {formatCurrency(linkedLaborTotal)}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              } else {
-                                return (
-                                  <div className="text-xs text-muted-foreground italic px-2">No estimate details added</div>
-                                );
-                              }
-                            })()}
-
-                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border transition-opacity">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10"
-                                onClick={() => {
-                                  setEditingRecommendation(rec);
-                                  setShowAddDialog(true);
-                                }}
-                                disabled={rec.customer_approved || !!rec.converted_to_task_id || isDisabled}
-                              >
-                                <Edit className="w-3.5 h-3.5 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => {
-                                  if (confirm(`Delete recommendation: "${rec.description}"?`)) {
-                                    deleteMutation.mutate(rec.id);
-                                  }
-                                }}
-                                disabled={deleteMutation.isPending || !!rec.converted_to_task_id || isDisabled}
-                              >
-                                <Trash2 className="w-3.5 h-3.5 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-border pb-2">
-                    <h3 className="font-semibold text-sm text-foreground">
-                      Approved - Ready to Convert ({approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length})
-                    </h3>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (confirm('Convert all approved recommendations to Service Tasks?')) {
-                          convertToTasksMutation.mutate(
-                            approvedRecommendations
-                              .filter((r: any) => !r.converted_to_task_id)
-                              .map((r: any) => r.id)
-                          );
-                        }
-                      }}
-                      disabled={convertToTasksMutation.isPending || isDisabled}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 text-xs px-3"
-                    >
-                      {convertToTasksMutation.isPending ? "Converting..." : "Convert All to Tasks"}
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {approvedRecommendations
-
-                      .filter((r: any) => !r.converted_to_task_id)
-
-                      .map((rec: any) => (
-                        <div key={rec.id} className="p-4 bg-success/10/30 border border-green-100 dark:border-green-900/30 rounded-lg space-y-3">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant={rec.priority === 'critical' ? 'danger' : rec.priority === 'necessary' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 h-5 font-medium capitalize">
-                                {rec.priority_display || rec.priority}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-muted-foreground bg-card">
-                                {rec.recommendation_type_display || rec.recommendation_type}
-                              </Badge>
-                              <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-success hover:bg-green-700 border-transparent text-white">
-                                ✓ Approved
-                              </Badge>
-                            </div>
-                            {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                              <span className="text-sm font-bold text-foreground font-mono">
-                                {formatCurrency(Number(rec.estimated_total_cost))}
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-sm text-foreground line-clamp-2">{rec.description}</p>
-
-                          {/* Parts and Labor Details */}
-                          {(rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) ||
-                            (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0) ? (
-                            <div className="text-xs bg-card/50 rounded p-2 text-muted-foreground space-y-1 border border-green-100/50">
-                              {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                  <Package className="w-3 h-3 text-success/70" />
-                                  <span>{rec.parts_needed.length} part(s) • {formatCurrency(Number(rec.estimated_parts_cost || 0))}</span>
-                                </div>
-                              )}
-                              {rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="w-3 h-3 text-success/70" />
-                                  <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h • {formatCurrency(Number(rec.estimated_labor_cost || 0))}</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="text-xs text-muted-foreground italic px-2">No estimate details</div>
-                          )}
-
-                          <div className="flex justify-end pt-2 border-t border-green-100/50">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10"
-                              onClick={() => {
-                                setEditingRecommendation(rec);
-                                setShowAddDialog(true);
-                              }}
-                              disabled={!!rec.converted_to_task_id || isDisabled}
-                            >
-                              <Edit className="w-3.5 h-3.5 mr-1" />
-                              Edit
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Converted to Tasks */}
-              {convertedRecommendations.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
-                    Converted to Tasks ({convertedRecommendations.length})
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                    {convertedRecommendations.map((rec: any) => (
-                      <div key={rec.id} className="p-4 bg-muted border border-border bg-muted border-border rounded-lg space-y-3 opacity-75">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
-                              {rec.priority_display || rec.priority}
-                            </Badge>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-card">
-                              ✓ Task Created
-                            </Badge>
-                          </div>
-                          {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                            <span className="text-sm font-bold text-muted-foreground font-mono">
-                              {formatCurrency(Number(rec.estimated_total_cost))}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{rec.description}</p>
-
-                        {rec.converted_to_task_id && (
-                          <div className="pt-2 border-t border-border">
-                            <Link href={`/workorders/${workOrderId}`} className="flex items-center text-xs font-medium text-primary hover:underline">
-                              <span>View Task #{rec.converted_to_task_id}</span>
-                              <ArrowRight className="w-3 h-3 ml-1" />
-                            </Link>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {renderSection("Pending Approval", pendingRecommendations, "Technician recommendations waiting for customer or supervisor decision.")}
+              {renderSection("Approved - Send to Stores", approvedAwaitingQuote, "Approved recommendations waiting to be submitted for quotation.")}
+              {renderSection("Quotation in Progress", quoteRequestedRecommendations, "Stores has been asked to prepare a quotation for these items.")}
+              {renderSection("Quoted - Ready for Work", quotedRecommendations, "Quotation is ready. Convert these items into executable work-order tasks when authorized.")}
+              {renderSection("Deferred", deferredRecommendations, "Deferred items stay on the vehicle record and should surface on future visits.")}
+              {renderSection("Declined", declinedRecommendations, "Declined items remain documented but are not active work.")}
+              {renderSection("Converted to Tasks", convertedRecommendations, "These recommendations are already linked to work-order tasks.")}
             </div>
           ) : (
             <div className="text-center py-16 bg-muted/50 rounded-lg border border-dashed border-border">
               <Wrench className="w-12 h-12 mx-auto mb-3 text-gray-300 text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground mb-1">No recommendations yet</h3>
-              <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">Add repair recommendations to suggest parts and labor services for this diagnosis.</p>
+              <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">Add the repairs or services the vehicle needs, then attach any parts stores should quote.</p>
               <Button onClick={() => setShowAddDialog(true)} variant="outline" size="sm" className="h-8">
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add First Recommendation
@@ -1439,6 +1602,7 @@ function RecommendationsTab({
 
       {/* Add/Edit Recommendation Dialog */}
       <RecommendationDialog
+        key={editingRecommendation?.id ?? (showAddDialog ? "new" : "closed")}
         open={showAddDialog}
         onOpenChange={(open) => {
           setShowAddDialog(open);
@@ -1447,6 +1611,7 @@ function RecommendationsTab({
           }
         }}
         recommendation={editingRecommendation}
+        findings={diagnosis.findings || []}
         onSave={(data) => {
           if (editingRecommendation) {
             updateMutation.mutate({ id: editingRecommendation.id, data });
@@ -1456,73 +1621,6 @@ function RecommendationsTab({
         }}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
-
-      {/* AI Suggestion Dialog */}
-      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              AI Repair Recommendations
-            </DialogTitle>
-            <DialogDescription>
-              Based on DTCs, findings, and customer complaints, AI suggests the following repairs.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-            {aiSuggestions.length > 0 ? (
-              aiSuggestions.map((suggestion, index) => (
-                <div key={index} className="p-4 border border-border rounded-lg bg-muted/30 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={suggestion.priority === 'critical' ? 'danger' : 'secondary'} className="capitalize">
-                        {suggestion.priority}
-                      </Badge>
-                      <Badge variant="outline" className="capitalize">
-                        {suggestion.recommendation_type}
-                      </Badge>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold">{formatCurrency(suggestion.estimated_total_cost || (Number(suggestion.estimated_labor_cost || 0) + Number(suggestion.estimated_parts_cost || 0)))}</p>
-                      <p className="text-[10px] text-muted-foreground">Estimated Total</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">{suggestion.description}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      <span className="font-semibold text-card-foreground">Parts:</span> {suggestion.parts_needed}
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        createMutation.mutate(suggestion);
-                        // Optional: remove from list after adding
-                        setAiSuggestions(prev => prev.filter((_, i) => i !== index));
-                        if (aiSuggestions.length <= 1) setShowAiDialog(false);
-                      }}
-                      disabled={createMutation.isPending}
-                    >
-                      Add Recommendation
-                    </Button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No specific AI suggestions found for this diagnostic data.</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowAiDialog(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

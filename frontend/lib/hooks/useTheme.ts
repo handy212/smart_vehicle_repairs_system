@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'light' | 'dark' | 'system' | 'classic' | 'perfex';
+
+const VALID_THEMES: readonly Theme[] = ['light', 'dark', 'system', 'classic', 'perfex'];
 
 let systemThemeMode: Theme | null = null;
 const THEME_VERSION = 'v2-light-default';
@@ -12,26 +14,30 @@ export function setSystemThemeMode(theme: Theme | null) {
 export function useTheme() {
   // Default to light to avoid initial flash of dark mode
   const [theme, setTheme] = useState<Theme>('light');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'classic' | 'perfex'>('light');
   const [mounted, setMounted] = useState(false);
 
   const applyTheme = useCallback((value: Theme) => {
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;
-    const isSystem = value === 'system';
-    const isDark = isSystem
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : value === 'dark';
+    // Remove all theme classes first for a clean state
+    root.classList.remove('dark', 'classic', 'perfex');
 
-    setResolvedTheme(isDark ? 'dark' : 'light');
-    
-    // Force remove first, then add if needed to ensure clean state
-    root.classList.remove('dark');
-    if (isDark) {
-      root.classList.add('dark');
+    if (value === 'classic') {
+      root.classList.add('classic');
+      setResolvedTheme('classic');
+    } else if (value === 'perfex') {
+      root.classList.add('perfex');
+      setResolvedTheme('perfex');
+    } else {
+      const isSystem = value === 'system';
+      const isDark = isSystem
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+        : value === 'dark';
+      setResolvedTheme(isDark ? 'dark' : 'light');
+      if (isDark) root.classList.add('dark');
     }
-    
   }, []);
 
   // Initial load - check system theme_mode setting first, then localStorage
@@ -46,15 +52,18 @@ export function useTheme() {
 
     // If system theme_mode is set, use it (unless user has manually overridden)
     const userOverride = localStorage.getItem('theme_override');
-    const stored = localStorage.getItem('theme') as Theme | null;
-    
+    const rawStored = localStorage.getItem('theme');
+    const stored: Theme | null = rawStored && (VALID_THEMES as readonly string[]).includes(rawStored)
+      ? rawStored as Theme
+      : null;
+
     let initial: Theme;
     if (userOverride === 'true' && stored) {
       // User has manually changed theme, respect their choice
       initial = stored;
     } else if (systemThemeMode) {
       // Use system setting
-      initial = systemThemeMode as Theme;
+      initial = systemThemeMode;
       // Sync to localStorage
       localStorage.setItem('theme', initial);
     } else {
@@ -80,8 +89,7 @@ export function useTheme() {
   useEffect(() => {
     if (theme !== 'system' || !mounted) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const handle = (e: MediaQueryListEvent) => applyTheme('system');
+    const handle = () => applyTheme('system');
     mq.addEventListener('change', handle);
     return () => mq.removeEventListener('change', handle);
   }, [theme, mounted, applyTheme]);
@@ -109,6 +117,7 @@ export function useTheme() {
     theme,
     resolvedTheme,
     setTheme,
+    applyTheme,
     mounted,
   };
 }

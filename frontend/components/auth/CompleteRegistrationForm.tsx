@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- Profile and branding images can come from external Google/admin-managed URLs. */
 
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
@@ -26,9 +27,33 @@ interface CompleteRegistrationFormProps {
         profile_picture?: string;
     };
 
-    onSuccess: (data: any) => void;
+    onSuccess: (data: CompleteRegistrationSuccess) => void;
     onCancel: () => void;
 }
+
+interface CompleteRegistrationFormData {
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    customer_type: 'individual' | 'business' | 'fleet';
+    company_name: string;
+    business_type: string;
+    tax_id: string;
+    otp_code: string;
+    google_id: string;
+}
+
+interface CompleteRegistrationSuccess {
+    access: string;
+    refresh: string;
+    user: unknown;
+}
+
+type ApiErrorResponse = {
+    detail?: string;
+    [key: string]: unknown;
+};
 
 export default function CompleteRegistrationForm({ userData, onSuccess, onCancel }: CompleteRegistrationFormProps) {
     const [submitting, setSubmitting] = useState(false);
@@ -37,7 +62,7 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
 
     const { primaryColor } = useBranding("public");
 
-    const { register, handleSubmit, watch, control, formState: { errors } } = useForm({
+    const { register, handleSubmit, watch, control, formState: { errors } } = useForm<CompleteRegistrationFormData>({
         defaultValues: {
             email: userData.email,
             first_name: userData.first_name,
@@ -74,14 +99,13 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
             } else {
                 setError('Failed to resend code. Please request a new one from the support if this persists.');
             }
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (err) {
+        } catch {
             setError('Connection error. Please try again.');
         }
     };
 
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: CompleteRegistrationFormData) => {
         setSubmitting(true);
         setError(null);
 
@@ -108,11 +132,12 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
             });
 
             if (!apiResponse.ok) {
-                const errorData = await apiResponse.json();
-                throw new Error(errorData.detail || Object.values(errorData).flat()[0] as string || 'Registration failed');
+                const errorData = (await apiResponse.json()) as ApiErrorResponse;
+                const firstError = Object.values(errorData).flat().find((value): value is string => typeof value === 'string');
+                throw new Error(errorData.detail || firstError || 'Registration failed');
             }
 
-            const authData = await apiResponse.json();
+            const authData = (await apiResponse.json()) as CompleteRegistrationSuccess;
 
             // Store tokens
             localStorage.setItem('access_token', authData.access);
@@ -121,9 +146,9 @@ export default function CompleteRegistrationForm({ userData, onSuccess, onCancel
 
             onSuccess(authData);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Registration error:', err);
-            setError(err.message);
+            setError(err instanceof Error ? err.message : 'Registration failed');
         } finally {
             setSubmitting(false);
         }

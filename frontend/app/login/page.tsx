@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Branding images are admin-configured and may come from arbitrary external URLs. */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +28,11 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
+type GoogleRegistrationUserData = ComponentProps<typeof CompleteRegistrationForm>["userData"];
+type GoogleRegistrationData = {
+  user_data: GoogleRegistrationUserData;
+  google_token_info: Record<string, unknown>;
+};
 
 const DEFAULT_HERO_IMAGE = "/images/login-hero.png";
 
@@ -44,7 +50,7 @@ export default function LoginPage() {
 
   // Partial registration state
 
-  const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
+  const [regData, setRegData] = useState<GoogleRegistrationData | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -301,10 +307,10 @@ export default function LoginPage() {
         </div>
 
         {/* Right side: Login Form */}
-        <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
+        <div className="flex items-start justify-center bg-muted/50 p-4 pt-10 lg:items-center lg:p-8">
           <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-center lg:text-left">
-              <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{branding.site_name}</h2>
+              <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{branding.site_name}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Welcome back! Please enter your details.
               </p>
@@ -470,7 +476,7 @@ export default function LoginPage() {
             </Card>
 
             <p className="text-center text-sm lg:text-base text-muted-foreground">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 type="button"
                 onClick={() => router.push("/register")}
@@ -485,14 +491,16 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-border py-4 px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-muted-foreground">
-          <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.</p>
-          <p>Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a></p>
+      <footer className="overflow-hidden bg-card border-t border-border px-4 py-4 sm:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
+          <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
+            © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.
+          </p>
+          <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
+            Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a>
+          </p>
         </div>
       </footer>
     </div>
   );
 }
-
-

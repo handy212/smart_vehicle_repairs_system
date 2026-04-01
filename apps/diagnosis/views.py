@@ -17,10 +17,12 @@ from apps.diagnosis.models import (
 from apps.core.services.ai_service import AIService
 from apps.branches.utils import resolve_branch, get_user_accessible_branches
 from django.db.models import Q
+from apps.diagnosis.services.baseline_test_procedures import seed_baseline_test_procedures
 from apps.diagnosis.serializers import (
     DiagnosisListSerializer, DiagnosisDetailSerializer,
     DiagnosisCreateSerializer, DiagnosisUpdateSerializer,
     RepairRecommendationSerializer, RepairRecommendationCreateSerializer,
+    RepairRecommendationQuoteQueueSerializer,
     DiagnosticCodeSerializer, DiagnosticCodeCreateSerializer,
     DiagnosticTestSerializer, DiagnosticTestCreateSerializer,
     DiagnosisFindingSerializer, DiagnosisFindingCreateSerializer,
@@ -123,6 +125,8 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         'technician'
     ).prefetch_related(
         'repair_recommendations',
+        'repair_recommendations__findings',
+        'repair_recommendations__findings__diagnostic_codes',
         'diagnostic_codes',
         'diagnostic_tests',
         'findings',
@@ -265,23 +269,10 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to update diagnosis history: {e}")
             
-        # Predictive Pre-Booking: Predict next service
-        prediction = None
-        try:
-            if work_order and work_order.vehicle:
-                history = work_order.vehicle.work_orders.filter(status__in=['completed', 'invoiced', 'closed']).order_by('-created_at')[:5]
-                if history.exists():
-                    prediction = AIService.predict_next_service(list(history))
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to predict next service: {e}")
-        
         serializer = self.get_serializer(diagnosis)
         return Response({
             'message': 'Diagnosis marked as completed',
             'diagnosis': serializer.data,
-            'prediction': prediction,
             'work_order': {
                 'id': work_order.id,
                 'status': work_order.status,
@@ -305,6 +296,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         """
         diagnosis = self.get_object()
         codes_data = request.data.get('codes', [])
+        allowed_statuses = {choice[0] for choice in DiagnosticCode.STATUS_CHOICES}
         
         if not isinstance(codes_data, list):
             return Response(
@@ -317,24 +309,41 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             code_str = code_item.get('code')
             if not code_str:
                 continue
+
+            normalized_status = str(code_item.get('status', 'active')).lower()
+            if normalized_status not in allowed_statuses:
+                normalized_status = 'active'
                 
             code_obj, created = DiagnosticCode.objects.get_or_create(
                 diagnosis=diagnosis,
                 code_number=code_str.upper(),
+                code_type='obd_ii',
                 defaults={
-                    'code_type': 'OBD-II',
+                    'code_type': 'obd_ii',
                     'description': code_item.get('description', 'Auto-synced from scanner'),
-                    'status': code_item.get('status', 'active'),
+                    'status': normalized_status,
                     'severity': 'warning'  # Default for auto-sync
                 }
             )
             
             if not created:
+                fields_to_update = []
+
+                if code_obj.code_type != 'obd_ii':
+                    code_obj.code_type = 'obd_ii'
+                    fields_to_update.append('code_type')
+
                 # Update existing if needed
-                code_obj.status = code_item.get('status', code_obj.status)
+                if code_obj.status != normalized_status:
+                    code_obj.status = normalized_status
+                    fields_to_update.append('status')
+
                 if 'description' in code_item:
                     code_obj.description = code_item['description']
-                code_obj.save(update_fields=['status', 'description'])
+                    fields_to_update.append('description')
+
+                if fields_to_update:
+                    code_obj.save(update_fields=fields_to_update)
                 
             synced_codes.append(code_obj.code_number)
             
@@ -369,7 +378,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         diagnosis = self.get_object()
         serializer = RepairRecommendationCreateSerializer(
             data=request.data,
-            context={'request': request}
+            context={'request': request, 'diagnosis': diagnosis}
         )
         
         if serializer.is_valid():
@@ -383,17 +392,40 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def approve_recommendations(self, request, pk=None):
         """
-        Approve or decline recommendations
+        Record a recommendation approval decision.
         
         Request body:
         {
-            "recommendation_ids": [1, 2, 3],  # IDs of recommendations to approve/decline
-            "approved": true  # true to approve, false to decline
+            "recommendation_ids": [1, 2, 3],
+            "decision": "approved" | "deferred" | "declined",
+            "decision_method": "supervisor_instruction",
+            "decision_notes": "Customer asked us to hold this for later."
         }
         """
         diagnosis = self.get_object()
         recommendation_ids = request.data.get('recommendation_ids', [])
-        approved = request.data.get('approved', True)
+        decision = request.data.get('decision')
+        if not decision:
+            approved = request.data.get('approved')
+            if approved is True:
+                decision = 'approved'
+            elif approved is False:
+                decision = 'declined'
+
+        if decision not in {'approved', 'deferred', 'declined'}:
+            return Response(
+                {"error": "decision must be one of approved, deferred, or declined"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        decision_method = request.data.get('decision_method', 'supervisor_instruction')
+        valid_methods = {choice[0] for choice in RepairRecommendation.DECISION_METHOD_CHOICES}
+        if decision_method and decision_method not in valid_methods:
+            return Response(
+                {"error": f"decision_method must be one of {', '.join(sorted(valid_methods))}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        decision_notes = request.data.get('decision_notes', '')
         
         if not recommendation_ids:
             return Response(
@@ -409,21 +441,103 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        updated_count = recommendations.update(customer_approved=approved)
+        for recommendation in recommendations:
+            recommendation.set_decision(
+                decision,
+                acted_by=request.user,
+                method=decision_method,
+                notes=decision_notes,
+            )
         
         # Return updated recommendations
         updated_recommendations = diagnosis.repair_recommendations.filter(id__in=recommendation_ids)
         serializer = RepairRecommendationSerializer(updated_recommendations, many=True)
         
         return Response({
-            'message': f'Successfully {"approved" if approved else "declined"} {updated_count} recommendation(s)',
+            'message': f'Successfully marked {updated_recommendations.count()} recommendation(s) as {decision.replace("_", " ")}',
             'recommendations': serializer.data
+        })
+
+    @action(detail=True, methods=['post'])
+    def submit_recommendations_for_quote(self, request, pk=None):
+        """Submit approved recommendations to stores for quotation."""
+        diagnosis = self.get_object()
+        recommendation_ids = request.data.get('recommendation_ids', [])
+
+        recommendations = diagnosis.repair_recommendations.filter(
+            approval_status='approved',
+            quotation_status='not_requested',
+            converted_to_task__isnull=True,
+        )
+
+        if recommendation_ids:
+            selected = diagnosis.repair_recommendations.filter(id__in=recommendation_ids)
+            recommendations = recommendations.filter(id__in=recommendation_ids)
+            if selected.count() != recommendations.count():
+                return Response(
+                    {
+                        "error": "Only approved recommendations that have not already been submitted for quotation can be sent to stores."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if not recommendations.exists():
+            return Response(
+                {"error": "No approved recommendations are ready to send for quotation."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        for recommendation in recommendations:
+            recommendation.request_quotation(requested_by=request.user)
+
+        serializer = RepairRecommendationSerializer(recommendations, many=True)
+        return Response({
+            'message': f'Submitted {recommendations.count()} recommendation(s) to stores for quotation',
+            'recommendations': serializer.data,
+        })
+
+    @action(detail=True, methods=['post'])
+    def mark_recommendations_quoted(self, request, pk=None):
+        """Mark previously requested recommendations as quoted."""
+        diagnosis = self.get_object()
+        recommendation_ids = request.data.get('recommendation_ids', [])
+
+        recommendations = diagnosis.repair_recommendations.filter(
+            approval_status='approved',
+            quotation_status='requested',
+            converted_to_task__isnull=True,
+        )
+
+        if recommendation_ids:
+            selected = diagnosis.repair_recommendations.filter(id__in=recommendation_ids)
+            recommendations = recommendations.filter(id__in=recommendation_ids)
+            if selected.count() != recommendations.count():
+                return Response(
+                    {
+                        "error": "Only approved recommendations already sent to stores can be marked as quoted."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if not recommendations.exists():
+            return Response(
+                {"error": "No quotation requests are pending."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        for recommendation in recommendations:
+            recommendation.mark_quoted(quoted_by=request.user)
+
+        serializer = RepairRecommendationSerializer(recommendations, many=True)
+        return Response({
+            'message': f'Marked {recommendations.count()} recommendation(s) as quotation ready',
+            'recommendations': serializer.data,
         })
     
     @action(detail=True, methods=['post'])
     def convert_recommendations_to_tasks(self, request, pk=None):
         """
-        Convert approved repair recommendations to ServiceTasks
+        Convert approved and quoted repair recommendations to ServiceTasks
         
         Request body (optional):
         {
@@ -449,21 +563,36 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         assign_to_technician = request.data.get('assign_to_technician', True)
         
         if recommendation_ids:
-            recommendations = diagnosis.repair_recommendations.filter(
+            selected_recommendations = diagnosis.repair_recommendations.filter(
                 id__in=recommendation_ids
             )
+            recommendations = selected_recommendations.filter(
+                approval_status='approved',
+                quotation_status='quoted',
+                converted_to_task__isnull=True,
+            )
+
+            if selected_recommendations.count() != recommendations.count():
+                return Response(
+                    {
+                        "error": "Only approved recommendations with a ready quotation that have not already been converted can be turned into tasks.",
+                        "message": "Approve the recommendation, submit it to stores, and wait for quotation before converting."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         else:
-            # Convert all approved recommendations
+            # Convert all approved and quoted recommendations
             recommendations = diagnosis.repair_recommendations.filter(
-                customer_approved=True,
+                approval_status='approved',
+                quotation_status='quoted',
                 converted_to_task__isnull=True  # Not already converted
             )
         
         if not recommendations.exists():
             return Response(
                 {
-                    "error": "No approved recommendations found to convert.",
-                    "message": "Please approve recommendations first before converting to tasks."
+                    "error": "No approved recommendations with a ready quotation found to convert.",
+                    "message": "Approved recommendations must be quoted before they can become work-order tasks."
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -476,14 +605,6 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             'adjust': 'adjustment',
             'clean': 'cleaning',
             'inspect': 'inspection',
-        }
-        
-        # Priority to sequence order mapping
-        PRIORITY_ORDER = {
-            'critical': 1,
-            'necessary': 2,
-            'recommended': 3,
-            'advisory': 4,
         }
         
         created_tasks = []
@@ -696,15 +817,18 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
     """
     queryset = RepairRecommendation.objects.all().select_related(
         'diagnosis', 'diagnosis__work_order'
+    ).prefetch_related(
+        'findings',
+        'findings__diagnostic_codes',
     )
     permission_classes = [IsAuthenticated, IsModuleEnabled('diagnosis')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'diagnosis', 'recommendation_type', 'priority',
-        'customer_approved', 'converted_to_task'
+        'customer_approved', 'approval_status', 'quotation_status', 'converted_to_task'
     ]
     search_fields = ['description']
-    ordering_fields = ['priority', 'order', 'created_at', 'estimated_total_cost']
+    ordering_fields = ['priority', 'order', 'created_at', 'estimated_total_cost', 'approval_status', 'quotation_status']
     ordering = ['priority', 'order', 'created_at']
     
     def get_queryset(self):
@@ -726,11 +850,62 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
     def approve(self, request, pk=None):
         """Mark recommendation as approved by customer"""
         recommendation = self.get_object()
-        recommendation.approve()
+        recommendation.set_decision(
+            'approved',
+            acted_by=request.user,
+            method=request.data.get('decision_method', 'supervisor_instruction'),
+            notes=request.data.get('decision_notes', ''),
+        )
         serializer = self.get_serializer(recommendation)
         return Response({
             'message': 'Recommendation approved',
             'recommendation': serializer.data
+        })
+
+    @action(detail=False, methods=['get'])
+    def quotation_queue(self, request):
+        """List approved recommendations waiting on stores quotation."""
+        queryset = self.get_queryset().filter(
+            approval_status='approved',
+            quotation_status='requested',
+            converted_to_task__isnull=True,
+        ).select_related(
+            'diagnosis__work_order',
+            'diagnosis__work_order__vehicle',
+            'diagnosis__work_order__customer__user',
+            'diagnosis__work_order__branch',
+        )
+
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(description__icontains=search)
+                | Q(diagnosis__work_order__work_order_number__icontains=search)
+                | Q(diagnosis__work_order__vehicle__make__icontains=search)
+                | Q(diagnosis__work_order__vehicle__model__icontains=search)
+                | Q(findings__finding_title__icontains=search)
+            ).distinct()
+
+        queryset = queryset.order_by('-quotation_requested_at', 'priority', 'order')
+        page = self.paginate_queryset(queryset)
+        serializer = RepairRecommendationQuoteQueueSerializer(page or queryset, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def mark_quoted(self, request, pk=None):
+        """Mark a queued recommendation as quotation ready."""
+        recommendation = self.get_object()
+        try:
+            recommendation.mark_quoted(quoted_by=request.user)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(recommendation)
+        return Response({
+            'message': 'Recommendation marked as quotation ready',
+            'recommendation': serializer.data,
         })
 
 
@@ -766,25 +941,28 @@ class DiagnosticCodeViewSet(viewsets.ModelViewSet):
         return DiagnosticCodeSerializer
         
     def perform_create(self, serializer):
-        """Auto-populate description from library if not provided"""
+        """Auto-populate description from library cache or Gemini AI if not provided."""
         code_number = serializer.validated_data.get('code_number', '').upper()
         description = serializer.validated_data.get('description', '')
-        severity = serializer.validated_data.get('severity', 'info')
-        
+
         if not description or description == 'Unknown Code':
-            from apps.diagnosis.models import DiagnosticCodeLibrary
-            library_entry = DiagnosticCodeLibrary.objects.filter(code_number=code_number).first()
+            # Check local library first to avoid unnecessary Gemini API calls
+            library_entry = DiagnosticCodeLibrary.objects.filter(
+                code_number=code_number, is_active=True
+            ).first()
+
             if library_entry:
+                library_entry.increment_use_count()
                 serializer.validated_data['description'] = library_entry.description
                 if 'severity' not in self.request.data:
                     serializer.validated_data['severity'] = library_entry.severity
             else:
                 from apps.core.services.ai_service import AIService
-                ai_decoded = AIService.decode_obd_code(code_number)
+                ai_decoded = AIService.decode_obd_code(code_number)  # also caches to library
                 serializer.validated_data['description'] = ai_decoded.get('description', f'Unknown Diagnostic Code {code_number}')
                 if 'severity' not in self.request.data:
                     serializer.validated_data['severity'] = ai_decoded.get('severity', 'info')
-                        
+
         serializer.save()
         
     @action(detail=False, methods=['get'])
@@ -793,29 +971,36 @@ class DiagnosticCodeViewSet(viewsets.ModelViewSet):
         code_number = request.query_params.get('code', '').strip().upper()
         if not code_number:
             return Response({'error': 'Code parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        from apps.diagnosis.models import DiagnosticCodeLibrary
-        library_entry = DiagnosticCodeLibrary.objects.filter(code_number=code_number).first()
-        
+
+        # Check local library cache first
+        library_entry = DiagnosticCodeLibrary.objects.filter(
+            code_number=code_number, is_active=True
+        ).first()
+
         if library_entry:
+            library_entry.increment_use_count()
             return Response({
                 'code': code_number,
+                'title': library_entry.title,
                 'description': library_entry.description,
                 'severity': library_entry.severity,
+                'common_causes': library_entry.common_causes,
                 'common_fixes': library_entry.common_fixes,
-                'source': 'library'
+                'source': 'library',
             })
-            
-        # AI/External API fallback for unknown codes
+
+        # Not cached — call Gemini (which also saves to library automatically)
         from apps.core.services.ai_service import AIService
         ai_decoded = AIService.decode_obd_code(code_number)
-        
+
         return Response({
             'code': code_number,
+            'title': ai_decoded.get('title', code_number),
             'description': ai_decoded.get('description', f'Unknown Diagnostic Code {code_number}'),
             'severity': ai_decoded.get('severity', 'info'),
-            'common_fixes': ai_decoded.get('common_fixes', ''),
-            'source': 'ai_fallback'
+            'common_causes': ai_decoded.get('common_causes', []),
+            'common_fixes': ai_decoded.get('common_fixes', []),
+            'source': 'ai',
         })
     
     @action(detail=True, methods=['post'])
@@ -968,6 +1153,15 @@ class TestProcedureLibraryViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description', 'test_procedure']
     ordering_fields = ['name', 'category', 'use_count', 'created_at']
     ordering = ['category', 'name']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if not queryset.exists():
+            user = self.request.user if getattr(self.request, 'user', None) and self.request.user.is_authenticated else None
+            created_by = user if getattr(user, 'role', None) in {'admin', 'manager', 'technician'} else None
+            seed_baseline_test_procedures(created_by=created_by)
+            queryset = super().get_queryset()
+        return queryset
     
     def get_serializer_class(self):
         return TestProcedureLibrarySerializer
@@ -1131,4 +1325,3 @@ class DiagnosisHistoryViewSet(viewsets.ReadOnlyModelViewSet):
                 {'error': 'No historical data found for this vehicle'},
                 status=status.HTTP_404_NOT_FOUND
             )
-

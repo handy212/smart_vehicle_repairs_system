@@ -9,6 +9,7 @@ from apps.accounts.permissions import HasPermission, user_has_permission, IsModu
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
+from datetime import timedelta
 
 from .models import Customer, CustomerNote, CustomerContact, CustomerReminder
 from .serializers import (
@@ -438,12 +439,33 @@ class CustomerViewSet(viewsets.ModelViewSet):
         active_contacts = CustomerContact.objects.filter(customer__status='active').count()
         inactive_contacts = CustomerContact.objects.filter(customer__status='inactive').count()
         
+        # New this month
+        today = timezone.now().date()
+        month_start = today.replace(day=1)
+        new_this_month = Customer.objects.filter(created_at__date__gte=month_start).count()
+        
+        # Growth calculation (compare with last month)
+        last_month_end = month_start - timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        new_last_month = Customer.objects.filter(
+            created_at__date__gte=last_month_start,
+            created_at__date__lte=last_month_end
+        ).count()
+        
+        growth_percentage = 0
+        if new_last_month > 0:
+            growth_percentage = round(((new_this_month - new_last_month) / new_last_month) * 100, 1)
+        elif new_this_month > 0:
+            growth_percentage = 100.0  # From 0 to something is 100% growth for simplicity
+            
         return Response({
             'total_customers': total_customers,
             'active_customers': active_customers,
             'inactive_customers': inactive_customers,
             'active_contacts': active_contacts,
-            'inactive_contacts': inactive_contacts
+            'inactive_contacts': inactive_contacts,
+            'new_this_month': new_this_month,
+            'growth_percentage': growth_percentage
         })
 
     @action(detail=False, methods=['get'])

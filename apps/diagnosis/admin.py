@@ -1,4 +1,6 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.shortcuts import redirect
+from django.urls import path, reverse
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
     DiagnosticCode, DiagnosticTest,
@@ -6,6 +8,7 @@ from apps.diagnosis.models import (
     TestProcedureLibrary, DiagnosticCodeLibrary,
     DiagnosisHistory
 )
+from apps.diagnosis.services.baseline_test_procedures import seed_baseline_test_procedures
 
 
 @admin.register(Diagnosis)
@@ -53,14 +56,18 @@ class DiagnosisAdmin(admin.ModelAdmin):
 class RepairRecommendationAdmin(admin.ModelAdmin):
     list_display = [
         'id', 'diagnosis', 'recommendation_type', 'priority',
-        'estimated_total_cost', 'customer_approved', 'converted_to_task'
+        'approval_status', 'quotation_status', 'converted_to_task'
     ]
     list_filter = [
-        'recommendation_type', 'priority', 'customer_approved',
+        'recommendation_type', 'priority', 'approval_status', 'quotation_status',
         'converted_to_task', 'created_at'
     ]
     search_fields = ['description', 'diagnosis__work_order__work_order_number']
-    readonly_fields = ['estimated_total_cost', 'created_at', 'updated_at']
+    readonly_fields = [
+        'estimated_total_cost', 'decision_at', 'decision_by',
+        'quotation_requested_at', 'quotation_requested_by',
+        'quoted_at', 'quoted_by', 'created_at', 'updated_at'
+    ]
     fieldsets = (
         ('Diagnosis', {
             'fields': ('diagnosis',)
@@ -71,16 +78,28 @@ class RepairRecommendationAdmin(admin.ModelAdmin):
             )
         }),
         ('Parts', {
-            'fields': ('parts_needed', 'estimated_parts_cost')
+            'fields': ('parts_needed',)
         }),
-        ('Labor', {
-            'fields': ('estimated_labor_hours', 'estimated_labor_cost')
+        ('Evidence', {
+            'fields': ('findings',)
         }),
-        ('Totals', {
-            'fields': ('estimated_total_cost',)
+        ('Planning', {
+            'fields': ('estimated_labor_hours',)
         }),
-        ('Status', {
-            'fields': ('customer_approved', 'converted_to_task')
+        ('Approval', {
+            'fields': (
+                'approval_status', 'decision_method', 'decision_notes',
+                'decision_at', 'decision_by', 'customer_approved'
+            )
+        }),
+        ('Quotation', {
+            'fields': (
+                'quotation_status', 'quotation_requested_at', 'quotation_requested_by',
+                'quoted_at', 'quoted_by'
+            )
+        }),
+        ('Execution', {
+            'fields': ('converted_to_task',)
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),
@@ -213,6 +232,7 @@ class DiagnosisPhotoAdmin(admin.ModelAdmin):
 
 @admin.register(TestProcedureLibrary)
 class TestProcedureLibraryAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/diagnosis/testprocedurelibrary/change_list.html'
     list_display = [
         'id', 'name', 'category', 'is_active', 'use_count', 'created_by', 'created_at'
     ]
@@ -236,6 +256,44 @@ class TestProcedureLibraryAdmin(admin.ModelAdmin):
             'fields': ('created_by', 'created_at', 'updated_at')
         }),
     )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'seed-baseline/',
+                self.admin_site.admin_view(self.seed_baseline_view),
+                name='diagnosis_testprocedurelibrary_seed_baseline',
+            ),
+        ]
+        return custom_urls + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['seed_baseline_url'] = reverse(
+            'admin:diagnosis_testprocedurelibrary_seed_baseline'
+        )
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def seed_baseline_view(self, request):
+        if request.method != 'POST':
+            self.message_user(
+                request,
+                'Invalid request method for seeding baseline procedures.',
+                level=messages.ERROR,
+            )
+            return redirect('admin:diagnosis_testprocedurelibrary_changelist')
+
+        result = seed_baseline_test_procedures(created_by=request.user)
+        self.message_user(
+            request,
+            (
+                f"Processed {result['total']} baseline procedures: "
+                f"{result['created']} created, {result['existing']} already present."
+            ),
+            level=messages.SUCCESS,
+        )
+        return redirect('admin:diagnosis_testprocedurelibrary_changelist')
 
 
 @admin.register(DiagnosticCodeLibrary)
@@ -288,4 +346,3 @@ class DiagnosisHistoryAdmin(admin.ModelAdmin):
             'fields': ('last_updated', 'created_at')
         }),
     )
-

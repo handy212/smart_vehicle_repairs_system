@@ -230,6 +230,11 @@ export default function CustomersPage() {
       {/* Header Section */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tighter text-foreground">Customers</h1>
+        <div className="perfex:block hidden">
+          <Link href="/customers/contacts" className="text-xs text-primary hover:underline flex items-center gap-1">
+            Contacts <span className="text-[10px]">→</span>
+          </Link>
+        </div>
       </div>
 
       {/* KPI Stats Grid */}

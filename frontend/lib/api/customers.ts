@@ -81,6 +81,8 @@ export const customersApi = {
     inactive_customers: number;
     active_contacts: number;
     inactive_contacts: number;
+    new_this_month: number;
+    growth_percentage: number;
   }> => {
     const response = await apiClient.get("/customers/customers/dashboard_stats/");
     return response.data;

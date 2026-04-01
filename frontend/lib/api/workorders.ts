@@ -148,7 +148,15 @@ export const workordersApi = {
       priority_display: string;
       recommendation_type: string;
       recommendation_type_display: string;
-      estimated_total_cost: string;
+      approval_status: string;
+      approval_status_display: string;
+      quotation_status: string;
+      quotation_status_display: string;
+      parts_needed: Array<{
+        part_name: string;
+        part_number?: string;
+        quantity: number;
+      }>;
       work_order_id: number;
       work_order_number: string;
       work_order_completed_at: string | null;
@@ -513,4 +521,3 @@ export interface WorkOrderPart {
   vehicle_info?: string;
   purchase_order_number?: string;
 }
-

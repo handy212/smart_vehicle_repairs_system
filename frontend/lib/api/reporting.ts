@@ -32,10 +32,22 @@ export interface DashboardOverview {
     arr: number;
   };
   recent_activity: {
-
-    work_orders: Array<any>;
-
-    appointments: Array<any>;
+    work_orders: Array<{
+      id: number;
+      wo_number: string;
+      customer: string;
+      vehicle: string;
+      status: string;
+      created_at: string;
+      diagnosis_notes?: string | null;
+    }>;
+    appointments: Array<{
+      id: number;
+      customer: string;
+      vehicle: string;
+      appointment_date: string;
+      status: string;
+    }>;
   };
 }
 

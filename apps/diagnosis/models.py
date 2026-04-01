@@ -475,7 +475,8 @@ class DiagnosisTimeLog(models.Model):
 class RepairRecommendation(models.Model):
     """
     Repair Recommendations - What needs to be fixed
-    Created during diagnosis phase, converted to ServiceTasks when approved
+    Created during diagnosis phase, reviewed for approval, sent to stores for
+    quotation, and only then converted to executable service tasks.
     """
     
     RECOMMENDATION_TYPE_CHOICES = [
@@ -492,6 +493,28 @@ class RepairRecommendation(models.Model):
         ('necessary', 'Necessary'),
         ('recommended', 'Recommended'),
         ('advisory', 'Advisory'),
+    ]
+
+    APPROVAL_STATUS_CHOICES = [
+        ('pending_approval', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('deferred', 'Deferred'),
+        ('declined', 'Declined'),
+    ]
+
+    DECISION_METHOD_CHOICES = [
+        ('phone', 'Phone'),
+        ('email', 'Email'),
+        ('in_person', 'In Person'),
+        ('text', 'Text Message'),
+        ('portal', 'Customer Portal'),
+        ('supervisor_instruction', 'Supervisor on Customer Instruction'),
+    ]
+
+    QUOTATION_STATUS_CHOICES = [
+        ('not_requested', 'Not Requested'),
+        ('requested', 'Requested From Stores'),
+        ('quoted', 'Quotation Ready'),
     ]
     
     # Link to diagnosis
@@ -525,12 +548,18 @@ class RepairRecommendation(models.Model):
         blank=True,
         help_text="List of parts with quantities: [{'part_id': 1, 'part_name': 'Brake Pad', 'quantity': 2, 'unit_cost': 25.00}]"
     )
+    findings = models.ManyToManyField(
+        'DiagnosisFinding',
+        related_name='recommendations',
+        blank=True,
+        help_text="Findings that support why this recommendation was made"
+    )
     estimated_parts_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
         validators=[MinValueValidator(0)],
-        help_text="Estimated total cost of parts"
+        help_text="Stores quotation amount for parts, when available"
     )
     
     # Labor
@@ -546,7 +575,7 @@ class RepairRecommendation(models.Model):
         decimal_places=2,
         default=0,
         validators=[MinValueValidator(0)],
-        help_text="Estimated labor cost"
+        help_text="Stores quotation amount for labor, when available"
     )
     
     # Total
@@ -558,10 +587,73 @@ class RepairRecommendation(models.Model):
         help_text="Estimated total cost (parts + labor)"
     )
     
-    # Status
+    # Recommendation decision and quotation flow
+    approval_status = models.CharField(
+        max_length=30,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='pending_approval',
+        db_index=True,
+        help_text="Customer decision status for this recommendation"
+    )
+    decision_method = models.CharField(
+        max_length=30,
+        choices=DECISION_METHOD_CHOICES,
+        blank=True,
+        help_text="How the approval or deferral decision was recorded"
+    )
+    decision_notes = models.TextField(
+        blank=True,
+        help_text="Notes captured when the approval decision was recorded"
+    )
+    decision_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the recommendation decision was recorded"
+    )
+    decision_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnosis_recommendation_decisions',
+        help_text="Staff user who recorded the decision"
+    )
     customer_approved = models.BooleanField(
         default=False,
-        help_text="Whether customer has approved this recommendation"
+        help_text="Legacy flag mirrored from approval_status for compatibility"
+    )
+    quotation_status = models.CharField(
+        max_length=20,
+        choices=QUOTATION_STATUS_CHOICES,
+        default='not_requested',
+        db_index=True,
+        help_text="Stores quotation progress for this recommendation"
+    )
+    quotation_requested_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the recommendation was submitted to stores for quotation"
+    )
+    quotation_requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnosis_recommendation_quote_requests',
+        help_text="User who submitted the recommendation to stores"
+    )
+    quoted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When stores marked the quotation as ready"
+    )
+    quoted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnosis_recommendation_quotes_completed',
+        help_text="User who marked the quotation as ready"
     )
     converted_to_task = models.ForeignKey(
         'workorders.ServiceTask',
@@ -589,6 +681,8 @@ class RepairRecommendation(models.Model):
         indexes = [
             models.Index(fields=['diagnosis', 'priority']),
             models.Index(fields=['customer_approved']),
+            models.Index(fields=['approval_status']),
+            models.Index(fields=['quotation_status']),
         ]
     
     def __str__(self):
@@ -596,13 +690,78 @@ class RepairRecommendation(models.Model):
     
     def save(self, *args, **kwargs):
         """Auto-calculate total cost"""
+        self.customer_approved = self.approval_status == 'approved'
+
+        if self.approval_status != 'approved':
+            self.quotation_status = 'not_requested'
+            self.quotation_requested_at = None
+            self.quotation_requested_by = None
+            self.quoted_at = None
+            self.quoted_by = None
+
         self.estimated_total_cost = self.estimated_parts_cost + self.estimated_labor_cost
         super().save(*args, **kwargs)
     
     def approve(self):
         """Mark recommendation as approved by customer"""
-        self.customer_approved = True
-        self.save(update_fields=['customer_approved'])
+        self.set_decision('approved')
+
+    def set_decision(self, approval_status, acted_by=None, method='', notes=''):
+        """Record approval, deferral, or decline for this recommendation."""
+        self.approval_status = approval_status
+        self.decision_method = method or ''
+        self.decision_notes = notes or ''
+        self.decision_at = timezone.now()
+        self.decision_by = acted_by
+        self.save(update_fields=[
+            'approval_status',
+            'decision_method',
+            'decision_notes',
+            'decision_at',
+            'decision_by',
+            'customer_approved',
+            'quotation_status',
+            'quotation_requested_at',
+            'quotation_requested_by',
+            'quoted_at',
+            'quoted_by',
+            'estimated_total_cost',
+            'updated_at',
+        ])
+
+    def request_quotation(self, requested_by=None):
+        """Submit an approved recommendation to stores for quotation."""
+        if self.approval_status != 'approved':
+            raise ValueError('Only approved recommendations can be submitted for quotation.')
+
+        self.quotation_status = 'requested'
+        self.quotation_requested_at = timezone.now()
+        self.quotation_requested_by = requested_by
+        self.quoted_at = None
+        self.quoted_by = None
+        self.save(update_fields=[
+            'quotation_status',
+            'quotation_requested_at',
+            'quotation_requested_by',
+            'quoted_at',
+            'quoted_by',
+            'updated_at',
+        ])
+
+    def mark_quoted(self, quoted_by=None):
+        """Mark the recommendation quotation as ready."""
+        if self.approval_status != 'approved':
+            raise ValueError('Only approved recommendations can be marked as quoted.')
+
+        self.quotation_status = 'quoted'
+        self.quoted_at = timezone.now()
+        self.quoted_by = quoted_by
+        self.save(update_fields=[
+            'quotation_status',
+            'quoted_at',
+            'quoted_by',
+            'updated_at',
+        ])
 
 
 class DiagnosticCode(models.Model):
@@ -1328,4 +1487,3 @@ class DiagnosisHistory(models.Model):
         
         history.save()
         return history
-

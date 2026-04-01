@@ -27,6 +27,33 @@ interface CodesTabProps {
   isDisabled?: boolean;
 }
 
+const CODE_TYPE_LABELS: Record<DiagnosticCode["code_type"], string> = {
+  obd_ii: "OBD-II",
+  manufacturer: "Manufacturer",
+  abs: "ABS",
+  airbag: "Airbag",
+  transmission: "Transmission",
+  body: "Body",
+  chassis: "Chassis",
+  other: "Other",
+};
+
+function inferCodeType(codeNumber: string): DiagnosticCode["code_type"] {
+  const normalizedCode = codeNumber.trim().toUpperCase();
+  const prefix = normalizedCode[0];
+
+  if (prefix === "B") {
+    return "body";
+  }
+  if (prefix === "C") {
+    return "chassis";
+  }
+  if (prefix === "P" || prefix === "U") {
+    return "obd_ii";
+  }
+  return "other";
+}
+
 export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -134,46 +161,12 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
     }
   };
 
-  const syncObdMutation = useMutation({
-    mutationFn: () => diagnosisApi.syncObdCodes(diagnosisId, [
-      { code: "P0300", description: "Random/Multiple Cylinder Misfire Detected" },
-      { code: "P0301", description: "Cylinder 1 Misfire Detected" },
-      { code: "C0040", description: "Right Front Wheel Speed Sensor" }
-    ]),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["diagnosis-codes", diagnosisId] });
-      onRefresh();
-      toast({ title: "OBD-II Sync Complete", description: `Synced ${data.synced_codes?.length || 3} codes directly from vehicle`, variant: "default" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Sync failed",
-        description: error.response?.data?.message || error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-lg">Diagnostic Codes</CardTitle>
           <div className="flex gap-2">
-            <Button
-              onClick={() => syncObdMutation.mutate()}
-              size="sm"
-              variant="secondary"
-              disabled={isDisabled || syncObdMutation.isPending}
-              className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 border border-indigo-200"
-            >
-              {syncObdMutation.isPending ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-700 mr-2"></div>
-              ) : (
-                <Code className="w-4 h-4 mr-2" />
-              )}
-              Sync OBD Scanner
-            </Button>
             <Button onClick={() => setShowAddDialog(true)} size="sm" disabled={isDisabled}>
               <Plus className="w-4 h-4 mr-2" />
               Add Code
@@ -486,7 +479,11 @@ function CodeDialog({
                       onChange={(e) => {
                         // Remove spaces and convert to uppercase
                         const cleanValue = e.target.value.replace(/\s+/g, '').toUpperCase();
-                        setFormData({ ...formData, code_number: cleanValue });
+                        setFormData({
+                          ...formData,
+                          code_number: cleanValue,
+                          code_type: inferCodeType(cleanValue),
+                        });
                       }}
                       placeholder="e.g., P0301"
                       required
@@ -554,35 +551,21 @@ function CodeDialog({
                 )}
                 {formData.code_number && formData.code_number.length >= 3 && libraryResults.length === 0 && !isSearchingLibrary && (
                   <div className="mt-2 text-xs text-muted-foreground">
-                    💡 Tip: Code not in library? You can enter details manually or try a different code type.
+                    Tip: Code not in library? You can still enter the description manually and save it.
                   </div>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="code_type">Code Type *</Label>
-                <Select
-                  value={formData.code_type}
-                  onValueChange={(val) => {
-
-                    setFormData({ ...formData, code_type: val as any });
-                    setLibraryResults([]); // Clear results when type changes
-                  }}
-                  required
-                >
-                  <SelectTrigger id="code_type" className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="obd_ii">OBD-II</SelectItem>
-                    <SelectItem value="manufacturer">Manufacturer</SelectItem>
-                    <SelectItem value="abs">ABS</SelectItem>
-                    <SelectItem value="airbag">Airbag</SelectItem>
-                    <SelectItem value="transmission">Transmission</SelectItem>
-                    <SelectItem value="body">Body</SelectItem>
-                    <SelectItem value="chassis">Chassis</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="code_type">Detected Type</Label>
+                <Input
+                  id="code_type"
+                  value={CODE_TYPE_LABELS[formData.code_type]}
+                  readOnly
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Auto-detected from the code prefix: `P/U` to OBD-II, `B` to Body, `C` to Chassis.
+                </p>
               </div>
             </div>
 
@@ -651,4 +634,3 @@ function CodeDialog({
     </Dialog>
   );
 }
-

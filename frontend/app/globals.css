@@ -4,6 +4,8 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant classic (&:where(.classic, .classic *));
+@custom-variant perfex (&:where(.perfex, .perfex *));
 
 :root {
   /* Tonal Architecture from DESIGN.md */
@@ -171,6 +173,78 @@
   --shadow-precision: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
+.classic {
+  /* Classic Theme - Traditional Enterprise */
+  --background: #f0ede8;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+
+  --border: #9ca3af;
+  --input: #9ca3af;
+  --ring: #1a3a6b;
+
+  --primary: #1a3a6b;
+  --primary-container: #2a4a8b;
+  --primary-foreground: #ffffff;
+  --secondary: #e8e4de;
+  --secondary-foreground: #1a1a1a;
+
+  --muted: #e8e4de;
+  --muted-foreground: #6b6b6b;
+  --accent: #d4c5b0;
+  --accent-foreground: #1a1a1a;
+
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --success: #166534;
+  --success-foreground: #ffffff;
+  --warning: #92400e;
+  --warning-foreground: #ffffff;
+  --info: #1e40af;
+  --info-foreground: #ffffff;
+
+  --radius: 0.25rem;
+
+  --sidebar: #e8e4de;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #1a3a6b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d4c5b0;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: #9ca3af;
+  --sidebar-ring: #1a3a6b;
+
+  --surface: #f0ede8;
+  --surface-container-low: #e8e4de;
+  --surface-container-lowest: #ffffff;
+  --surface-bright: #f5f2ed;
+  --on-surface: #1a1a1a;
+  --on-surface-variant: #4a4a4a;
+  --outline-variant: rgba(0, 0, 0, 0.12);
+
+  --chart-1: #1a3a6b;
+  --chart-2: #166534;
+  --chart-3: #92400e;
+  --chart-4: #b91c1c;
+  --chart-5: #1e40af;
+
+  --shadow-premium: 0 4px 12px -4px rgba(0, 0, 0, 0.35);
+  --shadow-glass: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+  --shadow-precision: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --glass-bg: rgba(240, 237, 232, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.15);
+  --glass-accent: rgba(26, 58, 107, 0.05);
+  --glass-reflection: none;
+  --dashboard-bg: #f0ede8;
+}
+
+html.classic body {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
 /* stylelint-disable-next-line at-rule-no-unknown -- Tailwind CSS v4 directive */
 @theme inline {
   --color-background: var(--background);
@@ -316,6 +390,296 @@ aside {
 /* Ensure dark mode class is applied to html element */
 html.dark {
   color-scheme: dark;
+}
+
+html.classic {
+  color-scheme: light;
+}
+
+/* ================================================================
+   CLASSIC THEME — Component & density overrides
+   Flatten glassmorphism, fix hardcoded radii, compact spacing.
+   ================================================================ */
+
+/* Precision cards: override hardcoded 0.75rem radius, remove glass */
+html.classic .precision-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  backdrop-filter: none;
+}
+html.classic .precision-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+}
+
+/* Glass cards: flat surface, no blur, no reflection overlay */
+html.classic .glass-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  backdrop-filter: none;
+}
+html.classic .glass-card::before {
+  display: none;
+}
+
+/* Interactive glow: disable orange radial */
+html.classic .interactive-glow::after {
+  display: none;
+}
+
+/* Tailwind radius variants add fixed px offsets to --radius, so they stay
+   too large even with --radius: 0.25rem. Override all of them directly. */
+html.classic .rounded-xl  { border-radius: var(--radius); }
+html.classic .rounded-2xl { border-radius: var(--radius); }
+html.classic .rounded-3xl { border-radius: var(--radius); }
+html.classic .rounded-\[28px\] { border-radius: var(--radius); }
+
+/* DashboardHeader: radial gradient background → flat card surface */
+html.classic [class*="bg-[radial-gradient"] {
+  background: var(--card);
+}
+
+/* Decorative blur blobs and glow overlays: hidden */
+html.classic .blur-3xl {
+  display: none;
+}
+
+/* Frosted-glass panels: remove blur, use solid background */
+html.classic .backdrop-blur-sm,
+html.classic .backdrop-blur {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.classic [class*="bg-background\/"] {
+  background-color: var(--background);
+}
+
+/* Muted gray text: follow theme variable */
+html.classic .text-gray-400 { color: var(--muted-foreground); }
+html.classic .text-gray-300 { color: var(--muted-foreground); }
+
+/* ── Compact density ─────────────────────────────────────────── */
+html.classic .p-5             { padding: 0.75rem; }
+html.classic .p-6             { padding: 1rem; }
+html.classic .p-8             { padding: 1.25rem; }
+html.classic .sm\:p-8         { padding: 1.25rem; }
+html.classic .gap-5           { gap: 0.75rem; }
+html.classic .gap-6           { gap: 1rem; }
+html.classic .gap-8           { gap: 1.25rem; }
+html.classic .mb-6            { margin-bottom: 0.75rem; }
+html.classic .mb-8            { margin-bottom: 1rem; }
+html.classic .py-10           { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+html.classic .min-h-\[152px\] { min-height: 108px; }
+
+/* Compact table rows */
+html.classic table th {
+  height: 2rem;
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+html.classic table td {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+/* ================================================================
+   PERFEX THEME — CSS variables
+   Clean modern SaaS: white sidebar, light #f8fafc background,
+   #2563eb blue primary, Inter 13.5px, thin borders, minimal shadows
+   ================================================================ */
+
+html.perfex {
+  color-scheme: light;
+}
+
+html.perfex body {
+  font-size: 13.5px;
+}
+
+.perfex {
+  --sidebar-width: 230px;
+  --header-height: 57px;
+  --background: #f4f4f5;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+
+  --primary: #2563eb;
+  --primary-container: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #111827;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #111827;
+
+  --destructive: #fc2d42;
+  --destructive-foreground: #ffffff;
+  --success: #84c529;
+  --success-foreground: #ffffff;
+  --warning: #ff6f00;
+  --warning-foreground: #ffffff;
+  --info: #03a9f4;
+  --info-foreground: #ffffff;
+
+  --radius: 0.25rem;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #363e48;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f9f9f9;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #cbd5e1;
+  --sidebar-ring: #2563eb;
+
+  --surface: #f4f4f5;
+  --surface-container-low: #f1f5f9;
+  --surface-container-lowest: #ffffff;
+  --surface-bright: #ffffff;
+  --on-surface: #111827;
+  --on-surface-variant: #6b7280;
+  --outline-variant: rgba(0, 0, 0, 0.08);
+
+  --chart-1: #2563eb;
+  --chart-2: #84c529;
+  --chart-3: #ff6f00;
+  --chart-4: #fc2d42;
+  --chart-5: #03a9f4;
+
+  --shadow-premium: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-glass: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-precision: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-accent: rgba(37, 99, 235, 0.05);
+  --glass-reflection: none;
+  --dashboard-bg: #f4f4f5;
+}
+
+/* Base values for other themes */
+:root:not(.perfex) {
+  --sidebar-width: 256px;
+  --header-height: 64px;
+}
+
+html.perfex body {
+  font-size: 13.5px;
+}
+
+/* ================================================================
+   PERFEX THEME — Component & density overrides
+   ================================================================ */
+
+html.perfex .precision-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  backdrop-filter: none;
+}
+html.perfex .precision-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Sidebar Active Item Override for Perfex */
+html.perfex aside a[class*="shadow-md"] {
+  background-color: #ffffff !important;
+  color: var(--primary) !important;
+  border: 1px solid rgba(15, 23, 42, 0.15) !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  border-radius: 0.375rem !important;
+}
+
+html.perfex aside a[class*="shadow-md"] i,
+html.perfex aside a[class*="shadow-md"] svg {
+  color: var(--primary) !important;
+}
+
+html.perfex .glass-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  backdrop-filter: none;
+}
+html.perfex .glass-card::before {
+  display: none;
+}
+
+html.perfex .interactive-glow::after {
+  display: none;
+}
+
+/* Radius normalization — Tailwind calc() addends still exceed 6px */
+html.perfex .rounded-xl  { border-radius: var(--radius); }
+html.perfex .rounded-2xl { border-radius: var(--radius); }
+html.perfex .rounded-3xl { border-radius: var(--radius); }
+html.perfex .rounded-\[28px\] { border-radius: var(--radius); }
+
+html.perfex [class*="bg-[radial-gradient"] {
+  background: var(--card);
+}
+
+html.perfex .blur-3xl {
+  display: none;
+}
+
+html.perfex .backdrop-blur-sm,
+html.perfex .backdrop-blur {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.perfex [class*="bg-background\/"] {
+  background-color: var(--background);
+}
+
+html.perfex .text-gray-400 { color: var(--muted-foreground); }
+html.perfex .text-gray-300 { color: var(--muted-foreground); }
+
+/* ── Compact density ── */
+html.perfex .p-3              { padding: 0.5rem; }
+html.perfex .p-4              { padding: 0.75rem; }
+html.perfex .p-5              { padding: 0.75rem; }
+html.perfex .p-6              { padding: 1rem; }
+html.perfex .p-8              { padding: 1.25rem; }
+html.perfex .sm\:p-8          { padding: 1.25rem; }
+html.perfex .gap-5            { gap: 0.75rem; }
+html.perfex .gap-6            { gap: 1rem; }
+html.perfex .gap-8            { gap: 1.25rem; }
+html.perfex .mb-6             { margin-bottom: 0.75rem; }
+html.perfex .mb-8             { margin-bottom: 1rem; }
+html.perfex .py-10            { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+html.perfex .min-h-\[152px\]  { min-height: 108px; }
+
+/* Special High-Density Widget Overrides */
+html.perfex .precision-card.shadow-none {
+  background: #ffffff;
+  border: 1px solid #ebedef !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
+}
+
+
+html.perfex table th {
+  height: 2rem;
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+html.perfex table td {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
 }
 
 /* Remove positioning from Next.js portal element */

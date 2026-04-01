@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Wrench, Trash2, Download, X, ChevronDown, LayoutGrid, MoreHorizontal, Eye, Edit, FileText, Printer } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -43,9 +43,18 @@ import { getStatusVariant, getStatusLabel } from "@/lib/utils/workorder-status";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
 
+const DASHBOARD_GROUP_STATUS_MAP: Record<string, string[]> = {
+  intake: ["intake", "inspection"],
+  diagnosis: ["diagnosis", "awaiting_approval"],
+  repair: ["assigned", "in_progress", "additional_work_found"],
+  qc: ["quality_check"],
+  ready: ["completed"],
+};
+
 export default function WorkOrdersPage() {
   const { formatCurrency } = useCurrency();
   const { openPrintWindow } = usePrint();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
@@ -58,6 +67,10 @@ export default function WorkOrdersPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
+  const dashboardGroup = searchParams.get("group");
+  const groupedStatuses = dashboardGroup ? DASHBOARD_GROUP_STATUS_MAP[dashboardGroup] ?? [] : [];
+  const groupedStatusFilter = groupedStatuses.length > 0 ? groupedStatuses.join(",") : undefined;
+
   const filterOptions: FilterOption[] = [
     {
       key: "status",
@@ -144,7 +157,7 @@ export default function WorkOrdersPage() {
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["workorders", page, debouncedSearch, advancedFilters, sortConfig],
+    queryKey: ["workorders", page, debouncedSearch, advancedFilters, sortConfig, groupedStatusFilter],
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -152,7 +165,7 @@ export default function WorkOrdersPage() {
       return workordersApi.list({
         page,
         search: debouncedSearch || undefined,
-        status: advancedFilters.status || undefined,
+        status: advancedFilters.status || groupedStatusFilter,
         priority: advancedFilters.priority || undefined,
         created_at__gte: advancedFilters.created_at_from || undefined,
         created_at__lte: advancedFilters.created_at_to || undefined,
@@ -755,4 +768,3 @@ export default function WorkOrdersPage() {
     </div>
   );
 }
-

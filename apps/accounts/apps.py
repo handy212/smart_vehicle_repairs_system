@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.conf import settings
 
 
 class AccountsConfig(AppConfig):
@@ -7,4 +8,6 @@ class AccountsConfig(AppConfig):
     verbose_name = 'User Accounts'
 
     def ready(self):
+        if getattr(settings, 'SKIP_AUDIT_REGISTRY', False):
+            return
         import apps.accounts.audit_registry

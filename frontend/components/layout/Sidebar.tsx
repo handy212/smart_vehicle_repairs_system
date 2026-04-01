@@ -104,12 +104,16 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
 
       <aside
         className={cn(
-          "fixed left-0 top-16 bottom-0 z-40 flex flex-col transition-all duration-200 ease-out",
+          "fixed left-0 bottom-0 z-40 flex flex-col transition-all duration-200 ease-out",
           "lg:translate-x-0",
           "border-r border-border bg-background shadow-sm",
           isOpen ? "translate-x-0" : "-translate-x-full",
-          isCollapsed ? "w-16" : "w-64"
+          isCollapsed ? "w-16" : ""
         )}
+        style={{ 
+          top: 'var(--header-height)',
+          width: isCollapsed ? '64px' : 'var(--sidebar-width)'
+        }}
       >
         <nav className={cn("flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800", isCollapsed && "px-2")}>
           {navigationGroups.map((group) => (

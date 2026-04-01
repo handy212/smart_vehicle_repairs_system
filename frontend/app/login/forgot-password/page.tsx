@@ -1,11 +1,10 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Branding images are admin-configured and may come from arbitrary external URLs. */
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { adminApi } from "@/lib/api/admin";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,13 +132,13 @@ export default function ForgotPasswordPage() {
                             <span style={{ color: '#bfdbfe' }}>Access</span>
                         </h1>
                         <p className="text-xl text-white/90 max-w-md">
-                            Enter your email and we'll send you a link to reset your password.
+                            Enter your email and we&apos;ll send you a link to reset your password.
                         </p>
                     </div>
                 </div>
 
                 {/* Right side: Forgot Password Form */}
-                <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
+                <div className="flex items-start justify-center bg-muted/50 p-4 pt-10 lg:items-center lg:p-8">
                     <div className="w-full max-w-sm space-y-6 animate-in fade-in duration-500">
                         <button
                             onClick={() => router.push("/login")}
@@ -150,7 +149,7 @@ export default function ForgotPasswordPage() {
                         </button>
 
                         <div className="text-center lg:text-left">
-                            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">{siteName}</h2>
+                            <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{siteName}</h2>
                             <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
                                 {!isSubmitted
                                     ? "No worries! We'll send you reset instructions."
@@ -230,7 +229,7 @@ export default function ForgotPasswordPage() {
                                         Return to login
                                     </Button>
                                     <p className="text-sm text-muted-foreground">
-                                        Didn't receive the email?{" "}
+                                        Didn&apos;t receive the email?{" "}
                                         <button
                                             onClick={() => setIsSubmitted(false)}
                                             className="font-semibold hover:underline"
@@ -247,10 +246,14 @@ export default function ForgotPasswordPage() {
             </div>
 
             {/* Footer */}
-            <footer className="bg-card border-t border-border py-4 px-8">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-muted-foreground">
-                    <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{siteName}</span>. All rights reserved.</p>
-                    <p>Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a></p>
+            <footer className="overflow-hidden bg-card border-t border-border px-4 py-4 sm:px-8">
+                <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
+                    <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
+                        © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{siteName}</span>. All rights reserved.
+                    </p>
+                    <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
+                        Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
+                    </p>
                 </div>
             </footer>
         </div>

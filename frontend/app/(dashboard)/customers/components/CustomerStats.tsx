@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Users, UserCheck, CreditCard, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useState, useEffect } from "react";
 
 interface CustomerStatsProps {
   stats: {
@@ -12,6 +13,8 @@ interface CustomerStatsProps {
     inactive_customers: number;
     active_contacts: number;
     inactive_contacts: number;
+    new_this_month: number;
+    growth_percentage: number;
   } | undefined;
   isLoading: boolean;
   totalBalance?: number;
@@ -19,6 +22,41 @@ interface CustomerStatsProps {
 
 export function CustomerStats({ stats, isLoading, totalBalance }: CustomerStatsProps) {
   const { formatCurrency } = useCurrency();
+  const [isPerfex, setIsPerfex] = useState(false);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      setIsPerfex(document.documentElement.classList.contains('perfex'));
+    }
+  }, []);
+
+  if (isPerfex) {
+    const perfexItems = [
+      { label: "Total Customers", value: stats?.total_customers || 0, color: "text-foreground" },
+      { label: "Active Customers", value: stats?.active_customers || 0, color: "text-success" },
+      { label: "Inactive Customers", value: stats?.inactive_customers || 0, color: "text-destructive" },
+      { label: "Active Contacts", value: stats?.active_contacts || 0, color: "text-info" },
+      { label: "Inactive Contacts", value: stats?.inactive_contacts || 0, color: "text-destructive" },
+      { label: "Contacts Logged In Today", value: 0, color: "text-foreground" },
+    ];
+
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        {perfexItems.map((item, idx) => (
+          <Card key={idx} className="precision-card border-none shadow-none bg-white rounded-md">
+            <CardContent className="p-3 flex items-center justify-start gap-2">
+              <span className="text-sm font-bold text-foreground">
+                {isLoading ? "..." : item.value}
+              </span>
+              <span className={cn("text-[11px] font-medium opacity-80", item.color)}>
+                {item.label}
+              </span>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   const statItems = [
     {
@@ -47,8 +85,10 @@ export function CustomerStats({ stats, isLoading, totalBalance }: CustomerStatsP
     },
     {
       label: "New This Month",
-      value: 48, // Demo data or fetch from API
-      trend: "up",
+      value: stats?.new_this_month || 0,
+      trend: stats?.growth_percentage !== undefined 
+        ? `${stats.growth_percentage >= 0 ? "+" : ""}${stats.growth_percentage}%`
+        : "0%",
       icon: UserPlus,
       color: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-900/20",

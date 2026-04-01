@@ -1,15 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { AlertTriangle, ArrowRight, CalendarClock, Clock3, Package, Truck, TrendingUp, Wrench, type LucideIcon } from "lucide-react";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { workordersApi } from "@/lib/api/workorders";
-import { reportingApi } from "@/lib/api/reporting";
+import { reportingApi, type DashboardOverview } from "@/lib/api/reporting";
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 import { SummaryStatsGrid } from "./components/SummaryStatsGrid";
 import { ShopPulse } from "./components/ShopPulse";
 import { ServiceReminders } from "./components/ServiceReminders";
@@ -25,7 +31,34 @@ const WorkOrderPieChart = dynamic(() => import("./components/WorkOrderPieChart")
   ssr: false,
 });
 
+type DashboardDiagnosisLog = {
+  id: number;
+  work_order_number: string;
+  description: string;
+  priority: "critical" | "warning" | "info";
+  timestamp: string;
+};
+
+type AttentionCard = {
+  title: string;
+  value: number;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  tone: "danger" | "warning" | "info";
+};
+
+type SnapshotCard = {
+  label: string;
+  value: string;
+  hint: string;
+  href: string;
+  icon: LucideIcon;
+};
+
 export default function DashboardPage() {
+  const { formatCurrency } = useCurrency();
+
   // Fetch dashboard overview from reporting API
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
     queryKey: ["dashboard", "overview"],
@@ -112,8 +145,10 @@ export default function DashboardPage() {
       overdue_invoices: dashboardData?.alerts?.overdue_invoices?.count || 0,
       overdue_amount: dashboardData?.alerts?.overdue_invoices?.total || 0,
       low_stock_items: dashboardData?.alerts?.low_stock_items || lowStockData?.summary?.total_low_stock || 0,
+      pending_estimates: dashboardData?.alerts?.pending_estimates || 0,
       active_subscriptions: dashboardData?.subscriptions?.active_count || 0,
       active_roadside: dashboardData?.today?.roadside_requests || 0,
+      roadside_completed_today: dashboardData?.today?.roadside_completed || 0,
       mrr: dashboardData?.subscriptions?.mrr || 0,
     }),
     [
@@ -126,17 +161,139 @@ export default function DashboardPage() {
     ]
   );
 
-  const diagnosisLogs = useMemo(() => {
-    return dashboardData?.recent_activity?.work_orders?.slice(0, 5).map((wo: any) => ({
-      id: wo.id,
-      work_order_number: wo.wo_number,
-      description: wo.diagnosis_notes
-        ? `Analysis: ${wo.diagnosis_notes}`
-        : `Status: ${wo.status.replace(/_/g, ' ').toUpperCase()}`,
-      priority: (wo.status === 'diagnosis' ? 'warning' : 'info') as 'warning' | 'info' | 'critical',
-      timestamp: wo.created_at
-    })) || [];
+  const diagnosisLogs = useMemo<DashboardDiagnosisLog[]>(() => {
+    return (
+      dashboardData?.recent_activity?.work_orders?.slice(0, 5).map((wo: DashboardOverview["recent_activity"]["work_orders"][number]) => ({
+        id: wo.id,
+        work_order_number: wo.wo_number,
+        description: wo.diagnosis_notes?.trim()
+          ? `Analysis: ${wo.diagnosis_notes}`
+          : `Status: ${wo.status.replace(/_/g, " ").toUpperCase()}`,
+        priority: wo.status === "diagnosis" ? "warning" : "info",
+        timestamp: wo.created_at,
+      })) || []
+    );
   }, [dashboardData]);
+
+  const workOrderSummary = workOrderStats?.summary;
+
+  const todayLabel = format(
+    dashboardData?.today?.date ? new Date(dashboardData.today.date) : new Date(),
+    "EEEE, MMMM d"
+  );
+
+  const attentionCards = useMemo<AttentionCard[]>(
+    () => [
+      {
+        title: "Overdue invoices",
+        value: stats.overdue_invoices,
+        description: `${formatCurrency(stats.overdue_amount || 0)} still waiting to be collected from past-due invoices.`,
+        href: "/billing/invoices",
+        icon: AlertTriangle,
+        tone: "danger",
+      },
+      {
+        title: "Low stock blockers",
+        value: stats.low_stock_items,
+        description: "Parts below reorder point can slow repairs and increase vehicle turnaround time.",
+        href: "/inventory",
+        icon: Package,
+        tone: "warning",
+      },
+      {
+        title: "Pending estimates",
+        value: stats.pending_estimates || 0,
+        description: "Quotes waiting for follow-up or customer approval before work can move ahead.",
+        href: "/billing/estimates",
+        icon: Clock3,
+        tone: "info",
+      },
+      {
+        title: "Roadside in progress",
+        value: stats.active_roadside || 0,
+        description: `${stats.roadside_completed_today || 0} roadside requests have already been completed today.`,
+        href: "/roadside",
+        icon: Truck,
+        tone: "info",
+      },
+    ],
+    [
+      formatCurrency,
+      stats.active_roadside,
+      stats.low_stock_items,
+      stats.overdue_amount,
+      stats.overdue_invoices,
+      stats.pending_estimates,
+      stats.roadside_completed_today,
+    ]
+  );
+
+  const activeAttentionCount = attentionCards.filter((item) => item.value > 0).length;
+
+  const headerSummary = useMemo(() => {
+    if (activeAttentionCount === 0) {
+      return `The shop looks steady right now. ${stats.active_work_orders} jobs are active, ${stats.today_appointments} appointments are on the board, and revenue today is ${formatCurrency(stats.today_revenue)}.`;
+    }
+
+    return `${activeAttentionCount} operating areas need attention right now. ${stats.active_work_orders} jobs are active in the shop, ${stats.today_appointments} appointments are scheduled today, and ${formatCurrency(stats.today_revenue)} has been collected so far.`;
+  }, [
+    activeAttentionCount,
+    formatCurrency,
+    stats.active_work_orders,
+    stats.today_appointments,
+    stats.today_revenue,
+  ]);
+
+  const spotlight = useMemo(
+    () => [
+      {
+        label: "Revenue Today",
+        value: formatCurrency(stats.today_revenue || 0),
+      },
+      {
+        label: "Pending Queue",
+        value: `${workOrderSummary?.pending_count ?? 0} jobs`,
+      },
+      {
+        label: "Roadside Live",
+        value: `${stats.active_roadside || 0} active`,
+      },
+    ],
+    [formatCurrency, stats.active_roadside, stats.today_revenue, workOrderSummary?.pending_count]
+  );
+
+  const todayBoard: SnapshotCard[] = [
+    {
+      label: "Appointments today",
+      value: `${stats.today_appointments}`,
+      hint: `${todayAppointments?.filter((appointment) => appointment.status === "confirmed").length || 0} confirmed so far`,
+      href: "/appointments",
+      icon: CalendarClock,
+    },
+    {
+      label: "Active repair load",
+      value: `${workOrderSummary?.active_count ?? stats.active_work_orders}`,
+      hint: `${workOrderSummary?.attention_count ?? 0} jobs currently sit in attention states`,
+      href: "/workorders",
+      icon: Wrench,
+    },
+    {
+      label: "Average turnaround",
+      value: workOrderSummary?.average_completion_hours
+        ? `${workOrderSummary.average_completion_hours.toFixed(1)} h`
+        : "No data",
+      hint: "Based on completed work orders in the selected reporting window",
+      href: "/reports",
+      icon: Clock3,
+    },
+    {
+      label: "Recurring revenue",
+      value: formatCurrency(stats.mrr || 0),
+      hint: `Month to date ${formatCurrency(stats.month_revenue || 0)}`,
+      href: "/subscriptions",
+      icon: TrendingUp,
+    },
+  ];
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -146,28 +303,194 @@ export default function DashboardPage() {
     <div className="space-y-6 p-4 max-w-[1700px] mx-auto pb-10">
       <DynamicPageTitle title="Dashboard" />
       
-      {/* Row 1: Header */}
-      <DashboardHeader />
+      <DashboardHeader todayLabel={todayLabel} summary={headerSummary} spotlight={spotlight} />
 
-      {/* Row 2: Key Metrics */}
       <SummaryStatsGrid stats={stats} />
 
-      {/* Row 3: Operational Flow (Pulse) */}
-      <ShopPulse workOrderStats={workOrderStats} />
+      <div className="grid grid-cols-1 gap-6 2xl:grid-cols-12">
+        <Card className="precision-card overflow-hidden 2xl:col-span-7">
+          <CardHeader className="flex flex-col gap-4 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.25em]">
+                Attention Required
+              </Badge>
+              <CardTitle className="text-2xl tracking-tight">What needs action first</CardTitle>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                These are the operating queues most likely to slow cash collection, customer response time, or repair throughput.
+              </p>
+            </div>
+            <Button variant="outline" className="rounded-xl" asChild>
+              <Link href="/reports">
+                Review reports
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            {attentionCards.map((item) => {
+              const toneClasses = {
+                danger: "border-rose-200 bg-rose-50/70 hover:border-rose-300 dark:border-rose-950/60 dark:bg-rose-950/20",
+                warning: "border-amber-200 bg-amber-50/70 hover:border-amber-300 dark:border-amber-950/60 dark:bg-amber-950/20",
+                info: "border-sky-200 bg-sky-50/70 hover:border-sky-300 dark:border-sky-950/60 dark:bg-sky-950/20",
+              } satisfies Record<AttentionCard["tone"], string>;
 
-      {/* Row 4: Complex Data Grid (12-column foundation) */}
+              const badgeVariant = {
+                danger: "danger",
+                warning: "warning",
+                info: "info",
+              } satisfies Record<AttentionCard["tone"], "danger" | "warning" | "info">;
+
+              return (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className={`rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${toneClasses[item.tone]}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-background/80 text-foreground shadow-sm">
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.description}</p>
+                      </div>
+                    </div>
+                    <Badge variant={badgeVariant[item.tone]} className="rounded-full whitespace-nowrap">
+                      {item.value} open
+                    </Badge>
+                  </div>
+                </Link>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card className="precision-card 2xl:col-span-5">
+          <CardHeader className="space-y-2 pb-5">
+            <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.25em]">
+              Today At A Glance
+            </Badge>
+            <CardTitle className="text-2xl tracking-tight">Operator snapshot</CardTitle>
+            <p className="text-sm leading-6 text-muted-foreground">
+              A compact read on the front desk, shop floor, service pace, and revenue footing for the day.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {todayBoard.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="rounded-2xl border border-border/60 bg-muted/30 p-4 transition-all hover:border-primary/30 hover:bg-muted/60"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      {item.label}
+                    </p>
+                    <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
+                      {item.value}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.hint}</p>
+                  </div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="xl:col-span-7">
+          <ShopPulse workOrderStats={workOrderStats} />
+        </div>
+
+        <div className="grid gap-6 xl:col-span-5">
+          <Card className="precision-card">
+            <CardHeader className="space-y-2 pb-4">
+              <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.25em]">
+                Revenue Pulse
+              </Badge>
+              <CardTitle className="text-xl tracking-tight">Cash and recurring revenue</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Today</p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(stats.today_revenue)}</p>
+                </div>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Week</p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(stats.week_revenue)}</p>
+                </div>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Month</p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(stats.month_revenue)}</p>
+                </div>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">MRR</p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(stats.mrr || 0)}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" className="rounded-xl" asChild>
+                  <Link href="/billing">Open billing</Link>
+                </Button>
+                <Button variant="ghost" className="rounded-xl" asChild>
+                  <Link href="/reports">See reporting</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="precision-card">
+            <CardHeader className="space-y-2 pb-4">
+              <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.25em]">
+                Operations Brief
+              </Badge>
+              <CardTitle className="text-xl tracking-tight">Workflow health across the last 30 days</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  label: "Pending queue",
+                  value: `${workOrderSummary?.pending_count ?? 0}`,
+                },
+                {
+                  label: "Active repair",
+                  value: `${workOrderSummary?.active_count ?? stats.active_work_orders}`,
+                },
+                {
+                  label: "Attention states",
+                  value: `${workOrderSummary?.attention_count ?? 0}`,
+                },
+                {
+                  label: "Completed",
+                  value: `${workOrderSummary?.completed ?? 0}`,
+                },
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{item.label}</p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{item.value}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Workload Distribution */}
         <div className="lg:col-span-5">
           <WorkOrderPieChart data={workOrderStats?.by_status || []} />
         </div>
         
-        {/* Service Intelligence */}
         <div className="lg:col-span-7">
           <ServiceReminders vehicles={serviceDueData?.vehicles || []} isLoading={serviceDueLoading} />
         </div>
 
-        {/* Detailed Feeds (Unified row) */}
         <div className="lg:col-span-4 h-full">
           <InventoryWatchlist items={lowStockData?.items || []} isLoading={lowStockLoading} />
         </div>

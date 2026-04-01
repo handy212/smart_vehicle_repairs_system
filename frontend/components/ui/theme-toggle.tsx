@@ -1,11 +1,11 @@
 "use client";
 
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Moon, Sun, Monitor, Archive, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme, type Theme } from "@/lib/hooks/useTheme";
 
 export function ThemeToggle() {
-  const { theme, resolvedTheme, setTheme, mounted } = useTheme();
+  const { theme, resolvedTheme, setTheme, applyTheme, mounted } = useTheme();
 
   if (!mounted) {
     return (
@@ -16,47 +16,39 @@ export function ThemeToggle() {
   }
 
   const cycleTheme = () => {
-    // Immediately apply theme change to DOM for instant feedback
-    const root = document.documentElement;
-    let newTheme: Theme;
-
-    if (theme === "light") {
-      newTheme = "dark";
-      root.classList.add("dark");
-    } else if (theme === "dark") {
-      newTheme = "system";
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList[isDark ? 'add' : 'remove']('dark');
-    } else {
-      newTheme = "light";
-      root.classList.remove("dark");
-    }
-
-    // Update state (this will trigger useEffect in useTheme)
+    const order: Theme[] = ["light", "dark", "system", "classic", "perfex"];
+    const newTheme = order[(order.indexOf(theme) + 1) % order.length];
+    // Apply immediately to DOM for instant visual feedback, then update state
+    applyTheme(newTheme);
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-
-
   };
 
   const icon =
-    theme === "system"
-      ? <Monitor className="h-4 w-4" />
-      : resolvedTheme === "dark"
-        ? <Moon className="h-4 w-4" />
-        : <Sun className="h-4 w-4" />;
+    theme === "classic"
+      ? <Archive className="h-4 w-4" />
+      : theme === "perfex"
+        ? <Layers className="h-4 w-4" />
+        : theme === "system"
+          ? <Monitor className="h-4 w-4" />
+          : resolvedTheme === "dark"
+            ? <Moon className="h-4 w-4" />
+            : <Sun className="h-4 w-4" />;
 
   const title =
     theme === "light"
       ? "Light mode"
       : theme === "dark"
         ? "Dark mode"
-        : "System theme";
+        : theme === "classic"
+          ? "Classic theme"
+          : theme === "perfex"
+            ? "Perfex theme"
+            : "System theme";
 
   return (
     <Button
       type="button"
-     variant="secondary"
+      variant="secondary"
       size="sm"
       className="w-9 h-9 p-0"
       onClick={(e) => {

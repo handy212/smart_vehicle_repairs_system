@@ -12,16 +12,32 @@ export interface RepairRecommendation {
   description: string;
   priority: "critical" | "necessary" | "recommended" | "advisory";
   priority_display?: string;
+  approval_status?: "pending_approval" | "approved" | "deferred" | "declined";
+  approval_status_display?: string;
+  decision_method?: string;
+  decision_notes?: string;
+  decision_at?: string | null;
+  decision_by?: number | null;
+  decision_by_name?: string | null;
+  quotation_status?: "not_requested" | "requested" | "quoted";
+  quotation_status_display?: string;
+  quotation_requested_at?: string | null;
+  quotation_requested_by?: number | null;
+  quotation_requested_by_name?: string | null;
+  quoted_at?: string | null;
+  quoted_by?: number | null;
+  quoted_by_name?: string | null;
   parts_needed?: Array<{
     part_id?: number;
     part_name: string;
     quantity: number;
-    unit_cost: number;
+    part_number?: string;
   }>;
-  estimated_parts_cost: number | string;
-  estimated_labor_hours: number | string;
-  estimated_labor_cost: number | string;
-  estimated_total_cost: number | string;
+  findings?: number[];
+  linked_findings?: DiagnosisFinding[];
+  estimated_parts_cost?: number | string;
+  estimated_labor_cost?: number | string;
+  estimated_total_cost?: number | string;
   customer_approved?: boolean;
   converted_to_task_id?: number | null;
   order?: number;
@@ -285,13 +301,52 @@ export const diagnosisApi = {
     id: number,
     data: {
       recommendation_ids: number[];
-      approved: boolean;
+      decision: "approved" | "deferred" | "declined";
+      decision_method?: string;
+      decision_notes?: string;
     }
   ): Promise<{
     message: string;
     recommendations: RepairRecommendation[];
   }> => {
     const response = await apiClient.post(`/diagnosis/diagnoses/${id}/approve_recommendations/`, data);
+    return response.data;
+  },
+
+  submitRecommendationsForQuote: async (
+    id: number,
+    data?: { recommendation_ids?: number[] }
+  ): Promise<{
+    message: string;
+    recommendations: RepairRecommendation[];
+  }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/submit_recommendations_for_quote/`, data || {});
+    return response.data;
+  },
+
+  markRecommendationsQuoted: async (
+    id: number,
+    data?: { recommendation_ids?: number[] }
+  ): Promise<{
+    message: string;
+    recommendations: RepairRecommendation[];
+  }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/mark_recommendations_quoted/`, data || {});
+    return response.data;
+  },
+
+  quotationQueue: async (params?: { search?: string; page?: number }): Promise<{
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: RepairRecommendation[];
+  }> => {
+    const response = await apiClient.get(`/diagnosis/recommendations/quotation_queue/`, { params });
+    return response.data;
+  },
+
+  markRecommendationQuoted: async (id: number): Promise<{ message: string; recommendation: RepairRecommendation }> => {
+    const response = await apiClient.post(`/diagnosis/recommendations/${id}/mark_quoted/`);
     return response.data;
   },
 
@@ -308,9 +363,7 @@ export const diagnosisApi = {
       description: string;
       priority: RepairRecommendation["priority"];
       parts_needed?: RepairRecommendation["parts_needed"];
-      estimated_parts_cost?: number | string;
-      estimated_labor_hours?: number | string;
-      estimated_labor_cost?: number | string;
+      findings?: number[];
       order?: number;
     }
   ): Promise<RepairRecommendation> => {
@@ -559,4 +612,3 @@ export const diagnosisApi = {
     },
   },
 };
-

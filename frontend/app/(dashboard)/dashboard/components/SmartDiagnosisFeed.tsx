@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import Link from "next/link";
 import { PremiumIcons } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
@@ -53,28 +53,30 @@ export function SmartDiagnosisFeed({ logs, isLoading }: SmartDiagnosisFeedProps)
                     </div>
                 ) : (
                     displayLogs.map((log) => (
-                        <div key={log.id} className="relative pl-6 pb-4 border-l-2 border-muted last:border-0 last:pb-0 group">
-                            <div 
-                                className={cn(
-                                    "absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full border-2 border-background shadow-sm z-10 transition-colors",
-                                    log.priority === 'critical' ? "bg-rose-500" :
-                                    log.priority === 'warning' ? "bg-amber-500" : "bg-blue-500"
-                                )} 
-                            />
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0">
-                                    <p className="text-[11px] font-bold text-foreground truncate uppercase tracking-tight group-hover:text-primary transition-colors leading-tight">
-                                        {log.description}
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[9px] font-bold text-gray-400 font-mono tracking-wider">{log.work_order_number}</span>
+                        <Link key={log.id} href={`/workorders/${log.id}`} className="block">
+                            <div className="relative border-l-2 border-muted pb-4 pl-6 last:border-0 last:pb-0 group">
+                                <div 
+                                    className={cn(
+                                        "absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full border-2 border-background shadow-sm z-10 transition-colors",
+                                        log.priority === 'critical' ? "bg-rose-500" :
+                                        log.priority === 'warning' ? "bg-amber-500" : "bg-blue-500"
+                                    )} 
+                                />
+                                <div className="flex items-start justify-between gap-4 rounded-xl p-2 transition-colors group-hover:bg-muted/70">
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-bold text-foreground truncate uppercase tracking-tight group-hover:text-primary transition-colors leading-tight">
+                                            {log.description}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <span className="text-[9px] font-bold text-gray-400 font-mono tracking-wider">{log.work_order_number}</span>
+                                        </div>
                                     </div>
+                                    <span className="text-[9px] font-bold text-gray-300 whitespace-nowrap uppercase tracking-widest">
+                                        {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
                                 </div>
-                                <span className="text-[9px] font-bold text-gray-300 whitespace-nowrap uppercase tracking-widest">
-                                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
                             </div>
-                        </div>
+                        </Link>
                     ))
                 )}
             </div>

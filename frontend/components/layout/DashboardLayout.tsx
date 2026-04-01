@@ -102,9 +102,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     };
   }, [mounted]);
 
-  // Calculate margin: sidebar (288px = w-72 when expanded, 80px = w-20 when collapsed) + sub-nav (224px when expanded, 48px when collapsed)
-  // Use default collapsed state during SSR to avoid hydration mismatch
-  const sidebarWidthExpanded = 256; // w-64 = 16rem = 256px
+  // Calculate margin: sidebar + sub-nav
+  const [sidebarWidthExpanded, setSidebarWidthExpanded] = useState(256);
+  const [headerHeight, setHeaderHeight] = useState(64);
+  
+  useEffect(() => {
+    if (mounted) {
+      const style = getComputedStyle(document.documentElement);
+      const width = parseInt(style.getPropertyValue('--sidebar-width'));
+      const height = parseInt(style.getPropertyValue('--header-height'));
+      if (!isNaN(width)) setSidebarWidthExpanded(width);
+      if (!isNaN(height)) setHeaderHeight(height);
+    }
+  }, [mounted]);
+
   const sidebarWidthCollapsed = 64; // w-16 = 4rem = 64px
   const sidebarCollapsed = mounted ? isSidebarCollapsed : false; // Default to expanded during SSR
   const sidebarWidth = sidebarCollapsed ? sidebarWidthCollapsed : sidebarWidthExpanded;
@@ -165,7 +176,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         className="min-h-screen px-2 py-0 sm:px-3 lg:px-3 pb-2 sm:pb-3 lg:pb-4 transition-all duration-300 print:!m-0 print:!p-0"
         style={{
           marginLeft: isDesktop ? `${totalMargin}px` : '0',
-          paddingTop: !isDesktop && hasSubNav ? '7.5rem' : '5rem' // Extra space on mobile for horizontal sub-nav tab bar
+          paddingTop: !isDesktop && hasSubNav ? `${headerHeight + 56}px` : `${headerHeight + 16}px`
         }}
       >
         <Suspense fallback={null}>

@@ -456,8 +456,6 @@ class WorkOrder(models.Model):
         if new_status == 'awaiting_approval':
             if not self.diagnosis_notes:
                 return False, "Diagnosis notes are required before requesting approval"
-            if self.estimated_total <= 0:
-                return False, "Estimated total must be greater than 0 before requesting approval"
         
         if new_status == 'approved':
             if not self.requires_approval:
@@ -511,8 +509,6 @@ class WorkOrder(models.Model):
         if new_status == 'awaiting_approval':
             if not self.diagnosis_notes or not self.diagnosis_notes.strip():
                 errors.append("Diagnosis notes are required")
-            if self.estimated_total <= 0:
-                errors.append("Estimated total must be greater than 0")
         
         if new_status == 'in_progress':
             if not self.primary_technician and not self.assigned_technicians.exists():
@@ -778,17 +774,11 @@ class WorkOrder(models.Model):
             from apps.diagnosis.models import Diagnosis
             diagnosis = Diagnosis.objects.filter(work_order=self).first()
             if diagnosis:
-                # If work order is approved, allow converting any recommendations (approved or not)
-                # Otherwise, only allow approved recommendations
-                if self.status == 'approved':
-                    has_recommendations = diagnosis.repair_recommendations.filter(
-                        converted_to_task__isnull=True
-                    ).exists()
-                else:
-                    has_recommendations = diagnosis.repair_recommendations.filter(
-                        customer_approved=True,
-                        converted_to_task__isnull=True
-                    ).exists()
+                has_recommendations = diagnosis.repair_recommendations.filter(
+                    approval_status='approved',
+                    quotation_status='quoted',
+                    converted_to_task__isnull=True
+                ).exists()
         except Exception:
             pass  # If diagnosis app not available, skip this check
         
@@ -825,18 +815,11 @@ class WorkOrder(models.Model):
             if not diagnosis:
                 return 0, 0
             
-            # Get recommendations that haven't been converted yet
-            # If work order is approved, convert all recommendations (not just customer_approved ones)
-            # Otherwise, only convert approved recommendations
-            if self.status == 'approved':
-                recommendations = diagnosis.repair_recommendations.filter(
-                    converted_to_task__isnull=True
-                )
-            else:
-                recommendations = diagnosis.repair_recommendations.filter(
-                    customer_approved=True,
-                    converted_to_task__isnull=True
-                )
+            recommendations = diagnosis.repair_recommendations.filter(
+                approval_status='approved',
+                quotation_status='quoted',
+                converted_to_task__isnull=True
+            )
             
             if not recommendations.exists():
                 return 0, 0

@@ -135,9 +135,9 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
   }, [activeBranchId, queryClient, router]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background shadow-sm">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background shadow-sm" style={{ height: 'var(--header-height)' }}>
+      <div className="px-4 sm:px-6 lg:px-8 h-full">
+        <div className="flex justify-between items-center h-full">
           {/* Left: Menu Toggle + Logo/Brand */}
           <div className="flex items-center flex-shrink-0 space-x-3">
             {/* Mobile Menu Toggle */}

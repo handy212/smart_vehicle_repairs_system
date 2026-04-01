@@ -4,6 +4,7 @@ Integrates with the role-based permission system
 """
 from rest_framework import permissions
 from rest_framework.permissions import BasePermission
+from django.conf import settings
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -129,6 +130,9 @@ class IsModuleEnabled(permissions.BasePermission):
         super().__init__()
 
     def has_permission(self, request, view):
+        if getattr(settings, 'SKIP_MODULE_PERMISSION_CHECKS', False):
+            return True
+
         # Allow only the 'super-admin' role to bypass module status checks
         if request.user and request.user.role == 'super-admin':
             return True

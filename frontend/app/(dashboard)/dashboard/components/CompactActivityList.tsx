@@ -29,6 +29,8 @@ interface CompactActivityListProps {
 
 export function CompactActivityList({ appointments, workOrders }: CompactActivityListProps) {
     const [activeTab, setActiveTab] = useState<'appointments' | 'work_orders'>('appointments');
+    const appointmentCount = appointments?.length || 0;
+    const workOrderCount = workOrders?.length || 0;
 
     return (
         <div className="precision-card h-full flex flex-col">
@@ -53,7 +55,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         activeTab === 'appointments' ? "bg-background text-primary shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
                     )}
                 >
-                    Agenda
+                    Agenda ({appointmentCount})
                 </button>
                 <button
                     onClick={() => setActiveTab('work_orders')}
@@ -62,7 +64,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         activeTab === 'work_orders' ? "bg-background text-primary shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
                     )}
                 >
-                    Recent Jobs
+                    Recent Jobs ({workOrderCount})
                 </button>
             </div>
 

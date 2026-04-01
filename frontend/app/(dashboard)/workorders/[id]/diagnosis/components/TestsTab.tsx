@@ -289,14 +289,21 @@ function TestDialog({
         actual_result: test?.actual_result || "",
         measurements: test?.measurements || {},
         tools_used: test?.tools_used || "",
-        status: test?.status || "pass",
+        status: test?.status || "inconclusive",
     });
     const [templateSearchQuery, setTemplateSearchQuery] = useState("");
     // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
     const [templateResults, setTemplateResults] = useState<any[]>([]);
     const [isSearchingTemplates, setIsSearchingTemplates] = useState(false);
+    const hasTemplateQuery = templateSearchQuery.trim().length >= 2;
 
     React.useEffect(() => {
+        if (!open) {
+            setTemplateResults([]);
+            setTemplateSearchQuery("");
+            return;
+        }
+
         if (test) {
             setFormData({
                 test_name: test.test_name || "",
@@ -306,8 +313,9 @@ function TestDialog({
                 actual_result: test.actual_result || "",
                 measurements: test.measurements || {},
                 tools_used: test.tools_used || "",
-                status: test.status || "pass",
+                status: test.status || "inconclusive",
             });
+            setTemplateSearchQuery("");
             setTemplateResults([]);
         } else {
             setFormData({
@@ -318,11 +326,12 @@ function TestDialog({
                 actual_result: "",
                 measurements: {},
                 tools_used: "",
-                status: "pass",
+                status: "inconclusive",
             });
+            setTemplateSearchQuery("");
             setTemplateResults([]);
         }
-    }, [test]);
+    }, [open, test]);
 
     // Helper to safely cast category
 
@@ -333,12 +342,11 @@ function TestDialog({
 
     // Search templates when name or category changes
     React.useEffect(() => {
-        if (open && !test && (formData.test_name.length >= 2 || templateSearchQuery.length >= 2)) {
+        if (open && !test && hasTemplateQuery) {
             const searchTimer = setTimeout(async () => {
                 setIsSearchingTemplates(true);
                 try {
-                    const query = templateSearchQuery || formData.test_name;
-                    const results = await diagnosisApi.testProcedureLibrary.search(query, formData.category);
+                    const results = await diagnosisApi.testProcedureLibrary.search(templateSearchQuery);
                     setTemplateResults(results.slice(0, 5)); // Show top 5 results
                 } catch (_error) {
                     setTemplateResults([]);
@@ -351,7 +359,7 @@ function TestDialog({
         } else {
             setTemplateResults([]);
         }
-    }, [formData.test_name, formData.category, templateSearchQuery, open, test]);
+    }, [hasTemplateQuery, templateSearchQuery, open, test]);
 
 
     const handleSelectTemplate = async (template: any) => {
@@ -366,10 +374,11 @@ function TestDialog({
                 test_procedure: template.test_procedure || "",
                 expected_result: template.expected_result || "",
                 actual_result: formData.actual_result || "",
-                measurements: template.measurement_fields || {},
+                measurements: formData.measurements || {},
                 tools_used: template.tools_needed || "",
-                status: formData.status || "pass",
+                status: formData.status || "inconclusive",
             });
+            setTemplateSearchQuery("");
             setTemplateResults([]);
             toast({
                 title: "Template loaded",
@@ -396,36 +405,36 @@ function TestDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-card border border-border shadow-xl sm:rounded-xl">
-                <DialogHeader className="p-6 pb-2">
-                    <DialogTitle className="text-xl font-bold text-foreground">
+            <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto p-0 gap-0 bg-card border border-border shadow-xl sm:rounded-xl">
+                <DialogHeader className="border-b border-border px-4 py-3">
+                    <DialogTitle className="text-lg font-semibold text-foreground">
                         {test ? "Edit Diagnostic Test" : "Add Diagnostic Test"}
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-sm text-muted-foreground">
                         {test ? "Modify the test details and results." : "Record a new diagnostic test and its results."}
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="flex flex-col h-full">
-                    <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-6">
+                    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
                         {/* Template Selection */}
                         {!test && (
-                            <div className="rounded-lg border border-primary/15 bg-primary/5 p-4">
-                                <Label className="mb-2 block text-sm font-semibold text-primary">
-                                    Quick Start from Template
-                                </Label>
+                            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-sm font-medium text-foreground">
+                                        Quick Start from Template
+                                    </Label>
+                                    <span className="text-xs text-muted-foreground">
+                                        Optional
+                                    </span>
+                                </div>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-2.5 w-4 h-4 text-primary/60" />
                                     <Input
-                                        placeholder="Search test procedure library..."
-                                        value={templateSearchQuery || formData.test_name}
-                                        onChange={(e) => {
-                                            setTemplateSearchQuery(e.target.value);
-                                            if (!templateSearchQuery) {
-                                                setFormData({ ...formData, test_name: e.target.value });
-                                            }
-                                        }}
-                                        className="bg-card pl-9 border-primary/20"
+                                        placeholder="Search saved procedures..."
+                                        value={templateSearchQuery}
+                                        onChange={(e) => setTemplateSearchQuery(e.target.value)}
+                                        className="h-8 pl-9 bg-card"
                                     />
                                     {isSearchingTemplates && (
                                         <div className="absolute right-3 top-2.5">
@@ -434,21 +443,24 @@ function TestDialog({
                                     )}
                                 </div>
                                 {templateResults.length > 0 && (
-                                    <div className="mt-2 border border-border rounded-lg bg-card shadow-sm overflow-hidden z-10 relative">
-                                        <div className="p-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b border-border">
+                                    <div className="border border-border rounded-lg bg-card shadow-sm overflow-hidden z-10 relative">
+                                        <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground bg-muted/50 border-b border-border">
                                             Recommended Templates
                                         </div>
-                                        <div className="max-h-48 overflow-y-auto">
+                                        <div className="max-h-40 overflow-y-auto">
 
                                             {templateResults.map((template: any) => (
                                                 <button
                                                     key={template.id}
                                                     type="button"
                                                     onClick={() => handleSelectTemplate(template)}
-                                                    className="group w-full border-b border-border p-3 text-left transition-colors hover:bg-primary/10 last:border-b-0"
+                                                    className="group w-full border-b border-border px-3 py-2.5 text-left transition-colors hover:bg-primary/10 last:border-b-0"
                                                 >
                                                     <div className="text-sm font-semibold text-foreground group-hover:text-primary">
                                                         {template.name}
+                                                    </div>
+                                                    <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                                        {template.category_display || template.category}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
                                                         {template.description || template.test_procedure}
@@ -458,10 +470,15 @@ function TestDialog({
                                         </div>
                                     </div>
                                 )}
+                                {hasTemplateQuery && !isSearchingTemplates && templateResults.length === 0 && (
+                                    <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                                        No matching templates found.
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        <div className="grid gap-5 md:grid-cols-2">
+                        <div className="grid gap-3 md:grid-cols-[1.6fr_1fr]">
                             <div className="space-y-2">
                                 <Label htmlFor="test_name" className="text-sm font-medium">Test Name <span className="text-red-500">*</span></Label>
                                 <Input
@@ -470,7 +487,7 @@ function TestDialog({
                                     onChange={(e) => setFormData({ ...formData, test_name: e.target.value })}
                                     placeholder="e.g., Battery Voltage Test"
                                     required
-                                    className="h-9"
+                                    className="h-8"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -484,7 +501,7 @@ function TestDialog({
                                     }}
                                     required
                                 >
-                                    <SelectTrigger id="category" className="h-9 w-full">
+                                    <SelectTrigger id="category" className="h-8 w-full">
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -509,12 +526,12 @@ function TestDialog({
                                 value={formData.test_procedure}
                                 onChange={(e) => setFormData({ ...formData, test_procedure: e.target.value })}
                                 placeholder="Step-by-step procedure..."
-                                rows={4}
-                                className="resize-none min-h-[100px]"
+                                rows={3}
+                                className="resize-none min-h-[84px]"
                             />
                         </div>
 
-                        <div className="grid gap-5 md:grid-cols-2">
+                        <div className="grid gap-3 md:grid-cols-2">
                             <div className="space-y-2">
                                 <Label htmlFor="expected_result" className="text-sm font-medium">Expected Result</Label>
                                 <Textarea
@@ -523,7 +540,7 @@ function TestDialog({
                                     onChange={(e) => setFormData({ ...formData, expected_result: e.target.value })}
                                     placeholder="What is the expected outcome?"
                                     rows={2}
-                                    className="resize-none"
+                                    className="resize-none min-h-[76px]"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -534,12 +551,12 @@ function TestDialog({
                                     onChange={(e) => setFormData({ ...formData, actual_result: e.target.value })}
                                     placeholder="What was the actual outcome?"
                                     rows={2}
-                                    className="resize-none"
+                                    className="resize-none min-h-[76px]"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid gap-5 md:grid-cols-2">
+                        <div className="grid gap-3 md:grid-cols-[1.4fr_1fr]">
                             <div className="space-y-2">
                                 <Label htmlFor="tools_used" className="text-sm font-medium">Tools Used</Label>
                                 <Input
@@ -547,7 +564,7 @@ function TestDialog({
                                     value={formData.tools_used}
                                     onChange={(e) => setFormData({ ...formData, tools_used: e.target.value })}
                                     placeholder="e.g., Multimeter, Scanner"
-                                    className="h-9"
+                                    className="h-8"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -558,7 +575,7 @@ function TestDialog({
                                     onValueChange={(val) => setFormData({ ...formData, status: val as any })}
                                     required
                                 >
-                                    <SelectTrigger id="status" className="h-9 w-full">
+                                    <SelectTrigger id="status" className="h-8 w-full">
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -571,7 +588,7 @@ function TestDialog({
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-muted/50 mt-auto">
+                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border bg-muted/40 mt-auto">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>

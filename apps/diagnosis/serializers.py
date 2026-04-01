@@ -14,6 +14,21 @@ from apps.workorders.models import WorkOrder
 # Phase 2: Structured Data Serializers
 # ============================================================================
 
+def infer_diagnostic_code_type(code_number):
+    """Infer the stored code type from the diagnostic code prefix."""
+    normalized_code = (code_number or '').strip().upper()
+    if not normalized_code:
+        return None
+
+    prefix = normalized_code[0]
+    if prefix == 'B':
+        return 'body'
+    if prefix == 'C':
+        return 'chassis'
+    if prefix in {'P', 'U'}:
+        return 'obd_ii'
+    return 'other'
+
 class DiagnosisPhotoSerializer(serializers.ModelSerializer):
     """Serializer for diagnosis photos"""
     photo_type_display = serializers.CharField(source='get_photo_type_display', read_only=True)
@@ -74,12 +89,27 @@ class DiagnosticCodeCreateSerializer(serializers.ModelSerializer):
             'diagnosis', 'code_number', 'code_type', 'description', 'severity',
             'freeze_frame_data', 'status', 'recorded_at'
         ]
+        extra_kwargs = {
+            'code_type': {'required': False},
+        }
     
     def validate(self, attrs):
         """Validate that the code doesn't already exist for this diagnosis"""
-        diagnosis = attrs.get('diagnosis')
-        code_number = attrs.get('code_number', '').strip().upper()
-        code_type = attrs.get('code_type')
+        diagnosis = attrs.get('diagnosis') or getattr(self.instance, 'diagnosis', None)
+        raw_code_number = attrs.get('code_number')
+        code_number = (raw_code_number if raw_code_number is not None else getattr(self.instance, 'code_number', ''))
+        code_number = code_number.strip().upper()
+        code_type_was_provided = 'code_type' in getattr(self, 'initial_data', {})
+
+        if raw_code_number is not None:
+            attrs['code_number'] = code_number
+
+        if code_number and (not code_type_was_provided or not attrs.get('code_type')):
+            inferred_code_type = infer_diagnostic_code_type(code_number)
+            if inferred_code_type:
+                attrs['code_type'] = inferred_code_type
+
+        code_type = attrs.get('code_type') or getattr(self.instance, 'code_type', None)
         
         if diagnosis and code_number and code_type:
             # Check if this code already exists for this diagnosis
@@ -200,6 +230,23 @@ class DiagnosisFindingCreateSerializer(serializers.ModelSerializer):
         return finding
 
 
+class DiagnosisFindingLinkSerializer(serializers.ModelSerializer):
+    """Compact finding serializer for recommendation evidence links."""
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    severity_display = serializers.CharField(source='get_severity_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    diagnostic_codes = DiagnosticCodeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DiagnosisFinding
+        fields = [
+            'id', 'finding_title', 'category', 'category_display',
+            'severity', 'severity_display',
+            'status', 'status_display',
+            'diagnostic_codes',
+        ]
+
+
 # ============================================================================
 # Phase 1 Serializers
 # ============================================================================
@@ -208,6 +255,12 @@ class RepairRecommendationSerializer(serializers.ModelSerializer):
     """Serializer for repair recommendations"""
     recommendation_type_display = serializers.CharField(source='get_recommendation_type_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    linked_findings = DiagnosisFindingLinkSerializer(source='findings', many=True, read_only=True)
+    approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
+    quotation_status_display = serializers.CharField(source='get_quotation_status_display', read_only=True)
+    decision_by_name = serializers.SerializerMethodField()
+    quotation_requested_by_name = serializers.SerializerMethodField()
+    quoted_by_name = serializers.SerializerMethodField()
     converted_to_task_id = serializers.IntegerField(source='converted_to_task.id', read_only=True, allow_null=True)
     
     class Meta:
@@ -215,30 +268,178 @@ class RepairRecommendationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'recommendation_type', 'recommendation_type_display',
             'description', 'priority', 'priority_display',
-            'parts_needed', 'estimated_parts_cost',
+            'parts_needed', 'linked_findings', 'estimated_parts_cost',
             'estimated_labor_hours', 'estimated_labor_cost',
-            'estimated_total_cost', 'customer_approved',
+            'estimated_total_cost',
+            'approval_status', 'approval_status_display',
+            'decision_method', 'decision_notes', 'decision_at',
+            'decision_by', 'decision_by_name',
+            'customer_approved',
+            'quotation_status', 'quotation_status_display',
+            'quotation_requested_at', 'quotation_requested_by', 'quotation_requested_by_name',
+            'quoted_at', 'quoted_by', 'quoted_by_name',
             'converted_to_task_id', 'order',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['estimated_total_cost', 'created_at', 'updated_at']
+        read_only_fields = [
+            'estimated_total_cost',
+            'decision_at',
+            'decision_by',
+            'quotation_requested_at',
+            'quotation_requested_by',
+            'quoted_at',
+            'quoted_by',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_decision_by_name(self, obj):
+        if obj.decision_by:
+            return f"{obj.decision_by.first_name} {obj.decision_by.last_name}".strip() or obj.decision_by.username
+        return None
+
+    def get_quotation_requested_by_name(self, obj):
+        if obj.quotation_requested_by:
+            return f"{obj.quotation_requested_by.first_name} {obj.quotation_requested_by.last_name}".strip() or obj.quotation_requested_by.username
+        return None
+
+    def get_quoted_by_name(self, obj):
+        if obj.quoted_by:
+            return f"{obj.quoted_by.first_name} {obj.quoted_by.last_name}".strip() or obj.quoted_by.username
+        return None
 
 
 class RepairRecommendationCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating repair recommendations"""
+    findings = serializers.PrimaryKeyRelatedField(
+        queryset=DiagnosisFinding.objects.all(),
+        many=True,
+        required=False,
+    )
+
+    FORBIDDEN_STATE_FIELDS = {
+        'customer_approved',
+        'approval_status',
+        'decision_method',
+        'decision_notes',
+        'decision_at',
+        'decision_by',
+        'quotation_status',
+        'quotation_requested_at',
+        'quotation_requested_by',
+        'quoted_at',
+        'quoted_by',
+        'converted_to_task',
+        'converted_to_task_id',
+    }
+
+    FORBIDDEN_COST_FIELDS = {
+        'estimated_labor_hours',
+        'estimated_parts_cost',
+        'estimated_labor_cost',
+        'estimated_total_cost',
+    }
     
     class Meta:
         model = RepairRecommendation
         fields = [
             'recommendation_type', 'description', 'priority',
-            'parts_needed', 'estimated_parts_cost',
-            'estimated_labor_hours', 'estimated_labor_cost',
-            'order', 'customer_approved'
+            'parts_needed', 'findings',
+            'order'
         ]
+
+    def validate(self, attrs):
+        forbidden_state_fields = sorted(
+            field_name for field_name in self.FORBIDDEN_STATE_FIELDS
+            if field_name in getattr(self, 'initial_data', {})
+        )
+
+        if forbidden_state_fields:
+            raise serializers.ValidationError({
+                'non_field_errors': [
+                    'Approval state must be changed through the dedicated recommendation approval actions.'
+                ],
+                'forbidden_fields': forbidden_state_fields,
+            })
+
+        forbidden_cost_fields = sorted(
+            field_name for field_name in self.FORBIDDEN_COST_FIELDS
+            if field_name in getattr(self, 'initial_data', {})
+        )
+
+        if forbidden_cost_fields:
+            raise serializers.ValidationError({
+                'non_field_errors': [
+                    'Recommendation costs are not captured during diagnosis. Submit the approved recommendation to stores for quotation instead.'
+                ],
+                'forbidden_fields': forbidden_cost_fields,
+            })
+
+        return super().validate(attrs)
+
+    def validate_findings(self, findings):
+        diagnosis = self.context.get('diagnosis') or getattr(self.instance, 'diagnosis', None)
+        if not diagnosis:
+            return findings
+
+        invalid_ids = sorted(finding.id for finding in findings if finding.diagnosis_id != diagnosis.id)
+        if invalid_ids:
+            raise serializers.ValidationError(
+                f'Findings must belong to diagnosis {diagnosis.id}. Invalid finding ids: {", ".join(str(item) for item in invalid_ids)}.'
+            )
+
+        return findings
+
+    def validate_parts_needed(self, value):
+        if value in (None, ''):
+            return []
+
+        if not isinstance(value, list):
+            raise serializers.ValidationError('parts_needed must be a list of part lines.')
+
+        normalized_parts = []
+        for index, part in enumerate(value):
+            if not isinstance(part, dict):
+                raise serializers.ValidationError(f'Part line {index + 1} must be an object.')
+
+            part_name = (part.get('part_name') or '').strip()
+            if not part_name:
+                raise serializers.ValidationError(f'Part line {index + 1} requires part_name.')
+
+            try:
+                quantity = int(part.get('quantity', 1))
+            except (TypeError, ValueError):
+                raise serializers.ValidationError(f'Part line {index + 1} quantity must be a whole number.')
+
+            if quantity <= 0:
+                raise serializers.ValidationError(f'Part line {index + 1} quantity must be greater than zero.')
+
+            normalized_part = {
+                'part_name': part_name,
+                'part_number': (part.get('part_number') or '').strip(),
+                'quantity': quantity,
+            }
+
+            if part.get('part_id'):
+                normalized_part['part_id'] = part['part_id']
+
+            normalized_parts.append(normalized_part)
+
+        return normalized_parts
     
     def create(self, validated_data):
-        # Diagnosis will be set in the view
-        return super().create(validated_data)
+        findings = validated_data.pop('findings', [])
+        recommendation = super().create(validated_data)
+        if findings:
+            recommendation.findings.set(findings)
+        return recommendation
+
+    def update(self, instance, validated_data):
+        findings = validated_data.pop('findings', None)
+        recommendation = super().update(instance, validated_data)
+        if findings is not None:
+            recommendation.findings.set(findings)
+        return recommendation
 
 
 class DiagnosisListSerializer(serializers.ModelSerializer):
@@ -267,6 +468,43 @@ class DiagnosisListSerializer(serializers.ModelSerializer):
     
     def get_recommendation_count(self, obj):
         return obj.repair_recommendations.count()
+
+
+class RepairRecommendationQuoteQueueSerializer(RepairRecommendationSerializer):
+    """Serializer for the stores quotation queue."""
+    diagnosis_id = serializers.IntegerField(source='diagnosis.id', read_only=True)
+    work_order_id = serializers.IntegerField(source='diagnosis.work_order.id', read_only=True)
+    work_order_number = serializers.CharField(source='diagnosis.work_order.work_order_number', read_only=True)
+    vehicle_display = serializers.SerializerMethodField()
+    customer_name = serializers.SerializerMethodField()
+    branch_name = serializers.CharField(source='diagnosis.work_order.branch.name', read_only=True)
+
+    class Meta(RepairRecommendationSerializer.Meta):
+        fields = RepairRecommendationSerializer.Meta.fields + [
+            'diagnosis_id',
+            'work_order_id',
+            'work_order_number',
+            'vehicle_display',
+            'customer_name',
+            'branch_name',
+        ]
+
+    def get_vehicle_display(self, obj):
+        work_order = getattr(obj.diagnosis, 'work_order', None)
+        vehicle = getattr(work_order, 'vehicle', None)
+        if not vehicle:
+            return None
+        parts = [str(vehicle.year), vehicle.make, vehicle.model]
+        return ' '.join(part for part in parts if part and str(part).strip())
+
+    def get_customer_name(self, obj):
+        work_order = getattr(obj.diagnosis, 'work_order', None)
+        customer = getattr(work_order, 'customer', None)
+        user = getattr(customer, 'user', None)
+        if not user:
+            return None
+        full_name = f"{user.first_name} {user.last_name}".strip()
+        return full_name or user.username or user.email
 
 
 class DiagnosisTimeLogSerializer(serializers.ModelSerializer):
@@ -383,22 +621,38 @@ class DiagnosisCreateSerializer(serializers.ModelSerializer):
 
 class DiagnosisUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating diagnoses"""
+
+    FORBIDDEN_WORKFLOW_FIELDS = {
+        'status',
+        'is_completed',
+        'diagnostic_time_hours',
+    }
     
     class Meta:
         model = Diagnosis
         fields = [
-            'technician', 'status',
+            'technician',
             'customer_complaint', 'initial_observations',
-            'diagnostic_notes', 'diagnostic_time_hours',
+            'diagnostic_notes',
             'diagnostic_fee', 'root_cause', 'root_cause_explanation',
-            'is_completed', 'requires_approval'
+            'requires_approval'
         ]
-    
-    def update(self, instance, validated_data):
-        # Auto-complete if status is being set to completed
-        if validated_data.get('status') == 'completed' and not instance.is_completed:
-            instance.complete()
-        return super().update(instance, validated_data)
+
+    def validate(self, attrs):
+        forbidden_fields = sorted(
+            field_name for field_name in self.FORBIDDEN_WORKFLOW_FIELDS
+            if field_name in getattr(self, 'initial_data', {})
+        )
+
+        if forbidden_fields:
+            raise serializers.ValidationError({
+                'non_field_errors': [
+                    'Workflow state and tracked time must be changed through the dedicated diagnosis actions.'
+                ],
+                'forbidden_fields': forbidden_fields,
+            })
+
+        return super().validate(attrs)
 
 
 # ============================================================================
@@ -454,4 +708,3 @@ class DiagnosisHistorySerializer(serializers.ModelSerializer):
             'last_updated', 'created_at'
         ]
         read_only_fields = ['last_updated', 'created_at']
-
