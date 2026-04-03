@@ -198,7 +198,7 @@ export default function NewStaffPage() {
                                 name="first_name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>First Name <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>First Name <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="John" {...field} />
                                         </FormControl>
@@ -211,7 +211,7 @@ export default function NewStaffPage() {
                                 name="last_name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Last Name <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Last Name <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Doe" {...field} />
                                         </FormControl>
@@ -224,7 +224,7 @@ export default function NewStaffPage() {
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Email <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input type="email" placeholder="john.doe@example.com" {...field} />
                                         </FormControl>
@@ -237,7 +237,7 @@ export default function NewStaffPage() {
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Password <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Password <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input type="password" placeholder="********" {...field} />
                                         </FormControl>
@@ -565,7 +565,7 @@ export default function NewStaffPage() {
                                 name="bank_name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Bank Name <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Bank Name <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Bank Name" {...field} />
                                         </FormControl>
@@ -578,7 +578,7 @@ export default function NewStaffPage() {
                                 name="bank_account_number"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Account Number <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Account Number <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Account Number" {...field} />
                                         </FormControl>
@@ -591,7 +591,7 @@ export default function NewStaffPage() {
                                 name="bank_branch"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Bank Branch <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Bank Branch <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Branch Name/Code" {...field} />
                                         </FormControl>
@@ -604,7 +604,7 @@ export default function NewStaffPage() {
                                 name="tax_id"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Tax ID / SSN <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Tax ID / SSN <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Tax ID" {...field} />
                                         </FormControl>
@@ -617,7 +617,7 @@ export default function NewStaffPage() {
                                 name="national_id"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>National ID <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>National ID <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="National ID" {...field} />
                                         </FormControl>
@@ -639,7 +639,7 @@ export default function NewStaffPage() {
                                 name="emergency_contact_name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Contact Name <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Contact Name <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Name" {...field} />
                                         </FormControl>
@@ -652,7 +652,7 @@ export default function NewStaffPage() {
                                 name="emergency_contact_relationship"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Relationship <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Relationship <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="e.g. Spouse, Parent" {...field} />
                                         </FormControl>
@@ -665,7 +665,7 @@ export default function NewStaffPage() {
                                 name="emergency_contact_phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone <span className="text-red-500">*</span></FormLabel>
+                                        <FormLabel>Phone <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Phone Number" {...field} />
                                         </FormControl>

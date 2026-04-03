@@ -321,7 +321,7 @@ export default function ServicesDuePage() {
                       </TableCell>
                       <TableCell className="text-xs">
                         {schedule.days_until_due !== undefined ? (
-                          <span className={schedule.days_until_due < 0 ? "text-red-600 font-medium" : ""}>
+                          <span className={schedule.days_until_due < 0 ? "text-destructive font-medium" : ""}>
                             {schedule.days_until_due < 0
                               ? `${Math.abs(schedule.days_until_due)} days overdue`
                               : `${schedule.days_until_due} days`}

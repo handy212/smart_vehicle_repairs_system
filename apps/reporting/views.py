@@ -740,8 +740,12 @@ def technician_performance(request):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
     
-    # Get all technicians
-    technicians = User.objects.filter(role='technician')
+    # Get technicians and service coordinators, filtered by active branch
+    staff_qs = User.objects.filter(role__in=['technician', 'service_coordinator'])
+    active_branch = resolve_branch(request)
+    if active_branch:
+        staff_qs = staff_qs.filter(branch=active_branch)
+    technicians = staff_qs
     
     performance_data = []
     for tech in technicians:
@@ -801,7 +805,8 @@ def technician_performance(request):
             'technician': {
                 'id': tech.id,
                 'name': f"{tech.first_name} {tech.last_name}",
-                'email': tech.email
+                'email': tech.email,
+                'role': tech.role,
             },
             'metrics': {
                 'total_work_orders': work_orders.count(),

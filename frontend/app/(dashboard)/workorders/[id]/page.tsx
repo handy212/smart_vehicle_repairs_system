@@ -277,7 +277,7 @@ export default function WorkOrderDetailPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600 dark:text-red-400">Error loading work order. Please try again.</p>
+            <p className="text-destructive dark:text-red-400">Error loading work order. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -611,7 +611,7 @@ function UnapprovedRecommendationsDialog({
             </div>
           ) : unapprovedRecommendations.length === 0 ? (
             <div className="text-center py-6">
-              <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
+              <CheckCircle className="w-10 h-10 mx-auto text-success mb-2" />
               <p className="font-medium text-foreground">
                 All Approved
               </p>

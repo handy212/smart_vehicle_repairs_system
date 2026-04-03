@@ -3,6 +3,8 @@ Serializers for vehicles app
 """
 from rest_framework import serializers
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 from .models import Vehicle, VehicleMileageHistory, VehicleDocument, VehiclePhoto, ServiceType, VehicleServiceSchedule, VehicleOwnershipHistory
 from .vin_decoder import decode_vin, VehicleVINDecoder
 
@@ -26,6 +28,7 @@ class VehicleListSerializer(serializers.ModelSerializer):
             'health_score', 'is_high_risk', 'average_daily_mileage', 'relationship', 'created_at', 'image'
         ]
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_due_service_name(self, obj):
         """Get the name of the most urgent due service"""
         due_schedule = obj.service_schedules.filter(is_active=True).order_by('next_service_due_date', 'next_service_due_mileage').first()
@@ -470,6 +473,7 @@ class ServiceTypeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'has_bundle']
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_bundle(self, obj):
         return hasattr(obj, 'service_bundle')
 
@@ -483,6 +487,7 @@ class ServiceTypeListSerializer(serializers.ModelSerializer):
         model = ServiceType
         fields = ['id', 'name', 'description', 'default_interval_months', 'default_interval_miles', 'is_predefined', 'is_active', 'has_bundle']
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_bundle(self, obj):
         return hasattr(obj, 'service_bundle')
 

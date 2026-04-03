@@ -187,8 +187,8 @@ export default function AgingReportPage() {
                         <div className="flex items-center justify-center h-64">
                             <Loader2 className="w-8 h-8 animate-spin" />
                         </div>
-                    ) : isError ? (
-                        <div className="p-4 text-red-500">Error loading report</div>
+                    ) : isError || !report ? (
+                        <div className="p-4 text-destructive">Error loading report</div>
                     ) : (
                         <>
                             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

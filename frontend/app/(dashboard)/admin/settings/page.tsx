@@ -67,6 +67,8 @@ export default function SystemSettingsPage() {
       adminApi.settings.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "settings"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "branding"] });
+      queryClient.refetchQueries({ queryKey: ["settings", "branding"] });
       toast({
         title: "Success",
         description: "Setting updated successfully",
@@ -224,6 +226,17 @@ export default function SystemSettingsPage() {
         const { [id]: _, ...rest } = prev;
         return rest;
       });
+
+      // Apply theme immediately when theme_mode is saved
+      if (setting.key === 'theme_mode' && payload.value) {
+        const themeMode = payload.value.toLowerCase().trim();
+        const validThemes = ['light', 'dark', 'system', 'auto', 'perfex', 'classic'];
+        if (validThemes.includes(themeMode)) {
+          const themeValue = themeMode === 'auto' ? 'system' : themeMode;
+          localStorage.removeItem('theme_override');
+          window.dispatchEvent(new CustomEvent('systemThemeModeChanged', { detail: themeValue }));
+        }
+      }
 
     } catch (error: any) {
       const errorMessage = error.response?.data?.detail || error.response?.data?.value?.[0] || "Failed to update setting";
@@ -442,6 +455,7 @@ export default function SystemSettingsPage() {
                                           <SelectItem value="light">Light</SelectItem>
                                           <SelectItem value="dark">Dark</SelectItem>
                                           <SelectItem value="auto">Auto (System Preference)</SelectItem>
+                                          <SelectItem value="perfex">Perfex</SelectItem>
                                         </SelectContent>
                                       </Select>
                                     ) : /* SMS Provider - Dropdown */
@@ -768,7 +782,7 @@ export default function SystemSettingsPage() {
                                                                         step={setting.key.match(/(rate|percentage|amount|price)/i) ? "0.01" : setting.key.match(/(duration|buffer|timeout)/i) ? "1" : undefined}
                                                                         className={`h-8 text-xs bg-card ${setting.is_secret ? "pr-8" : ""} ${rowEdits[setting.id]?.value !== undefined &&
                                                                           validateSetting(setting, rowEdits[setting.id]!.value || "")
-                                                                          ? "border-red-500 focus-visible:ring-red-500"
+                                                                          ? "border-destructive focus-visible:ring-red-500"
                                                                           : ""
                                                                           }`}
                                                                         placeholder={setting.is_secret ? "Enter secret" : "Value"}
@@ -794,7 +808,7 @@ export default function SystemSettingsPage() {
                                     (() => {
                                       const error = validateSetting(setting, rowEdits[setting.id]!.value || "");
                                       return error ? (
-                                        <p className="text-[10px] text-red-600 mt-1">{error}</p>
+                                        <p className="text-[10px] text-destructive mt-1">{error}</p>
                                       ) : null;
                                     })()}
                                 </div>
@@ -861,7 +875,7 @@ export default function SystemSettingsPage() {
                                         size="sm"
                                         onClick={() => handleDelete(setting)}
                                         disabled={deleteMutation.isPending || !canManage}
-                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                                       >
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </Button>
@@ -900,10 +914,10 @@ function TaxInfoBanner() {
 
   if (isLoading || !data) {
     return (
-      <Card className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30 mb-4 shadow-none">
+      <Card className="bg-warning/10 dark:bg-amber-900/10 border-warning/20 dark:border-amber-900/30 mb-4 shadow-none">
         <CardContent className="p-3 py-2 flex items-center gap-3">
-          <Info className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-          <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-tight">
+          <Info className="h-4 w-4 text-warning dark:text-warning" />
+          <p className="text-[11px] text-warning text-warning leading-tight">
             Tax settings affect how taxes are calculated and displayed.
           </p>
         </CardContent>
@@ -911,16 +925,16 @@ function TaxInfoBanner() {
     );
   }
 
-  return (
-    <Card className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30 mb-4 shadow-none">
-      <CardContent className="p-3 py-2 flex items-center gap-3">
-        <Info className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-        <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-tight">
-          Tax Regime: <span className="font-bold">{data.regime || "Standard"}</span>.
-          VAT Rate: <span className="font-bold">{data.vat_rate}%</span>.
-          Status: <span className="font-bold">{data.enabled ? "Active" : "Inactive"}</span>.
-        </p>
-      </CardContent>
-    </Card>
-  );
+  // return (
+  //   <Card className="bg-warning/10 dark:bg-amber-900/10 border-warning/20 dark:border-amber-900/30 mb-4 shadow-none">
+  //     <CardContent className="p-3 py-2 flex items-center gap-3">
+  //       <Info className="h-4 w-4 text-warning dark:text-warning" />
+  //       <p className="text-[11px] text-warning text-warning leading-tight">
+  //         Tax Regime: <span className="font-bold">{data.regime || "Standard"}</span>.
+  //         VAT Rate: <span className="font-bold">{data.vat_rate}%</span>.
+  //         Status: <span className="font-bold">{data.enabled ? "Active" : "Inactive"}</span>.
+  //       </p>
+  //     </CardContent>
+  //   </Card>
+  // );
 }

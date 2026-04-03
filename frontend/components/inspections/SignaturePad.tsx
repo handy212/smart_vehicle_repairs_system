@@ -56,7 +56,7 @@ export function SignaturePad({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {required && <span className="text-destructive ml-1">*</span>}
           </CardTitle>
           {!disabled && (
             <Button

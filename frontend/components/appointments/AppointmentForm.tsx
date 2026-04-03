@@ -112,7 +112,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                         </CardHeader>
                         <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Customer <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Customer <span className="text-destructive">*</span></label>
                                 <Select
                                     value={watch("customer")?.toString() || ""}
                                     onValueChange={(val) => {
@@ -120,7 +120,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                                         setValue("vehicle", 0); // Reset vehicle
                                     }}
                                 >
-                                    <SelectTrigger className={errors.customer ? "border-red-500" : ""}>
+                                    <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
                                         <SelectValue placeholder="Select Customer" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -137,17 +137,17 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                                         })}
                                     </SelectContent>
                                 </Select>
-                                {errors.customer && <p className="text-xs text-red-500">{errors.customer.message}</p>}
+                                {errors.customer && <p className="text-xs text-destructive">{errors.customer.message}</p>}
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Vehicle <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Vehicle <span className="text-destructive">*</span></label>
                                 <Select
                                     value={watch("vehicle")?.toString() || ""}
                                     onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
                                     disabled={!selectedCustomer}
                                 >
-                                    <SelectTrigger className={errors.vehicle ? "border-red-500" : ""}>
+                                    <SelectTrigger className={errors.vehicle ? "border-destructive" : ""}>
                                         <SelectValue placeholder={!selectedCustomer ? "Select a customer first" : "Select Vehicle"} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -158,7 +158,7 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {errors.vehicle && <p className="text-xs text-red-500">{errors.vehicle.message}</p>}
+                                {errors.vehicle && <p className="text-xs text-destructive">{errors.vehicle.message}</p>}
                             </div>
                         </CardContent>
                     </Card>
@@ -170,24 +170,24 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                         </CardHeader>
                         <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Date <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Date <span className="text-destructive">*</span></label>
                                 <Input
                                     type="date"
                                     {...register("appointment_date")}
                                     min={todayStr}
-                                    className={errors.appointment_date ? "border-red-500" : ""}
+                                    className={errors.appointment_date ? "border-destructive" : ""}
                                 />
-                                {errors.appointment_date && <p className="text-xs text-red-500">{errors.appointment_date.message}</p>}
+                                {errors.appointment_date && <p className="text-xs text-destructive">{errors.appointment_date.message}</p>}
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Time <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Time <span className="text-destructive">*</span></label>
                                 <Input
                                     type="time"
                                     {...register("appointment_time")}
                                     min={minTimeForSelectedDate}
-                                    className={errors.appointment_time ? "border-red-500" : ""}
+                                    className={errors.appointment_time ? "border-destructive" : ""}
                                 />
-                                {errors.appointment_time && <p className="text-xs text-red-500">{errors.appointment_time.message}</p>}
+                                {errors.appointment_time && <p className="text-xs text-destructive">{errors.appointment_time.message}</p>}
                             </div>
                         </CardContent>
                     </Card>

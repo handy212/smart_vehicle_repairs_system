@@ -142,7 +142,9 @@ class Notification(models.Model):
     
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='user_notifications'
     )
     notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPE_CHOICES)

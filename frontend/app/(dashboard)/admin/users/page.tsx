@@ -329,14 +329,14 @@ export default function UsersManagementPage() {
                         ) : (
                           <div className="flex items-center space-x-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                            <span className="text-xs text-red-600 dark:text-red-400">Inactive</span>
+                            <span className="text-xs text-destructive dark:text-red-400">Inactive</span>
                           </div>
                         )}
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
                         {user.two_factor_enabled ? (
                           <div className="flex items-center space-x-1.5" title="2FA is enabled">
-                            <ShieldCheck className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                            <ShieldCheck className="w-3.5 h-3.5 text-success dark:text-green-400" />
                             <span className="text-xs text-green-700 dark:text-green-400 font-medium">Enabled</span>
                           </div>
                         ) : (
@@ -401,7 +401,7 @@ export default function UsersManagementPage() {
                                       handleDelete(user);
                                     }
                                   }}
-                                  className="text-red-600 dark:text-red-400"
+                                  className="text-destructive dark:text-red-400"
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Delete User

@@ -114,12 +114,12 @@ export default function TillDetailPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className={till.is_balanced ? 'border-green-500' : 'border-red-500'}>
+                        <Card className={till.is_balanced ? 'border-green-500' : 'border-destructive'}>
                             <CardHeader>
                                 <CardTitle className="text-sm text-muted-foreground">Variance</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className={`text-3xl font-bold ${till.is_balanced ? 'text-success' : 'text-red-600'}`}>
+                                <p className={`text-3xl font-bold ${till.is_balanced ? 'text-success' : 'text-destructive'}`}>
                                     {till.variance && parseFloat(till.variance) >= 0 ? '+' : ''}${parseFloat(till.variance || '0').toLocaleString()}
                                 </p>
                                 <p className="text-sm mt-2">

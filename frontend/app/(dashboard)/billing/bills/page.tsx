@@ -184,8 +184,8 @@ export default function BillsPage() {
                     <CardContent className="p-4 flex flex-col gap-1">
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Overdue</span>
                         <div className="flex items-end justify-between">
-                            <span className="text-xl font-bold text-red-600">{overdueCount}</span>
-                            <AlertCircle className="w-5 h-5 text-red-500/50 mb-0.5" />
+                            <span className="text-xl font-bold text-destructive">{overdueCount}</span>
+                            <AlertCircle className="w-5 h-5 text-destructive/50 mb-0.5" />
                         </div>
                     </CardContent>
                 </Card>
@@ -232,7 +232,7 @@ export default function BillsPage() {
                                         setAdvancedFilters({});
                                         setPage(1);
                                     }}
-                                    className="h-8 text-muted-foreground hover:text-red-600"
+                                    className="h-8 text-muted-foreground hover:text-destructive"
                                 >
                                     <X className="w-3.5 h-3.5 mr-1" />
                                     Clear
@@ -294,7 +294,7 @@ export default function BillsPage() {
                                             <TableCell className="px-4 py-2 text-right font-medium text-sm text-foreground">
                                                 {formatCurrency(parseFloat(bill.total || "0"))}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-right text-sm text-red-600 font-medium">
+                                            <TableCell className="px-4 py-2 text-right text-sm text-destructive font-medium">
                                                 {formatCurrency(parseFloat(bill.amount_due || "0"))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">

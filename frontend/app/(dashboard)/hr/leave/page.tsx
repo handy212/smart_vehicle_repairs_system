@@ -77,9 +77,9 @@ function LeaveContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "pending": return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
-            case "approved": return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-            case "rejected": return "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
+            case "pending": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
+            case "approved": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
+            case "rejected": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
             case "cancelled": return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
             default: return "";
         }
@@ -125,19 +125,19 @@ function LeaveContent() {
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending</span>
-                            <span className="text-lg font-bold text-amber-600">{pendingCount}</span>
+                            <span className="text-lg font-bold text-warning">{pendingCount}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Approved</span>
-                            <span className="text-lg font-bold text-green-600">{approvedCount}</span>
+                            <span className="text-lg font-bold text-success">{approvedCount}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rejected</span>
-                            <span className="text-lg font-bold text-red-600">{rejectedCount}</span>
+                            <span className="text-lg font-bold text-destructive">{rejectedCount}</span>
                         </CardContent>
                     </Card>
                 </div>
@@ -215,7 +215,7 @@ function LeaveContent() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                                className="h-7 px-2 text-success hover:text-green-700 hover:bg-success/10"
                                                                 onClick={() => approveMutation.mutate(req.id)}
                                                                 disabled={approveMutation.isPending}
                                                             >
@@ -225,7 +225,7 @@ function LeaveContent() {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                                 onClick={() => rejectMutation.mutate(req.id)}
                                                                 disabled={rejectMutation.isPending}
                                                             >
@@ -242,7 +242,7 @@ function LeaveContent() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem onClick={() => setEditingRequest(req)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
-                                                            <DropdownMenuItem className="text-red-600" onClick={() => setDeletingId(req.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                            <DropdownMenuItem className="text-destructive" onClick={() => setDeletingId(req.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </PermissionGuard>

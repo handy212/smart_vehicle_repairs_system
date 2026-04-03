@@ -9,6 +9,7 @@ from django.conf import settings
 from rest_framework.views import exception_handler
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 
 logger = logging.getLogger('django.request')
 
@@ -53,10 +54,18 @@ def custom_exception_handler(exc, context):
                 exc_info=True,
             )
         elif response.status_code >= 400:
-            logger.warning(
-                "Client error in %s: %s",
-                context.get('view', 'unknown'),
-                exc,
-            )
+            # Avoid noisy warnings for out-of-range page navigation
+            if isinstance(exc, NotFound) and "Invalid page" in str(exc):
+                logger.debug(
+                    "Pagination out-of-range in %s: %s",
+                    context.get('view', 'unknown'),
+                    exc,
+                )
+            else:
+                logger.warning(
+                    "Client error in %s: %s",
+                    context.get('view', 'unknown'),
+                    exc,
+                )
 
     return response

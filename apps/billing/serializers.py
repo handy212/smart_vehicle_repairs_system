@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.utils import timezone
 from django.db import transaction
 from django.core.validators import MinValueValidator
+from drf_spectacular.utils import extend_schema_field, inline_serializer
+from drf_spectacular.types import OpenApiTypes
 from apps.billing.models import (
     TaxRate,
     Estimate,
@@ -155,6 +157,7 @@ class EstimateListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if not obj.vehicle:
             return None
@@ -206,17 +209,31 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'viewed_at', 'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if obj.vehicle:
             return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
         return None
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_work_order_number(self, obj):
         """Get work order number if work order exists"""
         if obj.work_order:
             return obj.work_order.work_order_number
         return None
 
+    @extend_schema_field(inline_serializer(
+        name='TaxBreakdownEstimate',
+        fields={
+            'regime': serializers.CharField(),
+            'taxable_subtotal': serializers.CharField(),
+            'nhil_amount': serializers.CharField(),
+            'getfund_amount': serializers.CharField(),
+            'hrl_amount': serializers.CharField(),
+            'vat_amount': serializers.CharField(),
+            'total_tax': serializers.CharField(),
+        }
+    ))
     def get_tax_breakdown(self, obj):
         return {
             'regime': obj.tax_regime,
@@ -442,6 +459,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if not obj.vehicle:
             return None
@@ -510,11 +528,13 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if not obj.vehicle:
             return None
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
         """Get customer name from user or company name"""
         customer = obj.customer
@@ -524,6 +544,7 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             return customer.user.get_full_name() or customer.user.username
         return str(customer)
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_email(self, obj):
         """Get customer email from user"""
         customer = obj.customer
@@ -531,6 +552,7 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             return customer.user.email or ''
         return ''
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_phone(self, obj):
         """Get customer phone from user"""
         customer = obj.customer
@@ -538,6 +560,7 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             return customer.user.phone or ''
         return ''
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_address(self, obj):
         """Get customer address from service_address, billing_address, or user address"""
         customer = obj.customer
@@ -569,11 +592,24 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
         
         return ", ".join(filter(None, parts))
     
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_payments(self, obj):
         from apps.billing.serializers import PaymentSerializer
         payments = obj.payments.filter(status='completed').order_by('-payment_date')
         return PaymentSerializer(payments, many=True).data
 
+    @extend_schema_field(inline_serializer(
+        name='TaxBreakdownInvoice',
+        fields={
+            'regime': serializers.CharField(),
+            'taxable_subtotal': serializers.CharField(),
+            'nhil_amount': serializers.CharField(),
+            'getfund_amount': serializers.CharField(),
+            'hrl_amount': serializers.CharField(),
+            'vat_amount': serializers.CharField(),
+            'total_tax': serializers.CharField(),
+        }
+    ))
     def get_tax_breakdown(self, obj):
         return {
             'regime': obj.tax_regime,

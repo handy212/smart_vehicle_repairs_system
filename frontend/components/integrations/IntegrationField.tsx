@@ -133,7 +133,7 @@ export function IntegrationField({
             )}
 
             {error && (
-              <p className="text-[10px] text-red-600 dark:text-red-400 mt-1">{error}</p>
+              <p className="text-[10px] text-destructive dark:text-red-400 mt-1">{error}</p>
             )}
           </div>
 

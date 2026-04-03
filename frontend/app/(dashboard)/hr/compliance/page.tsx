@@ -57,9 +57,9 @@ function ComplianceContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "valid": return "bg-green-50 text-green-700 border-green-200";
-            case "expiring_soon": return "bg-amber-50 text-amber-700 border-amber-200";
-            case "expired": return "bg-red-50 text-red-700 border-red-200";
+            case "valid": return "bg-success/10 text-green-700 border-green-200";
+            case "expiring_soon": return "bg-warning/10 text-amber-700 border-warning/20";
+            case "expired": return "bg-destructive/10 text-destructive border-destructive/20";
             default: return "bg-gray-100 text-gray-700 border-gray-200";
         }
     };
@@ -78,9 +78,9 @@ function ComplianceContent() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-amber-50 border-amber-200">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Expiring Soon (30 Days)</CardTitle></CardHeader>
-                    <CardContent><div className="text-2xl font-bold text-amber-900">{expiringSoon?.length || 0}</div></CardContent>
+                <Card className="bg-warning/10 border-warning/20">
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-warning flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Expiring Soon (30 Days)</CardTitle></CardHeader>
+                    <CardContent><div className="text-2xl font-bold text-warning">{expiringSoon?.length || 0}</div></CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><FileText className="h-4 w-4" /> Total Documents</CardTitle></CardHeader>
@@ -88,7 +88,7 @@ function ComplianceContent() {
                 </Card>
                 <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Shield className="h-4 w-4" /> Compliance Rate</CardTitle></CardHeader>
-                    <CardContent><div className="text-2xl font-bold text-green-600">98%</div></CardContent>
+                    <CardContent><div className="text-2xl font-bold text-success">98%</div></CardContent>
                 </Card>
             </div>
 
@@ -155,7 +155,7 @@ function ComplianceContent() {
                                                     )}
                                                     <DropdownMenuItem onClick={() => setEditingDoc(doc)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="text-red-600" onClick={() => setDeletingDoc(doc)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => setDeletingDoc(doc)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>

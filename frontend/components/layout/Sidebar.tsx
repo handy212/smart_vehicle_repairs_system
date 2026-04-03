@@ -55,10 +55,15 @@ const navigationGroups = [
     ],
   },
   {
+    name: "Communications",
+    items: [
+      { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications" },
+    ],
+  },
+  {
     name: "System",
     items: [
       { name: "Configurations", href: "/admin", icon: PremiumIcons.Settings, permission: "view_settings" },
-      { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications" },
     ],
   },
 ];

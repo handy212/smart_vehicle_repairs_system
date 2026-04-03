@@ -109,10 +109,10 @@ export default function ProformaDetailPage() {
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                 </Button>
-                <Card className="border-red-200 bg-red-50">
+                <Card className="border-destructive/20 bg-destructive/10">
                     <CardContent className="pt-6">
-                        <p className="text-sm font-medium text-red-800">Invalid Proforma ID</p>
-                        <p className="text-sm text-red-700 mt-1">The proforma ID in the URL is invalid.</p>
+                        <p className="text-sm font-medium text-destructive">Invalid Proforma ID</p>
+                        <p className="text-sm text-destructive mt-1">The proforma ID in the URL is invalid.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -125,7 +125,7 @@ export default function ProformaDetailPage() {
 
     if (error || !invoice || invoice.status !== 'proforma') {
         return (
-            <div className="p-8 text-center text-red-500">
+            <div className="p-8 text-center text-destructive">
                 Error loading proforma or invoice is not a proforma.
                 <Button variant="link" onClick={() => router.push("/billing/proformas")}>Back to list</Button>
             </div>
@@ -262,7 +262,7 @@ export default function ProformaDetailPage() {
                                         </div>
                                         <div className="flex justify-between md:justify-start md:gap-8">
                                             <span className="text-sm text-muted-foreground w-24">Due:</span>
-                                            <span className="text-sm font-medium text-red-600">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</span>
+                                            <span className="text-sm font-medium text-destructive">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</span>
                                         </div>
                                         {invoice.sales_agent_name && (
                                             <div className="flex justify-between md:justify-start md:gap-8">
@@ -330,7 +330,7 @@ export default function ProformaDetailPage() {
                                                     {formatCurrency(parseFloat(item.unit_price))}
                                                 </TableCell>
                                                 <TableCell className="text-right align-top py-3">
-                                                    {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto" /> : <span className="text-gray-300">-</span>}
+                                                    {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-success ml-auto" /> : <span className="text-gray-300">-</span>}
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium align-top py-3">
                                                     {formatCurrency(parseFloat(item.total))}

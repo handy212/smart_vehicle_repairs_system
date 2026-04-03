@@ -394,7 +394,7 @@ export default function PurchaseOrderDetailPage() {
                 </h3>
                 <p className="text-[10px] text-muted-foreground">PO Expected due</p>
               </div>
-              <Clock className="h-6 w-6 text-amber-500/30" />
+              <Clock className="h-6 w-6 text-warning/30" />
             </div>
           </CardContent>
         </Card>
@@ -409,7 +409,7 @@ export default function PurchaseOrderDetailPage() {
                 </h3>
                 <p className="text-[10px] text-muted-foreground">QuickBooks integration</p>
               </div>
-              <Database className="h-6 w-6 text-green-500/30" />
+              <Database className="h-6 w-6 text-success/30" />
             </div>
           </CardContent>
         </Card>
@@ -486,7 +486,7 @@ export default function PurchaseOrderDetailPage() {
                         </TableCell>
                         <TableCell className="text-right font-bold text-xs">{item.quantity}</TableCell>
                         <TableCell className="text-right text-xs">
-                          <span className={cn(item.quantity_received === item.quantity ? "text-green-600 font-bold" : "text-amber-600")}>
+                          <span className={cn(item.quantity_received === item.quantity ? "text-success font-bold" : "text-warning")}>
                             {item.quantity_received || 0}
                           </span>
                         </TableCell>
@@ -557,7 +557,7 @@ export default function PurchaseOrderDetailPage() {
                 <div className="pt-2 border-t">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Expected Delivery</label>
                   <p className="text-xs font-semibold mt-0.5 flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-amber-500" />
+                    <Clock className="h-3 w-3 text-warning" />
                     {purchaseOrder.expected_delivery_date ? format(new Date(purchaseOrder.expected_delivery_date), "MMMM dd, yyyy") : "Not scheduled"}
                   </p>
                 </div>

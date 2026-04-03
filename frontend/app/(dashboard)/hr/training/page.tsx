@@ -119,7 +119,7 @@ function AvailableProgramsList() {
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem onClick={() => setEditingProg(prog)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem className="text-red-600" onClick={() => setDeletingId(prog.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive" onClick={() => setDeletingId(prog.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </PermissionGuard>
@@ -247,9 +247,9 @@ function MyTrainingList() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "completed": return "bg-green-50 text-green-700 border-green-200";
-            case "in_progress": return "bg-blue-50 text-blue-700 border-blue-200";
-            case "failed": return "bg-red-50 text-red-700 border-red-200";
+            case "completed": return "bg-success/10 text-green-700 border-green-200";
+            case "in_progress": return "bg-info/10 text-blue-700 border-info/20";
+            case "failed": return "bg-destructive/10 text-destructive border-destructive/20";
             default: return "bg-gray-100 text-gray-700 border-gray-200"; // enrolled
         }
     };
@@ -261,7 +261,7 @@ function MyTrainingList() {
             {records.map(rec => (
                 <Card key={rec.id} className="flex items-center p-4 justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", rec.status === "completed" ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600")}>
+                        <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", rec.status === "completed" ? "bg-green-100 text-success" : "bg-blue-100 text-primary")}>
                             {rec.status === "completed" ? <Award className="h-6 w-6" /> : <BookOpen className="h-6 w-6" />}
                         </div>
                         <div>

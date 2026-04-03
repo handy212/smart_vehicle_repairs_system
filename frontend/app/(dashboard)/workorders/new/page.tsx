@@ -607,9 +607,9 @@ export default function NewWorkOrderPage() {
       )}
 
       {serverError && (
-        <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+        <Card className="bg-destructive/10 dark:bg-red-900/20 border-destructive/20 dark:border-red-800">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800 dark:text-red-400">
+            <div className="flex items-center space-x-2 text-destructive dark:text-red-400">
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">{serverError}</p>
             </div>
@@ -620,7 +620,7 @@ export default function NewWorkOrderPage() {
       <Dialog open={showActiveWorkOrderDialog} onOpenChange={setShowActiveWorkOrderDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+            <DialogTitle className="flex items-center space-x-2 text-destructive dark:text-red-400">
               <AlertCircle className="w-5 h-5" />
               <span>Active Work Order Detected</span>
             </DialogTitle>
@@ -788,7 +788,7 @@ export default function NewWorkOrderPage() {
                           }
                         }}
                       >
-                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-red-500" : ""}`}>
+                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-destructive" : ""}`}>
                           <SelectValue placeholder="Select a customer" />
                         </SelectTrigger>
                         <SelectContent>
@@ -801,7 +801,7 @@ export default function NewWorkOrderPage() {
                       </Select>
 
                       {errors.customer && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
                           {errors.customer.message}
                         </p>
                       )}
@@ -832,7 +832,7 @@ export default function NewWorkOrderPage() {
                         onValueChange={(val) => setValue("vehicle", parseInt(val))}
                         disabled={!selectedCustomer || !vehiclesData?.results?.length}
                       >
-                        <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}>
+                        <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-destructive" : ""}`}>
                           <SelectValue placeholder={
                             !selectedCustomer
                               ? "Select a customer first"
@@ -851,7 +851,7 @@ export default function NewWorkOrderPage() {
                       </Select>
 
                       {errors.vehicle && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
                           {errors.vehicle.message}
                         </p>
                       )}
@@ -873,9 +873,9 @@ export default function NewWorkOrderPage() {
 
             {/* Smart Preventive Suggestions */}
             {suggestedService?.smart_suggestions && suggestedService.smart_suggestions.length > 0 && (
-              <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20 shadow-sm animate-in fade-in slide-in-from-top-4">
+              <Card className="border-warning/20 bg-warning/10 dark:border-amber-900/50 dark:bg-amber-900/20 shadow-sm animate-in fade-in slide-in-from-top-4">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-amber-800 dark:text-amber-300 flex items-center gap-2 text-md">
+                  <CardTitle className="text-warning dark:text-amber-300 flex items-center gap-2 text-md">
                     <HeartPulse className="w-5 h-5 animate-pulse" />
                     Smart Preventive Suggestions
                   </CardTitle>
@@ -893,7 +893,7 @@ export default function NewWorkOrderPage() {
                             {service.is_due ? (
                               <Badge variant="danger" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none">OVERDUE</Badge>
                             ) : service.is_due_soon ? (
-                              <Badge variant="warning" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none bg-amber-500 text-amber-950">DUE SOON</Badge>
+                              <Badge variant="warning" className="text-[10px] h-4 px-1 py-0 shadow-sm leading-none bg-warning/100 text-amber-950">DUE SOON</Badge>
                             ) : null}
                           </span>
                           <span className="text-muted-foreground font-mono text-xs mt-1 block">
@@ -969,7 +969,7 @@ export default function NewWorkOrderPage() {
                           Service Type
                         </label>
                         {suggestedService && (
-                          <Badge variant="outline" className="text-[10px] bg-info/10 text-blue-700 border-blue-200">
+                          <Badge variant="outline" className="text-[10px] bg-info/10 text-blue-700 border-info/20">
                             Suggested: {suggestedService.suggested_service_name}
                           </Badge>
                         )}
@@ -1114,7 +1114,7 @@ export default function NewWorkOrderPage() {
                       {...register("customer_concerns")}
                       rows={6}
                       placeholder="Describe the issue or service needed... (You can select multiple common concerns above or type your own)"
-                      className={errors.customer_concerns ? "border-red-500" : ""}
+                      className={errors.customer_concerns ? "border-destructive" : ""}
                       onChange={(e) => {
                         // Update the textarea value
                         setValue("customer_concerns", e.target.value);
@@ -1125,7 +1125,7 @@ export default function NewWorkOrderPage() {
                       }}
                     />
                     {errors.customer_concerns && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customer_concerns.message}</p>
+                      <p className="mt-1 text-sm text-destructive dark:text-red-400">{errors.customer_concerns.message}</p>
                     )}
                     {repeatVisitMatches.length > 0 && !showRepeatVisitDialog && (
                       <div className="mt-2 rounded-md border border-primary/15 bg-primary/5 p-3">
@@ -1283,7 +1283,7 @@ export default function NewWorkOrderPage() {
                     {selectedRelatedWorkOrder && (
                       <div className="space-y-2 animate-in fade-in duration-300">
                         <label htmlFor="warranty_reason" className="text-sm font-medium text-card-foreground flex items-center justify-between">
-                          <span>Reason for Rework <span className="text-red-500">*</span></span>
+                          <span>Reason for Rework <span className="text-destructive">*</span></span>
                         </label>
                         <Textarea
                           id="warranty_reason"
@@ -1390,7 +1390,7 @@ export default function NewWorkOrderPage() {
               </div>
             ) : (
               <div className="text-center py-6">
-                <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
+                <CheckCircle className="w-10 h-10 mx-auto text-success mb-2" />
                 <p className="font-medium text-foreground">
                   No Open Recommendations
                 </p>

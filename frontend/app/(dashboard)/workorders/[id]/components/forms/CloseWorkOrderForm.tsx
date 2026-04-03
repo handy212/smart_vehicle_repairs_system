@@ -35,7 +35,7 @@ export function CloseWorkOrderForm({
         <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto px-6 pb-4">
                 <div className="space-y-4">
-                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <div className="bg-success/10 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
                         <p className="text-sm text-green-800 dark:text-green-400">
                             <CheckCircle className="w-4 h-4 inline mr-1.5" />
                             This will mark the work order as closed. Make sure the vehicle has been handed over to the customer.

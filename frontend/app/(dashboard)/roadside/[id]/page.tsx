@@ -225,7 +225,7 @@ export default function RoadsideDetailPage() {
     if (!isValidId) {
         return (
             <div className="p-8 text-center space-y-4">
-                <div className="text-red-500 font-bold text-xl">Invalid Request ID</div>
+                <div className="text-destructive font-bold text-xl">Invalid Request ID</div>
                 <p className="text-muted-foreground">The roadside request ID provided in the URL is invalid.</p>
                 <Button onClick={() => router.push("/roadside")}>Go back to Roadside List</Button>
             </div>
@@ -243,7 +243,7 @@ export default function RoadsideDetailPage() {
     if (!request) {
         return (
             <div className="p-8 text-center space-y-4">
-                <div className="text-red-500 font-bold text-xl">Request Not Found</div>
+                <div className="text-destructive font-bold text-xl">Request Not Found</div>
                 <p className="text-muted-foreground">We couldn't find the roadside request you're looking for.</p>
                 <Button onClick={() => router.push("/roadside")}>Go back to Roadside List</Button>
             </div>
@@ -519,7 +519,7 @@ export default function RoadsideDetailPage() {
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    className="w-full text-red-600 dark:text-red-400"
+                                    className="w-full text-destructive dark:text-red-400"
                                     onClick={() => {
                                         if (confirm("Are you sure you want to cancel this request?")) {
                                             statusUpdateMutation.mutate('cancel');
@@ -663,7 +663,7 @@ export default function RoadsideDetailPage() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Status:</span>
-                                    <span className={`font-medium ${request.subscription_allowance_deducted ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                                    <span className={`font-medium ${request.subscription_allowance_deducted ? "text-success dark:text-emerald-400" : "text-warning dark:text-amber-400"}`}>
                                         {request.subscription_allowance_deducted ? "Deducted" : "Refunded"}
                                     </span>
                                 </div>
@@ -741,7 +741,7 @@ export default function RoadsideDetailPage() {
                                     id="customer_phone"
                                     {...register("customer_phone")}
                                 />
-                                {editErrors.customer_phone && <p className="text-xs text-red-500">{editErrors.customer_phone.message}</p>}
+                                {editErrors.customer_phone && <p className="text-xs text-destructive">{editErrors.customer_phone.message}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="breakdown_location">Breakdown Location *</Label>
@@ -749,7 +749,7 @@ export default function RoadsideDetailPage() {
                                     id="breakdown_location"
                                     {...register("breakdown_location")}
                                 />
-                                {editErrors.breakdown_location && <p className="text-xs text-red-500">{editErrors.breakdown_location.message}</p>}
+                                {editErrors.breakdown_location && <p className="text-xs text-destructive">{editErrors.breakdown_location.message}</p>}
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">

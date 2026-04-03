@@ -162,7 +162,7 @@ export function FeedbackForm() {
             <Card className="max-w-md mx-auto mt-10 text-center animate-in fade-in duration-500">
                 <CardHeader>
                     <div className="flex justify-center mb-4">
-                        <CheckCircle2 className="w-16 h-16 text-green-500" />
+                        <CheckCircle2 className="w-16 h-16 text-success" />
                     </div>
                     <CardTitle className="text-2xl">Thank You!</CardTitle>
                     <CardDescription>

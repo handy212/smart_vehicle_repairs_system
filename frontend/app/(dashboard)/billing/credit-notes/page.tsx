@@ -135,7 +135,7 @@ export default function CreditNotesPage() {
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                     ) : error ? (
-                        <div className="bg-red-50 text-red-600 p-4 rounded-md">
+                        <div className="bg-destructive/10 text-destructive p-4 rounded-md">
 
                             Error details: {(error as any).message || "Detailed error information unavailable"}
                         </div>

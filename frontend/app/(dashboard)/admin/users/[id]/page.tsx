@@ -377,7 +377,7 @@ export default function UserDetailPage() {
         </Link>
         <Card className="bg-muted border-border">
           <CardContent className="pt-6">
-            <p className="text-red-600 dark:text-red-400">User not found</p>
+            <p className="text-destructive dark:text-red-400">User not found</p>
           </CardContent>
         </Card>
       </div>
@@ -467,7 +467,7 @@ export default function UserDetailPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {serverError && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 px-4 py-3 rounded-r flex items-start">
+                  <div className="bg-destructive/10 dark:bg-red-900/20 border-l-4 border-destructive text-destructive dark:text-red-400 px-4 py-3 rounded-r flex items-start">
                     <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
                     <span className="text-sm">{serverError}</span>
                   </div>
@@ -476,15 +476,15 @@ export default function UserDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-card-foreground mb-2">
-                      First Name <span className="text-red-500">*</span>
+                      First Name <span className="text-destructive">*</span>
                     </label>
                     <Input
                       placeholder="John"
                       {...register("first_name")}
-                      className={errors.first_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
+                      className={errors.first_name ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                     />
                     {errors.first_name && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         {errors.first_name.message}
                       </p>
@@ -493,15 +493,15 @@ export default function UserDetailPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-card-foreground mb-2">
-                      Last Name <span className="text-red-500">*</span>
+                      Last Name <span className="text-destructive">*</span>
                     </label>
                     <Input
                       placeholder="Doe"
                       {...register("last_name")}
-                      className={errors.last_name ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}
+                      className={errors.last_name ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}
                     />
                     {errors.last_name && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         {errors.last_name.message}
                       </p>
@@ -520,14 +520,14 @@ export default function UserDetailPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-card-foreground mb-2">
-                      Role <span className="text-red-500">*</span>
+                      Role <span className="text-destructive">*</span>
                     </label>
                     <Select
                       value={watch("role")}
 
                       onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
                     >
-                      <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
+                      <SelectTrigger className={errors.role ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}>
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                       <SelectContent>
@@ -539,7 +539,7 @@ export default function UserDetailPage() {
                       </SelectContent>
                     </Select>
                     {errors.role && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <p className="text-destructive dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         {errors.role.message}
                       </p>
@@ -601,7 +601,7 @@ export default function UserDetailPage() {
                       {isManager ? (
                         <div>
                           <label className="block text-sm font-semibold text-card-foreground mb-3">
-                            Managed Branches <span className="text-red-500">*</span>
+                            Managed Branches <span className="text-destructive">*</span>
                           </label>
                           <p className="text-xs text-muted-foreground mb-3">
                             Select all branches this manager should oversee
@@ -649,7 +649,7 @@ export default function UserDetailPage() {
                             )}
                           </div>
                           {errors.managed_branches && (
-                            <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                            <p className="text-destructive dark:text-red-400 text-xs mt-2 flex items-center gap-1">
                               <AlertCircle className="w-4 h-4" />
                               {errors.managed_branches.message}
                             </p>
@@ -658,7 +658,7 @@ export default function UserDetailPage() {
                       ) : (
                         <div>
                           <label className="block text-sm font-semibold text-card-foreground mb-3">
-                            Assigned Branch <span className="text-red-500">*</span>
+                            Assigned Branch <span className="text-destructive">*</span>
                           </label>
                           <p className="text-xs text-muted-foreground mb-3">
                             Select the primary branch for this staff member
@@ -667,7 +667,7 @@ export default function UserDetailPage() {
                             value={watch("branch")?.toString() || ""}
                             onValueChange={(val) => setValue("branch", val ? Number(val) : null, { shouldValidate: true })}
                           >
-                            <SelectTrigger className={errors.branch ? "border-red-500 dark:border-red-500" : "bg-muted border-border text-foreground"}>
+                            <SelectTrigger className={errors.branch ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}>
                               <SelectValue placeholder="-- Select a branch --" />
                             </SelectTrigger>
                             <SelectContent>
@@ -679,7 +679,7 @@ export default function UserDetailPage() {
                             </SelectContent>
                           </Select>
                           {errors.branch && (
-                            <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                            <p className="text-destructive dark:text-red-400 text-xs mt-2 flex items-center gap-1">
                               <AlertCircle className="w-4 h-4" />
                               {errors.branch.message}
                             </p>
@@ -782,7 +782,7 @@ export default function UserDetailPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-card-foreground mb-2">
-                        New Password <span className="text-red-500">*</span>
+                        New Password <span className="text-destructive">*</span>
                       </label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
@@ -935,9 +935,9 @@ export default function UserDetailPage() {
                   </div>
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.is_active ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
                     {user.is_active ? (
-                      <UserCheck className={`w-6 h-6 ${user.is_active ? "text-success" : "text-red-600 dark:text-red-400"}`} />
+                      <UserCheck className={`w-6 h-6 ${user.is_active ? "text-success" : "text-destructive dark:text-red-400"}`} />
                     ) : (
-                      <UserX className="w-6 h-6 text-red-600 dark:text-red-400" />
+                      <UserX className="w-6 h-6 text-destructive dark:text-red-400" />
                     )}
                   </div>
                 </div>
@@ -975,7 +975,7 @@ export default function UserDetailPage() {
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 ml-2">
-                    <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                    <Building2 className="w-6 h-6 text-primary dark:text-purple-400" />
                   </div>
                 </div>
               </CardContent>
@@ -1169,7 +1169,7 @@ export default function UserDetailPage() {
                 <div className="mt-6 pt-6 border-t border-border space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-card-foreground mb-2">
-                      New Password <span className="text-red-500">*</span>
+                      New Password <span className="text-destructive">*</span>
                     </label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -1277,7 +1277,7 @@ export default function UserDetailPage() {
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2 text-lg font-semibold">
                 {user.two_factor_enabled ? (
-                  <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <ShieldCheck className="w-5 h-5 text-success dark:text-green-400" />
                 ) : (
                   <ShieldAlert className="w-5 h-5 text-muted-foreground" />
                 )}

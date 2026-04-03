@@ -22,20 +22,20 @@ const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
   completed: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 text-primary border-orange-200 dark:border-orange-800",
   approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
-  rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+  rejected: "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 border-destructive/20 dark:border-red-800",
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const resultColors: Record<string, string> = {
   pass: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
   pass_with_advisory: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  fail: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+  fail: "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 border-destructive/20 dark:border-red-800",
   needs_attention: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800",
 };
 
 const itemResultColors: Record<string, string> = {
   pass: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200",
-  fail: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200",
+  fail: "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200",
   advisory: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200",
   na: "bg-muted text-foreground bg-muted text-muted-foreground hover:bg-muted",
 };
@@ -202,7 +202,7 @@ export default function InspectionDetailPage() {
 
           {inspection.status === "completed" && (
             <>
-              <Button variant="outline" size="sm" onClick={() => rejectMutation.mutate()} disabled={rejectMutation.isPending} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              <Button variant="outline" size="sm" onClick={() => rejectMutation.mutate()} disabled={rejectMutation.isPending} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                 Reject
               </Button>
               <Button size="sm" onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending} className="bg-success hover:bg-green-700">
@@ -317,7 +317,7 @@ export default function InspectionDetailPage() {
                               <div className={cn(
                                 "w-2 h-2 rounded-full mt-2 flex-shrink-0",
                                 result.result === 'pass' ? 'bg-success/100' :
-                                  result.result === 'fail' ? 'bg-red-500' :
+                                  result.result === 'fail' ? 'bg-destructive/100' :
                                     result.result === 'advisory' ? 'bg-warning/100' : 'bg-gray-300'
                               )} />
                               <div className="flex-1 space-y-1">
@@ -417,7 +417,7 @@ export default function InspectionDetailPage() {
                   variant="secondary"
                   onClick={() => generateSummaryMutation.mutate()}
                   disabled={generateSummaryMutation.isPending || (inspection.status !== 'completed' && inspection.status !== 'approved')}
-                  className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 border border-indigo-200"
+                  className="bg-primary/10 text-primary hover:bg-indigo-100 hover:text-indigo-800 border border-primary/20"
                 >
                   {generateSummaryMutation.isPending ? "Analyzing..." : "✨ Generate AI Summary"}
                 </Button>

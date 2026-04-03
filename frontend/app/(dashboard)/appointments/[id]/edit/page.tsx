@@ -142,7 +142,7 @@ export default function EditAppointmentPage() {
         </Link>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Appointment not found.</p>
+            <p className="text-destructive">Appointment not found.</p>
           </CardContent>
         </Card>
       </div>
@@ -195,7 +195,7 @@ export default function EditAppointmentPage() {
                       setSelectedCustomer(numVal);
                     }}
                   >
-                    <SelectTrigger className={errors.customer ? "border-red-500" : ""}>
+                    <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select a customer" />
                     </SelectTrigger>
                     <SelectContent>
@@ -214,7 +214,7 @@ export default function EditAppointmentPage() {
                     </SelectContent>
                   </Select>
                   {errors.customer && (
-                    <p className="mt-1 text-sm text-red-600">{errors.customer.message}</p>
+                    <p className="mt-1 text-sm text-destructive">{errors.customer.message}</p>
                   )}
                 </div>
 
@@ -227,7 +227,7 @@ export default function EditAppointmentPage() {
                     onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
                     disabled={!selectedCustomer || !vehiclesData?.results?.length}
                   >
-                    <SelectTrigger className={errors.vehicle ? "border-red-500" : ""}>
+                    <SelectTrigger className={errors.vehicle ? "border-destructive" : ""}>
                       <SelectValue placeholder={
                         !selectedCustomer
                           ? "Select a customer first"
@@ -245,7 +245,7 @@ export default function EditAppointmentPage() {
                     </SelectContent>
                   </Select>
                   {errors.vehicle && (
-                    <p className="mt-1 text-sm text-red-600">{errors.vehicle.message}</p>
+                    <p className="mt-1 text-sm text-destructive">{errors.vehicle.message}</p>
                   )}
                 </div>
               </CardContent>
@@ -267,10 +267,10 @@ export default function EditAppointmentPage() {
                       id="appointment_date"
                       type="date"
                       {...register("appointment_date")}
-                      className={errors.appointment_date ? "border-red-500" : ""}
+                      className={errors.appointment_date ? "border-destructive" : ""}
                     />
                     {errors.appointment_date && (
-                      <p className="mt-1 text-sm text-red-600">{errors.appointment_date.message}</p>
+                      <p className="mt-1 text-sm text-destructive">{errors.appointment_date.message}</p>
                     )}
                   </div>
                   <div>
@@ -281,10 +281,10 @@ export default function EditAppointmentPage() {
                       id="appointment_time"
                       type="time"
                       {...register("appointment_time")}
-                      className={errors.appointment_time ? "border-red-500" : ""}
+                      className={errors.appointment_time ? "border-destructive" : ""}
                     />
                     {errors.appointment_time && (
-                      <p className="mt-1 text-sm text-red-600">{errors.appointment_time.message}</p>
+                      <p className="mt-1 text-sm text-destructive">{errors.appointment_time.message}</p>
                     )}
                   </div>
                 </div>

@@ -365,13 +365,13 @@ export default function EditInvoicePage() {
   if (!isValidId) {
     return (
       <div className="p-8">
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/10">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-red-800">Invalid Invoice ID</p>
-                <p className="text-sm text-red-700 mt-1">The invoice ID in the URL is invalid.</p>
+                <p className="text-sm font-medium text-destructive">Invalid Invoice ID</p>
+                <p className="text-sm text-destructive mt-1">The invoice ID in the URL is invalid.</p>
               </div>
             </div>
           </CardContent>
@@ -394,13 +394,13 @@ export default function EditInvoicePage() {
       </div>
 
       {serverError && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/10">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-red-800">Error updating invoice</p>
-                <p className="text-sm text-red-700 mt-1">{serverError}</p>
+                <p className="text-sm font-medium text-destructive">Error updating invoice</p>
+                <p className="text-sm text-destructive mt-1">{serverError}</p>
               </div>
             </div>
           </CardContent>
@@ -428,7 +428,7 @@ export default function EditInvoicePage() {
                     }
                   }}
                 >
-                  <SelectTrigger className={errors.customer ? "border-red-600" : ""}>
+                  <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
                     <SelectValue placeholder="Select customer..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -440,7 +440,7 @@ export default function EditInvoicePage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.customer && <p className="text-sm text-red-600">{errors.customer.message}</p>}
+                {errors.customer && <p className="text-sm text-destructive">{errors.customer.message}</p>}
               </div>
 
               <div className="space-y-2">
@@ -499,7 +499,7 @@ export default function EditInvoicePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Invoice Date *</label>
                 <Input type="date" {...register("invoice_date")} />
-                {errors.invoice_date && <p className="text-sm text-red-600">{errors.invoice_date.message}</p>}
+                {errors.invoice_date && <p className="text-sm text-destructive">{errors.invoice_date.message}</p>}
               </div>
 
               <div className="space-y-2">
@@ -717,7 +717,7 @@ export default function EditInvoicePage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-red-500 hover:bg-red-50"
+                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                             onClick={() => removeLineItem(index)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -740,7 +740,7 @@ export default function EditInvoicePage() {
               <span>{formatCurrency(subtotal)}</span>
             </div>
             {discountType !== 'none' && (
-              <div className="flex justify-between text-sm text-red-600">
+              <div className="flex justify-between text-sm text-destructive">
                 <span>Discount ({discountPercentage}%)</span>
                 <span>- {formatCurrency(discountAmount)}</span>
               </div>

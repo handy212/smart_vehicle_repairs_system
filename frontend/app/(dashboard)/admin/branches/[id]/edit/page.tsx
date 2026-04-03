@@ -222,16 +222,16 @@ export default function BranchEditPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">
-                    Name <span className="text-red-500">*</span>
+                    Name <span className="text-destructive">*</span>
                   </Label>
                   <Input id="name" {...register("name")} className="w-full" />
                   {errors.name && (
-                    <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="code">
-                    Code <span className="text-red-500">*</span>
+                    Code <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="code"
@@ -245,7 +245,7 @@ export default function BranchEditPage() {
                     Branch code cannot be changed after creation
                   </p>
                   {errors.code && (
-                    <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.code.message}</p>
                   )}
                 </div>
               </div>
@@ -258,11 +258,11 @@ export default function BranchEditPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="phone">
-                    Phone <span className="text-red-500">*</span>
+                    Phone <span className="text-destructive">*</span>
                   </Label>
                   <Input id="phone" {...register("phone")} className="w-full" />
                   {errors.phone && (
-                    <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.phone.message}</p>
                   )}
                 </div>
                 <div>
@@ -277,40 +277,40 @@ export default function BranchEditPage() {
 
               <div>
                 <Label htmlFor="address">
-                  Address <span className="text-red-500">*</span>
+                  Address <span className="text-destructive">*</span>
                 </Label>
                 <Input id="address" {...register("address")} className="w-full" />
                 {errors.address && (
-                  <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.address.message}</p>
                 )}
               </div>
 
               <div className="grid grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="city">
-                    City <span className="text-red-500">*</span>
+                    City <span className="text-destructive">*</span>
                   </Label>
                   <Input id="city" {...register("city")} className="w-full" />
                   {errors.city && (
-                    <p className="text-red-500 text-xs mt-1">{errors.city.message}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.city.message}</p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="state">
-                    State <span className="text-red-500">*</span>
+                    State <span className="text-destructive">*</span>
                   </Label>
                   <Input id="state" {...register("state")} className="w-full" />
                   {errors.state && (
-                    <p className="text-red-500 text-xs mt-1">{errors.state.message}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.state.message}</p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="zip_code">
-                    Zip Code <span className="text-red-500">*</span>
+                    Zip Code <span className="text-destructive">*</span>
                   </Label>
                   <Input id="zip_code" {...register("zip_code")} className="w-full" />
                   {errors.zip_code && (
-                    <p className="text-red-500 text-xs mt-1">{errors.zip_code.message}</p>
+                    <p className="text-destructive text-xs mt-1">{errors.zip_code.message}</p>
                   )}
                 </div>
                 <div>

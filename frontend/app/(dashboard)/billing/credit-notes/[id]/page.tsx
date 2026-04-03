@@ -72,10 +72,10 @@ export default function CreditNoteDetailPage() {
                         Back
                     </Button>
                 </Link>
-                <Card className="border-red-200 bg-red-50">
+                <Card className="border-destructive/20 bg-destructive/10">
                     <CardContent className="pt-6">
-                        <p className="text-sm font-medium text-red-800">Invalid Credit Note ID</p>
-                        <p className="text-sm text-red-700 mt-1">The credit note ID in the URL is invalid.</p>
+                        <p className="text-sm font-medium text-destructive">Invalid Credit Note ID</p>
+                        <p className="text-sm text-destructive mt-1">The credit note ID in the URL is invalid.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -92,7 +92,7 @@ export default function CreditNoteDetailPage() {
 
     if (error || !creditNote) {
         return (
-            <div className="p-8 text-center text-red-600">
+            <div className="p-8 text-center text-destructive">
                 Error loading credit note.
             </div>
         );

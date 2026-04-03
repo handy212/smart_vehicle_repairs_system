@@ -63,7 +63,7 @@ export function CreateInspectionForm({
                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="template" className="block mb-2 text-foreground">
-                            Inspection Template <span className="text-red-500">*</span>
+                            Inspection Template <span className="text-destructive">*</span>
                         </Label>
                         <select
                             id="template"
@@ -89,7 +89,7 @@ export function CreateInspectionForm({
 
                     <div>
                         <Label htmlFor="inspection_date" className="block mb-2 text-foreground">
-                            Inspection Date <span className="text-red-500">*</span>
+                            Inspection Date <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="inspection_date"
@@ -103,7 +103,7 @@ export function CreateInspectionForm({
 
                     <div>
                         <Label htmlFor="inspection_odometer_reading" className="block mb-2 text-foreground">
-                            Odometer Reading <span className="text-red-500">*</span>
+                            Odometer Reading <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="inspection_odometer_reading"
@@ -113,10 +113,10 @@ export function CreateInspectionForm({
                             placeholder="Enter odometer reading"
                             min={0}
                             required
-                            className={`w-full bg-muted border-border text-foreground ${fieldErrors?.odometer_reading ? "border-red-500" : ""}`}
+                            className={`w-full bg-muted border-border text-foreground ${fieldErrors?.odometer_reading ? "border-destructive" : ""}`}
                         />
                         {fieldErrors?.odometer_reading && (
-                            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                            <p className="mt-1 text-sm text-destructive dark:text-red-400">
                                 {fieldErrors.odometer_reading}
                             </p>
                         )}

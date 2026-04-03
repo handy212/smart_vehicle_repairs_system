@@ -131,7 +131,7 @@ export default function RecordPaymentDialog({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {serverError && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded text-sm">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded text-sm">
               {serverError}
             </div>
           )}
@@ -163,7 +163,7 @@ export default function RecordPaymentDialog({
 
                 onValueChange={(val: any) => setValue("payment_method", val, { shouldValidate: true })}
               >
-                <SelectTrigger id="payment_method" className={`h-9 ${errors.payment_method ? "border-red-500" : ""}`}>
+                <SelectTrigger id="payment_method" className={`h-9 ${errors.payment_method ? "border-destructive" : ""}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -177,7 +177,7 @@ export default function RecordPaymentDialog({
                 </SelectContent>
               </Select>
               {errors.payment_method && (
-                <p className="text-xs text-red-600">{errors.payment_method.message}</p>
+                <p className="text-xs text-destructive">{errors.payment_method.message}</p>
               )}
             </div>
 
@@ -189,10 +189,10 @@ export default function RecordPaymentDialog({
                 id="payment_date"
                 type="date"
                 {...register("payment_date")}
-                className={`h-9 ${errors.payment_date ? "border-red-500" : ""}`}
+                className={`h-9 ${errors.payment_date ? "border-destructive" : ""}`}
               />
               {errors.payment_date && (
-                <p className="text-xs text-red-600">{errors.payment_date.message}</p>
+                <p className="text-xs text-destructive">{errors.payment_date.message}</p>
               )}
             </div>
           </div>
@@ -206,15 +206,15 @@ export default function RecordPaymentDialog({
               type="number"
               step="0.01"
               {...register("amount", { valueAsNumber: true })}
-              className={`h-9 ${errors.amount ? "border-red-500" : ""}`}
+              className={`h-9 ${errors.amount ? "border-destructive" : ""}`}
               placeholder="0.00"
             />
             {errors.amount && (
-              <p className="text-xs text-red-600">{errors.amount.message}</p>
+              <p className="text-xs text-destructive">{errors.amount.message}</p>
             )}
             {isOverPayment && (
-              <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-md">
-                <p className="text-xs font-medium text-amber-900">
+              <div className="mt-2 p-2.5 bg-warning/10 border border-warning/20 rounded-md">
+                <p className="text-xs font-medium text-warning">
                   Overpayment: {formatCurrency(overPaymentAmount)} will be applied as customer credit
                 </p>
               </div>

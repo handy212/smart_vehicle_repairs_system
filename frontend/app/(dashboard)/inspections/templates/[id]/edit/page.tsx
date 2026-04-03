@@ -147,7 +147,7 @@ export default function EditTemplatePage() {
   if (!isValidId) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">Invalid template ID</p>
+        <p className="text-destructive">Invalid template ID</p>
         <Link href="/inspections/templates">
           <Button variant="secondary" className="mt-4">
             Back to Templates
@@ -205,7 +205,7 @@ export default function EditTemplatePage() {
           <CardContent className="space-y-6">
             <div>
               <Label htmlFor="name">
-                Template Name <span className="text-red-500">*</span>
+                Template Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
@@ -214,7 +214,7 @@ export default function EditTemplatePage() {
                 className="mt-1"
               />
               {errors.name && (
-                <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+                <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
               )}
               {/* Server-side validation errors will be shown in toast */}
             </div>

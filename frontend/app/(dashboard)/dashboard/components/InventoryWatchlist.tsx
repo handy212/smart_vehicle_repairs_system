@@ -53,8 +53,8 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                     </div>
                 </div>
                 {items.length > 0 && (
-                    <div className="px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
-                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">{items.length} Alerts</span>
+                    <div className="px-2 py-1 rounded-md bg-warning/10 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+                        <span className="text-[10px] font-bold text-warning dark:text-amber-400 uppercase tracking-widest">{items.length} Alerts</span>
                     </div>
                 )}
             </div>
@@ -84,7 +84,7 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                                     <div className="text-right">
                                         <span className={cn(
                                             "text-xs font-bold tracking-tighter",
-                                            isCritical ? "text-rose-500" : "text-amber-500"
+                                            isCritical ? "text-destructive" : "text-warning"
                                         )}>
                                             {item.stock.current} / {item.stock.reorder_point}
                                         </span>
@@ -94,7 +94,7 @@ export function InventoryWatchlist({ items, isLoading }: InventoryWatchlistProps
                                     <div 
                                         className={cn(
                                             "h-full transition-all duration-1000",
-                                            isCritical ? "bg-rose-500" : "bg-amber-500"
+                                            isCritical ? "bg-rose-500" : "bg-warning/100"
                                         )}
                                         style={{ width: `${getStockLevelWidth(item.stock.current, item.stock.reorder_point)}%` }}
                                     />

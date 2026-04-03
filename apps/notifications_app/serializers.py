@@ -28,7 +28,7 @@ class NotificationTemplateListSerializer(serializers.ModelSerializer):
         model = NotificationTemplate
         fields = [
             'id', 'name', 'template_type', 'channel', 'subject', 'body', 'html_body',
-            'is_active', 'created_at', 'updated_at'
+            'sms_body', 'is_active', 'created_at', 'updated_at'
         ]
 
 

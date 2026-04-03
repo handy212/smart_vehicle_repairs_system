@@ -487,7 +487,7 @@ export default function WorkOrderOverviewTab({
                       <span className="text-muted-foreground">Variance</span>
 
                       <span className={`font-medium ${parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0")
-                        ? "text-red-600 dark:text-red-400"
+                        ? "text-destructive dark:text-red-400"
                         : "text-success"
                         }`}>
 
@@ -544,7 +544,7 @@ export default function WorkOrderOverviewTab({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs text-muted-foreground">
-                  Service Coordinator {!workOrder?.service_coordinator && <span className="text-red-500">*</span>}
+                  Service Coordinator {!workOrder?.service_coordinator && <span className="text-destructive">*</span>}
                 </p>
                 {canEditServiceCoordinator && !isEditingServiceCoordinator && (
                   <Button
@@ -598,7 +598,7 @@ export default function WorkOrderOverviewTab({
                   </div>
                 </div>
               ) : (
-                <p className={`text-sm ${!workOrder?.service_coordinator ? "text-red-600 font-medium" : ""}`}>
+                <p className={`text-sm ${!workOrder?.service_coordinator ? "text-destructive font-medium" : ""}`}>
                   {getServiceCoordinatorName()}
                 </p>
               )}
@@ -613,7 +613,7 @@ export default function WorkOrderOverviewTab({
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center text-purple-900 group">
-                  <Sparkles className="w-4 h-4 mr-2 text-purple-600 group-hover:animate-pulse" />
+                  <Sparkles className="w-4 h-4 mr-2 text-primary group-hover:animate-pulse" />
                   Smart Health Prediction
                 </CardTitle>
                 <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-200 text-[10px] uppercase font-bold tracking-wider">
@@ -624,7 +624,7 @@ export default function WorkOrderOverviewTab({
             <CardContent className="space-y-4 pt-2">
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
-                  <div className="flex items-center text-xs text-purple-600 mb-1">
+                  <div className="flex items-center text-xs text-primary mb-1">
                     <Calendar className="w-3 h-3 mr-1" />
                     Projected Date
                   </div>
@@ -633,7 +633,7 @@ export default function WorkOrderOverviewTab({
                   </p>
                 </div>
                 <div className="p-3 bg-white rounded-lg border border-purple-100 shadow-sm">
-                  <div className="flex items-center text-xs text-purple-600 mb-1">
+                  <div className="flex items-center text-xs text-primary mb-1">
                     <TrendingUp className="w-3 h-3 mr-1" />
                     Target Odometer
                   </div>
@@ -653,7 +653,7 @@ export default function WorkOrderOverviewTab({
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-purple-600">
+                <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-primary">
                   <span>Prediction Confidence</span>
                   <span>{Math.round(prediction.confidence_score * 100)}%</span>
                 </div>
@@ -667,7 +667,7 @@ export default function WorkOrderOverviewTab({
 
               <div className="flex items-center justify-center pt-2">
                 <p className="text-[10px] text-muted-foreground flex items-center">
-                  <ShieldCheck className="w-3 h-3 mr-1 text-green-500" />
+                  <ShieldCheck className="w-3 h-3 mr-1 text-success" />
                   Verified by Vehicle Repair History Analysis
                 </p>
               </div>

@@ -38,10 +38,10 @@ const CustomerRow = memo(function CustomerRow({
     : customer.email?.[0].toUpperCase() || "C";
 
   const avatarColors = [
-    "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-    "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
-    "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
+    "bg-blue-100 text-primary dark:bg-blue-900/30 dark:text-blue-400",
+    "bg-orange-100 text-warning dark:bg-orange-900/30 dark:text-orange-400",
+    "bg-emerald-100 text-success dark:bg-emerald-900/30 dark:text-emerald-400",
+    "bg-purple-100 text-primary dark:bg-purple-900/30 dark:text-purple-400",
   ];
 
   const colorIndex = customer.id % avatarColors.length;
@@ -76,7 +76,7 @@ const CustomerRow = memo(function CustomerRow({
 
       <TableCell className="text-right font-bold text-sm" onClick={() => router.push(`/customers/${customer.id}`)}>
         <span className={cn(
-          parseFloat(customer.current_balance) > 1000 ? "text-amber-600" : "text-foreground"
+          parseFloat(customer.current_balance) > 1000 ? "text-warning" : "text-foreground"
         )}>
           {formatCurrency(parseFloat(customer.current_balance || "0"))}
         </span>
@@ -90,13 +90,13 @@ const CustomerRow = memo(function CustomerRow({
         <div className="flex items-center gap-2">
           <div className={cn(
             "w-1.5 h-1.5 rounded-full",
-            customer.status === "active" ? "bg-emerald-500" : "bg-gray-300"
+            customer.status === "active" ? "bg-success/100" : "bg-gray-300"
           )} />
           <Badge
             variant="outline"
             className={cn(
               "text-[9px] font-black uppercase tracking-widest border-none shadow-none p-0",
-              customer.status === "active" ? "text-emerald-600" : "text-gray-400"
+              customer.status === "active" ? "text-success" : "text-gray-400"
             )}
           >
             {customer.status || "Active"}
@@ -179,7 +179,7 @@ const CustomerRow = memo(function CustomerRow({
                 e.stopPropagation();
                 onDelete?.(customer);
               }}
-              className="text-red-600 focus:text-red-600"
+              className="text-destructive focus:text-destructive"
             >
               Delete Customer
             </DropdownMenuItem>

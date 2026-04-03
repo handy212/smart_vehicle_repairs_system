@@ -122,7 +122,7 @@ export default function TillHistoryPage() {
                                         <TableCell className="text-right font-mono">
                                             {till.closing_balance ? `$${till.closing_balance}` : '-'}
                                         </TableCell>
-                                        <TableCell className={`text-right font-mono ${till.variance && parseFloat(till.variance) < 0 ? 'text-red-600' : ''
+                                        <TableCell className={`text-right font-mono ${till.variance && parseFloat(till.variance) < 0 ? 'text-destructive' : ''
                                             }`}>
                                             {till.variance || '-'}
                                         </TableCell>

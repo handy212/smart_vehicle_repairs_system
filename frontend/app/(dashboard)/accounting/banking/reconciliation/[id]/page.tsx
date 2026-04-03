@@ -364,12 +364,12 @@ export default function ReconciliationDetailPage() {
                         <div className="text-[10px] text-muted-foreground mt-1">Based on matched lines</div>
                     </CardContent>
                 </Card>
-                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-red-50 dark:bg-red-900/10 border-red-200")}>
+                <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-destructive/10 dark:bg-red-900/10 border-destructive/20")}>
                     <CardHeader className="p-4 pb-1">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Difference</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-1">
-                        <div className={cn("text-xl font-mono font-bold", Math.abs(difference) < 0.01 ? "text-success" : "text-red-600")}>
+                        <div className={cn("text-xl font-mono font-bold", Math.abs(difference) < 0.01 ? "text-success" : "text-destructive")}>
                             {formatCurrency(difference)}
                         </div>
                         <div className="text-[10px] text-muted-foreground mt-1">{Math.abs(difference) < 0.01 ? "Perfectly balanced" : "Review needed"}</div>

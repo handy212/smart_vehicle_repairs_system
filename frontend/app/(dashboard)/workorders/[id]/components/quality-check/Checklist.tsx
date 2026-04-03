@@ -38,7 +38,7 @@ export function Checklist({
                     <h3 className="text-sm font-bold text-foreground">Verification Checklist</h3>
                 </div>
                 {allChecksPassed ? (
-                    <Badge className="bg-green-500/10 text-green-600 border-green-200/50 hover:bg-green-500/10 gap-1 px-1.5 py-0 h-5 text-[10px]">
+                    <Badge className="bg-success/100/10 text-success border-green-200/50 hover:bg-success/100/10 gap-1 px-1.5 py-0 h-5 text-[10px]">
                         <CheckCircle2 className="w-3 h-3" />
                         Verified
                     </Badge>

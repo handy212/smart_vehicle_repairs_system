@@ -98,7 +98,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
           <div className="space-y-4">
             {serverError && (
-              <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded text-sm">
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded text-sm">
                 {serverError}
               </div>
             )}
@@ -123,7 +123,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
                 </SelectContent>
               </Select>
               {errors.task_type && (
-                <p className="mt-1 text-sm text-red-600">{errors.task_type.message}</p>
+                <p className="mt-1 text-sm text-destructive">{errors.task_type.message}</p>
               )}
             </div>
 
@@ -134,10 +134,10 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
               <Input
                 id="description"
                 {...register("description")}
-                className={`w-full ${errors.description ? "border-red-500" : ""}`}
+                className={`w-full ${errors.description ? "border-destructive" : ""}`}
               />
               {errors.description && (
-                <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+                <p className="mt-1 text-sm text-destructive">{errors.description.message}</p>
               )}
             </div>
 

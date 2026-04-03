@@ -132,7 +132,7 @@ export function TestsTab({
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                         </div>
                     ) : error ? (
-                        <p className="text-sm text-red-600 text-center py-8">
+                        <p className="text-sm text-destructive text-center py-8">
                             Failed to load tests. Please try again.
                         </p>
                     ) : tests.length === 0 ? (
@@ -221,7 +221,7 @@ export function TestsTab({
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
                                                     onClick={() => {
                                                         if (confirm("Delete this test?")) {
                                                             deleteMutation.mutate(test.id);
@@ -480,7 +480,7 @@ function TestDialog({
 
                         <div className="grid gap-3 md:grid-cols-[1.6fr_1fr]">
                             <div className="space-y-2">
-                                <Label htmlFor="test_name" className="text-sm font-medium">Test Name <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="test_name" className="text-sm font-medium">Test Name <span className="text-destructive">*</span></Label>
                                 <Input
                                     id="test_name"
                                     value={formData.test_name}
@@ -491,7 +491,7 @@ function TestDialog({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="category" className="text-sm font-medium">Category <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="category" className="text-sm font-medium">Category <span className="text-destructive">*</span></Label>
                                 <Select
                                     value={formData.category}
                                     onValueChange={(val) => {
@@ -568,7 +568,7 @@ function TestDialog({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="status" className="text-sm font-medium">Status <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="status" className="text-sm font-medium">Status <span className="text-destructive">*</span></Label>
                                 <Select
                                     value={formData.status}
 

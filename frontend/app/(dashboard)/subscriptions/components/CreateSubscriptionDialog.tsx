@@ -165,7 +165,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    {errors.customer && <span className="text-xs text-red-500 font-medium">{errors.customer.message}</span>}
+                                    {errors.customer && <span className="text-xs text-destructive font-medium">{errors.customer.message}</span>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -190,7 +190,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                             })}
                                         </SelectContent>
                                     </Select>
-                                    {errors.vehicle && <span className="text-xs text-red-500 font-medium">{errors.vehicle.message}</span>}
+                                    {errors.vehicle && <span className="text-xs text-destructive font-medium">{errors.vehicle.message}</span>}
                                 </div>
                             </div>
                         </div>
@@ -239,7 +239,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                     </div>
                                 ))}
                             </div>
-                            {errors.package && <p className="pl-8 text-xs text-red-500 font-medium">{errors.package.message}</p>}
+                            {errors.package && <p className="pl-8 text-xs text-destructive font-medium">{errors.package.message}</p>}
                         </div>
 
                         {/* Step 3: Settings */}
@@ -304,15 +304,15 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                             <h4 className="text-xs font-bold text-muted-foreground uppercase">Includes</h4>
                                             <ul className="space-y-2 text-sm text-foreground">
                                                 <li className="flex items-center gap-2">
-                                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                                    <CheckCircle2 className="w-4 h-4 text-success" />
                                                     <span>{selectedPackage.features?.towing_services_km || 0} km Towing Range</span>
                                                 </li>
                                                 <li className="flex items-center gap-2">
-                                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                                    <CheckCircle2 className="w-4 h-4 text-success" />
                                                     <span>{selectedPackage.features?.total_service_calls || 0} Service Calls</span>
                                                 </li>
                                                 <li className="flex items-center gap-2">
-                                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                                    <CheckCircle2 className="w-4 h-4 text-success" />
                                                     <span>{selectedPackage.features?.emergency_fuel || 0} Emergency Fuel</span>
                                                 </li>
                                             </ul>

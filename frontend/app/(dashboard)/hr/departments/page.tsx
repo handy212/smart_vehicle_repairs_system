@@ -147,7 +147,7 @@ function DepartmentsList({ onEdit, onDelete }: { onEdit: (d: Department) => void
                         <PermissionGuard permission="manage_departments">
                             <div className="flex gap-2">
                                 <Button variant="ghost" size="sm" className="flex-1 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); onEdit(dept); }}><Pencil className="h-3 w-3 mr-2" />Edit</Button>
-                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); onDelete(dept.id); }}><Trash2 className="h-3 w-3" /></Button>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); onDelete(dept.id); }}><Trash2 className="h-3 w-3" /></Button>
                             </div>
                         </PermissionGuard>
                     </CardFooter>
@@ -191,7 +191,7 @@ function PositionsList({ onEdit, onDelete }: { onEdit: (p: Position) => void, on
                                 <PermissionGuard permission="manage_departments">
                                     <div className="flex gap-1 justify-end">
                                         <Button variant="ghost" size="icon" onClick={() => onEdit(pos)}><Pencil className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => onDelete(pos.id)}><Trash2 className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(pos.id)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                 </PermissionGuard>
                             </TableCell>
@@ -217,7 +217,13 @@ function CreateDepartmentDialog({ open, onOpenChange, onCreated }: { open: boole
         queryKey: ["branches", "list"],
         queryFn: async () => {
             const res = await branchesApi.list({ is_active: true });
-            return Array.isArray(res) ? res : res.results;
+            if (Array.isArray(res)) {
+                return res;
+            }
+            if (res && Array.isArray(res.results)) {
+                return res.results;
+            }
+            return [];
         }
     });
 

@@ -96,7 +96,7 @@ export default function JobProfitabilityPage() {
                                         {formatCurrency(report.summary?.total_costs || 0)}
                                     </p>
                                 </div>
-                                <TrendingDown className="w-8 h-8 text-red-600" />
+                                <TrendingDown className="w-8 h-8 text-destructive" />
                             </div>
                         </CardContent>
                     </Card>
@@ -163,10 +163,10 @@ export default function JobProfitabilityPage() {
                                             <TableCell className="px-4 py-2 text-xs text-muted-foreground text-right font-mono">
                                                 {formatCurrency(job.parts_cost || 0)}
                                             </TableCell>
-                                            <TableCell className={`px-4 py-2 text-xs text-right font-mono font-medium ${(job.profit || 0) >= 0 ? 'text-success' : 'text-red-600'}`}>
+                                            <TableCell className={`px-4 py-2 text-xs text-right font-mono font-medium ${(job.profit || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
                                                 {formatCurrency(job.profit || 0)}
                                             </TableCell>
-                                            <TableCell className={`px-4 py-2 text-xs text-right font-medium ${(job.margin || 0) >= 0 ? 'text-success' : 'text-red-600'}`}>
+                                            <TableCell className={`px-4 py-2 text-xs text-right font-medium ${(job.margin || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
                                                 {job.margin !== undefined ? `${job.margin.toFixed(1)}%` : '-'}
                                             </TableCell>
                                         </TableRow>

@@ -50,7 +50,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   const items = [
     { label: "Total Suppliers", value: stats.total_suppliers, color: "text-primary" },
     { label: "Active", value: stats.active_suppliers, color: "text-success" },
-    { label: "Preferred", value: stats.preferred_suppliers, color: "text-amber-600" },
+    { label: "Preferred", value: stats.preferred_suppliers, color: "text-warning" },
   ];
 
 };
@@ -172,7 +172,7 @@ export default function SuppliersPage() {
                 setAdvancedFilters({});
                 setPage(1);
               }}
-              className="h-9 w-9 p-0 text-muted-foreground hover:text-red-600"
+              className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
               title="Clear all filters"
             >
               <X className="w-4 h-4" />
@@ -199,7 +199,7 @@ export default function SuppliersPage() {
                 <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
                   <X
-                    className="w-3 h-3 cursor-pointer hover:text-red-500"
+                    className="w-3 h-3 cursor-pointer hover:text-destructive"
                     onClick={() => {
                       const newFilters = { ...advancedFilters };
                       delete newFilters[key];

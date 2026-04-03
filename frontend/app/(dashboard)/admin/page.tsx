@@ -66,7 +66,7 @@ export default function AdminDashboardPage() {
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inactive</span>
-            <span className="text-lg font-bold text-red-600 dark:text-red-400">{inactiveUsers}</span>
+            <span className="text-lg font-bold text-destructive dark:text-red-400">{inactiveUsers}</span>
           </CardContent>
         </Card>
 
@@ -122,7 +122,7 @@ export default function AdminDashboardPage() {
               <Link href="/subscriptions">
                 <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-muted border-border shadow-sm transition-all hover:scale-[1.02]">
                   <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mb-1">
-                    <CreditCard className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <CreditCard className="h-4 w-4 text-primary dark:text-purple-400" />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Subscriptions</span>
@@ -185,7 +185,7 @@ export default function AdminDashboardPage() {
                         <span className={cn("w-2 h-2 rounded-full",
                           log.action === 'create' ? 'bg-success/100' :
                             log.action === 'update' ? 'bg-primary' :
-                              log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
+                              log.action === 'delete' ? 'bg-destructive/100' : 'bg-gray-500'
                         )}></span>
                         <span className="text-xs font-bold text-foreground">{log.user_name || "System"}</span>
                       </div>

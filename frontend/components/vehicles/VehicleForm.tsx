@@ -257,12 +257,12 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                         </CardHeader>
                         <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2 space-y-2">
-                                <label className="text-sm font-medium">VIN <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">VIN <span className="text-destructive">*</span></label>
                                 <div className="flex gap-2">
                                     <Input
                                         {...register("vin")}
                                         id="vin-input"
-                                        className={`font-mono uppercase ${errors.vin ? "border-red-500" : ""}`}
+                                        className={`font-mono uppercase ${errors.vin ? "border-destructive" : ""}`}
                                         placeholder="17-Digit VIN"
                                         maxLength={17}
                                         onChange={(e) => setValue("vin", e.target.value.toUpperCase())}
@@ -282,7 +282,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                         disabled={isSubmitting}
                                     />
                                 </div>
-                                {errors.vin && <p className="text-xs text-red-500">{errors.vin.message}</p>}
+                                {errors.vin && <p className="text-xs text-destructive">{errors.vin.message}</p>}
                                 <Dialog open={showScanner} onOpenChange={setShowScanner}>
                                     <DialogContent className="sm:max-w-md">
                                         <DialogHeader>
@@ -330,10 +330,10 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 <Input
                                     {...register("license_plate")}
                                     placeholder="ABC-123"
-                                    className={`uppercase ${errors.license_plate ? "border-red-500" : ""}`}
+                                    className={`uppercase ${errors.license_plate ? "border-destructive" : ""}`}
                                     onChange={(e) => setValue("license_plate", e.target.value.toUpperCase())}
                                 />
-                                {errors.license_plate && <p className="text-xs text-red-500">{errors.license_plate.message}</p>}
+                                {errors.license_plate && <p className="text-xs text-destructive">{errors.license_plate.message}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -364,35 +364,35 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                         </CardHeader>
                         <CardContent className="pt-4 grid sm:grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Year <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Year <span className="text-destructive">*</span></label>
                                 <Input
                                     type="number"
                                     {...register("year", { valueAsNumber: true })}
-                                    className={errors.year ? "border-red-500" : ""}
+                                    className={errors.year ? "border-destructive" : ""}
                                 />
-                                {errors.year && <p className="text-xs text-red-500">{errors.year.message}</p>}
+                                {errors.year && <p className="text-xs text-destructive">{errors.year.message}</p>}
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Make <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Make <span className="text-destructive">*</span></label>
                                 <Input
                                     {...register("make")}
-                                    className={errors.make ? "border-red-500" : ""}
+                                    className={errors.make ? "border-destructive" : ""}
                                     placeholder="e.g. Toyota"
                                 />
-                                {errors.make && <p className="text-xs text-red-500">{errors.make.message}</p>}
+                                {errors.make && <p className="text-xs text-destructive">{errors.make.message}</p>}
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Model <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Model <span className="text-destructive">*</span></label>
                                 <Input
                                     {...register("model")}
-                                    className={errors.model ? "border-red-500" : ""}
+                                    className={errors.model ? "border-destructive" : ""}
                                     placeholder="e.g. Camry"
                                 />
-                                {errors.model && <p className="text-xs text-red-500">{errors.model.message}</p>}
+                                {errors.model && <p className="text-xs text-destructive">{errors.model.message}</p>}
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Body Style <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Body Style <span className="text-destructive">*</span></label>
                                 <Select
                                     value={watch("vehicle_type")}
 
@@ -466,12 +466,12 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                         </CardHeader>
                         <CardContent className="pt-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Owner <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-medium">Owner <span className="text-destructive">*</span></label>
                                 <Select
                                     value={watch("owner")?.toString()}
                                     onValueChange={(val) => setValue("owner", parseInt(val))}
                                 >
-                                    <SelectTrigger className={errors.owner ? "border-red-500 w-full" : "w-full"}>
+                                    <SelectTrigger className={errors.owner ? "border-destructive w-full" : "w-full"}>
                                         <SelectValue placeholder="Select Customer" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -487,7 +487,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                         })}
                                     </SelectContent>
                                 </Select>
-                                {errors.owner && <p className="text-xs text-red-500">{errors.owner.message}</p>}
+                                {errors.owner && <p className="text-xs text-destructive">{errors.owner.message}</p>}
                             </div>
 
                             <div className="space-y-2 mt-4">

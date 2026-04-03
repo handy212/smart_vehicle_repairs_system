@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp, DollarSign, TrendingUp, TrendingDown, Activity, Wal
 import { useCurrency } from "@/lib/hooks/useCurrency";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
+import { useTheme } from "@/lib/hooks/useTheme";
 
 interface MetricCardProps {
     title: string;
@@ -25,6 +26,8 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, trend, icon, variant = "default", data, dataKey, onClick }: MetricCardProps) {
     const { formatCurrency } = useCurrency();
+    const { theme } = useTheme();
+    const isPerfex = theme === "perfex";
 
     const getIcon = () => {
         switch (icon) {
@@ -51,7 +54,39 @@ export function MetricCard({ title, value, trend, icon, variant = "default", dat
         }
     };
 
+    const getPerfexIconColors = () => {
+        switch (variant) {
+            case "success": return "bg-success/10 text-success";
+            case "warning": return "bg-warning/10 text-warning";
+            case "danger": return "bg-destructive/10 text-destructive";
+            case "info": return "bg-primary/10 text-primary";
+            default: return "bg-muted text-muted-foreground";
+        }
+    };
+
     const colors = getColors();
+
+    if (isPerfex) {
+        return (
+            <div
+                className={`border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] p-3 flex items-center gap-3${onClick ? " cursor-pointer hover:border-primary/20" : ""}`}
+                onClick={onClick}
+            >
+                <div className={`h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0 ${getPerfexIconColors()}`}>
+                    {getIcon()}
+                </div>
+                <div className="min-w-0">
+                    <p className="text-lg font-bold text-foreground leading-tight">{formatCurrency(value)}</p>
+                    <p className="text-[11px] text-muted-foreground leading-tight">{title}</p>
+                    {trend && (
+                        <p className={`text-[11px] font-medium mt-0.5 ${trend.isPositive ? "text-success" : "text-destructive"}`}>
+                            {trend.isPositive ? "+" : ""}{Math.abs(trend.value)}% {trend.label}
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <Card

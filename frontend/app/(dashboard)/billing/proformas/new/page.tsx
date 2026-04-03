@@ -371,13 +371,13 @@ export default function NewProformaPage() {
             </div>
 
             {serverError && (
-                <Card className="border-red-200 bg-red-50">
+                <Card className="border-destructive/20 bg-destructive/10">
                     <CardContent className="pt-6">
                         <div className="flex items-start gap-3">
-                            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                            <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
                             <div className="flex-1">
-                                <p className="text-sm font-medium text-red-800">Error creating proforma</p>
-                                <p className="text-sm text-red-700 mt-1">{serverError}</p>
+                                <p className="text-sm font-medium text-destructive">Error creating proforma</p>
+                                <p className="text-sm text-destructive mt-1">{serverError}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -411,7 +411,7 @@ export default function NewProformaPage() {
                                                 }
                                             }}
                                         >
-                                            <SelectTrigger className={errors.customer ? "border-red-600" : ""}>
+                                            <SelectTrigger className={errors.customer ? "border-destructive" : ""}>
                                                 <SelectValue placeholder="Select customer..." />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -425,7 +425,7 @@ export default function NewProformaPage() {
                                         </Select>
                                     )}
                                 />
-                                {errors.customer && <p className="text-sm text-red-600 font-medium">{errors.customer.message as string}</p>}
+                                {errors.customer && <p className="text-sm text-destructive font-medium">{errors.customer.message as string}</p>}
                             </div>
 
 
@@ -650,16 +650,16 @@ export default function NewProformaPage() {
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => removeLineItem(index)}
-                                                        className="h-8 w-8 p-0 text-red-500"
+                                                        className="h-8 w-8 p-0 text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
                                             {errors.line_items?.[index] && (
-                                                <TableRow key={`${item.id}-error`} className="border-none bg-red-50/30">
+                                                <TableRow key={`${item.id}-error`} className="border-none bg-destructive/10/30">
                                                     <TableCell colSpan={7} className="p-2 pt-0">
-                                                        <div className="flex gap-4 text-[11px] text-red-600 font-medium ml-2">
+                                                        <div className="flex gap-4 text-[11px] text-destructive font-medium ml-2">
                                                             {errors.line_items?.[index]?.description && <span>• {errors.line_items?.[index]?.description?.message as string}</span>}
                                                             {errors.line_items?.[index]?.quantity && <span>• {errors.line_items?.[index]?.quantity?.message as string}</span>}
                                                             {errors.line_items?.[index]?.unit_price && <span>• {errors.line_items?.[index]?.unit_price?.message as string}</span>}

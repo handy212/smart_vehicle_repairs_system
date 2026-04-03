@@ -338,7 +338,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                         onClick={() => removeItemMutation.mutate(item.id)}
                                                     >
                                                         <Trash2 className="w-4 h-4" />

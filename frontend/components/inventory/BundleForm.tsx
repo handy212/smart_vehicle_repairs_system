@@ -138,9 +138,9 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Bundle Name <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="name">Bundle Name <span className="text-destructive">*</span></Label>
                                 <Input id="name" {...register("name")} placeholder="e.g. Major Service Kit" />
-                                {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+                                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -239,7 +239,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                                                             type="button"
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                             onClick={() => remove(index)}
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -249,7 +249,7 @@ export function BundleForm({ initialData, onSubmit, isSubmitting, mode, onCancel
                                             ))}
                                         </TableBody>
                                     </Table>
-                                    {errors.items && <p className="text-xs text-red-500">{errors.items.message}</p>}
+                                    {errors.items && <p className="text-xs text-destructive">{errors.items.message}</p>}
                                 </div>
                             )}
                         </CardContent>

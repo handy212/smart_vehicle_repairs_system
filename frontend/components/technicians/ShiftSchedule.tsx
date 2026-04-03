@@ -71,10 +71,10 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
     const getStatusColor = (status: Shift['status']) => {
         switch (status) {
             case 'scheduled': return "text-primary bg-primary/10 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
-            case 'active': return "text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
+            case 'active': return "text-success bg-success/10 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
             case 'completed': return "text-muted-foreground bg-muted border-border bg-muted text-muted-foreground border-border";
-            case 'absent': return "text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
-            case 'cancelled': return "text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
+            case 'absent': return "text-destructive bg-destructive/10 border-destructive/20 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
+            case 'cancelled': return "text-warning bg-warning/10 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
             default: return "text-muted-foreground bg-muted border-border";
         }
     };
@@ -152,7 +152,7 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                                                         <span className="font-semibold">{formatHours(shift.actual_hours)}</span>
                                                     </div>
                                                     {shift.overtime_hours !== null && shift.overtime_hours !== undefined && shift.overtime_hours > 0 && (
-                                                        <div className="flex justify-between text-orange-600 dark:text-orange-400">
+                                                        <div className="flex justify-between text-warning dark:text-orange-400">
                                                             <span className="opacity-70">Overtime:</span>
                                                             <span className="font-semibold">{formatHours(shift.overtime_hours)}</span>
                                                         </div>

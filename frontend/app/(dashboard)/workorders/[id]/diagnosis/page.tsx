@@ -263,7 +263,7 @@ export default function DiagnosisPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading work order. Please try again.</p>
+            <p className="text-destructive">Error loading work order. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -280,7 +280,7 @@ export default function DiagnosisPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-red-600 font-semibold">Error loading diagnosis</p>
+              <p className="text-destructive font-semibold">Error loading diagnosis</p>
               <p className="text-sm text-muted-foreground">
 
                 {(diagnosisError as any)?.response?.data?.detail ||
@@ -976,7 +976,7 @@ function FindingsTab({
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-red-600"
+                      className="h-8 text-destructive"
                       disabled={deleteMutation.isPending || isDisabled}
                       onClick={() => {
                         if (confirm(`Delete finding: "${finding.finding_title}"?`)) {
@@ -1463,7 +1463,7 @@ function RecommendationsTab({
             <Button size="sm" variant="outline" className="h-8" onClick={() => decisionMutation.mutate({ recommendationIds: [rec.id], decision: "deferred" })} disabled={decisionMutation.isPending || isDisabled}>
               Defer
             </Button>
-            <Button size="sm" variant="outline" className="h-8 text-red-600" onClick={() => decisionMutation.mutate({ recommendationIds: [rec.id], decision: "declined" })} disabled={decisionMutation.isPending || isDisabled}>
+            <Button size="sm" variant="outline" className="h-8 text-destructive" onClick={() => decisionMutation.mutate({ recommendationIds: [rec.id], decision: "declined" })} disabled={decisionMutation.isPending || isDisabled}>
               Decline
             </Button>
           </>
@@ -1510,7 +1510,7 @@ function RecommendationsTab({
           <Button
             size="sm"
             variant="ghost"
-            className="h-8 text-red-600"
+            className="h-8 text-destructive"
             onClick={() => {
               if (confirm(`Delete recommendation: "${rec.description}"?`)) {
                 deleteMutation.mutate(rec.id);
@@ -1684,7 +1684,7 @@ function PhotosTab({
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           ) : error ? (
-            <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-center">
+            <div className="p-4 bg-destructive/10 text-destructive text-sm rounded-lg flex items-center justify-center">
               Failed to load photos. Please try again.
             </div>
           ) : photos.length === 0 ? (
@@ -1911,7 +1911,7 @@ function PhotoUploadDialog({
           <div className="p-6 pt-4 space-y-5">
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="photo" className="text-sm font-medium text-card-foreground">Photo <span className="text-red-500">*</span></Label>
+              <Label htmlFor="photo" className="text-sm font-medium text-card-foreground">Photo <span className="text-destructive">*</span></Label>
               <input
                 id="photo"
                 type="file"
@@ -1984,7 +1984,7 @@ function PhotoUploadDialog({
 
               {/* Photo Type */}
               <div className="space-y-2">
-                <Label htmlFor="photo_type" className="text-sm font-medium text-card-foreground">Photo Type <span className="text-red-500">*</span></Label>
+                <Label htmlFor="photo_type" className="text-sm font-medium text-card-foreground">Photo Type <span className="text-destructive">*</span></Label>
                 <Select
                   value={formData.photo_type}
                   onValueChange={(val) =>

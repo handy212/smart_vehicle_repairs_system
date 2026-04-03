@@ -258,10 +258,10 @@ export default function InvoiceDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/10">
           <CardContent className="pt-6">
-            <p className="text-sm font-medium text-red-800">Invalid Invoice ID</p>
-            <p className="text-sm text-red-700 mt-1">The invoice ID in the URL is invalid.</p>
+            <p className="text-sm font-medium text-destructive">Invalid Invoice ID</p>
+            <p className="text-sm text-destructive mt-1">The invoice ID in the URL is invalid.</p>
           </CardContent>
         </Card>
       </div>
@@ -285,7 +285,7 @@ export default function InvoiceDetailPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading invoice. Please try again.</p>
+            <p className="text-destructive">Error loading invoice. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -511,7 +511,7 @@ export default function InvoiceDetailPage() {
                       </div>
                       <div className="flex justify-between md:justify-start md:gap-8">
                         <span className="text-sm text-muted-foreground w-24">Due:</span>
-                        <span className="text-sm font-medium text-red-600">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</span>
+                        <span className="text-sm font-medium text-destructive">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</span>
                       </div>
                       {invoice.sales_agent_name && (
                         <div className="flex justify-between md:justify-start md:gap-8">
@@ -564,7 +564,7 @@ export default function InvoiceDetailPage() {
                               </Button>
                             </div>
                             {invoice.qbo_sync_status === 'failed' && invoice.qbo_sync_error && (
-                              <span className="text-xs text-red-600 line-clamp-2 max-w-[200px]" title={invoice.qbo_sync_error}>
+                              <span className="text-xs text-destructive line-clamp-2 max-w-[200px]" title={invoice.qbo_sync_error}>
                                 {invoice.qbo_sync_error}
                               </span>
                             )}
@@ -631,7 +631,7 @@ export default function InvoiceDetailPage() {
                               {item.unit_price ? formatCurrency(parseFloat(item.unit_price)) : "-"}
                             </TableCell>
                             <TableCell className="text-right align-top py-3">
-                              {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-green-500 ml-auto" /> : <span className="text-gray-300">-</span>}
+                              {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-success ml-auto" /> : <span className="text-gray-300">-</span>}
                             </TableCell>
                             <TableCell className="text-right font-medium align-top py-3">
                               {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
@@ -663,7 +663,7 @@ export default function InvoiceDetailPage() {
 
                 {/* Discount */}
                 {parseFloat(invoice.discount_percentage || "0") > 0 && (
-                  <div className="flex justify-between text-sm text-red-600">
+                  <div className="flex justify-between text-sm text-destructive">
                     <span>
                       Discount ({parseFloat(invoice.discount_percentage || "0").toFixed(1)}%)
                       {invoice.discount_reason && <span className="text-xs ml-1">({invoice.discount_reason})</span>}
@@ -724,7 +724,7 @@ export default function InvoiceDetailPage() {
                   </div>
                   <div className="flex justify-between text-base font-semibold">
                     <span className="text-foreground">Balance Due</span>
-                    <span className={cn(parseFloat(invoice.balance_due || "0") > 0 ? "text-red-600" : "text-foreground")}>
+                    <span className={cn(parseFloat(invoice.balance_due || "0") > 0 ? "text-destructive" : "text-foreground")}>
                       {formatCurrency(parseFloat(invoice.balance_due || "0"))}
                     </span>
                   </div>
@@ -811,7 +811,7 @@ export default function InvoiceDetailPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-none"
+                                    className="h-9 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-none"
                                     onClick={() => setSelectedPaymentForRefund(payment)}
                                   >
                                     <Undo2 className="w-4 h-4 mr-2" /> Refund
@@ -849,7 +849,7 @@ export default function InvoiceDetailPage() {
             <Card className="bg-muted/50 border-dashed min-h-[400px]">
               <CardContent className="flex flex-col items-center justify-center h-full py-16 text-center">
                 <div className="bg-card p-6 rounded-full shadow-sm mb-6">
-                  <Wrench className="w-12 h-12 text-orange-500" />
+                  <Wrench className="w-12 h-12 text-warning" />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-2">Work Order Details</h3>
                 {invoice.work_order ? (

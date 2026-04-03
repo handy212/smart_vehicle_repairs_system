@@ -441,7 +441,7 @@ export default function NewBillPage() {
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-8 w-8 text-muted-foreground hover:text-red-600"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                                                 onClick={() => remove(index)}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />

@@ -13,6 +13,7 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/lib/hooks/useTheme";
 
 type TrendPoint = {
     date: string;
@@ -55,6 +56,8 @@ type AccountingSnapshot = {
 
 export default function AccountingDashboardPage() {
     const { error: toastError, success: toastSuccess } = useToast();
+    const { theme: activeTheme } = useTheme();
+    const isPerfex = activeTheme === "perfex";
     const [dateRange, setDateRange] = useState({
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date())
@@ -105,7 +108,7 @@ export default function AccountingDashboardPage() {
 
     if (isLoading) {
         return (
-            <div className="max-w-[1600px] space-y-6 p-4 md:p-6 animate-pulse">
+            <div className={`max-w-[1600px] animate-pulse ${isPerfex ? "space-y-4 p-4" : "space-y-6 p-4 md:p-6"}`}>
                 <div className="h-10 w-72 rounded bg-muted"></div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     {[1, 2, 3, 4].map((i) => <div key={i} className="h-28 rounded-xl bg-muted" />)}
@@ -116,8 +119,10 @@ export default function AccountingDashboardPage() {
     }
 
     if (isError) {
-        return <div className="p-8 text-rose-500">Error loading dashboard data. Please try again.</div>;
+        return <div className="p-8 text-destructive">Error loading dashboard data. Please try again.</div>;
     }
+
+    if (!data) return null;
 
     const { financial_health, trends, insights, top_jobs } = data;
 
@@ -127,11 +132,11 @@ export default function AccountingDashboardPage() {
     const cashFlowSpark = trends.map((t) => ({ value: t.cash_flow }));
 
     return (
-        <div className="max-w-[1600px] space-y-6 p-4 md:p-6">
+        <div className={`max-w-[1600px] ${isPerfex ? "space-y-4 p-4" : "space-y-6 p-4 md:p-6"}`}>
             <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Financial Overview</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <h1 className={`${isPerfex ? "text-base font-semibold" : "text-2xl font-semibold"} tracking-tight text-foreground`}>Financial Overview</h1>
+                    <p className={`mt-1 ${isPerfex ? "text-xs" : "text-sm"} text-muted-foreground`}>
                         Analytics for {format(dateRange.from!, "MMM d")} - {format(dateRange.to!, "MMM d, yyyy")}
                     </p>
                 </div>
@@ -142,14 +147,14 @@ export default function AccountingDashboardPage() {
                         onStartDateChange={(date) => setDateRange(prev => ({ ...prev, from: new Date(date) }))}
                         onEndDateChange={(date) => setDateRange(prev => ({ ...prev, to: new Date(date) }))}
                     />
-                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetch()}>
+                    <Button variant="outline" size="icon" className={isPerfex ? "h-8 w-8 text-xs" : "h-9 w-9"} onClick={() => refetch()}>
                         <RefreshCw className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-9" onClick={handleQBOSync} disabled={isSyncing}>
+                    <Button variant="outline" size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={handleQBOSync} disabled={isSyncing}>
                         <Database className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
                         {isSyncing ? "Syncing..." : "Sync from QuickBooks"}
                     </Button>
-                    <Button size="sm" className="h-9" onClick={handleExport}>
+                    <Button size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={handleExport}>
                         <Download className="w-4 h-4 mr-2" />
                         Export Report
                     </Button>
@@ -177,7 +182,7 @@ export default function AccountingDashboardPage() {
                     variant={financial_health.net_profit >= 0 ? "success" : "danger"}
                     data={profitSpark}
                     trend={{
-                        value: financial_health.net_profit_margin.toFixed(1),
+                        value: Number(financial_health.net_profit_margin.toFixed(1)),
                         isPositive: financial_health.net_profit >= 0,
                         label: "Margin"
                     }}
@@ -203,14 +208,16 @@ export default function AccountingDashboardPage() {
                 />
             </div>
 
-            <div className="grid grid-cols-1">
+            <div className={`grid grid-cols-1 ${isPerfex ? "rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] overflow-hidden" : ""}`}>
                 <InteractiveTrendChart data={trends} title="Financial Performance Trends" />
             </div>
 
-            <OperationalGrid
-                insights={insights}
-                topJobs={top_jobs}
-            />
+            <div className={isPerfex ? "rounded-md border border-border bg-card shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] overflow-hidden" : ""}>
+                <OperationalGrid
+                    insights={insights}
+                    topJobs={top_jobs}
+                />
+            </div>
         </div>
     );
 }

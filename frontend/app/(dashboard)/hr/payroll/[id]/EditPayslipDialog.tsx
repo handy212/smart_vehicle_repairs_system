@@ -152,7 +152,7 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <Label className="text-base font-semibold text-green-700 dark:text-green-400">Allowances</Label>
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                <Badge variant="outline" className="bg-success/10 text-green-700 border-green-200">
                                     Total: {allowances.reduce((s, i) => s + i.amount, 0).toLocaleString()}
                                 </Badge>
                             </div>
@@ -161,7 +161,7 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
                                     <div key={idx} className="flex items-center gap-2">
                                         <Input value={item.name} onChange={e => { const n = [...allowances]; n[idx].name = e.target.value; setAllowances(n); }} className="flex-1 h-8 text-xs" />
                                         <Input type="number" value={item.amount} onChange={e => { const n = [...allowances]; n[idx].amount = parseFloat(e.target.value); setAllowances(n); }} className="w-24 h-8 text-xs text-right" />
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeAllowance(idx)}><Trash2 className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAllowance(idx)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                 ))}
                                 <div className="flex items-center gap-2 pt-2 border-t border-dashed">
@@ -177,8 +177,8 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
                         {/* Deductions */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-base font-semibold text-red-700 dark:text-red-400">Deductions</Label>
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                <Label className="text-base font-semibold text-destructive dark:text-red-400">Deductions</Label>
+                                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
                                     Total: {deductions.reduce((s, i) => s + i.amount, 0).toLocaleString()}
                                 </Badge>
                             </div>
@@ -187,7 +187,7 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
                                     <div key={idx} className="flex items-center gap-2">
                                         <Input value={item.name} onChange={e => { const n = [...deductions]; n[idx].name = e.target.value; setDeductions(n); }} className="flex-1 h-8 text-xs" />
                                         <Input type="number" value={item.amount} onChange={e => { const n = [...deductions]; n[idx].amount = parseFloat(e.target.value); setDeductions(n); }} className="w-24 h-8 text-xs text-right" />
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeDeduction(idx)}><Trash2 className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeDeduction(idx)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                 ))}
                                 <div className="flex items-center gap-2 pt-2 border-t border-dashed">

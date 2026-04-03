@@ -51,14 +51,14 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
               {importantNotes.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-2 text-red-500" />
+                    <AlertCircle className="w-4 h-4 mr-2 text-destructive" />
                     Important Notes ({importantNotes.length})
                   </h3>
                   <div className="space-y-3">
                     {importantNotes.map((note) => (
                       <div
                         key={note.id}
-                        className="border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20 p-4 rounded-r"
+                        className="border-l-4 border-destructive bg-destructive/10 dark:bg-red-900/20 p-4 rounded-r"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">

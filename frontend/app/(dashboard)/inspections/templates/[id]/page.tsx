@@ -369,7 +369,7 @@ export default function TemplateDetailPage() {
                                   {item.item_type_display || item.item_type}
                                 </Badge>
                                 {item.is_critical && (
-                                  <Badge className="bg-red-100 text-red-800 text-xs">
+                                  <Badge className="bg-red-100 text-destructive text-xs">
                                     Critical
                                   </Badge>
                                 )}

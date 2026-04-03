@@ -390,7 +390,7 @@ export default function ChartOfAccountsPage() {
                                                                 <DropdownMenuItem
                                                                     onClick={() => handleDelete(account)}
                                                                     disabled={deleteMutation.isPending}
-                                                                    className="text-red-600 focus:text-red-700 cursor-pointer"
+                                                                    className="text-destructive focus:text-destructive cursor-pointer"
                                                                 >
                                                                     <Trash2 className="w-4 h-4 mr-2" />
                                                                     Delete

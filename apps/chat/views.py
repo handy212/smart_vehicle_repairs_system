@@ -12,6 +12,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Conversation.objects.none()
         # Show non-archived conversations where user is a participant
         return Conversation.objects.filter(
             participants=self.request.user,
@@ -184,6 +186,8 @@ class ChatMessageViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ChatMessage.objects.none()
         return ChatMessage.objects.filter(
             conversation__participants=self.request.user
         ).select_related('sender', 'parent_message__sender')

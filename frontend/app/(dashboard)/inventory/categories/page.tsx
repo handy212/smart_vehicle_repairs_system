@@ -183,7 +183,7 @@ export default function PartCategoriesPage() {
       </div>
 
       {/* Categories Table */}
-      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-border">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6"><TableSkeleton rows={8} columns={6} /></div>
@@ -247,7 +247,7 @@ export default function PartCategoriesPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleDelete(category.id)}
-                              className="text-red-600 focus:text-red-700 cursor-pointer"
+                              className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                               disabled={deleteMutation.isPending}
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -263,7 +263,7 @@ export default function PartCategoriesPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <FolderTree className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
+              <FolderTree className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground">No categories found</h3>
               <p className="text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
                 Get started by adding a new category to organize your parts.

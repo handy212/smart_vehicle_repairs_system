@@ -86,11 +86,11 @@ function AttendanceContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "present": return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-            case "late": return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
-            case "absent": return "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
-            case "half_day": return "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800";
-            case "on_leave": return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
+            case "present": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
+            case "late": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
+            case "absent": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
+            case "half_day": return "bg-warning/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800";
+            case "on_leave": return "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
             default: return "";
         }
     };
@@ -113,7 +113,7 @@ function AttendanceContent() {
                             variant="outline"
                             onClick={() => clockInMutation.mutate()}
                             disabled={clockInMutation.isPending}
-                            className="text-green-600 border-green-200 hover:bg-green-50"
+                            className="text-success border-green-200 hover:bg-success/10"
                         >
                             <LogIn className="h-4 w-4 mr-2" />
                             Clock In
@@ -123,7 +123,7 @@ function AttendanceContent() {
                             variant="outline"
                             onClick={() => clockOutMutation.mutate()}
                             disabled={clockOutMutation.isPending}
-                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            className="text-destructive border-destructive/20 hover:bg-destructive/10"
                         >
                             <LogOut className="h-4 w-4 mr-2" />
                             Clock Out
@@ -149,25 +149,25 @@ function AttendanceContent() {
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Present</span>
-                            <span className="text-lg font-bold text-green-600">{summary.present}</span>
+                            <span className="text-lg font-bold text-success">{summary.present}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Late</span>
-                            <span className="text-lg font-bold text-amber-600">{summary.late}</span>
+                            <span className="text-lg font-bold text-warning">{summary.late}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Absent</span>
-                            <span className="text-lg font-bold text-red-600">{summary.absent}</span>
+                            <span className="text-lg font-bold text-destructive">{summary.absent}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">On Leave</span>
-                            <span className="text-lg font-bold text-blue-600">{summary.on_leave}</span>
+                            <span className="text-lg font-bold text-primary">{summary.on_leave}</span>
                         </CardContent>
                     </Card>
                 </div>
@@ -244,7 +244,7 @@ function AttendanceContent() {
                                         <TableCell className="px-4 py-2 text-sm font-medium">{rec.total_hours != null ? `${Number(rec.total_hours).toFixed(1)}h` : "—"}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm">
                                             {Number(rec.overtime_hours) > 0 ? (
-                                                <span className="text-amber-600 font-medium">{Number(rec.overtime_hours).toFixed(1)}h</span>
+                                                <span className="text-warning font-medium">{Number(rec.overtime_hours).toFixed(1)}h</span>
                                             ) : (
                                                 "—"
                                             )}
@@ -262,7 +262,7 @@ function AttendanceContent() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onClick={() => setEditingRec(rec)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-red-600" onClick={() => setDeletingId(rec.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive" onClick={() => setDeletingId(rec.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </PermissionGuard>

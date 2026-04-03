@@ -66,7 +66,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                         {/* Header Info */}
                         <div className="bg-muted/30 p-4 rounded-lg border mb-6 grid grid-cols-2 gap-4">
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-primary">
                                     <User className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -75,7 +75,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-primary">
                                     <CalendarDays className="h-5 w-5" />
                                 </div>
                                 <div>
@@ -89,7 +89,7 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                             {/* Earnings Section */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between border-b pb-2">
-                                    <h3 className="font-semibold text-sm uppercase text-green-600">Earnings</h3>
+                                    <h3 className="font-semibold text-sm uppercase text-success">Earnings</h3>
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex justify-between text-sm">
@@ -118,24 +118,24 @@ export function PayslipDetailDialog({ payslip, open, onOpenChange }: PayslipDeta
                             {/* Deductions Section */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between border-b pb-2">
-                                    <h3 className="font-semibold text-sm uppercase text-red-600">Deductions</h3>
+                                    <h3 className="font-semibold text-sm uppercase text-destructive">Deductions</h3>
                                 </div>
                                 <div className="space-y-3">
                                     {parseFloat(payslip.tax_amount) > 0 && (
                                         <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">Tax (PAYE)</span>
-                                            <span className="font-mono font-medium text-red-600">{formatCurrency(payslip.tax_amount)}</span>
+                                            <span className="font-mono font-medium text-destructive">{formatCurrency(payslip.tax_amount)}</span>
                                         </div>
                                     )}
                                     {Object.entries(payslip.deductions || {}).map(([name, amount]) => (
                                         <div key={name} className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">{name}</span>
-                                            <span className="font-mono font-medium text-red-600">{formatCurrency(amount as string)}</span>
+                                            <span className="font-mono font-medium text-destructive">{formatCurrency(amount as string)}</span>
                                         </div>
                                     ))}
                                     <div className="border-t pt-3 mt-2 flex justify-between font-bold text-gray-500">
                                         <span>Total Deductions</span>
-                                        <span className="font-mono text-red-700">
+                                        <span className="font-mono text-destructive">
                                             {formatCurrency(
                                                 parseFloat(payslip.gross_pay) - parseFloat(payslip.net_pay)
                                             )}

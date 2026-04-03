@@ -49,8 +49,8 @@ export function InspectionItemRow({
     const [isExpanded, setIsExpanded] = useState(false);
 
     const statusOptions = [
-        { value: "pass", label: "Pass", icon: Check, color: "text-green-600", bg: "bg-green-50", border: "border-green-200", activeBg: "bg-green-600", activeText: "text-white" },
-        { value: "fail", label: "Fail", icon: X, color: "text-red-600", bg: "bg-red-50", border: "border-red-200", activeBg: "bg-red-600", activeText: "text-white" },
+        { value: "pass", label: "Pass", icon: Check, color: "text-success", bg: "bg-success/10", border: "border-green-200", activeBg: "bg-green-600", activeText: "text-white" },
+        { value: "fail", label: "Fail", icon: X, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", activeBg: "bg-red-600", activeText: "text-white" },
         { value: "advisory", label: "Advisory", icon: AlertTriangle, color: "text-yellow-600", bg: "bg-yellow-50", border: "border-yellow-200", activeBg: "bg-yellow-600", activeText: "text-white" },
         { value: "not_applicable", label: "N/A", icon: Minus, color: "text-muted-foreground", bg: "bg-muted", border: "border-border", activeBg: "bg-gray-600", activeText: "text-white" },
     ];
@@ -73,7 +73,7 @@ export function InspectionItemRow({
     return (
         <div className={cn(
             "border-b border-border transition-colors",
-            isCriticalRemaining && "bg-red-50/30 dark:bg-red-950/20 border-l-4 border-l-red-500",
+            isCriticalRemaining && "bg-destructive/10/30 dark:bg-red-950/20 border-l-4 border-l-red-500",
             !isLast && "border-b",
             isLast && "border-b-0"
         )}>
@@ -89,7 +89,7 @@ export function InspectionItemRow({
                             {item.name}
                         </h4>
                         {item.is_critical && (
-                            <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[9px] font-bold uppercase tracking-wider h-4 px-1.5 py-0">
+                            <Badge className="bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 text-[9px] font-bold uppercase tracking-wider h-4 px-1.5 py-0">
                                 Critical
                             </Badge>
                         )}
@@ -308,11 +308,11 @@ export function InspectionItemRow({
                                 type="checkbox"
                                 checked={result.needs_immediate_attention || false}
                                 onChange={(e) => onUpdate("needs_immediate_attention", e.target.checked)}
-                                className="w-3.5 h-3.5 rounded border-border text-red-600 focus:ring-red-500"
+                                className="w-3.5 h-3.5 rounded border-border text-destructive focus:ring-red-500"
                             />
                             <span className={cn(
                                 "text-[10px] font-bold uppercase tracking-widest",
-                                result.needs_immediate_attention ? "text-red-600" : "text-muted-foreground"
+                                result.needs_immediate_attention ? "text-destructive" : "text-muted-foreground"
                             )}>
                                 Needs Immediate Attention
                             </span>

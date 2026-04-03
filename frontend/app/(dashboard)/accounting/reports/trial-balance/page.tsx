@@ -147,7 +147,7 @@ export default function TrialBalancePage() {
                         {report?.is_balanced ? (
                             <span className="text-success bg-success/10 px-3 py-1 rounded-full text-sm font-medium">Balanced</span>
                         ) : (
-                            <span className="text-red-600 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">Unbalanced</span>
+                            <span className="text-destructive bg-destructive/10 px-3 py-1 rounded-full text-sm font-medium">Unbalanced</span>
                         )}
                     </div>
 

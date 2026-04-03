@@ -90,9 +90,9 @@ function PayrollPeriodDetail() {
     const getStatusConfig = (status: string) => {
         switch (status) {
             case "draft": return { color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400", label: "Draft" };
-            case "processing": return { color: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400", label: "Processing" };
-            case "approved": return { color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400", label: "Approved" };
-            case "paid": return { color: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400", label: "Paid" };
+            case "processing": return { color: "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400", label: "Processing" };
+            case "approved": return { color: "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400", label: "Approved" };
+            case "paid": return { color: "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400", label: "Paid" };
             default: return { color: "", label: status };
         }
     };
@@ -100,8 +100,8 @@ function PayrollPeriodDetail() {
     const getPayslipStatusColor = (status: string) => {
         switch (status) {
             case "draft": return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400";
-            case "approved": return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400";
-            case "paid": return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400";
+            case "approved": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400";
+            case "paid": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400";
             default: return "";
         }
     };
@@ -199,13 +199,13 @@ function PayrollPeriodDetail() {
                 <Card className="shadow-sm border">
                     <CardContent className="p-3">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Total Deductions</p>
-                        <p className="text-lg font-bold mt-1 text-red-600">{totalDeductions.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className="text-lg font-bold mt-1 text-destructive">{totalDeductions.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     </CardContent>
                 </Card>
                 <Card className="shadow-sm border">
                     <CardContent className="p-3">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Total Net Pay</p>
-                        <p className="text-lg font-bold mt-1 text-green-600">{totalNet.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className="text-lg font-bold mt-1 text-success">{totalNet.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -259,8 +259,8 @@ function PayrollPeriodDetail() {
                                         <TableCell className="px-4 py-2 text-sm text-right font-mono">{parseFloat(slip.basic_salary || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm text-right font-mono">{parseFloat(slip.overtime_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm text-right font-mono font-medium">{parseFloat(slip.gross_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                                        <TableCell className="px-4 py-2 text-sm text-right font-mono text-red-600">{parseFloat(slip.tax_amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                                        <TableCell className="px-4 py-2 text-sm text-right font-mono font-bold text-green-600">{parseFloat(slip.net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell className="px-4 py-2 text-sm text-right font-mono text-destructive">{parseFloat(slip.tax_amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell className="px-4 py-2 text-sm text-right font-mono font-bold text-success">{parseFloat(slip.net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                         <TableCell className="px-4 py-2">
                                             <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", getPayslipStatusColor(slip.status))}>
                                                 {slip.status}

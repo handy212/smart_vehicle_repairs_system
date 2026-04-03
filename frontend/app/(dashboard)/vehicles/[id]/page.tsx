@@ -192,7 +192,7 @@ export default function VehicleDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-md">
+        <div className="bg-destructive/10 dark:bg-red-900/20 text-destructive dark:text-red-400 p-4 rounded-md">
           Error loading vehicle. Please try again.
         </div>
       </div>

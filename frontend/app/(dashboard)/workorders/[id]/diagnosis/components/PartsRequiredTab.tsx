@@ -280,7 +280,7 @@ export function PartsRequiredTab({
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="h-8 w-8 p-0 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors focus-visible:ring-1"
+                                                                className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:ring-1"
                                                                 onClick={() => {
                                                                     if (confirm("Remove this part request?")) {
                                                                         deleteMutation.mutate(part.id);
@@ -504,7 +504,7 @@ function PartFormDialog({
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-6 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    className="h-6 text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10"
                                     onClick={() => setQueuedParts([])}
                                 >
                                     Clear All
@@ -531,7 +531,7 @@ function PartFormDialog({
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveFromQueue(idx)}
-                                                        className="text-muted-foreground hover:text-red-500 transition-colors"
+                                                        className="text-muted-foreground hover:text-destructive transition-colors"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -607,7 +607,7 @@ function PartFormDialog({
                                 )}
 
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="part_name" className="text-xs font-semibold text-foreground">Part Name <span className="text-red-500">*</span></Label>
+                                    <Label htmlFor="part_name" className="text-xs font-semibold text-foreground">Part Name <span className="text-destructive">*</span></Label>
                                     <Input
                                         id="part_name"
                                         className="h-9 text-sm"
@@ -623,7 +623,7 @@ function PartFormDialog({
                             <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
-                                        <Label htmlFor="quantity" className="text-xs font-semibold text-foreground">Qty <span className="text-red-500">*</span></Label>
+                                        <Label htmlFor="quantity" className="text-xs font-semibold text-foreground">Qty <span className="text-destructive">*</span></Label>
                                         <Input
                                             id="quantity"
                                             type="number"

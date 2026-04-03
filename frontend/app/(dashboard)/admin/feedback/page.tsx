@@ -77,7 +77,7 @@ export default function AdminFeedbackPage() {
         switch (category) {
             case 'suggestion': return <HelpCircle className="h-4 w-4" />;
             case 'complaint': return <AlertCircle className="h-4 w-4 text-destructive" />;
-            case 'compliment': return <ThumbsUp className="h-4 w-4 text-green-500" />;
+            case 'compliment': return <ThumbsUp className="h-4 w-4 text-success" />;
             default: return <MessageSquare className="h-4 w-4" />;
         }
     };
@@ -264,7 +264,7 @@ export default function AdminFeedbackPage() {
                                                     className="h-7 px-2"
                                                     onClick={() => copyToClipboard(branch.code, branch.id)}
                                                 >
-                                                    {copiedBranchId === branch.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                                                    {copiedBranchId === branch.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                                                 </Button>
                                                 <Button size="sm" variant="ghost" className="h-7 px-2" asChild>
                                                     <a href={`/feedback?branch=${branch.code}`} target="_blank" rel="noopener noreferrer">

@@ -120,7 +120,7 @@ export function TwoFactorSettings() {
             <CardContent>
                 {is2FAEnabled ? (
                     <div className="flex flex-col space-y-4">
-                        <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-3 p-4 bg-success/10 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg border border-green-200 dark:border-green-800">
                             <Shield className="h-4 w-4" />
                             <div>
                                 <p className="font-semibold">Two-factor authentication is enabled</p>
@@ -191,7 +191,7 @@ export function TwoFactorSettings() {
                                             <div className="flex gap-2">
                                                 <Input value={setupData.secret} readOnly className="font-mono text-xs bg-muted" />
                                                 <Button variant="outline" size="icon" onClick={copyToClipboard}>
-                                                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                                    {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                                                 </Button>
                                             </div>
                                         </div>

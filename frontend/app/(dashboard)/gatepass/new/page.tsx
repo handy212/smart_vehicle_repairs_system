@@ -238,7 +238,7 @@ export default function NewGatePassPage() {
                   setValue("work_order", woId);
                 }}
               >
-                <SelectTrigger id="work_order" className={errors.work_order ? "border-red-500" : ""}>
+                <SelectTrigger id="work_order" className={errors.work_order ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select a closed work order" />
                 </SelectTrigger>
                 <SelectContent>
@@ -250,7 +250,7 @@ export default function NewGatePassPage() {
                 </SelectContent>
               </Select>
               {errors.work_order && (
-                <p className="text-xs text-red-500">{errors.work_order.message}</p>
+                <p className="text-xs text-destructive">{errors.work_order.message}</p>
               )}
             </div>
 
@@ -307,10 +307,10 @@ export default function NewGatePassPage() {
                     id="pickup_person_name"
                     {...register("pickup_person_name")}
                     placeholder="Enter full name"
-                    className={errors.pickup_person_name ? "border-red-500" : ""}
+                    className={errors.pickup_person_name ? "border-destructive" : ""}
                   />
                   {errors.pickup_person_name && (
-                    <p className="text-xs text-red-500">{errors.pickup_person_name.message}</p>
+                    <p className="text-xs text-destructive">{errors.pickup_person_name.message}</p>
                   )}
                 </div>
 
@@ -376,7 +376,7 @@ export default function NewGatePassPage() {
         </Card>
 
         {serverError && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded flex items-start gap-2">
+          <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded flex items-start gap-2">
             <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Error</p>

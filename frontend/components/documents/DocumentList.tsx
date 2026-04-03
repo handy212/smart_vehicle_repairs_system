@@ -103,7 +103,7 @@ export function DocumentList({ customerId, vehicleId }: DocumentListProps) {
                                                 {doc.file_type.startsWith("image/") ? (
                                                     <ImageIcon className="w-4 h-4 text-primary" />
                                                 ) : (
-                                                    <FileText className="w-4 h-4 text-orange-500" />
+                                                    <FileText className="w-4 h-4 text-warning" />
                                                 )}
                                                 {doc.title}
                                             </div>
@@ -125,7 +125,7 @@ export function DocumentList({ customerId, vehicleId }: DocumentListProps) {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="text-red-500 hover:text-red-700"
+                                                    className="text-destructive hover:text-destructive"
                                                     onClick={() => {
                                                         if (confirm("Are you sure?")) deleteMutation.mutate(doc.id);
                                                     }}

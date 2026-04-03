@@ -156,7 +156,7 @@ export function UserMenu() {
 
                 <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 cursor-pointer"
+                    className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20 cursor-pointer"
                 >
                     <PremiumIcons.LogOut className="w-4 h-4 mr-2" />
                     Sign Out

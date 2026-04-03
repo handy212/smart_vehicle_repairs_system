@@ -70,7 +70,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
         if (customer.phone) {
             onSelect({
                 type: 'user',
-                value: customer.id.toString(),
+                value: (customer.user_id ?? customer.id).toString(),
                 name: `${name} (${customer.phone})`
             });
             setSearch('');

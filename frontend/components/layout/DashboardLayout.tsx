@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useTheme } from "@/lib/hooks/useTheme";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import { SubNav, getSubNavConfig } from "./SubNav";
@@ -103,9 +104,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }, [mounted]);
 
   // Calculate margin: sidebar + sub-nav
+  const { theme: activeTheme } = useTheme();
   const [sidebarWidthExpanded, setSidebarWidthExpanded] = useState(256);
   const [headerHeight, setHeaderHeight] = useState(64);
-  
+
   useEffect(() => {
     if (mounted) {
       const style = getComputedStyle(document.documentElement);
@@ -114,7 +116,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       if (!isNaN(width)) setSidebarWidthExpanded(width);
       if (!isNaN(height)) setHeaderHeight(height);
     }
-  }, [mounted]);
+  }, [mounted, activeTheme]);
 
   const sidebarWidthCollapsed = 64; // w-16 = 4rem = 64px
   const sidebarCollapsed = mounted ? isSidebarCollapsed : false; // Default to expanded during SSR

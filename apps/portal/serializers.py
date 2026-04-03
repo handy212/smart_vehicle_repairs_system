@@ -79,7 +79,7 @@ class PortalHistorySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = WorkOrder
-        fields = ['id', 'work_order_number', 'vehicle_name', 'status', 'created_at', 'total_amount']
+        fields = ['id', 'work_order_number', 'vehicle_name', 'status', 'created_at', 'actual_total']
         
     def get_vehicle_name(self, obj):
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"

@@ -87,9 +87,9 @@ function StaffContent() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "active": return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
-            case "probation": return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
-            case "suspended": return "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
+            case "active": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
+            case "probation": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800";
+            case "suspended": return "bg-destructive/10 text-destructive border-destructive/20 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
             case "terminated": return "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
             case "resigned": return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
             default: return "";
@@ -162,13 +162,13 @@ function StaffContent() {
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
-                            <span className="text-lg font-bold text-green-600">{activeCount}</span>
+                            <span className="text-lg font-bold text-success">{activeCount}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Probation</span>
-                            <span className="text-lg font-bold text-amber-600">{probationCount}</span>
+                            <span className="text-lg font-bold text-warning">{probationCount}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
@@ -299,7 +299,7 @@ function StaffContent() {
                                     </div>
                                     <div className="flex gap-1.5 flex-wrap justify-end">
                                         {emp.technician_id && (
-                                            <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
+                                            <Badge variant="secondary" className="bg-warning/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
                                                 Technician
                                             </Badge>
                                         )}
@@ -323,7 +323,7 @@ function StaffContent() {
                     )) : (
                         <div className="col-span-full flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-lg bg-muted/50">
                             <div className="rounded-full bg-blue-100 dark:bg-blue-900/20 p-4 mb-4">
-                                <Users className="h-8 w-8 text-blue-600" />
+                                <Users className="h-8 w-8 text-primary" />
                             </div>
                             <h3 className="text-lg font-semibold">No staff found</h3>
                             <p className="text-muted-foreground max-w-sm mt-2 mb-6">
@@ -401,7 +401,7 @@ function StaffContent() {
                                         <TableCell className="px-4 py-2">
                                             <div className="flex gap-2">
                                                 {emp.technician_id && (
-                                                    <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
+                                                    <Badge variant="secondary" className="bg-warning/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 text-[9px] px-1.5 py-0">
                                                         Tech
                                                     </Badge>
                                                 )}

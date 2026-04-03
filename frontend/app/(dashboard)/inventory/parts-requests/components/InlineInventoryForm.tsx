@@ -73,11 +73,11 @@ export function InlineInventoryForm({
     };
 
     return (
-        <Card className="p-4 border-amber-200 bg-amber-50/30 dark:bg-amber-900/10">
+        <Card className="p-4 border-warning/20 bg-warning/10/30 dark:bg-amber-900/10">
             <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-600" />
-                    <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    <AlertCircle className="w-4 h-4 text-warning" />
+                    <h4 className="text-sm font-semibold text-warning text-warning">
                         Create Inventory Item
                     </h4>
                 </div>
@@ -92,7 +92,7 @@ export function InlineInventoryForm({
                 </Button>
             </div>
 
-            <p className="text-xs text-amber-800 dark:text-amber-200 mb-4">
+            <p className="text-xs text-warning text-warning mb-4">
                 This part doesn't exist in inventory. Create it now to proceed with the PO.
             </p>
 
@@ -100,7 +100,7 @@ export function InlineInventoryForm({
                 <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                         <Label htmlFor="part_name" className="text-xs">
-                            Part Name <span className="text-red-500">*</span>
+                            Part Name <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="part_name"
@@ -115,7 +115,7 @@ export function InlineInventoryForm({
 
                     <div className="space-y-1.5">
                         <Label htmlFor="part_number" className="text-xs">
-                            Part Number <span className="text-red-500">*</span>
+                            Part Number <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="part_number"
@@ -131,7 +131,7 @@ export function InlineInventoryForm({
 
                 <div className="space-y-1.5">
                     <Label htmlFor="cost_price" className="text-xs">
-                        Cost Price <span className="text-red-500">*</span>
+                        Cost Price <span className="text-destructive">*</span>
                     </Label>
                     <Input
                         id="cost_price"
@@ -150,7 +150,7 @@ export function InlineInventoryForm({
 
                 <div className="space-y-1.5">
                     <Label htmlFor="supplier" className="text-xs">
-                        Supplier <span className="text-red-500">*</span>
+                        Supplier <span className="text-destructive">*</span>
                     </Label>
                     <Select
                         value={formData.supplier_id > 0 ? formData.supplier_id.toString() : ""}

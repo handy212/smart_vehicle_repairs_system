@@ -14,7 +14,6 @@ from datetime import timedelta
 from apps.notifications_app.triggers import notification_triggers
 
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
-from apps.vehicles.models import Vehicle
 
 from .models import (
     WorkOrder, ServiceTask, WorkOrderPart,
@@ -212,7 +211,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             )
         
         try:
-            from apps.diagnosis.models import Diagnosis
+            from apps.diagnosis.models import Diagnosis, RepairRecommendation
+            from apps.vehicles.models import Vehicle
             
             vehicle = Vehicle.objects.get(id=vehicle_id)
             

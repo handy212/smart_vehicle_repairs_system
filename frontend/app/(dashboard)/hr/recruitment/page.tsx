@@ -93,9 +93,9 @@ function JobOpeningsList() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case "draft": return "bg-gray-100 text-gray-700 border-gray-200";
-            case "open": return "bg-green-50 text-green-700 border-green-200";
-            case "on_hold": return "bg-amber-50 text-amber-700 border-amber-200";
-            case "closed": return "bg-red-50 text-red-700 border-red-200";
+            case "open": return "bg-success/10 text-green-700 border-green-200";
+            case "on_hold": return "bg-warning/10 text-amber-700 border-warning/20";
+            case "closed": return "bg-destructive/10 text-destructive border-destructive/20";
             default: return "";
         }
     };
@@ -123,7 +123,7 @@ function JobOpeningsList() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => setEditingJob(job)}>Edit</DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem className="text-red-600" onClick={() => setDeletingJobId(job.id)}>Delete</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive" onClick={() => setDeletingJobId(job.id)}>Delete</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </PermissionGuard>
@@ -276,12 +276,12 @@ function ApplicantsList() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "new": return "bg-blue-50 text-blue-700 border-blue-200";
+            case "new": return "bg-info/10 text-blue-700 border-info/20";
             case "screening": return "bg-purple-50 text-purple-700 border-purple-200";
-            case "interview": return "bg-amber-50 text-amber-700 border-amber-200";
-            case "offered": return "bg-green-50 text-green-700 border-green-200";
-            case "hired": return "bg-emerald-50 text-emerald-700 border-emerald-200";
-            case "rejected": return "bg-red-50 text-red-700 border-red-200";
+            case "interview": return "bg-warning/10 text-amber-700 border-warning/20";
+            case "offered": return "bg-success/10 text-green-700 border-green-200";
+            case "hired": return "bg-success/10 text-emerald-700 border-emerald-200";
+            case "rejected": return "bg-destructive/10 text-destructive border-destructive/20";
             default: return "";
         }
     };
@@ -318,7 +318,7 @@ function ApplicantsList() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onClick={() => router.push(`/hr/recruitment/applicants/${app.id}`)}><ArrowRight className="h-4 w-4 mr-2" />Details</DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-red-600" onClick={() => setDeletingAppId(app.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingAppId(app.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </PermissionGuard>

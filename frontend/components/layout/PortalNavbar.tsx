@@ -165,9 +165,9 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, is
                         setShowUserMenu(false);
                         handleLogout();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors group"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-destructive dark:text-red-400 hover:bg-destructive/10 dark:hover:bg-red-900/10 rounded-lg transition-colors group"
                     >
-                      <LogOut className="w-4 h-4 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
+                      <LogOut className="w-4 h-4 group-hover:text-destructive dark:group-hover:text-red-400 transition-colors" />
                       <span>Sign out</span>
                     </button>
                   </div>

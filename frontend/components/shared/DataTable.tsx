@@ -26,7 +26,7 @@ interface DataTableProps<T> {
     columns: Column<T>[];
     isLoading?: boolean;
     onRowClick?: (item: T) => void;
-    onRowDoubleClick?: (item: T) => void; // Per UI roadmap
+    onRowDoubleClick?: (item: T) => void;
     emptyMessage?: string;
     className?: string;
     sortColumn?: string;

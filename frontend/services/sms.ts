@@ -52,9 +52,16 @@ const smsApi = {
         return response.data;
     },
 
-    // AI Assist
-    aiAssist: async (prompt: string) => {
-        const response = await api.post<{ suggestion: string }>('/notifications/sms-console/ai_assist/', { prompt });
+    // AI Chat (multi-turn)
+    aiChat: async (data: {
+        messages: { role: 'user' | 'model'; content: string }[];
+        current_draft?: string;
+        mode?: 'sms' | 'template';
+    }) => {
+        const response = await api.post<{ reply: string; suggestion: string | null }>(
+            '/notifications/sms-console/ai_assist/',
+            data
+        );
         return response.data;
     },
 

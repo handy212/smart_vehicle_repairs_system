@@ -200,7 +200,7 @@ export default function RolesPage() {
               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Active</p>
               <p className="text-xl font-bold text-success">{stats.activeRoles}</p>
             </div>
-            <Shield className="w-5 h-5 text-green-500 opacity-80" />
+            <Shield className="w-5 h-5 text-success opacity-80" />
           </CardContent>
         </Card>
         <Card className="shadow-sm">
@@ -227,7 +227,7 @@ export default function RolesPage() {
               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Perms</p>
               <p className="text-xl font-bold text-foreground">{stats.totalPermissions}</p>
             </div>
-            <Shield className="w-5 h-5 text-orange-500 opacity-80" />
+            <Shield className="w-5 h-5 text-warning opacity-80" />
           </CardContent>
         </Card>
       </div>
@@ -355,7 +355,7 @@ export default function RolesPage() {
                           ) : (
                             <div className="flex items-center space-x-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                              <span className="text-xs text-red-600">Inactive</span>
+                              <span className="text-xs text-destructive">Inactive</span>
                             </div>
                           )}
                           {role.is_system && (
@@ -395,7 +395,7 @@ export default function RolesPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDelete(role)}
-                                className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                                 title="Delete Role"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -428,7 +428,7 @@ export default function RolesPage() {
                 <div className="flex items-center gap-3">
                   <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-success/100' :
                     log.action === 'update' ? 'bg-primary' :
-                      log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
+                      log.action === 'delete' ? 'bg-destructive/100' : 'bg-gray-500'
                     }`}></span>
                   <span className="text-xs font-medium text-foreground">{log.object_repr}</span>
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1.5 bg-muted rounded-sm">{log.action}</span>
@@ -557,7 +557,7 @@ function RoleDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name" className="text-xs">
-              Name <span className="text-red-500">*</span>
+              Name <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
@@ -570,7 +570,7 @@ function RoleDialog({
           </div>
           <div>
             <Label htmlFor="code" className="text-xs">
-              Code <span className="text-red-500">*</span>
+              Code <span className="text-destructive">*</span>
             </Label>
             <Input
               id="code"

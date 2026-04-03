@@ -186,7 +186,7 @@ export default function RoadsidePage() {
             <Card className="shadow-sm border bg-card">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Subscribed</span>
-                    <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats?.covered_by_subscription || 0}</span>
+                    <span className="text-lg font-bold text-success dark:text-emerald-400">{stats?.covered_by_subscription || 0}</span>
                 </CardContent>
             </Card>
         </div>
@@ -194,7 +194,7 @@ export default function RoadsidePage() {
 
     if (error) {
         return (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+            <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
                 Error loading roadside requests. Please try again.
             </div>
         );
@@ -269,7 +269,7 @@ export default function RoadsidePage() {
                                 setAdvancedFilters({});
                                 setPage(1);
                             }}
-                            className="h-9 w-9 p-0 text-muted-foreground hover:text-red-600"
+                            className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
                             title="Clear all filters"
                         >
                             <X className="w-4 h-4" />
@@ -286,7 +286,7 @@ export default function RoadsidePage() {
                                 <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                                     {filter.label}: {String(value)}
                                     <X
-                                        className="w-3 h-3 cursor-pointer hover:text-red-500"
+                                        className="w-3 h-3 cursor-pointer hover:text-destructive"
                                         onClick={() => {
                                             const newFilters = { ...advancedFilters };
                                             delete newFilters[key];
@@ -381,7 +381,7 @@ export default function RoadsidePage() {
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-mono text-xs font-medium text-primary">{request.request_number}</span>
                                                     {request.is_covered_by_subscription && (
-                                                        <div className="flex items-center text-[10px] text-emerald-600 font-medium">
+                                                        <div className="flex items-center text-[10px] text-success font-medium">
                                                             <ShieldCheck className="h-3 w-3 mr-0.5" />
                                                             Covered
                                                         </div>

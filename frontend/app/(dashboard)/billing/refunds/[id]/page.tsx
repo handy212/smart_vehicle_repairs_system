@@ -90,10 +90,10 @@ export default function RefundDetailPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                 </Button>
-                <Card className="border-red-200 bg-red-50">
+                <Card className="border-destructive/20 bg-destructive/10">
                     <CardContent className="pt-6">
-                        <p className="text-sm font-medium text-red-800">Invalid Refund ID</p>
-                        <p className="text-sm text-red-700 mt-1">The refund ID in the URL is invalid.</p>
+                        <p className="text-sm font-medium text-destructive">Invalid Refund ID</p>
+                        <p className="text-sm text-destructive mt-1">The refund ID in the URL is invalid.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -111,7 +111,7 @@ export default function RefundDetailPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
                 </Button>
-                <div className="text-red-500">Error loading refund details or refund not found.</div>
+                <div className="text-destructive">Error loading refund details or refund not found.</div>
             </div>
         );
     }

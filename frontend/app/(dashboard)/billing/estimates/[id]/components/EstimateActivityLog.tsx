@@ -32,7 +32,7 @@ export function EstimateActivityLog({ estimateId }: EstimateActivityLogProps) {
         switch (action.toLowerCase()) {
             case 'create': return 'bg-green-100 text-green-800 border-green-200';
             case 'update': return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'delete': return 'bg-red-100 text-red-800 border-red-200';
+            case 'delete': return 'bg-red-100 text-destructive border-destructive/20';
             default: return 'bg-muted text-foreground border-border';
         }
     };

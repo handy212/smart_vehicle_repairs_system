@@ -125,7 +125,7 @@ export default function NewSupplierPage() {
       </div>
 
       {serverError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded flex items-center">
           <AlertCircle className="w-5 h-5 mr-2" />
           {serverError}
         </div>
@@ -148,7 +148,7 @@ export default function NewSupplierPage() {
                   placeholder="Supplier name"
                 />
                 {errors.name && (
-                  <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
                 )}
               </div>
 
@@ -161,7 +161,7 @@ export default function NewSupplierPage() {
                   placeholder="SUP-001"
                 />
                 {errors.supplier_code && (
-                  <p className="text-red-500 text-xs mt-1">{errors.supplier_code.message}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.supplier_code.message}</p>
                 )}
               </div>
 
@@ -180,7 +180,7 @@ export default function NewSupplierPage() {
                   <option value="other">Other</option>
                 </select>
                 {errors.supplier_type && (
-                  <p className="text-red-500 text-xs mt-1">{errors.supplier_type.message}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.supplier_type.message}</p>
                 )}
               </div>
 
@@ -231,7 +231,7 @@ export default function NewSupplierPage() {
                   placeholder="supplier@example.com"
                 />
                 {errors.email && (
-                  <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.email.message}</p>
                 )}
               </div>
 
@@ -265,7 +265,7 @@ export default function NewSupplierPage() {
                   placeholder="https://www.example.com"
                 />
                 {errors.website && (
-                  <p className="text-red-500 text-xs mt-1">{errors.website.message}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.website.message}</p>
                 )}
               </div>
             </CardContent>

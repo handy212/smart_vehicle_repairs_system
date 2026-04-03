@@ -60,9 +60,9 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
       const themeModeSetting = brandingSettings.find(s => s.key === 'theme_mode');
       if (themeModeSetting?.value) {
         const themeMode = themeModeSetting.value.toLowerCase().trim();
-        if (['light', 'dark', 'system', 'auto'].includes(themeMode)) {
+        if (['light', 'dark', 'system', 'auto', 'perfex', 'classic'].includes(themeMode)) {
           const themeValue = themeMode === 'auto' ? 'system' : themeMode;
-          setSystemThemeMode(themeValue as 'light' | 'dark' | 'system');
+          setSystemThemeMode(themeValue as 'light' | 'dark' | 'system' | 'perfex' | 'classic');
           window.dispatchEvent(new CustomEvent('systemThemeModeChanged', { detail: themeValue }));
         }
       }

@@ -76,7 +76,7 @@ function ReviewDetailContent() {
                                     <Button variant="ghost" size="sm" className="h-9 w-9 p-0 border"><MoreHorizontal className="h-4 w-4" /></Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem className="text-red-600" onClick={() => setShowDelete(true)}><Trash2 className="h-4 w-4 mr-2" />Delete Review</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive" onClick={() => setShowDelete(true)}><Trash2 className="h-4 w-4 mr-2" />Delete Review</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </PermissionGuard>
@@ -95,7 +95,7 @@ function ReviewDetailContent() {
                         <div>
                             <p className="text-xs text-muted-foreground mb-1">Overall Rating</p>
                             <div className="flex items-center gap-2">
-                                <div className={cn("text-3xl font-bold", review.overall_rating && review.overall_rating >= 4 ? "text-green-600" : review.overall_rating && review.overall_rating >= 3 ? "text-amber-600" : "text-red-600")}>{review.overall_rating || "-"}</div>
+                                <div className={cn("text-3xl font-bold", review.overall_rating && review.overall_rating >= 4 ? "text-success" : review.overall_rating && review.overall_rating >= 3 ? "text-warning" : "text-destructive")}>{review.overall_rating || "-"}</div>
                                 <span className="text-muted-foreground">/ 5</span>
                             </div>
                         </div>

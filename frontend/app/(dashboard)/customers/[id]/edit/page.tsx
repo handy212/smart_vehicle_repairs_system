@@ -231,7 +231,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
                 </div>
                 <Badge
                   variant={hasPortalAccess ? "default" : "secondary"}
-                  className={hasPortalAccess ? "bg-green-100/10 text-green-500 border-green-500/20" : ""}
+                  className={hasPortalAccess ? "bg-green-100/10 text-success border-green-500/20" : ""}
                 >
                   {hasPortalAccess ? "Enabled" : "Disabled"}
                 </Badge>
@@ -281,7 +281,7 @@ function EditCustomerForm({ customer, customerId }: { customer: any; customerId:
                       }
                     }}
                     disabled={revokePortalAccessMutation.isPending}
-                    className="w-full dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 text-xs"
+                    className="w-full dark:border-destructive dark:text-red-400 dark:hover:bg-red-900/20 text-xs"
                   >
                     <UserX className="w-3 h-3 mr-1.5" />
                     Revoke Access
@@ -363,7 +363,7 @@ export default function EditCustomerPage() {
         </Link>
         <Card className="bg-muted border-border">
           <CardContent className="pt-6">
-            <p className="text-red-600 dark:text-red-400">Customer not found.</p>
+            <p className="text-destructive dark:text-red-400">Customer not found.</p>
           </CardContent>
         </Card>
       </div>

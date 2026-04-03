@@ -235,7 +235,7 @@ export default function NewJournalEntryPage() {
                                             size="icon"
                                             onClick={() => removeLine(index)}
                                             disabled={lines.length <= 2}
-                                            className="text-muted-foreground hover:text-red-500"
+                                            className="text-muted-foreground hover:text-destructive"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
@@ -259,7 +259,7 @@ export default function NewJournalEntryPage() {
                             </div>
                             <div className="flex flex-col items-end">
                                 <span className="text-muted-foreground text-xs">Difference</span>
-                                <span className={isBalanced ? "text-success" : "text-red-600"}>
+                                <span className={isBalanced ? "text-success" : "text-destructive"}>
                                     {formatCurrency(Math.abs(totalDebits - totalCredits))}
                                 </span>
                             </div>

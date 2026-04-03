@@ -138,7 +138,7 @@ export default function NewTemplatePage() {
           <CardContent className="space-y-6">
             <div>
               <Label htmlFor="name">
-                Template Name <span className="text-red-500">*</span>
+                Template Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
@@ -147,7 +147,7 @@ export default function NewTemplatePage() {
                 className="mt-1"
               />
               {errors.name && (
-                <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+                <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
               )}
               {/* Server-side validation errors will be shown in toast */}
             </div>

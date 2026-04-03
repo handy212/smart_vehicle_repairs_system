@@ -50,10 +50,10 @@ const VehicleRow = memo(function VehicleRow({
   onDelete?: (vehicle: any) => void;
 }) {
   const avatarColors = [
-    "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
-    "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
-    "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+    "bg-blue-100 text-primary dark:bg-blue-900/30 dark:text-blue-400",
+    "bg-emerald-100 text-success dark:bg-emerald-900/30 dark:text-emerald-400",
+    "bg-purple-100 text-primary dark:bg-purple-900/30 dark:text-purple-400",
+    "bg-amber-100 text-warning dark:bg-amber-900/30 dark:text-amber-400",
   ];
   
   const colorIndex = vehicle.id % avatarColors.length;
@@ -123,15 +123,15 @@ const VehicleRow = memo(function VehicleRow({
         <div className="flex items-center gap-2">
           <div className={cn(
             "w-1.5 h-1.5 rounded-full",
-            vehicle.status === "active" ? "bg-emerald-500" : 
-            vehicle.status === "in_service" ? "bg-amber-500" : "bg-gray-300"
+            vehicle.status === "active" ? "bg-success/100" : 
+            vehicle.status === "in_service" ? "bg-warning/100" : "bg-gray-300"
           )} />
           <Badge 
             variant="outline" 
             className={cn(
               "text-[9px] font-black uppercase tracking-widest border-none shadow-none p-0",
-              vehicle.status === "active" ? "text-emerald-600" : 
-              vehicle.status === "in_service" ? "text-amber-600" : "text-gray-400"
+              vehicle.status === "active" ? "text-success" : 
+              vehicle.status === "in_service" ? "text-warning" : "text-gray-400"
             )}
           >
             {vehicle.status?.replace(/_/g, " ") || "Active"}
@@ -191,7 +191,7 @@ const VehicleRow = memo(function VehicleRow({
             <PermissionGuard permission="delete_vehicles">
               <DropdownMenuItem 
                 onClick={(e) => { e.stopPropagation(); onDelete?.(vehicle); }}
-                className="text-red-600 focus:text-red-600"
+                className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete Vehicle

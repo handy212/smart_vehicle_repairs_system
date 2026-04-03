@@ -226,7 +226,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                     <div className="flex-1 overflow-y-auto px-6 py-4">
                         {unreceivedItems.length === 0 ? (
                             <div className="text-center py-12">
-                                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                                <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
                                 <p className="text-muted-foreground">All items have been received</p>
                             </div>
                         ) : (
@@ -281,7 +281,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
                                                         </TableCell>
                                                         <TableCell className="text-right font-medium">{item.quantity}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <span className={hasPartialReceipt ? "text-amber-600 font-medium" : ""}>
+                                                            <span className={hasPartialReceipt ? "text-warning font-medium" : ""}>
                                                                 {item.quantity_received || 0}
                                                             </span>
                                                         </TableCell>

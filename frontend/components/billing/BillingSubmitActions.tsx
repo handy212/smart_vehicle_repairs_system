@@ -97,7 +97,7 @@ export function BillingSubmitActions({
                     </DropdownMenuItem>
                     {onRecordPayment && resourceType === "invoice" && (
                         <DropdownMenuItem onClick={() => setLastAction("payment")}>
-                            <CreditCard className="mr-2 h-4 w-4 text-green-600" />
+                            <CreditCard className="mr-2 h-4 w-4 text-success" />
                             <span>{getLabel("payment")}</span>
                         </DropdownMenuItem>
                     )}

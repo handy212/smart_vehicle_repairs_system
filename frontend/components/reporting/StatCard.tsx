@@ -49,8 +49,8 @@ export function StatCard({
                                 {change && (
                                     <span className={cn(
                                         "font-medium",
-                                        change.trend === 'up' ? "text-green-600" :
-                                            change.trend === 'down' ? "text-red-600" : "text-muted-foreground"
+                                        change.trend === 'up' ? "text-success" :
+                                            change.trend === 'down' ? "text-destructive" : "text-muted-foreground"
                                     )}>
                                         {change.value > 0 ? '+' : ''}{change.value}%
                                     </span>

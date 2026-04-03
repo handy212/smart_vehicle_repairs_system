@@ -113,13 +113,13 @@ export function ServiceScheduleForm({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="service_type">Service Type <span className="text-red-500">*</span></Label>
+            <Label htmlFor="service_type">Service Type <span className="text-destructive">*</span></Label>
             <select
               id="service_type"
               {...register("service_type", { valueAsNumber: true })}
               className={cn(
                 "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                errors.service_type ? "border-red-500" : ""
+                errors.service_type ? "border-destructive" : ""
               )}
             >
               <option value="">Select a service type</option>
@@ -129,7 +129,7 @@ export function ServiceScheduleForm({
                 </option>
               ))}
             </select>
-            {errors.service_type && <p className="text-xs text-red-500">{errors.service_type.message}</p>}
+            {errors.service_type && <p className="text-xs text-destructive">{errors.service_type.message}</p>}
           </div>
 
           {selectedType && (

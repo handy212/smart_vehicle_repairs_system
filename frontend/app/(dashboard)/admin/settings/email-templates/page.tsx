@@ -399,7 +399,7 @@ export default function EmailTemplatesPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(template)}
-                        className="h-6 w-6 p-0 hover:text-red-600"
+                        className="h-6 w-6 p-0 hover:text-destructive"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -452,7 +452,7 @@ export default function EmailTemplatesPage() {
               <div className="flex-1 overflow-y-auto p-6 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="name" className="text-xs font-semibold">Template Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="name" className="text-xs font-semibold">Template Name <span className="text-destructive">*</span></Label>
                     <Input
                       id="name"
                       value={editForm.name || ""}
@@ -462,7 +462,7 @@ export default function EmailTemplatesPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="type" className="text-xs font-semibold">Type <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="type" className="text-xs font-semibold">Type <span className="text-destructive">*</span></Label>
                     <Select
                       value={editForm.template_type || ""}
                       onValueChange={(val) => setEditForm({ ...editForm, template_type: val })}
@@ -505,7 +505,7 @@ export default function EmailTemplatesPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="subject" className="text-xs font-semibold">Subject Line <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="subject" className="text-xs font-semibold">Subject Line <span className="text-destructive">*</span></Label>
                   <Input
                     id="subject"
                     value={editForm.subject || ""}
@@ -664,7 +664,7 @@ export default function EmailTemplatesPage() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Trash2 className="w-5 h-5 text-red-600" />
+                <Trash2 className="w-5 h-5 text-destructive" />
                 Delete Template
               </DialogTitle>
               <DialogDescription className="pt-2">

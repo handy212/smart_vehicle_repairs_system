@@ -303,7 +303,7 @@ export default function WorkOrdersPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+      <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
         Error loading work orders. Please try again.
       </div>
     );
@@ -337,7 +337,7 @@ export default function WorkOrdersPage() {
         <Card className="shadow-sm border bg-card">
           <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending</span>
-            <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats?.pending || 0}</span>
+            <span className="text-lg font-bold text-warning dark:text-amber-400">{stats?.pending || 0}</span>
           </CardContent>
         </Card>
         <Card className="shadow-sm border bg-card">
@@ -400,7 +400,7 @@ export default function WorkOrdersPage() {
                 setAdvancedFilters({});
                 setPage(1);
               }}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
               title="Clear all filters"
             >
               <X className="w-3.5 h-3.5" />
@@ -424,7 +424,7 @@ export default function WorkOrdersPage() {
                 <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-5 flex items-center gap-1 bg-border text-muted-foreground font-normal border border-border">
                   {displayLabel}: {displayValue}
                   <X
-                    className="w-3 h-3 cursor-pointer hover:text-red-500"
+                    className="w-3 h-3 cursor-pointer hover:text-destructive"
                     onClick={() => {
                       const newFilters = { ...advancedFilters };
                       if (key.includes("_from")) {
@@ -590,13 +590,12 @@ export default function WorkOrdersPage() {
                       <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{workorder.customer_name || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5">
-                        <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
+                        <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold shadow-none">
                           {getStatusLabel(workorder.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
-
-                        <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
+                        <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold shadow-none">
                           {workorder.priority || "-"}
                         </Badge>
                       </TableCell>
@@ -653,7 +652,7 @@ export default function WorkOrdersPage() {
                             <PermissionGuard permission="delete_workorders">
                               <DropdownMenuItem
                                 onClick={() => handleDelete(workorder)}
-                                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 text-xs"
+                                className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20 text-xs"
                                 disabled={deleteMutation.isPending}
                               >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" />

@@ -139,7 +139,7 @@ export default function BackupsPage() {
       case "full":
         return <HardDrive className="w-3.5 h-3.5 text-primary" />;
       case "database":
-        return <Database className="w-3.5 h-3.5 text-purple-600" />;
+        return <Database className="w-3.5 h-3.5 text-primary" />;
       case "media":
         return <FileArchive className="w-3.5 h-3.5 text-primary" />;
       default:
@@ -329,7 +329,7 @@ export default function BackupsPage() {
                                 onClick={() => handleDelete(backup)}
                                 disabled={deleteMutation.isPending}
                                 title="Delete"
-                                className="h-7 w-7 p-0 hover:text-red-600"
+                                className="h-7 w-7 p-0 hover:text-destructive"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>

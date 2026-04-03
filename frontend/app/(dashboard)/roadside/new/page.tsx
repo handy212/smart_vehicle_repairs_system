@@ -229,7 +229,7 @@ export default function NewRoadsideRequestDashboardPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {serverError && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-lg flex items-start gap-2">
+                    <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-200 p-4 rounded-lg flex items-start gap-2">
                         <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                         <p className="text-sm">{serverError}</p>
                     </div>
@@ -260,7 +260,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                             }}
                                         />
                                         {errors.customer && (
-                                            <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                            <p className="text-xs text-destructive font-medium flex items-center gap-1">
                                                 <AlertCircle className="w-3 h-3" />
                                                 {errors.customer.message}
                                             </p>
@@ -276,7 +276,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 disabled={!selectedCustomerId || isLoadingVehicles}
                                                 className={cn(
                                                     "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all disabled:opacity-50",
-                                                    errors.vehicle ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
+                                                    errors.vehicle ? "border-destructive ring-red-500/10" : "border-border focus:ring-primary/10"
                                                 )}
                                             >
                                                 <option value="">
@@ -291,13 +291,13 @@ export default function NewRoadsideRequestDashboardPage() {
                                             {isLoadingVehicles && <div className="absolute right-9 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-primary border-r-transparent animate-spin" />}
                                         </div>
                                         {errors.vehicle && (
-                                            <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                            <p className="text-xs text-destructive font-medium flex items-center gap-1">
                                                 <AlertCircle className="w-3 h-3" />
                                                 {errors.vehicle.message}
                                             </p>
                                         )}
                                         {!selectedCustomerId && (
-                                            <p className="text-xs text-amber-600 font-medium px-1">← Select a customer first</p>
+                                            <p className="text-xs text-warning font-medium px-1">← Select a customer first</p>
                                         )}
                                     </div>
                                 </div>
@@ -334,11 +334,11 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
+                                                        <div className="flex items-center gap-2 text-warning dark:text-amber-400 font-medium">
                                                             <Info className="w-4 h-4" />
                                                             <span>No Active Subscription Found</span>
                                                         </div>
-                                                        <Badge variant="warning" className="bg-amber-100 text-amber-800 border-amber-200">Pay-Per-Use</Badge>
+                                                        <Badge variant="warning" className="bg-amber-100 text-warning border-warning/20">Pay-Per-Use</Badge>
                                                     </div>
                                                 )}
                                             </div>
@@ -382,7 +382,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         />
                                     </div>
                                     {errors.breakdown_location && (
-                                        <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                        <p className="text-xs text-destructive font-medium flex items-center gap-1">
                                             <AlertCircle className="w-3 h-3" />
                                             {errors.breakdown_location.message}
                                         </p>
@@ -434,7 +434,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         {...register("service_type")}
                                         className={cn(
                                             "w-full h-11 px-3 py-2 border rounded-lg bg-card transition-all",
-                                            errors.service_type ? "border-red-500 ring-red-500/10" : "border-border focus:ring-primary/10"
+                                            errors.service_type ? "border-destructive ring-red-500/10" : "border-border focus:ring-primary/10"
                                         )}
                                     >
                                         <option value="">Select Service Type</option>
@@ -445,7 +445,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         ))}
                                     </select>
                                     {errors.service_type && (
-                                        <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                        <p className="text-xs text-destructive font-medium flex items-center gap-1">
                                             <AlertCircle className="w-3 h-3" />
                                             {errors.service_type.message}
                                         </p>
@@ -464,7 +464,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         />
                                     </div>
                                     {errors.customer_phone && (
-                                        <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                        <p className="text-xs text-destructive font-medium flex items-center gap-1">
                                             <AlertCircle className="w-3 h-3" />
                                             {errors.customer_phone.message}
                                         </p>
@@ -472,7 +472,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                 </div>
 
                                 {serviceType === 'towing' && (
-                                    <div className="space-y-4 pt-2 p-4 rounded-xl bg-orange-50/30 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 animate-in zoom-in-95 duration-200">
+                                    <div className="space-y-4 pt-2 p-4 rounded-xl bg-warning/10/30 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 animate-in zoom-in-95 duration-200">
                                         <div className="space-y-3">
                                             <Label htmlFor="tow_distance_km" className="font-semibold text-orange-800 dark:text-orange-400">Tow Distance (km) *</Label>
                                             <div className="relative">
@@ -486,7 +486,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 />
                                             </div>
                                             {errors.tow_distance_km && (
-                                                <p className="text-xs text-red-600 font-medium">{errors.tow_distance_km.message}</p>
+                                                <p className="text-xs text-destructive font-medium">{errors.tow_distance_km.message}</p>
                                             )}
                                         </div>
                                         <div className="space-y-3">

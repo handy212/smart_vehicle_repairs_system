@@ -40,7 +40,7 @@ export function EstimatesView({ customerId }: EstimatesViewProps) {
         { label: "Draft", value: counts.draft, icon: FileText },
         { label: "Sent", value: counts.sent, icon: Send, color: "text-primary" },
         { label: "Accepted", value: counts.accepted, icon: CheckCircle, color: "text-success" },
-        { label: "Declined", value: counts.declined, icon: XCircle, color: "text-red-600" },
+        { label: "Declined", value: counts.declined, icon: XCircle, color: "text-destructive" },
         { label: "Expired", value: counts.expired, icon: Clock, color: "text-primary" },
     ];
 

@@ -87,7 +87,7 @@ export default function EditBundlePage() {
     if (!bundle) {
         return (
             <div className="text-center py-12">
-                <p className="text-red-500">Bundle not found.</p>
+                <p className="text-destructive">Bundle not found.</p>
                 <Link href="/inventory/bundles">
                     <Button variant="link">Back to bundles</Button>
                 </Link>
@@ -115,9 +115,9 @@ export default function EditBundlePage() {
             </div>
 
             {serverError && (
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 border border-red-200">
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-800">{serverError}</p>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-destructive">{serverError}</p>
                 </div>
             )}
 

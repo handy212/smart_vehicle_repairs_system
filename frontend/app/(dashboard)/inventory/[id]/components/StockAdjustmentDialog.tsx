@@ -132,13 +132,13 @@ export default function StockAdjustmentDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
           <div className="space-y-4">
             {serverError && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-3 rounded text-sm">
+              <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-200 p-3 rounded text-sm">
                 {serverError}
               </div>
             )}
 
             {activeBranch && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-info/10 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 rounded">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-info/10 dark:bg-blue-900/20 border border-info/20 dark:border-blue-800 p-2 rounded">
                 <Building2 className="w-4 h-4" />
                 <span>Adjusting stock for: <strong className="text-foreground">{activeBranch.name}</strong></span>
               </div>
@@ -185,17 +185,17 @@ export default function StockAdjustmentDialog({
                 id="quantity"
                 type="number"
                 {...register("quantity", { valueAsNumber: true })}
-                className={`w-full ${errors.quantity ? "border-red-500" : ""}`}
+                className={`w-full ${errors.quantity ? "border-destructive" : ""}`}
                 min={1}
               />
               {errors.quantity && (
-                <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>
+                <p className="mt-1 text-sm text-destructive">{errors.quantity.message}</p>
               )}
               {quantity && (
                 <p className="mt-1 text-sm text-muted-foreground">
                   New stock level will be: <strong>{newStockLevel}</strong>
                   {newStockLevel < 0 && (
-                    <span className="text-red-600 ml-2">(Warning: Negative stock!)</span>
+                    <span className="text-destructive ml-2">(Warning: Negative stock!)</span>
                   )}
                 </p>
               )}
@@ -208,7 +208,7 @@ export default function StockAdjustmentDialog({
               <Select value={watch("reason")} onValueChange={(val) => {
               setValue("reason", val, { shouldValidate: true });
             }}>
-              <SelectTrigger id="reason" className={`w-full ${errors.reason ? "border-red-500" : ""}`}>
+              <SelectTrigger id="reason" className={`w-full ${errors.reason ? "border-destructive" : ""}`}>
                 <SelectValue placeholder="Select reason" />
               </SelectTrigger>
               <SelectContent>
@@ -222,7 +222,7 @@ export default function StockAdjustmentDialog({
               </SelectContent>
             </Select>
               {errors.reason && (
-                <p className="mt-1 text-sm text-red-600">{errors.reason.message}</p>
+                <p className="mt-1 text-sm text-destructive">{errors.reason.message}</p>
               )}
             </div>
 

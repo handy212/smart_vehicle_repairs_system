@@ -234,7 +234,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
             {/* Error */}
             {state === 'error' && errorMsg && (
                 <div className="p-6 text-center text-white/90 space-y-4 z-30 relative">
-                    <div className="w-14 h-14 mx-auto rounded-full bg-red-500/20 flex items-center justify-center">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-destructive/100/20 flex items-center justify-center">
                         {errorMsg.includes('denied') || errorMsg.includes('permission')
                             ? <ShieldAlert className="w-7 h-7 text-red-400" />
                             : <AlertCircle className="w-7 h-7 text-red-400" />
@@ -287,7 +287,7 @@ export function BarcodeScanner({ onScan, onError, onClose, aspectRatio = 1.77777
                                 variant="destructive"
                                 size="sm"
                                 onClick={handleClose}
-                                className="bg-red-500/80 hover:bg-red-500 backdrop-blur-sm shadow-lg h-8 text-xs"
+                                className="bg-destructive/100/80 hover:bg-destructive/100 backdrop-blur-sm shadow-lg h-8 text-xs"
                             >
                                 <X className="w-3.5 h-3.5 mr-1" />
                                 Cancel

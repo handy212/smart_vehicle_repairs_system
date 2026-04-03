@@ -202,10 +202,10 @@ export default function ProfilePage() {
                       {...register("first_name")}
                       placeholder="John"
                       disabled={!isAdmin}
-                      className={`h-8 text-sm ${errors.first_name ? "border-red-500" : ""}`}
+                      className={`h-8 text-sm ${errors.first_name ? "border-destructive" : ""}`}
                     />
                     {errors.first_name && (
-                      <p className="text-[10px] text-red-500">{errors.first_name.message}</p>
+                      <p className="text-[10px] text-destructive">{errors.first_name.message}</p>
                     )}
                   </div>
 
@@ -216,10 +216,10 @@ export default function ProfilePage() {
                       {...register("last_name")}
                       placeholder="Doe"
                       disabled={!isAdmin}
-                      className={`h-8 text-sm ${errors.last_name ? "border-red-500" : ""}`}
+                      className={`h-8 text-sm ${errors.last_name ? "border-destructive" : ""}`}
                     />
                     {errors.last_name && (
-                      <p className="text-[10px] text-red-500">{errors.last_name.message}</p>
+                      <p className="text-[10px] text-destructive">{errors.last_name.message}</p>
                     )}
                   </div>
                 </div>
@@ -235,10 +235,10 @@ export default function ProfilePage() {
                     {...register("email")}
                     placeholder="john.doe@example.com"
                     disabled={!isAdmin}
-                    className={`h-8 text-sm ${errors.email ? "border-red-500" : ""}`}
+                    className={`h-8 text-sm ${errors.email ? "border-destructive" : ""}`}
                   />
                   {errors.email && (
-                    <p className="text-[10px] text-red-500">{errors.email.message}</p>
+                    <p className="text-[10px] text-destructive">{errors.email.message}</p>
                   )}
                 </div>
 
@@ -253,10 +253,10 @@ export default function ProfilePage() {
                     {...register("phone")}
                     placeholder="+1 (555) 123-4567"
                     disabled={!isAdmin}
-                    className={`h-8 text-sm ${errors.phone ? "border-red-500" : ""}`}
+                    className={`h-8 text-sm ${errors.phone ? "border-destructive" : ""}`}
                   />
                   {errors.phone && (
-                    <p className="text-[10px] text-red-500">{errors.phone.message}</p>
+                    <p className="text-[10px] text-destructive">{errors.phone.message}</p>
                   )}
                 </div>
 
@@ -410,7 +410,7 @@ export default function ProfilePage() {
               <CardHeader className="pb-3 border-b border-border bg-muted/50">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-md">
-                    <Briefcase className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <Briefcase className="w-4 h-4 text-primary dark:text-purple-400" />
                   </div>
                   <div>
                     <CardTitle className="text-sm font-semibold text-foreground">Employment</CardTitle>

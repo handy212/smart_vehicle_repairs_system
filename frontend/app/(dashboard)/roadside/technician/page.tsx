@@ -159,7 +159,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
             <CardContent className="space-y-4">
                 <div className="p-3 bg-muted/50 rounded-xl space-y-3">
                     <div className="flex items-start gap-2">
-                        <MapPin className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                        <MapPin className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
                             <div className="text-[10px] font-black uppercase text-muted-foreground leading-none mb-1">Breakdown Location</div>
                             <div className="text-sm font-bold leading-tight">{request.breakdown_location}</div>
@@ -178,7 +178,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
 
                     <div className="flex items-center justify-between pt-2 border-t border-border">
                         <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+                            <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-success">
                                 <Phone className="h-4 w-4" />
                             </div>
                             <div className="text-sm font-bold">{request.customer_phone}</div>
@@ -186,7 +186,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                         <Button
                             variant="secondary"
                             size="sm"
-                            className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white border-none font-bold text-xs"
+                            className="h-8 bg-success/100 hover:bg-emerald-600 text-white border-none font-bold text-xs"
                             onClick={() => window.open(`tel:${request.customer_phone}`)}
                         >
                             CALL CUSTOMER

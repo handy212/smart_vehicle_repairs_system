@@ -51,7 +51,7 @@ export function MarkInvoicedForm({
 
                     <div>
                         <Label htmlFor="mark_invoiced_odometer_out" className="block mb-2 text-foreground">
-                            Odometer Out (km) <span className="text-red-500">*</span>
+                            Odometer Out (km) <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="mark_invoiced_odometer_out"

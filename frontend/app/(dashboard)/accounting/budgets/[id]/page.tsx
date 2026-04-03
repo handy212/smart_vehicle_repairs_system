@@ -230,7 +230,7 @@ export default function BudgetDetailEditPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                     onClick={() => deleteLineMutation.mutate(line.id)}
                                                 >
                                                     <Trash2 className="w-4 h-4" />

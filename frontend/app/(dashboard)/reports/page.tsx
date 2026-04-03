@@ -35,6 +35,7 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { RevenueForecastChart } from "@/components/reporting/RevenueForecastChart";
 import { TechnicianProductivityHeatmap } from "@/components/reporting/TechnicianProductivityHeatmap";
 import { InventoryTurnoverChart } from "@/components/reporting/InventoryTurnoverChart";
+import { useTheme } from "@/lib/hooks/useTheme";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
@@ -47,6 +48,15 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("financial");
   const [showFilters, setShowFilters] = useState(false);
   const [showForecast, setShowForecast] = useState(false);
+
+  const { theme: activeTheme } = useTheme();
+  const isPerfex = activeTheme === "perfex";
+  const pCard = isPerfex ? "border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]" : "border-border";
+  const pCardHeader = isPerfex ? "py-3 px-4 border-b border-border" : "pb-3 sm:pb-6";
+  const pCardTitle = isPerfex ? "text-sm font-semibold text-foreground" : "text-base sm:text-lg";
+  const pCardContent = isPerfex ? "p-4" : "";
+  const pTH = isPerfex ? "bg-[#f1f5f9] text-[11px] font-semibold text-[#374151] px-4 py-2.5" : "text-xs sm:text-sm";
+  const pTD = isPerfex ? "px-4 py-2.5 text-xs" : "text-xs sm:text-sm";
 
   // Dashboard Overview
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -221,7 +231,7 @@ export default function ReportsPage() {
       {/* Header - Mobile optimized */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+          <h1 className={`${isPerfex ? "text-base font-semibold" : "text-2xl sm:text-3xl font-bold"} text-foreground`}>
             Reports & Analytics
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
@@ -246,15 +256,15 @@ export default function ReportsPage() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full sm:w-40 h-10 text-sm"
+              className={`w-full sm:w-40 ${isPerfex ? "h-8 text-xs" : "h-10 text-sm"}`}
             />
             <Input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full sm:w-40 h-10 text-sm"
+              className={`w-full sm:w-40 ${isPerfex ? "h-8 text-xs" : "h-10 text-sm"}`}
             />
-            <Button variant="secondary" onClick={handleExport} className="h-10">
+            <Button variant="secondary" onClick={handleExport} className={isPerfex ? "h-8 text-xs" : "h-10"}>
               <Download className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Export</span>
             </Button>
@@ -263,119 +273,212 @@ export default function ReportsPage() {
       </div>
 
       {/* Quick Date Range Filters - Mobile friendly */}
-      <Card className="border-border">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs sm:text-sm text-muted-foreground self-center mr-2">
-              Quick ranges:
-            </span>
-            {dateRangeOptions.map((option) => (
-              <Button
-                key={option.label}
-                variant="secondary"
-                size="sm"
-                onClick={() => handleQuickDateRange(option.days)}
-                className="text-xs h-8"
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {isPerfex ? (
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-xs text-muted-foreground mr-1">Quick ranges:</span>
+          {dateRangeOptions.map((option) => (
+            <button
+              key={option.label}
+              onClick={() => handleQuickDateRange(option.days)}
+              className="px-3 py-1.5 rounded text-[11px] font-medium border bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <Card className={pCard}>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs sm:text-sm text-muted-foreground self-center mr-2">
+                Quick ranges:
+              </span>
+              {dateRangeOptions.map((option) => (
+                <Button
+                  key={option.label}
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleQuickDateRange(option.days)}
+                  className="text-xs h-8"
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dashboard Overview - Mobile responsive */}
       {dashboardData && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-border">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    Today's Revenue
-                  </p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                    {formatCurrency(dashboardData.today.revenue)}
-                  </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {isPerfex ? (
+            <>
+              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+                <div className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-success/10 text-success flex-shrink-0">
+                    <DollarSign className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-foreground leading-tight truncate">{formatCurrency(dashboardData.today.revenue)}</p>
+                    <p className="text-[11px] text-muted-foreground">Today&apos;s Revenue</p>
+                  </div>
                 </div>
-                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 flex-shrink-0 ml-2" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    This Week
-                  </p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                    {formatCurrency(dashboardData.week.revenue)}
-                  </p>
+              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+                <div className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-info/10 text-primary flex-shrink-0">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-foreground leading-tight truncate">{formatCurrency(dashboardData.week.revenue)}</p>
+                    <p className="text-[11px] text-muted-foreground">This Week</p>
+                  </div>
                 </div>
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 ml-2" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    This Month
-                  </p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                    {formatCurrency(dashboardData.month.revenue)}
-                  </p>
+              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+                <div className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-warning/10 text-warning flex-shrink-0">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-foreground leading-tight truncate">{formatCurrency(dashboardData.month.revenue)}</p>
+                    <p className="text-[11px] text-muted-foreground">This Month</p>
+                  </div>
                 </div>
-                <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0 ml-2" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="pt-4 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    Overdue Invoices
-                  </p>
-                  <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
-                    {dashboardData.alerts?.overdue_invoices?.count || 0}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency((dashboardData.alerts?.overdue_invoices?.total || 0))}
-                  </p>
+              <div className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+                <div className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md flex items-center justify-center bg-destructive/10 text-destructive flex-shrink-0">
+                    <AlertCircle className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-destructive leading-tight">{dashboardData.alerts?.overdue_invoices?.count || 0}</p>
+                    <p className="text-[11px] text-muted-foreground">Overdue Invoices</p>
+                    <p className="text-[11px] text-muted-foreground">{formatCurrency(dashboardData.alerts?.overdue_invoices?.total || 0)}</p>
+                  </div>
                 </div>
-                <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0 ml-2" />
               </div>
-            </CardContent>
-          </Card>
+            </>
+          ) : (
+            <>
+              <Card className={pCard}>
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                        Today&apos;s Revenue
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                        {formatCurrency(dashboardData.today.revenue)}
+                      </p>
+                    </div>
+                    <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-success flex-shrink-0 ml-2" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={pCard}>
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                        This Week
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                        {formatCurrency(dashboardData.week.revenue)}
+                      </p>
+                    </div>
+                    <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 ml-2" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={pCard}>
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                        This Month
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
+                        {formatCurrency(dashboardData.month.revenue)}
+                      </p>
+                    </div>
+                    <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0 ml-2" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={pCard}>
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                        Overdue Invoices
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
+                        {dashboardData.alerts?.overdue_invoices?.count || 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency((dashboardData.alerts?.overdue_invoices?.total || 0))}
+                      </p>
+                    </div>
+                    <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-destructive flex-shrink-0 ml-2" />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto flex-wrap">
-          <TabsTrigger value="financial" className="text-xs sm:text-sm">
-            Financial
-          </TabsTrigger>
-          <TabsTrigger value="operational" className="text-xs sm:text-sm">
-            Operational
-          </TabsTrigger>
-          <TabsTrigger value="inventory" className="text-xs sm:text-sm">
-            Inventory
-          </TabsTrigger>
-          <TabsTrigger value="customers" className="text-xs sm:text-sm">
-            Customers
-          </TabsTrigger>
-          <TabsTrigger value="vehicles" className="text-xs sm:text-sm">
-            Vehicles
-          </TabsTrigger>
-          <TabsTrigger value="controls" className="text-xs sm:text-sm">
-            Controls
-          </TabsTrigger>
-        </TabsList>
+        {isPerfex ? (
+          <div className="flex border-b border-border gap-0 overflow-x-auto">
+            {[
+              { value: "financial", label: "Financial" },
+              { value: "operational", label: "Operational" },
+              { value: "inventory", label: "Inventory" },
+              { value: "customers", label: "Customers" },
+              { value: "vehicles", label: "Vehicles" },
+              { value: "controls", label: "Controls" },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`px-4 py-2.5 text-[12px] font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  activeTab === tab.value
+                    ? "border-primary text-foreground font-semibold"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto flex-wrap">
+            <TabsTrigger value="financial" className="text-xs sm:text-sm">
+              Financial
+            </TabsTrigger>
+            <TabsTrigger value="operational" className="text-xs sm:text-sm">
+              Operational
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="text-xs sm:text-sm">
+              Inventory
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="text-xs sm:text-sm">
+              Customers
+            </TabsTrigger>
+            <TabsTrigger value="vehicles" className="text-xs sm:text-sm">
+              Vehicles
+            </TabsTrigger>
+            <TabsTrigger value="controls" className="text-xs sm:text-sm">
+              Controls
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         {/* Financial Reports */}
+        {(!isPerfex || activeTab === "financial") && (
         <TabsContent value="financial" className="space-y-4 sm:space-y-6">
           {revenueLoading && (
             <div className="flex items-center justify-center h-64">
@@ -385,49 +488,49 @@ export default function ReportsPage() {
           {revenueData && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
+                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
                       Total Invoiced
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className={pCardContent}>
                     <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {formatCurrency(revenueData.summary.total_invoiced)}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
+                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
                       Total Paid
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className={pCardContent}>
                     <p className="text-xl sm:text-2xl font-bold text-success">
                       {formatCurrency(revenueData.summary.total_paid)}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
+                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
                       Outstanding
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+                  <CardContent className={pCardContent}>
+                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
                       {formatCurrency(revenueData.summary.total_outstanding)}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
+                    <CardTitle className={isPerfex ? "text-xs font-medium text-muted-foreground" : "text-xs sm:text-sm font-medium text-muted-foreground"}>
                       Payment Rate
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className={pCardContent}>
                     <p className="text-xl sm:text-2xl font-bold text-foreground">
                       {revenueData.summary.payment_rate.toFixed(1)}%
                     </p>
@@ -435,17 +538,16 @@ export default function ReportsPage() {
                 </Card>
               </div>
 
-              // Subscription vs Service Revenue Breakdown
               {(revenueData.summary.subscription_revenue !== undefined || revenueData.summary.service_revenue !== undefined) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Card className="border-border">
-                    <CardHeader className="pb-2 sm:pb-3">
+                  <Card className={pCard}>
+                    <CardHeader className={pCardHeader}>
                       <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                         Subscription Revenue
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-indigo-400">
                         {formatCurrency((revenueData.summary.subscription_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (
@@ -455,8 +557,8 @@ export default function ReportsPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="border-border">
-                    <CardHeader className="pb-2 sm:pb-3">
+                  <Card className={pCard}>
+                    <CardHeader className={pCardHeader}>
                       <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                         Service Revenue
                       </CardTitle>
@@ -476,10 +578,10 @@ export default function ReportsPage() {
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <Card className="border-border">
-                  <CardHeader className="pb-3 sm:pb-6">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base sm:text-lg">Revenue Analysis</CardTitle>
+                      <CardTitle className={pCardTitle}>Revenue Analysis</CardTitle>
                       <Button
                         variant={showForecast ? "default" : "outline"}
                         size="sm"
@@ -553,9 +655,9 @@ export default function ReportsPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-border">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="text-base sm:text-lg">Revenue by Payment Method</CardTitle>
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
+                    <CardTitle className={pCardTitle}>Revenue by Payment Method</CardTitle>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
                     {revenueData.revenue_by_payment_method.length > 0 ? (
@@ -589,9 +691,9 @@ export default function ReportsPage() {
                 </Card>
               </div>
 
-              <Card className="border-border">
-                <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg">Revenue by Technician</CardTitle>
+              <Card className={pCard}>
+                <CardHeader className={pCardHeader}>
+                  <CardTitle className={pCardTitle}>Revenue by Technician</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
                   {revenueData.revenue_by_technician.length > 0 ? (
@@ -622,9 +724,9 @@ export default function ReportsPage() {
           )}
 
           {profitMarginData && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Profit Margin Analysis</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Profit Margin Analysis</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -636,7 +738,7 @@ export default function ReportsPage() {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Total Costs</p>
-                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
                       {formatCurrency(profitMarginData.costs.parts)}
                     </p>
                   </div>
@@ -667,14 +769,16 @@ export default function ReportsPage() {
             </Card>
           )}
         </TabsContent>
+        )}
 
         {/* Operational Reports */}
+        {(!isPerfex || activeTab === "operational") && (
         <TabsContent value="operational" className="space-y-4 sm:space-y-6">
           {workOrderStats && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <Card className="border-border">
-                <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg">Work Orders by Status</CardTitle>
+              <Card className={pCard}>
+                <CardHeader className={pCardHeader}>
+                  <CardTitle className={pCardTitle}>Work Orders by Status</CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
                   {workOrderStats.by_status && workOrderStats.by_status.length > 0 ? (
@@ -709,9 +813,9 @@ export default function ReportsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-border">
-                <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="text-base sm:text-lg">Work Order Summary</CardTitle>
+              <Card className={pCard}>
+                <CardHeader className={pCardHeader}>
+                  <CardTitle className={pCardTitle}>Work Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -744,40 +848,39 @@ export default function ReportsPage() {
           )}
 
           {technicianPerf && technicianPerf.technicians && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Technician Performance</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Technician Performance</CardTitle>
               </CardHeader>
-              <CardContent className="p-0 sm:p-6">
+              <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
                 <div className="overflow-x-auto -mx-2 sm:mx-0">
                   <Table>
-                    // ... existing table ...
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs sm:text-sm">Technician</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Work Orders</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Completed</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Revenue</TableHead>
-                        <TableHead className="text-xs sm:text-sm">Avg Time (hrs)</TableHead>
+                        <TableHead className={pTH}>Technician</TableHead>
+                        <TableHead className={pTH}>Work Orders</TableHead>
+                        <TableHead className={pTH}>Completed</TableHead>
+                        <TableHead className={pTH}>Revenue</TableHead>
+                        <TableHead className={pTH}>Avg Time (hrs)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
 
                       {technicianPerf.technicians.map((tech: { technician: { id: number; name: string }; metrics: any }) => (
                         <TableRow key={tech.technician.id}>
-                          <TableCell className="font-medium text-xs sm:text-sm">
+                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "font-medium text-xs sm:text-sm"}>
                             {tech.technician.name}
                           </TableCell>
-                          <TableCell className="text-xs sm:text-sm">
+                          <TableCell className={pTD}>
                             {tech.metrics.total_work_orders || 0}
                           </TableCell>
-                          <TableCell className="text-xs sm:text-sm">
+                          <TableCell className={pTD}>
                             {tech.metrics.completed || 0}
                           </TableCell>
-                          <TableCell className="text-xs sm:text-sm">
+                          <TableCell className={pTD}>
                             ${tech.metrics.revenue?.toFixed(2) || "0.00"}
                           </TableCell>
-                          <TableCell className="text-xs sm:text-sm">
+                          <TableCell className={pTD}>
                             {tech.metrics.average_completion_hours?.toFixed(1) || "N/A"}
                           </TableCell>
                         </TableRow>
@@ -798,9 +901,9 @@ export default function ReportsPage() {
           )}
 
           {appointmentStats && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Appointment Statistics</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Appointment Statistics</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -814,7 +917,7 @@ export default function ReportsPage() {
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">No-Show Rate</p>
-                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
+                    <p className="text-xl sm:text-2xl font-bold text-destructive dark:text-red-400">
                       {appointmentStats.summary?.no_show_rate?.toFixed(1) || 0}%
                     </p>
                   </div>
@@ -843,13 +946,15 @@ export default function ReportsPage() {
             </Card>
           )}
         </TabsContent>
+        )}
 
         {/* Inventory Reports */}
+        {(!isPerfex || activeTab === "inventory") && (
         <TabsContent value="inventory" className="space-y-4 sm:space-y-6">
           {turnoverData && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Inventory Turnover Rate</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Inventory Turnover Rate</CardTitle>
                 <p className="text-xs text-muted-foreground">How many times your inventory is sold and replaced over a 90-day period.</p>
               </CardHeader>
               <CardContent>
@@ -859,9 +964,9 @@ export default function ReportsPage() {
           )}
 
           {inventoryValuation && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Inventory Valuation</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Inventory Valuation</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="mb-4 sm:mb-6">
@@ -894,42 +999,42 @@ export default function ReportsPage() {
           )}
 
           {lowStockData && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Low Stock Items</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Low Stock Items</CardTitle>
               </CardHeader>
-              <CardContent className="p-0 sm:p-6">
+              <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
                 {lowStockData.items && lowStockData.items.length > 0 ? (
                   <div className="overflow-x-auto -mx-2 sm:mx-0">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-xs sm:text-sm">Part Name</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Category</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Current Stock</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Reorder Point</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                          <TableHead className={pTH}>Part Name</TableHead>
+                          <TableHead className={pTH}>Category</TableHead>
+                          <TableHead className={pTH}>Current Stock</TableHead>
+                          <TableHead className={pTH}>Reorder Point</TableHead>
+                          <TableHead className={pTH}>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
 
                         {lowStockData.items.map((item: any) => (
                           <TableRow key={item.part.id}>
-                            <TableCell className="font-medium text-xs sm:text-sm">
+                            <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "font-medium text-xs sm:text-sm"}>
                               {item.part.name}
                             </TableCell>
-                            <TableCell className="text-xs sm:text-sm">
+                            <TableCell className={pTD}>
                               {item.part.category || "N/A"}
                             </TableCell>
-                            <TableCell className="text-xs sm:text-sm">{item.stock.current}</TableCell>
-                            <TableCell className="text-xs sm:text-sm">
+                            <TableCell className={pTD}>{item.stock.current}</TableCell>
+                            <TableCell className={pTD}>
                               {item.stock.reorder_point}
                             </TableCell>
-                            <TableCell className="text-xs sm:text-sm">
+                            <TableCell className={pTD}>
                               <span
                                 className={
                                   item.is_critical
-                                    ? "text-red-600 dark:text-red-400 font-medium"
+                                    ? "text-destructive dark:text-red-400 font-medium"
                                     : "text-primary font-medium"
                                 }
                               >
@@ -950,14 +1055,16 @@ export default function ReportsPage() {
             </Card>
           )}
         </TabsContent>
+        )}
 
         {/* Customer Reports */}
+        {(!isPerfex || activeTab === "customers") && (
         <TabsContent value="customers" className="space-y-4 sm:space-y-6">
           {customerStats && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
                     <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Total Customers
                     </CardTitle>
@@ -968,8 +1075,8 @@ export default function ReportsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
                     <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       New Customers
                     </CardTitle>
@@ -980,8 +1087,8 @@ export default function ReportsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
                     <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Active Customers
                     </CardTitle>
@@ -992,8 +1099,8 @@ export default function ReportsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="border-border">
-                  <CardHeader className="pb-2 sm:pb-3">
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
                     <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       Top Customers
                     </CardTitle>
@@ -1005,14 +1112,14 @@ export default function ReportsPage() {
                   </CardContent>
                 </Card>
                 {customerStats.customers_with_subscriptions !== undefined && (
-                  <Card className="border-border">
-                    <CardHeader className="pb-2 sm:pb-3">
+                  <Card className={pCard}>
+                    <CardHeader className={pCardHeader}>
                       <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                         With Subscriptions
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-indigo-400">
                         {customerStats.customers_with_subscriptions || 0}
                       </p>
                       {customerStats.subscription_adoption_rate !== undefined && (
@@ -1026,35 +1133,35 @@ export default function ReportsPage() {
               </div>
 
               {customerStats.top_customers && customerStats.top_customers.length > 0 && (
-                <Card className="border-border">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="text-base sm:text-lg">Top Customers by Revenue</CardTitle>
+                <Card className={pCard}>
+                  <CardHeader className={pCardHeader}>
+                    <CardTitle className={pCardTitle}>Top Customers by Revenue</CardTitle>
                   </CardHeader>
-                  <CardContent className="p-0 sm:p-6">
+                  <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
                     <div className="overflow-x-auto -mx-2 sm:mx-0">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-xs sm:text-sm">Customer</TableHead>
-                            <TableHead className="text-xs sm:text-sm">Revenue</TableHead>
-                            <TableHead className="text-xs sm:text-sm">Work Orders</TableHead>
-                            <TableHead className="text-xs sm:text-sm">Subscription</TableHead>
+                            <TableHead className={pTH}>Customer</TableHead>
+                            <TableHead className={pTH}>Revenue</TableHead>
+                            <TableHead className={pTH}>Work Orders</TableHead>
+                            <TableHead className={pTH}>Subscription</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
 
                           {customerStats.top_customers.map((customer: any) => (
                             <TableRow key={customer.id}>
-                              <TableCell className="font-medium text-xs sm:text-sm">
+                              <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "font-medium text-xs sm:text-sm"}>
                                 {customer.name}
                               </TableCell>
-                              <TableCell className="text-xs sm:text-sm">
+                              <TableCell className={pTD}>
                                 ${customer.revenue?.toFixed(2) || "0.00"}
                               </TableCell>
-                              <TableCell className="text-xs sm:text-sm">
+                              <TableCell className={pTD}>
                                 {customer.work_orders || 0}
                               </TableCell>
-                              <TableCell className="text-xs sm:text-sm">
+                              <TableCell className={pTD}>
                                 {customer.has_subscription ? (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
                                     Active
@@ -1074,13 +1181,15 @@ export default function ReportsPage() {
             </>
           )}
         </TabsContent>
+        )}
 
         {/* Vehicle Reports */}
+        {(!isPerfex || activeTab === "vehicles") && (
         <TabsContent value="vehicles" className="space-y-4 sm:space-y-6">
           {vehicleStats && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Vehicle Statistics</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Vehicle Statistics</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -1118,20 +1227,20 @@ export default function ReportsPage() {
           )}
 
           {serviceDueData && (
-            <Card className="border-border">
-              <CardHeader className="pb-3 sm:pb-6">
-                <CardTitle className="text-base sm:text-lg">Service Due Report</CardTitle>
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Service Due Report</CardTitle>
               </CardHeader>
-              <CardContent className="p-0 sm:p-6">
+              <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
                 {serviceDueData.vehicles && serviceDueData.vehicles.length > 0 ? (
                   <div className="overflow-x-auto -mx-2 sm:mx-0">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-xs sm:text-sm">Vehicle</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Last Service</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Next Service Due</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Mileage</TableHead>
+                          <TableHead className={pTH}>Vehicle</TableHead>
+                          <TableHead className={pTH}>Last Service</TableHead>
+                          <TableHead className={pTH}>Next Service Due</TableHead>
+                          <TableHead className={pTH}>Mileage</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1143,17 +1252,17 @@ export default function ReportsPage() {
                                 `${vehicle.year || ""} ${vehicle.make || ""} ${vehicle.model || ""} ${vehicle.license_plate || ""}`.trim() ||
                                 `Vehicle #${vehicle.id}`}
                             </TableCell>
-                            <TableCell className="text-xs sm:text-sm">
+                            <TableCell className={pTD}>
                               {vehicle.last_service_date
                                 ? format(new Date(vehicle.last_service_date), "MMM dd, yyyy")
                                 : "N/A"}
                             </TableCell>
-                            <TableCell className="text-xs sm:text-sm">
+                            <TableCell className={pTD}>
                               {vehicle.next_service_due
                                 ? format(new Date(vehicle.next_service_due), "MMM dd, yyyy")
                                 : "N/A"}
                             </TableCell>
-                            <TableCell className="text-xs sm:text-sm">
+                            <TableCell className={pTD}>
                               {(vehicle.mileage || vehicle.odometer_reading)?.toLocaleString() || "N/A"}
                             </TableCell>
                           </TableRow>
@@ -1170,24 +1279,26 @@ export default function ReportsPage() {
             </Card>
           )}
         </TabsContent>
+        )}
 
+        {(!isPerfex || activeTab === "controls") && (
         <TabsContent value="controls" className="space-y-4 sm:space-y-6">
-          <Card className="border-border">
-            <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">Discounts & Overrides Analysis</CardTitle>
+          <Card className={pCard}>
+            <CardHeader className={pCardHeader}>
+              <CardTitle className={pCardTitle}>Discounts & Overrides Analysis</CardTitle>
             </CardHeader>
-            <CardContent className="p-0 sm:p-6">
+            <CardContent className={isPerfex ? "p-0" : "p-0 sm:p-6"}>
               <div className="overflow-x-auto -mx-2 sm:mx-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs sm:text-sm">Invoice #</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Date</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Subtotal</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Discount</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Reason</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Total</TableHead>
-                      <TableHead className="text-xs sm:text-sm">Action</TableHead>
+                      <TableHead className={pTH}>Invoice #</TableHead>
+                      <TableHead className={pTH}>Date</TableHead>
+                      <TableHead className={pTH}>Subtotal</TableHead>
+                      <TableHead className={pTH}>Discount</TableHead>
+                      <TableHead className={pTH}>Reason</TableHead>
+                      <TableHead className={pTH}>Total</TableHead>
+                      <TableHead className={pTH}>Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1200,14 +1311,14 @@ export default function ReportsPage() {
                     ) : (
                       discountedInvoices.map((inv) => (
                         <TableRow key={inv.id}>
-                          <TableCell className="font-mono text-xs sm:text-sm">{inv.invoice_number}</TableCell>
-                          <TableCell className="text-xs sm:text-sm">{format(new Date(inv.invoice_date), "MMM dd, yyyy")}</TableCell>
-                          <TableCell className="text-xs sm:text-sm">{formatCurrency(parseFloat(inv.subtotal || "0"))}</TableCell>
-                          <TableCell className="text-xs sm:text-sm font-bold text-primary">
+                          <TableCell className={isPerfex ? "font-mono px-4 py-2.5 text-xs" : "font-mono text-xs sm:text-sm"}>{inv.invoice_number}</TableCell>
+                          <TableCell className={pTD}>{format(new Date(inv.invoice_date), "MMM dd, yyyy")}</TableCell>
+                          <TableCell className={pTD}>{formatCurrency(parseFloat(inv.subtotal || "0"))}</TableCell>
+                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-bold text-primary" : "text-xs sm:text-sm font-bold text-primary"}>
                             {inv.discount_percentage ? `${inv.discount_percentage}%` : `${formatCurrency(parseFloat(inv.discount_amount || "0"))}`}
                           </TableCell>
-                          <TableCell className="text-xs sm:text-sm italic">{inv.discount_reason || "-"}</TableCell>
-                          <TableCell className="text-xs sm:text-sm font-bold">{formatCurrency(parseFloat(inv.total))}</TableCell>
+                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs italic" : "text-xs sm:text-sm italic"}>{inv.discount_reason || "-"}</TableCell>
+                          <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-bold" : "text-xs sm:text-sm font-bold"}>{formatCurrency(parseFloat(inv.total))}</TableCell>
                           <TableCell>
                             <Link href={`/billing/invoices/${inv.id}`} target="_blank">
                               <Button variant="ghost" size="sm">View</Button>
@@ -1222,6 +1333,7 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
       </Tabs>
     </div>
   );

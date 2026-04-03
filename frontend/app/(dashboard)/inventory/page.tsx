@@ -55,8 +55,8 @@ const StatsGrid = ({ stats, loading }: { stats: any; loading: boolean }) => {
 
   const items = [
     { label: "Total Parts", value: stats.total_parts, color: "text-primary" },
-    { label: "Low Stock", value: stats.low_stock, color: "text-amber-600" },
-    { label: "Out of Stock", value: stats.out_of_stock, color: "text-red-600" },
+    { label: "Low Stock", value: stats.low_stock, color: "text-warning" },
+    { label: "Out of Stock", value: stats.out_of_stock, color: "text-destructive" },
     { label: "Total Value", value: stats.total_value, isCurrency: true, color: "text-success" },
   ];
 
@@ -241,7 +241,7 @@ export default function InventoryPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
         Error loading inventory. Please try again.
       </div>
     );
@@ -316,7 +316,7 @@ export default function InventoryPage() {
                 setSearchQuery("");
                 setAdvancedFilters({});
               }}
-              className="h-9 w-9 p-0 text-muted-foreground hover:text-red-600"
+              className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
               title="Clear all filters"
             >
               <X className="w-4 h-4" />
@@ -350,7 +350,7 @@ export default function InventoryPage() {
                 <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-border text-muted-foreground font-normal">
                   {displayLabel}: {displayValue}
                   <X
-                    className="w-3 h-3 cursor-pointer hover:text-red-500"
+                    className="w-3 h-3 cursor-pointer hover:text-destructive"
                     onClick={() => {
                       const newFilters = { ...advancedFilters };
                       delete newFilters[key];
@@ -500,8 +500,8 @@ export default function InventoryPage() {
                       <TableCell className="px-4 py-2 text-center">
                         <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${isLowStock(part)
                           ? part.quantity_in_stock === 0
-                            ? "bg-red-50 text-red-700 border-red-100"
-                            : "bg-amber-50 text-amber-700 border-amber-100"
+                            ? "bg-destructive/10 text-destructive border-destructive/10"
+                            : "bg-warning/10 text-amber-700 border-amber-100"
                           : "bg-muted text-foreground border-border"
                           }`}>
                           {part.quantity_in_stock}
@@ -515,7 +515,7 @@ export default function InventoryPage() {
                       </TableCell>
                       <TableCell className="px-4 py-2">
                         <Badge variant="outline" className={`text-[10px] px-2 py-0  ${part.is_active
-                          ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                          ? "text-success border-emerald-200 bg-success/10"
                           : "text-muted-foreground border-border bg-muted"
                           }`}>
                           {part.is_active ? "Active" : "Inactive"}
@@ -548,7 +548,7 @@ export default function InventoryPage() {
                               <DropdownMenuItem
                                 onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDelete(part); }}
                                 disabled={deleteMutation.isPending}
-                                className="text-red-600 focus:text-red-700 cursor-pointer"
+                                className="text-destructive focus:text-destructive cursor-pointer"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete

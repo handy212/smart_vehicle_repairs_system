@@ -300,7 +300,7 @@ export default function InvoicesPage() {
 
     if (error) {
         return (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
                 Error loading invoices. Please try again.
             </div>
         );
@@ -432,7 +432,7 @@ export default function InvoicesPage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-primary bg-orange-50 bg-muted' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'unpaid' ? 'ring-2 ring-primary bg-warning/10 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'unpaid' ? null : 'unpaid';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -443,7 +443,7 @@ export default function InvoicesPage() {
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unpaid</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-primary">{stats?.counts.unpaid || 0}</span>
-                            <FileText className="w-4 h-4 text-orange-500/50" />
+                            <FileText className="w-4 h-4 text-warning/50" />
                         </div>
                     </CardContent>
                 </Card>
@@ -459,7 +459,7 @@ export default function InvoicesPage() {
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paid</span>
                         <div className="flex items-center gap-2">
                             <span className="text-lg font-bold text-success">{stats?.counts.paid || 0}</span>
-                            <CheckCircle className="w-4 h-4 text-green-500/50" />
+                            <CheckCircle className="w-4 h-4 text-success/50" />
                         </div>
                     </CardContent>
                 </Card>
@@ -480,7 +480,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-red-500 bg-red-50 bg-muted' : 'bg-card'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'overdue' ? 'ring-2 ring-red-500 bg-destructive/10 bg-muted' : 'bg-card'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'overdue' ? null : 'overdue';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -490,8 +490,8 @@ export default function InvoicesPage() {
                     <CardContent className="p-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Overdue</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-red-600">{stats?.counts.overdue || 0}</span>
-                            <AlertCircle className="w-4 h-4 text-red-500/50" />
+                            <span className="text-lg font-bold text-destructive">{stats?.counts.overdue || 0}</span>
+                            <AlertCircle className="w-4 h-4 text-destructive/50" />
                         </div>
                     </CardContent>
                 </Card>
@@ -558,7 +558,7 @@ export default function InvoicesPage() {
                                         setAdvancedFilters({});
                                         setPage(1);
                                     }}
-                                    className="h-8 text-muted-foreground hover:text-red-600"
+                                    className="h-8 text-muted-foreground hover:text-destructive"
                                 >
                                     <X className="w-3.5 h-3.5 mr-1" />
                                     Clear
@@ -575,7 +575,7 @@ export default function InvoicesPage() {
                                     <div className="h-4 w-px bg-border"></div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground font-medium">Past Due Inv:</span>
-                                        <span className="font-bold text-red-600">{formatCurrency(stats.financials.past_due_total)}</span>
+                                        <span className="font-bold text-destructive">{formatCurrency(stats.financials.past_due_total)}</span>
                                     </div>
                                     <div className="h-4 w-px bg-border"></div>
                                     <div className="flex items-center gap-2">
@@ -597,7 +597,7 @@ export default function InvoicesPage() {
                                                 setSearch("");
                                                 setPage(1);
                                             }}
-                                            className="hover:text-red-600"
+                                            className="hover:text-destructive"
                                         >
                                             <X className="w-3 h-3" />
                                         </button>
@@ -630,7 +630,7 @@ export default function InvoicesPage() {
                                                     setAdvancedFilters(newFilters);
                                                     setPage(1);
                                                 }}
-                                                className="hover:text-red-600"
+                                                className="hover:text-destructive"
                                             >
                                                 <X className="w-3 h-3" />
                                             </button>
@@ -724,7 +724,7 @@ export default function InvoicesPage() {
                                             <TableCell className="px-4 py-2 text-right text-sm text-success">
                                                 {formatCurrency(parseFloat(invoice.amount_paid || "0"))}
                                             </TableCell>
-                                            <TableCell className="px-4 py-2 text-right text-sm text-red-600 font-medium">
+                                            <TableCell className="px-4 py-2 text-right text-sm text-destructive font-medium">
                                                 {formatCurrency(parseFloat(invoice.balance_due || invoice.total || "0"))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
@@ -758,7 +758,7 @@ export default function InvoicesPage() {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                className="h-7 w-7 p-0 text-muted-foreground hover:text-purple-600"
+                                                                className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                                                             >
                                                                 <Printer className="w-3.5 h-3.5" />
                                                             </Button>

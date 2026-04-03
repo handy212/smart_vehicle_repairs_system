@@ -94,9 +94,9 @@ function PayrollContent() {
     const getStatusConfig = (status: string) => {
         switch (status) {
             case "draft": return { color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700", label: "Draft" };
-            case "processing": return { color: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800", label: "Processing" };
-            case "approved": return { color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800", label: "Approved" };
-            case "paid": return { color: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800", label: "Paid" };
+            case "processing": return { color: "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800", label: "Processing" };
+            case "approved": return { color: "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800", label: "Approved" };
+            case "paid": return { color: "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800", label: "Paid" };
             default: return { color: "", label: status };
         }
     };
@@ -158,19 +158,19 @@ function PayrollContent() {
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Payslips</span>
-                            <span className="text-lg font-bold text-blue-600">{totalPayslips}</span>
+                            <span className="text-lg font-bold text-primary">{totalPayslips}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Net Pay</span>
-                            <span className="text-lg font-bold text-green-600">{totalNetPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-lg font-bold text-success">{totalNetPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm border bg-card">
                         <CardContent className="p-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending</span>
-                            <span className="text-lg font-bold text-amber-600">{periods.filter(p => p.status === "draft" || p.status === "processing").length}</span>
+                            <span className="text-lg font-bold text-warning">{periods.filter(p => p.status === "draft" || p.status === "processing").length}</span>
                         </CardContent>
                     </Card>
                 </div>
@@ -259,7 +259,7 @@ function PayrollContent() {
                                                         {period.status === "draft" && (
                                                             <Button
                                                                 variant="ghost" size="sm"
-                                                                className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                className="h-7 px-2 text-primary hover:text-blue-700 hover:bg-info/10"
                                                                 onClick={() => processMutation.mutate(period.id)}
                                                                 disabled={processMutation.isPending}
                                                             >
@@ -270,7 +270,7 @@ function PayrollContent() {
                                                         {period.status === "processing" && (
                                                             <Button
                                                                 variant="ghost" size="sm"
-                                                                className="h-7 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                                                className="h-7 px-2 text-warning hover:text-amber-700 hover:bg-warning/10"
                                                                 onClick={() => approveMutation.mutate(period.id)}
                                                                 disabled={approveMutation.isPending}
                                                             >
@@ -281,7 +281,7 @@ function PayrollContent() {
                                                         {period.status === "approved" && (
                                                             <Button
                                                                 variant="ghost" size="sm"
-                                                                className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                                className="h-7 px-2 text-success hover:text-green-700 hover:bg-success/10"
                                                                 onClick={() => markPaidMutation.mutate(period.id)}
                                                                 disabled={markPaidMutation.isPending}
                                                             >
@@ -299,7 +299,7 @@ function PayrollContent() {
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem onClick={() => setEditingPeriod(period)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem className="text-red-600" onClick={() => setDeletingId(period.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingId(period.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </div>

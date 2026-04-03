@@ -281,7 +281,7 @@ export default function SubscriptionsPage() {
           {subscription.days_remaining !== undefined && (
             <span className={cn(
               "mt-0.5",
-              subscription.days_remaining < 30 ? "text-red-600 font-medium" : "text-muted-foreground"
+              subscription.days_remaining < 30 ? "text-destructive font-medium" : "text-muted-foreground"
             )}>
               {subscription.days_remaining} days left
             </span>
@@ -362,7 +362,7 @@ export default function SubscriptionsPage() {
                 }}
                 title="Cancel"
               >
-                <X className="h-4 w-4 text-red-500" />
+                <X className="h-4 w-4 text-destructive" />
               </Button>
             </>
           )}
@@ -376,7 +376,7 @@ export default function SubscriptionsPage() {
                 setIsDeleteDialogOpen(true);
               }}
             >
-              <Trash2 className="h-4 w-4 text-red-600" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </PermissionGuard>
         </div>
@@ -449,10 +449,10 @@ export default function SubscriptionsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expired</p>
-                  <p className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">{expiredSubscriptions}</p>
+                  <p className="text-2xl font-black text-destructive dark:text-red-400 mt-1">{expiredSubscriptions}</p>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                <div className="w-10 h-10 rounded-lg bg-destructive/10 dark:bg-red-950/20 flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400" />
                 </div>
               </div>
             </CardContent>
@@ -618,14 +618,14 @@ export default function SubscriptionsPage() {
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-red-600">Delete Subscription</DialogTitle>
+              <DialogTitle className="text-destructive">Delete Subscription</DialogTitle>
             </DialogHeader>
             <div className="px-6 py-4 space-y-3">
               <p className="text-sm text-muted-foreground">
                 Are you sure you want to <strong>permanently delete</strong> subscription{" "}
                 <span className="font-mono font-semibold">{selectedSubscription?.subscription_number}</span>?
               </p>
-              <p className="text-xs text-red-500 font-medium">
+              <p className="text-xs text-destructive font-medium">
                 This action cannot be undone. All usage history and allowances for this subscription will be lost.
               </p>
             </div>

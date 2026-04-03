@@ -260,7 +260,7 @@ export default function ImportHistoryPage() {
                                 </span>
                               </TableCell>
                               <TableCell className="px-4 py-2.5 text-right">
-                                <span className={`text-xs font-mono font-medium ${errorCount > 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                <span className={`text-xs font-mono font-medium ${errorCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
                                   {errorCount}
                                 </span>
                               </TableCell>

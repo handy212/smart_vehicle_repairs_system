@@ -340,7 +340,7 @@ export default function PackagesPage() {
             size="sm"
             onClick={() => handleDelete(pkg)}
           >
-            <Trash2 className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
       )
@@ -479,7 +479,7 @@ export default function PackagesPage() {
                     placeholder="e.g., Lite Package"
                   />
                   {errors.name && (
-                    <p className="text-sm text-red-500">{errors.name.message}</p>
+                    <p className="text-sm text-destructive">{errors.name.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -494,7 +494,7 @@ export default function PackagesPage() {
                     placeholder="e.g., LITE"
                   />
                   {errors.code && (
-                    <p className="text-sm text-red-500">{errors.code.message}</p>
+                    <p className="text-sm text-destructive">{errors.code.message}</p>
                   )}
                 </div>
               </div>
@@ -520,7 +520,7 @@ export default function PackagesPage() {
                     placeholder="0.00"
                   />
                   {errors.price && (
-                    <p className="text-sm text-red-500">{errors.price.message}</p>
+                    <p className="text-sm text-destructive">{errors.price.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -532,7 +532,7 @@ export default function PackagesPage() {
                     placeholder="12"
                   />
                   {errors.duration_months && (
-                    <p className="text-sm text-red-500">{errors.duration_months.message}</p>
+                    <p className="text-sm text-destructive">{errors.duration_months.message}</p>
                   )}
                 </div>
               </div>

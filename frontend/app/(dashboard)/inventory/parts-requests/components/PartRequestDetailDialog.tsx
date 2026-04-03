@@ -289,7 +289,7 @@ export function PartRequestDetailDialog({
                                                                             In Stock: {stockQty}
                                                                         </Badge>
                                                                     ) : (
-                                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-red-50 text-red-700 border-red-200">
+                                                                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-destructive/10 text-destructive border-destructive/20">
                                                                             Out of Stock
                                                                         </Badge>
                                                                     )}
@@ -323,7 +323,7 @@ export function PartRequestDetailDialog({
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="h-7 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-200"
+                                                                className="h-7 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 border-primary/20"
                                                                 onClick={() => orderMutation.mutate(part.id)}
                                                                 disabled={orderMutation.isPending || showInventoryForm === part.id}
                                                             >
@@ -351,7 +351,7 @@ export function PartRequestDetailDialog({
                                                                         <Pencil className="mr-2 h-4 w-4" /> Edit Details
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem
-                                                                        className="text-red-600 focus:text-red-600"
+                                                                        className="text-destructive focus:text-destructive"
                                                                         onClick={() => {
                                                                             if (confirm('Are you sure you want to remove this request?')) {
                                                                                 deletePartMutation.mutate(part.id);
@@ -402,7 +402,7 @@ export function PartRequestDetailDialog({
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                                    className="bg-primary/10 text-primary hover:bg-indigo-100 border border-primary/20"
                                     onClick={() => bulkOrderMutation.mutate(outOfStockParts.map(p => p.id))}
                                     disabled={bulkOrderMutation.isPending}
                                 >

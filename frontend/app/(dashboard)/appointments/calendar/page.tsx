@@ -264,11 +264,11 @@ export default function AppointmentCalendarPage() {
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Confirmed</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20"></div>
+            <div className="w-2 h-2 rounded-full bg-warning/100 ring-2 ring-amber-500/20"></div>
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Pending / High</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-red-500 ring-2 ring-red-500/20"></div>
+            <div className="w-2 h-2 rounded-full bg-destructive/100 ring-2 ring-red-500/20"></div>
             <span className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Urgent / Cancelled</span>
           </div>
           <div className="flex items-center space-x-2">

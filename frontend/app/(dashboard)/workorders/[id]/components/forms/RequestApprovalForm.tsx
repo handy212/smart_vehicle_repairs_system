@@ -39,13 +39,13 @@ export function RequestApprovalForm({
                     <div className="space-y-2 text-sm">
                         <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">Diagnosis Notes:</span>
-                            <span className={`font-medium ${hasDiagnosisNotes ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                            <span className={`font-medium ${hasDiagnosisNotes ? "text-success dark:text-green-400" : "text-destructive dark:text-red-400"}`}>
                                 {hasDiagnosisNotes ? "✓ Set" : "✗ Missing"}
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">Estimated Total:</span>
-                            <span className={`font-medium ${hasEstimate ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                            <span className={`font-medium ${hasEstimate ? "text-success dark:text-green-400" : "text-destructive dark:text-red-400"}`}>
                                 {hasEstimate ? `✓ ${formatCurrency(estimatedTotal)}` : "✗ $0.00"}
                             </span>
                         </div>

@@ -111,14 +111,14 @@ export default function ChangePasswordPage() {
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                             <div className="space-y-2">
                                 <Label htmlFor="current_password">
-                                    Current Password <span className="text-red-500">*</span>
+                                    Current Password <span className="text-destructive">*</span>
                                 </Label>
                                 <div className="relative">
                                     <Input
                                         id="current_password"
                                         type={showCurrentPassword ? "text" : "password"}
                                         {...register("current_password")}
-                                        className={`pr-10 ${errors.current_password ? "border-red-500" : ""}`}
+                                        className={`pr-10 ${errors.current_password ? "border-destructive" : ""}`}
                                         placeholder="Enter your current password"
                                     />
                                     <button
@@ -134,20 +134,20 @@ export default function ChangePasswordPage() {
                                     </button>
                                 </div>
                                 {errors.current_password && (
-                                    <p className="text-sm text-red-600">{errors.current_password.message}</p>
+                                    <p className="text-sm text-destructive">{errors.current_password.message}</p>
                                 )}
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="new_password">
-                                    New Password <span className="text-red-500">*</span>
+                                    New Password <span className="text-destructive">*</span>
                                 </Label>
                                 <div className="relative">
                                     <Input
                                         id="new_password"
                                         type={showNewPassword ? "text" : "password"}
                                         {...register("new_password")}
-                                        className={`pr-10 ${errors.new_password ? "border-red-500" : ""}`}
+                                        className={`pr-10 ${errors.new_password ? "border-destructive" : ""}`}
                                         placeholder="Enter your new password (min. 8 characters)"
                                     />
                                     <button
@@ -163,7 +163,7 @@ export default function ChangePasswordPage() {
                                     </button>
                                 </div>
                                 {errors.new_password && (
-                                    <p className="text-sm text-red-600">{errors.new_password.message}</p>
+                                    <p className="text-sm text-destructive">{errors.new_password.message}</p>
                                 )}
                                 <p className="text-xs text-muted-foreground">
                                     Password must be at least 8 characters long
@@ -172,14 +172,14 @@ export default function ChangePasswordPage() {
 
                             <div className="space-y-2">
                                 <Label htmlFor="confirm_password">
-                                    Confirm New Password <span className="text-red-500">*</span>
+                                    Confirm New Password <span className="text-destructive">*</span>
                                 </Label>
                                 <div className="relative">
                                     <Input
                                         id="confirm_password"
                                         type={showConfirmPassword ? "text" : "password"}
                                         {...register("confirm_password")}
-                                        className={`pr-10 ${errors.confirm_password ? "border-red-500" : ""}`}
+                                        className={`pr-10 ${errors.confirm_password ? "border-destructive" : ""}`}
                                         placeholder="Confirm your new password"
                                     />
                                     <button
@@ -195,7 +195,7 @@ export default function ChangePasswordPage() {
                                     </button>
                                 </div>
                                 {errors.confirm_password && (
-                                    <p className="text-sm text-red-600">{errors.confirm_password.message}</p>
+                                    <p className="text-sm text-destructive">{errors.confirm_password.message}</p>
                                 )}
                             </div>
 

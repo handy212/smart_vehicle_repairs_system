@@ -46,10 +46,10 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
     if (!stats) return null;
 
     const items = [
-        { label: "Pending Requests", value: stats.pending_requests, color: "text-amber-600" },
+        { label: "Pending Requests", value: stats.pending_requests, color: "text-warning" },
         { label: "PO Created", value: stats.ordered_requests || stats.po_created_requests, color: "text-primary" },
         { label: "Received", value: stats.received_requests, color: "text-success" },
-        { label: "Awaiting Stock", value: stats.awaiting_stock_requests, color: "text-purple-600" },
+        { label: "Awaiting Stock", value: stats.awaiting_stock_requests, color: "text-primary" },
     ];
 
     return (

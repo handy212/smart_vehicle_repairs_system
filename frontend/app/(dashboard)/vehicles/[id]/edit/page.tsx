@@ -124,7 +124,7 @@ export default function EditVehiclePage() {
           </Button>
         </Link>
         <div className="p-6 bg-card rounded-lg shadow-sm border border-border">
-          <p className="text-red-600 dark:text-red-400">Vehicle not found.</p>
+          <p className="text-destructive dark:text-red-400">Vehicle not found.</p>
         </div>
       </div>
     );
@@ -170,9 +170,9 @@ export default function EditVehiclePage() {
       </div>
 
       {serverError && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800">
+          <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive dark:text-red-300">{serverError}</p>
         </div>
       )}
 

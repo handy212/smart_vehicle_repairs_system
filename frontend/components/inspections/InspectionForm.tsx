@@ -121,7 +121,7 @@ export function InspectionForm({
                 <Dialog open={showActiveWorkOrderDialog} onOpenChange={setShowActiveWorkOrderDialog}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle className="flex items-center space-x-2 text-red-600">
+                            <DialogTitle className="flex items-center space-x-2 text-destructive">
                                 <AlertCircle className="w-5 h-5" />
                                 <span>Active Work Order Detected</span>
                             </DialogTitle>
@@ -153,13 +153,13 @@ export function InspectionForm({
                     <CardContent className="pt-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label htmlFor="vehicle">Vehicle <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="vehicle">Vehicle <span className="text-destructive">*</span></Label>
                                 <select
                                     id="vehicle"
                                     {...register("vehicle", { valueAsNumber: true })}
                                     className={cn(
                                         "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                                        errors.vehicle ? "border-red-500" : ""
+                                        errors.vehicle ? "border-destructive" : ""
                                     )}
                                 >
                                     <option value="">Select a vehicle</option>
@@ -171,18 +171,18 @@ export function InspectionForm({
                                     ))}
                                 </select>
                                 {errors.vehicle && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.vehicle.message}</p>
+                                    <p className="text-destructive text-xs mt-1">{errors.vehicle.message}</p>
                                 )}
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="template">Template <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="template">Template <span className="text-destructive">*</span></Label>
                                 <select
                                     id="template"
                                     {...register("template", { valueAsNumber: true })}
                                     className={cn(
                                         "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                                        errors.template ? "border-red-500" : ""
+                                        errors.template ? "border-destructive" : ""
                                     )}
                                 >
                                     <option value="">Select a template</option>
@@ -195,7 +195,7 @@ export function InspectionForm({
                                     ))}
                                 </select>
                                 {errors.template && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.template.message}</p>
+                                    <p className="text-destructive text-xs mt-1">{errors.template.message}</p>
                                 )}
                                 <p className="text-xs text-muted-foreground">
                                     <Link href="/inspections/templates" className="text-primary hover:underline">
@@ -213,7 +213,7 @@ export function InspectionForm({
                                     placeholder="Work order ID"
                                 />
                                 {errors.work_order && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.work_order.message}</p>
+                                    <p className="text-destructive text-xs mt-1">{errors.work_order.message}</p>
                                 )}
                                 {workOrderData && (
                                     <div className="flex items-center gap-2 mt-1 bg-primary/10 dark:bg-orange-900/20 px-2 py-1 rounded text-xs text-orange-700 dark:text-orange-300">
@@ -225,7 +225,7 @@ export function InspectionForm({
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="inspection_date">Inspection Date <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="inspection_date">Inspection Date <span className="text-destructive">*</span></Label>
                                 <div className="relative">
                                     <Input
                                         id="inspection_date"
@@ -234,14 +234,14 @@ export function InspectionForm({
                                     />
                                 </div>
                                 {errors.inspection_date && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.inspection_date.message}</p>
+                                    <p className="text-destructive text-xs mt-1">{errors.inspection_date.message}</p>
                                 )}
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label htmlFor="odometer_reading">Odometer Reading <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="odometer_reading">Odometer Reading <span className="text-destructive">*</span></Label>
                                 <Input
                                     id="odometer_reading"
                                     type="number"
@@ -251,7 +251,7 @@ export function InspectionForm({
                                     required
                                 />
                                 {errors.odometer_reading && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.odometer_reading.message}</p>
+                                    <p className="text-destructive text-xs mt-1">{errors.odometer_reading.message}</p>
                                 )}
                             </div>
                         </div>
@@ -266,7 +266,7 @@ export function InspectionForm({
                                 className="resize-none"
                             />
                             {errors.notes && (
-                                <p className="text-red-500 text-xs mt-1">{errors.notes.message}</p>
+                                <p className="text-destructive text-xs mt-1">{errors.notes.message}</p>
                             )}
                         </div>
 

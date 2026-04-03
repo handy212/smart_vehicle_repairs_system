@@ -218,10 +218,10 @@ export default function EstimateDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/10">
           <CardContent className="pt-6">
-            <p className="text-sm font-medium text-red-800">Invalid Estimate ID</p>
-            <p className="text-sm text-red-700 mt-1">The estimate ID in the URL is invalid.</p>
+            <p className="text-sm font-medium text-destructive">Invalid Estimate ID</p>
+            <p className="text-sm text-destructive mt-1">The estimate ID in the URL is invalid.</p>
           </CardContent>
         </Card>
       </div>
@@ -245,7 +245,7 @@ export default function EstimateDetailPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading estimate. Please try again.</p>
+            <p className="text-destructive">Error loading estimate. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -529,7 +529,7 @@ export default function EstimateDetailPage() {
                       {estimate.days_until_expiration !== undefined && estimate.status === 'sent' && (
                         <div className="flex justify-between md:justify-start md:gap-8">
                           <span className="text-sm text-muted-foreground w-24">Expires:</span>
-                          <span className={cn("text-sm font-medium", estimate.days_until_expiration < 0 ? "text-red-600" : "text-foreground")}>
+                          <span className={cn("text-sm font-medium", estimate.days_until_expiration < 0 ? "text-destructive" : "text-foreground")}>
                             {estimate.days_until_expiration < 0 ? "Expired" : `${estimate.days_until_expiration} days`}
                           </span>
                         </div>
@@ -676,7 +676,7 @@ export default function EstimateDetailPage() {
 
                 {/* Discount */}
                 {parseFloat(estimate.discount_percentage || "0") > 0 && (
-                  <div className="flex justify-between text-sm text-red-600">
+                  <div className="flex justify-between text-sm text-destructive">
                     <span>
                       Discount ({parseFloat(estimate.discount_percentage || "0").toFixed(1)}%)
                       {estimate.discount_reason && <span className="text-xs ml-1">({estimate.discount_reason})</span>}

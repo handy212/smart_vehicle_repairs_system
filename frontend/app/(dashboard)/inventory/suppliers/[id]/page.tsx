@@ -119,7 +119,7 @@ export default function SupplierDetailPage() {
                   {supplier.is_active ? "Active" : "Inactive"}
                 </Badge>
                 {supplier.is_preferred && (
-                  <Badge variant="success" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500 hover:bg-amber-600 border-none">
+                  <Badge variant="success" className="text-[10px] px-1.5 py-0 h-4 bg-warning/100 hover:bg-amber-600 border-none">
                     Preferred
                   </Badge>
                 )}
@@ -182,7 +182,7 @@ export default function SupplierDetailPage() {
                 </h3>
                 <p className="text-[10px] text-muted-foreground">Unpaid amount</p>
               </div>
-              <CircleDollarSign className="h-6 w-6 text-amber-500/30" />
+              <CircleDollarSign className="h-6 w-6 text-warning/30" />
             </div>
           </CardContent>
         </Card>
@@ -192,12 +192,12 @@ export default function SupplierDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Overdue</p>
-                <h3 className="text-xl font-bold text-red-600">
+                <h3 className="text-xl font-bold text-destructive">
                   {formatCurrency(parseFloat(supplier.overdue_payment || "0"))}
                 </h3>
                 <p className="text-[10px] text-muted-foreground">Past due date</p>
               </div>
-              <AlertCircle className="h-6 w-6 text-red-500/30" />
+              <AlertCircle className="h-6 w-6 text-destructive/30" />
             </div>
           </CardContent>
         </Card>
@@ -210,7 +210,7 @@ export default function SupplierDetailPage() {
                 <h3 className="text-xl font-bold text-foreground">{supplier.total_po_count || 0}</h3>
                 <p className="text-[10px] text-muted-foreground">All time orders</p>
               </div>
-              <FileText className="h-6 w-6 text-green-500/30" />
+              <FileText className="h-6 w-6 text-success/30" />
             </div>
           </CardContent>
         </Card>
@@ -279,7 +279,7 @@ export default function SupplierDetailPage() {
                         <TableCell className="text-xs">
                           {po.due_date ? (
                             <span className={cn(
-                              new Date(po.due_date) < new Date() && po.status !== 'received' && "text-red-500 font-bold"
+                              new Date(po.due_date) < new Date() && po.status !== 'received' && "text-destructive font-bold"
                             )}>
                               {format(new Date(po.due_date), "MMM dd, yy")}
                             </span>

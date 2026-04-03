@@ -18,6 +18,8 @@ from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, A
 from django.http import HttpResponse
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from apps.branches.utils import resolve_branch
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
 
 def get_report_branch_id(request):
     """
@@ -33,6 +35,11 @@ def get_report_branch_id(request):
 class BalanceSheetView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
+    @extend_schema(
+        summary="Balance Sheet Report",
+        description="Generates a Balance Sheet for the specified date.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
     def get(self, request):
         date_str = request.query_params.get('date')
         date = parse_date(date_str) if date_str else timezone.now().date()
@@ -44,6 +51,11 @@ class BalanceSheetView(APIView):
 class ProfitLossView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
+    @extend_schema(
+        summary="Profit & Loss Report",
+        description="Generates a P&L report for the specified date range.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
     def get(self, request):
         start_str = request.query_params.get('start_date')
         end_str = request.query_params.get('end_date')
@@ -70,6 +82,11 @@ class ProfitLossView(APIView):
 class TrialBalanceView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
+    @extend_schema(
+        summary="Trial Balance Report",
+        description="Generates a Trial Balance for the specified date.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
     def get(self, request):
         date_str = request.query_params.get('date')
         date = parse_date(date_str) if date_str else timezone.now().date()
@@ -81,6 +98,11 @@ class TrialBalanceView(APIView):
 class AgingReportView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
+    @extend_schema(
+        summary="Aging Report (AR/AP)",
+        description="Generates an Accounts Receivable or Accounts Payable aging report.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
     def get(self, request):
         report_type = request.query_params.get('type', 'ar') # 'ar' or 'ap'
         date_str = request.query_params.get('date')
@@ -93,6 +115,11 @@ class AgingReportView(APIView):
 class CashFlowView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
 
+    @extend_schema(
+        summary="Cash Flow Statement",
+        description="Generates a Cash Flow statement for the specified date range.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
@@ -107,6 +134,11 @@ class CashFlowView(APIView):
 class TaxReportView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
     
+    @extend_schema(
+        summary="Tax Liability Report",
+        description="Generates a report of tax liabilities for the specified date range.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')

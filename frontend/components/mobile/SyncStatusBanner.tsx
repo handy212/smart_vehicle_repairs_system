@@ -67,7 +67,7 @@ export function SyncStatusBanner() {
                 "sticky top-0 z-50 border-b transition-colors",
                 isOnline
                     ? "bg-primary/10 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
-                    : "bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
+                    : "bg-warning/10 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
             )}
         >
             <div className="px-4 py-2 flex items-center justify-between gap-3">
@@ -82,7 +82,7 @@ export function SyncStatusBanner() {
                         </>
                     ) : (
                         <>
-                            <WifiOff className="h-4 w-4 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                            <WifiOff className="h-4 w-4 text-warning dark:text-orange-400 flex-shrink-0" />
                             <span className="text-sm font-medium text-orange-900 dark:text-orange-200">
                                 Offline
                             </span>

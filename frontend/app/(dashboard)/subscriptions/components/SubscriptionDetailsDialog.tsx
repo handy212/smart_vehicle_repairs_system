@@ -144,7 +144,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                     <span className="text-[12px] font-medium text-muted-foreground">Remaining</span>
                                     <span className={cn(
                                         "text-sm font-black",
-                                        subscription.days_remaining && subscription.days_remaining < 30 ? "text-red-500" : "text-foreground"
+                                        subscription.days_remaining && subscription.days_remaining < 30 ? "text-destructive" : "text-foreground"
                                     )}>
                                         {subscription.days_remaining} Days
                                     </span>

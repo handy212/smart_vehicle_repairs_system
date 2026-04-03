@@ -35,14 +35,14 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
             <Card className="h-full">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        <AlertTriangle className="w-4 h-4 text-warning" />
                         Insights & Actions
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                     {insights.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
-                            <CheckCircle className="w-8 h-8 mb-2 text-emerald-500 opacity-50" />
+                            <CheckCircle className="w-8 h-8 mb-2 text-success/50" />
                             All systems normal.
                         </div>
                     ) : (
@@ -53,7 +53,7 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                                     insight.type === "danger"
                                         ? "border-destructive/20 bg-destructive/10 text-destructive"
                                         : insight.type === "warning"
-                                            ? "border-warning/20 bg-warning/10 text-warning-foreground"
+                                            ? "border-warning/20 bg-warning/10 text-warning"
                                             : "border-primary/20 bg-primary/10 text-primary"
                                 }`}
                             >

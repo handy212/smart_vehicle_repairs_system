@@ -258,7 +258,7 @@ export function ImportDialog({
               </div>
             )}
             {validationError && (
-              <p className="text-xs text-red-600 mt-1">{validationError}</p>
+              <p className="text-xs text-destructive mt-1">{validationError}</p>
             )}
           </div>
 
@@ -301,7 +301,7 @@ export function ImportDialog({
             <div className="space-y-2 p-4 bg-muted bg-background rounded-md border border-border">
               <div className="flex items-center gap-2">
                 {result.imported > 0 ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
                 ) : (
                   <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
                 )}
@@ -320,8 +320,8 @@ export function ImportDialog({
                 )}
                 {result.errors && result.errors.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-red-700 font-medium mb-1">Errors:</p>
-                    <ul className="list-disc list-inside text-xs text-red-600 space-y-1 max-h-32 overflow-y-auto">
+                    <p className="text-destructive font-medium mb-1">Errors:</p>
+                    <ul className="list-disc list-inside text-xs text-destructive space-y-1 max-h-32 overflow-y-auto">
                       {result.errors.slice(0, 10).map((error, idx) => (
                         <li key={idx}>{error}</li>
                       ))}

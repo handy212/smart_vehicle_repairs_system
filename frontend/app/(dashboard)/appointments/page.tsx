@@ -301,7 +301,7 @@ export default function AppointmentsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
         Error loading appointments. Please try again.
       </div>
     );
@@ -460,7 +460,7 @@ export default function AppointmentsPage() {
                     setSearch("");
                     setPage(1);
                   }}
-                  className="hover:text-red-600"
+                  className="hover:text-destructive"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -493,7 +493,7 @@ export default function AppointmentsPage() {
                       setAdvancedFilters(newFilters);
                       setPage(1);
                     }}
-                    className="hover:text-red-600"
+                    className="hover:text-destructive"
                   >
                     <PremiumIcons.X className="w-3 h-3" />
                   </button>
@@ -694,7 +694,7 @@ export default function AppointmentsPage() {
                                     handleDelete(appointment);
                                   }
                                 }}
-                                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20"
+                                className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20"
                                 disabled={deleteMutation.isPending}
                               >
                                 <PremiumIcons.Trash2 className="mr-2 h-4 w-4" />

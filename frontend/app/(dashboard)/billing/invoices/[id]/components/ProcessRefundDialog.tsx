@@ -97,7 +97,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-red-600" />
+                        <DollarSign className="h-5 w-5 text-destructive" />
                         Process Refund
                     </DialogTitle>
                     <DialogDescription>
@@ -137,7 +137,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
                     </div>
 
                     {parseFloat(amount) > maxRefund && (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100">
+                        <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm border border-destructive/10">
                             <AlertCircle className="h-4 w-4" />
                             <span>Refund amount cannot exceed remaining payment balance.</span>
                         </div>

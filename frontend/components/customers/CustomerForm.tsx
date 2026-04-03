@@ -155,35 +155,35 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                         </CardHeader>
                         <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="first_name">First Name <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="first_name">First Name <span className="text-destructive">*</span></Label>
                                 <Input
                                     id="first_name"
                                     placeholder="John"
                                     {...register("first_name")}
-                                    className={errors.first_name ? "border-red-500" : ""}
+                                    className={errors.first_name ? "border-destructive" : ""}
                                 />
-                                {errors.first_name && <p className="text-xs text-red-500">{errors.first_name.message}</p>}
+                                {errors.first_name && <p className="text-xs text-destructive">{errors.first_name.message}</p>}
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="last_name">Last Name <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="last_name">Last Name <span className="text-destructive">*</span></Label>
                                 <Input
                                     id="last_name"
                                     placeholder="Doe"
                                     {...register("last_name")}
-                                    className={errors.last_name ? "border-red-500" : ""}
+                                    className={errors.last_name ? "border-destructive" : ""}
                                 />
-                                {errors.last_name && <p className="text-xs text-red-500">{errors.last_name.message}</p>}
+                                {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                                <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
                                 <Input
                                     id="email"
                                     type="email"
                                     placeholder="email@example.com"
                                     {...register("email")}
-                                    className={errors.email ? "border-red-500" : ""}
+                                    className={errors.email ? "border-destructive" : ""}
                                 />
-                                {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+                                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="phone">Primary Phone</Label>
@@ -282,14 +282,14 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                             </CardHeader>
                             <CardContent className="pt-4 grid sm:grid-cols-2 gap-4">
                                 <div className="space-y-2 sm:col-span-2">
-                                    <Label htmlFor="company_name">Company Name <span className="text-red-500">*</span></Label>
+                                    <Label htmlFor="company_name">Company Name <span className="text-destructive">*</span></Label>
                                     <Input
                                         id="company_name"
                                         placeholder="Acme Corp"
                                         {...register("company_name")}
-                                        className={errors.company_name ? "border-red-500" : ""}
+                                        className={errors.company_name ? "border-destructive" : ""}
                                     />
-                                    {errors.company_name && <p className="text-xs text-red-500">{errors.company_name.message}</p>}
+                                    {errors.company_name && <p className="text-xs text-destructive">{errors.company_name.message}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="contact_person_name">Contact Person</Label>
@@ -416,7 +416,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                                 </Button>
                                                 {passwordValue && (
                                                     <Button type="button" variant="secondary" onClick={handleCopyPassword} title="Copy">
-                                                        {passwordCopied ? <span className="text-xs text-green-600">Copied</span> : <Copy className="w-4 h-4" />}
+                                                        {passwordCopied ? <span className="text-xs text-success">Copied</span> : <Copy className="w-4 h-4" />}
                                                     </Button>
                                                 )}
                                             </div>

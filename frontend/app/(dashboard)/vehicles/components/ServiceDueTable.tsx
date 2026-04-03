@@ -48,8 +48,8 @@ const ServiceDueRow = memo(function ServiceDueRow({
   router: any;
 }) {
   const avatarColors = [
-    "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
-    "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
+    "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400",
+    "bg-orange-100 text-warning dark:bg-orange-900/30 dark:text-orange-400",
   ];
   
   const colorIndex = vehicle.id % avatarColors.length;
@@ -112,8 +112,8 @@ const ServiceDueRow = memo(function ServiceDueRow({
       
       <TableCell onClick={() => router.push(`/vehicles/${vehicle.id}?view=services`)}>
         <div className="flex items-center gap-2">
-            <AlertTriangle className={cn("w-3.5 h-3.5", isOverdue ? "text-red-500" : "text-amber-500")} />
-            <span className={cn("text-xs font-bold uppercase tracking-tight", isOverdue ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400")}>
+            <AlertTriangle className={cn("w-3.5 h-3.5", isOverdue ? "text-destructive" : "text-warning")} />
+            <span className={cn("text-xs font-bold uppercase tracking-tight", isOverdue ? "text-destructive dark:text-red-400" : "text-warning dark:text-amber-400")}>
                 {vehicle.due_service_name || "General Service"}
             </span>
         </div>

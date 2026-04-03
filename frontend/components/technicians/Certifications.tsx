@@ -253,9 +253,9 @@ export function Certifications({ technicianId }: CertificationsProps) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-muted-foreground">Expiring Soon</p>
-                                <p className="text-2xl font-bold text-orange-600">{expiringSoon.length}</p>
+                                <p className="text-2xl font-bold text-warning">{expiringSoon.length}</p>
                             </div>
-                            <AlertTriangle className="h-8 w-8 text-orange-500 opacity-50" />
+                            <AlertTriangle className="h-8 w-8 text-warning opacity-50" />
                         </div>
                     </CardContent>
                 </Card>
@@ -329,7 +329,7 @@ export function Certifications({ technicianId }: CertificationsProps) {
                                                         size="sm"
                                                         onClick={() => handleDelete(cert)}
                                                     >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
                                                     </Button>
                                                 </div>
                                             </TableCell>

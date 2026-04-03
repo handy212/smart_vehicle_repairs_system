@@ -32,8 +32,8 @@ function MyPayslipsContent() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case "draft": return "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400";
-            case "approved": return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400";
-            case "paid": return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400";
+            case "approved": return "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400";
+            case "paid": return "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400";
             default: return "";
         }
     };
@@ -50,7 +50,7 @@ function MyPayslipsContent() {
             {!isLoading && payslips && (
                 <div className="grid grid-cols-2 gap-3">
                     <Card className="shadow-sm border"><CardContent className="p-3 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Payslips</span><span className="text-lg font-bold">{payslips.length}</span></CardContent></Card>
-                    <Card className="shadow-sm border"><CardContent className="p-3 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Earned</span><span className="text-lg font-bold text-green-600">{totalEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></CardContent></Card>
+                    <Card className="shadow-sm border"><CardContent className="p-3 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Earned</span><span className="text-lg font-bold text-success">{totalEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></CardContent></Card>
                 </div>
             )}
 
@@ -65,8 +65,8 @@ function MyPayslipsContent() {
                                     <AccordionTrigger className="px-4 py-3 hover:no-underline">
                                         <div className="flex items-center justify-between w-full pr-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                                                    <Banknote className="h-4.5 w-4.5 text-green-600" />
+                                                <div className="h-9 w-9 rounded-lg bg-success/10 dark:bg-green-900/20 flex items-center justify-center">
+                                                    <Banknote className="h-4.5 w-4.5 text-success" />
                                                 </div>
                                                 <div className="text-left">
                                                     <p className="text-sm font-semibold">{slip.period_name}</p>
@@ -75,7 +75,7 @@ function MyPayslipsContent() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", getStatusColor(slip.status))}>{slip.status}</Badge>
-                                                <span className="text-sm font-bold text-green-600">{parseFloat(slip.net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                <span className="text-sm font-bold text-success">{parseFloat(slip.net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         </div>
                                     </AccordionTrigger>
@@ -83,7 +83,7 @@ function MyPayslipsContent() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                             // Earnings
                                             <Card className="border shadow-none">
-                                                <CardHeader className="py-2 px-3 bg-green-50/50 dark:bg-green-900/10 border-b">
+                                                <CardHeader className="py-2 px-3 bg-success/10/50 dark:bg-green-900/10 border-b">
                                                     <CardTitle className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase">Earnings</CardTitle>
                                                 </CardHeader>
                                                 <CardContent className="p-3 space-y-2">
@@ -92,21 +92,21 @@ function MyPayslipsContent() {
                                                     {Object.entries(slip.allowances || {}).map(([key, val]) => (
                                                         <div key={key} className="flex justify-between text-sm"><span className="capitalize">{key.replace(/_/g, " ")}</span><span className="font-mono">{parseFloat(val || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                     ))}
-                                                    <div className="border-t pt-2 flex justify-between text-sm font-bold"><span>Gross Pay</span><span className="font-mono text-green-600">{parseFloat(slip.gross_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                                                    <div className="border-t pt-2 flex justify-between text-sm font-bold"><span>Gross Pay</span><span className="font-mono text-success">{parseFloat(slip.gross_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                 </CardContent>
                                             </Card>
 
                                             // Deductions
                                             <Card className="border shadow-none">
-                                                <CardHeader className="py-2 px-3 bg-red-50/50 dark:bg-red-900/10 border-b">
-                                                    <CardTitle className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase">Deductions</CardTitle>
+                                                <CardHeader className="py-2 px-3 bg-destructive/10/50 dark:bg-red-900/10 border-b">
+                                                    <CardTitle className="text-xs font-semibold text-destructive dark:text-red-400 uppercase">Deductions</CardTitle>
                                                 </CardHeader>
                                                 <CardContent className="p-3 space-y-2">
                                                     <div className="flex justify-between text-sm"><span>Tax</span><span className="font-mono">{parseFloat(slip.tax_amount || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                     {Object.entries(slip.deductions || {}).map(([key, val]) => (
                                                         <div key={key} className="flex justify-between text-sm"><span className="capitalize">{key.replace(/_/g, " ")}</span><span className="font-mono">{parseFloat(val || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                     ))}
-                                                    <div className="border-t pt-2 flex justify-between text-sm font-bold"><span>Net Pay</span><span className="font-mono text-green-600">{parseFloat(slip.net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                                                    <div className="border-t pt-2 flex justify-between text-sm font-bold"><span>Net Pay</span><span className="font-mono text-success">{parseFloat(slip.net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                 </CardContent>
                                             </Card>
                                         </div>

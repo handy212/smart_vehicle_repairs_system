@@ -75,7 +75,7 @@ export function AssignServiceCoordinatorForm({
                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="service_coordinator" className="block mb-2 text-foreground">
-                            Service Coordinator <span className="text-red-500">*</span>
+                            Service Coordinator <span className="text-destructive">*</span>
                         </Label>
                         <select
                             id="service_coordinator"

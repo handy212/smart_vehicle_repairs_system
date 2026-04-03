@@ -97,7 +97,7 @@ export default function ControlPanelPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Lock className="w-5 h-5 text-amber-600" />
+                            <Lock className="w-5 h-5 text-warning" />
                             Period Locking
                         </CardTitle>
                         <CardDescription>

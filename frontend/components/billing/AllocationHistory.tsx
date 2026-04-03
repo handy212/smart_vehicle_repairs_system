@@ -36,7 +36,7 @@ export function AllocationHistory({ paymentId }: AllocationHistoryProps) {
     if (!allocations || allocations.length === 0) {
         return (
             <div className="mt-3 pt-3 border-t border-border">
-                <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-md">
+                <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 dark:bg-amber-900/20 px-3 py-2 rounded-md">
                     <Receipt className="w-3.5 h-3.5" />
                     <span className="font-medium">No allocation recorded</span>
                     <span className="text-muted-foreground">- Payment not yet allocated to specific invoices</span>
@@ -76,7 +76,7 @@ export function AllocationHistory({ paymentId }: AllocationHistoryProps) {
                                     <span className="text-sm font-medium text-foreground">
                                         Invoice {allocation.invoice_number}
                                     </span>
-                                    <span className="text-sm font-bold text-green-600">
+                                    <span className="text-sm font-bold text-success">
                                         {formatCurrency(parseFloat(allocation.amount))}
                                     </span>
                                 </div>
@@ -114,13 +114,13 @@ export function AllocationHistory({ paymentId }: AllocationHistoryProps) {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Allocated:</span>
-                        <span className="font-semibold text-green-600">
+                        <span className="font-semibold text-success">
                             {formatCurrency(allocatedAmount)}
                         </span>
                     </div>
                 </div>
                 {hasUnallocated && (
-                    <div className="flex justify-between text-xs mt-1 text-amber-600 font-medium">
+                    <div className="flex justify-between text-xs mt-1 text-warning font-medium">
                         <span>Unallocated Balance:</span>
                         <span>{formatCurrency(unallocatedAmount)}</span>
                     </div>

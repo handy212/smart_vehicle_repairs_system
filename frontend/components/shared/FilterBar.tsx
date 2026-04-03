@@ -52,7 +52,7 @@ export function FilterBar({ onSearch, placeholder = "Search...", className, filt
                     {searchTerm && (
                         <button
                             onClick={handleClear}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive"
                         >
                             <X className="h-4 w-4" />
                         </button>

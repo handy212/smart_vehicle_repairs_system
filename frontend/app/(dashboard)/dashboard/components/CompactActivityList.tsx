@@ -84,7 +84,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                         <span className="text-[10px] font-bold text-primary font-mono">{apt.appointment_time}</span>
                                         <div className={cn(
                                             "w-1 h-1 rounded-full mt-1",
-                                            apt.status === "confirmed" ? "bg-emerald-500" : "bg-amber-500"
+                                            apt.status === "confirmed" ? "bg-success/100" : "bg-warning/100"
                                         )} />
                                     </div>
                                 </div>
@@ -113,7 +113,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{wo.status.replace(/_/g, " ")}</span>
                                         <div className={cn(
                                             "w-1.5 h-1.5 rounded-full",
-                                            wo.status === "in_progress" ? "bg-emerald-500 animate-pulse" : "bg-gray-300"
+                                            wo.status === "in_progress" ? "bg-success/100 animate-pulse" : "bg-gray-300"
                                         )} />
                                     </div>
                                 </div>

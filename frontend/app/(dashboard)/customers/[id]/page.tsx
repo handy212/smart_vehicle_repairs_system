@@ -99,7 +99,7 @@ export default function CustomerDetailPage() {
   };
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading customer...</div>;
-  if (error || !customer) return <div className="p-8 text-center text-red-500">Error loading customer</div>;
+  if (error || !customer) return <div className="p-8 text-center text-destructive">Error loading customer</div>;
 
   const renderContent = () => {
     switch (activeView) {

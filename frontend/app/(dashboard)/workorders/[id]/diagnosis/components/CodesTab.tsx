@@ -142,7 +142,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case "critical":
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+        return <AlertTriangle className="w-4 h-4 text-destructive" />;
       case "warning":
         return <AlertCircleIcon className="w-4 h-4 text-yellow-500" />;
       default:
@@ -230,7 +230,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
                             onClick={() => {
                               if (confirm("Delete this code?")) {
                                 deleteMutation.mutate(code.id);
@@ -487,10 +487,10 @@ function CodeDialog({
                       }}
                       placeholder="e.g., P0301"
                       required
-                      className={isDuplicate ? "border-red-500 focus:ring-red-500" : ""}
+                      className={isDuplicate ? "border-destructive focus:ring-red-500" : ""}
                     />
                     {isDuplicate && (
-                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" />
                         This code already exists for this diagnosis
                       </p>

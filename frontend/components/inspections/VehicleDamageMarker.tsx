@@ -43,7 +43,7 @@ const damageTypeColors: Record<DamageMark["type"], string> = {
 const severityColors: Record<DamageMark["severity"], string> = {
   minor: "border-2 border-green-500 shadow-green-500/50",
   moderate: "border-2 border-yellow-500 shadow-yellow-500/50",
-  major: "border-3 border-red-600 shadow-red-600/50",
+  major: "border-3 border-destructive shadow-red-600/50",
 };
 
 const severitySizes: Record<DamageMark["severity"], string> = {
@@ -121,16 +121,16 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
             <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Total</span>
             <span className="text-lg font-black text-foreground">{damage.length}</span>
           </div>
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-red-600 dark:text-red-400">Major</span>
-            <span className="text-lg font-black text-red-700 dark:text-red-300">{damage.filter(m => m.severity === "major").length}</span>
+          <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/10 dark:border-red-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-destructive dark:text-red-400">Major</span>
+            <span className="text-lg font-black text-destructive dark:text-red-300">{damage.filter(m => m.severity === "major").length}</span>
           </div>
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
             <span className="text-[9px] font-bold uppercase tracking-widest text-yellow-600 dark:text-yellow-400">Moderate</span>
             <span className="text-lg font-black text-yellow-700 dark:text-yellow-300">{damage.filter(m => m.severity === "moderate").length}</span>
           </div>
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-green-600 dark:text-green-400">Minor</span>
+          <div className="bg-success/10 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-md p-2 flex flex-col items-center justify-center text-center">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-success dark:text-green-400">Minor</span>
             <span className="text-lg font-black text-green-700 dark:text-green-300">{damage.filter(m => m.severity === "minor").length}</span>
           </div>
         </div>
@@ -265,7 +265,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
                           handleDeleteMark(mark.id);
                         }
                       }}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center shadow-lg hover:scale-110 z-30"
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-destructive/100 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center shadow-lg hover:scale-110 z-30"
                       title="Delete mark"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -371,7 +371,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
                               handleDeleteMark(mark.id);
                             }
                           }}
-                          className="h-8 w-8 p-0 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:hover:bg-red-900/20"
                           title="Delete mark"
                         >
                           <Trash2 className="w-4 h-4" />

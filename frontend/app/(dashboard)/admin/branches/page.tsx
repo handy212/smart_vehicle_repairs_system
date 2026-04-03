@@ -217,7 +217,7 @@ export default function BranchesPage() {
                 {activeBranches}
               </p>
             </div>
-            <Building2 className="w-5 h-5 text-green-500 opacity-80" />
+            <Building2 className="w-5 h-5 text-success opacity-80" />
           </CardContent>
         </Card>
         <Card className="shadow-sm">
@@ -382,7 +382,7 @@ export default function BranchesPage() {
                           ) : (
                             <div className="flex items-center space-x-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                              <span className="text-xs text-red-600">Inactive</span>
+                              <span className="text-xs text-destructive">Inactive</span>
                             </div>
                           )}
                         </div>
@@ -413,7 +413,7 @@ export default function BranchesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDelete(branch)}
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
@@ -651,16 +651,16 @@ function BranchDialog({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="name" className="text-xs">
-                Name <span className="text-red-500">*</span>
+                Name <span className="text-destructive">*</span>
               </Label>
               <Input id="name" {...register("name")} className="w-full h-8 text-sm mt-1" />
               {errors.name && (
-                <p className="text-red-500 text-[10px] mt-0.5">{errors.name.message}</p>
+                <p className="text-destructive text-[10px] mt-0.5">{errors.name.message}</p>
               )}
             </div>
             <div>
               <Label htmlFor="code" className="text-xs">
-                Code <span className="text-red-500">*</span>
+                Code <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="code"
@@ -671,7 +671,7 @@ function BranchDialog({
                 maxLength={10}
               />
               {errors.code && (
-                <p className="text-red-500 text-[10px] mt-0.5">{errors.code.message}</p>
+                <p className="text-destructive text-[10px] mt-0.5">{errors.code.message}</p>
               )}
             </div>
           </div>
@@ -682,11 +682,11 @@ function BranchDialog({
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="phone" className="text-xs">
-                Phone <span className="text-red-500">*</span>
+                Phone <span className="text-destructive">*</span>
               </Label>
               <Input id="phone" {...register("phone")} className="w-full h-8 text-sm mt-1" />
               {errors.phone && (
-                <p className="text-red-500 text-[10px] mt-0.5">{errors.phone.message}</p>
+                <p className="text-destructive text-[10px] mt-0.5">{errors.phone.message}</p>
               )}
             </div>
             <div>
@@ -700,39 +700,39 @@ function BranchDialog({
           </div>
           <div>
             <Label htmlFor="address" className="text-xs">
-              Address <span className="text-red-500">*</span>
+              Address <span className="text-destructive">*</span>
             </Label>
             <Input id="address" {...register("address")} className="w-full h-8 text-sm mt-1" />
             {errors.address && (
-              <p className="text-red-500 text-[10px] mt-0.5">{errors.address.message}</p>
+              <p className="text-destructive text-[10px] mt-0.5">{errors.address.message}</p>
             )}
           </div>
           <div className="grid grid-cols-4 gap-3">
             <div>
               <Label htmlFor="city" className="text-xs">
-                City <span className="text-red-500">*</span>
+                City <span className="text-destructive">*</span>
               </Label>
               <Input id="city" {...register("city")} className="w-full h-8 text-sm mt-1" />
               {errors.city && (
-                <p className="text-red-500 text-[10px] mt-0.5">{errors.city.message}</p>
+                <p className="text-destructive text-[10px] mt-0.5">{errors.city.message}</p>
               )}
             </div>
             <div>
               <Label htmlFor="state" className="text-xs">
-                State <span className="text-red-500">*</span>
+                State <span className="text-destructive">*</span>
               </Label>
               <Input id="state" {...register("state")} className="w-full h-8 text-sm mt-1" />
               {errors.state && (
-                <p className="text-red-500 text-[10px] mt-0.5">{errors.state.message}</p>
+                <p className="text-destructive text-[10px] mt-0.5">{errors.state.message}</p>
               )}
             </div>
             <div>
               <Label htmlFor="zip_code" className="text-xs">
-                Zip Code <span className="text-red-500">*</span>
+                Zip Code <span className="text-destructive">*</span>
               </Label>
               <Input id="zip_code" {...register("zip_code")} className="w-full h-8 text-sm mt-1" />
               {errors.zip_code && (
-                <p className="text-red-500 text-[10px] mt-0.5">{errors.zip_code.message}</p>
+                <p className="text-destructive text-[10px] mt-0.5">{errors.zip_code.message}</p>
               )}
             </div>
             <div>

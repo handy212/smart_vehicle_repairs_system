@@ -1,10 +1,11 @@
 """
 Views for customers app
 """
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema, inline_serializer
 from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Sum, Avg
@@ -428,6 +429,22 @@ class CustomerViewSet(viewsets.ModelViewSet):
         serializer = CustomerListSerializer(customers, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                name='CustomerDashboardStatsResponse',
+                fields={
+                    'total_customers': serializers.IntegerField(),
+                    'active_customers': serializers.IntegerField(),
+                    'inactive_customers': serializers.IntegerField(),
+                    'active_contacts': serializers.IntegerField(),
+                    'inactive_contacts': serializers.IntegerField(),
+                    'new_this_month': serializers.IntegerField(),
+                    'growth_percentage': serializers.FloatField(),
+                }
+            )
+        }
+    )
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Get customer dashboard statistics"""

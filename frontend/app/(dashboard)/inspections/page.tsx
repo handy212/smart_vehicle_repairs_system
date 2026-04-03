@@ -135,7 +135,7 @@ export default function InspectionsPage() {
                     setStatusFilter("");
                     setResultFilter("");
                   }}
-                  className="h-9 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  className="h-9 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 dark:hover:bg-red-900/20"
                 >
                   <Filter className="w-3.5 h-3.5 mr-2" />
                   Clear
@@ -220,8 +220,8 @@ export default function InspectionsPage() {
                             "text-[10px] px-2 py-0.5 font-medium border shadow-none",
                             inspection.status === 'completed' && "border-green-200 text-green-700 bg-success/10",
                             inspection.status === 'in_progress' && "border-orange-200 text-primary bg-primary/5",
-                            inspection.status === 'approved' && "border-indigo-200 text-indigo-700 bg-indigo-50/50",
-                            inspection.status === 'rejected' && "border-red-200 text-red-700 bg-red-50/50",
+                            inspection.status === 'approved' && "border-primary/20 text-primary bg-primary/10/50",
+                            inspection.status === 'rejected' && "border-destructive/20 text-destructive bg-destructive/10/50",
                           )}
                         >
                           {inspection.status_display || inspection.status}
@@ -235,8 +235,8 @@ export default function InspectionsPage() {
                               "text-[10px] px-2 py-0.5 font-medium border shadow-none",
                               inspection.overall_result === 'pass' && "border-green-200 text-green-700 bg-success/10",
                               inspection.overall_result === 'pass_with_advisory' && "border-yellow-200 text-yellow-700 bg-warning/10",
-                              inspection.overall_result === 'fail' && "border-red-200 text-red-700 bg-red-50/50",
-                              inspection.overall_result === 'needs_attention' && "border-orange-200 text-primary bg-orange-50/50",
+                              inspection.overall_result === 'fail' && "border-destructive/20 text-destructive bg-destructive/10/50",
+                              inspection.overall_result === 'needs_attention' && "border-orange-200 text-primary bg-warning/10/50",
                             )}
                           >
                             {inspection.overall_result_display || inspection.overall_result}

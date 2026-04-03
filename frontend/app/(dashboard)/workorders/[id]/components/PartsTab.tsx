@@ -139,7 +139,7 @@ export default function WorkOrderPartsTab({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="mr-2 border-green-500 text-green-600 hover:bg-green-50"
+                              className="mr-2 border-green-500 text-success hover:bg-success/10"
                               onClick={() => approveMutation.mutate(part.id)}
                               disabled={approveMutation.isPending}
                             >

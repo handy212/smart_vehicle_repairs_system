@@ -61,8 +61,8 @@ export function StaffStatsGrid({ stats, columns = 4, className }: StaffStatsGrid
                                         {stat.trend && (
                                             <span className={cn(
                                                 "font-medium",
-                                                stat.trend.positive === true && "text-green-600",
-                                                stat.trend.positive === false && "text-red-600",
+                                                stat.trend.positive === true && "text-success",
+                                                stat.trend.positive === false && "text-destructive",
                                             )}>
                                                 {stat.trend.value}
                                             </span>

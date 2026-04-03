@@ -313,7 +313,7 @@ export default function VehiclesPage() {
           <TableSkeleton rows={8} columns={6} />
         </div>
       ) : error ? (
-        <div className="precision-card p-12 text-center text-rose-500 border-rose-100 bg-rose-50/50">
+        <div className="precision-card p-12 text-center text-destructive border-rose-100 bg-rose-50/50">
           Error loading vehicle data. Please try again or contact support.
         </div>
       ) : (

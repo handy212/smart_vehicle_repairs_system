@@ -157,7 +157,7 @@ export default function TillDashboardPage() {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-sm text-muted-foreground">Variance</p>
-                                                    <p className={`font-mono font-semibold ${till.is_balanced ? 'text-success' : 'text-red-600'
+                                                    <p className={`font-mono font-semibold ${till.is_balanced ? 'text-success' : 'text-destructive'
                                                         }`}>
                                                         {till.variance && parseFloat(till.variance) >= 0 ? '+' : ''}{till.variance || '0.00'}
                                                     </p>
@@ -218,7 +218,7 @@ export default function TillDashboardPage() {
                         <CardContent className="pt-6">
                             <div className="flex items-center gap-3">
                                 <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                                    <DollarSign className="h-6 w-6 text-purple-600" />
+                                    <DollarSign className="h-6 w-6 text-primary" />
                                 </div>
                                 <div>
                                     <p className="font-semibold">Refunds</p>

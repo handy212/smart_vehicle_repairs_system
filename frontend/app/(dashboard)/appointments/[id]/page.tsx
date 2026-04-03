@@ -189,7 +189,7 @@ export default function AppointmentDetailPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading appointment. Please try again.</p>
+            <p className="text-destructive">Error loading appointment. Please try again.</p>
           </CardContent>
         </Card>
       </div>

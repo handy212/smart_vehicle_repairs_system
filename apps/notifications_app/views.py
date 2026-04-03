@@ -10,6 +10,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
 import logging
 
+logger = logging.getLogger(__name__)
+
 from .models import NotificationTemplate, Notification, NotificationPreference, NotificationLog, WebPushSubscription
 from .serializers import (
     NotificationTemplateSerializer, NotificationTemplateListSerializer,
@@ -482,6 +484,89 @@ class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
 
+def _build_sms_context(customer=None):
+    """
+    Build a variable substitution context for SMS console messages.
+    Pulls the latest vehicle, work order, invoice and appointment for the customer.
+    """
+    from apps.accounts.settings_utils import get_company_info
+    from django.utils import timezone
+
+    company = get_company_info()
+    ctx = {
+        'company_name': company.get('company_name', ''),
+        'company_phone': company.get('company_phone', ''),
+    }
+
+    if not customer:
+        return ctx
+
+    # Customer name
+    full_name = (
+        getattr(customer, 'full_name', None)
+        or f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+        or getattr(customer, 'company_name', '')
+    )
+    ctx['customer_name'] = full_name
+
+    # Latest vehicle
+    try:
+        vehicle = customer.vehicles.order_by('-created_at').first()
+        if vehicle:
+            display = f"{vehicle.year} {vehicle.make} {vehicle.model}".strip()
+            ctx['vehicle'] = display
+            ctx['vehicle_display'] = display
+    except Exception:
+        pass
+
+    # Latest work order
+    try:
+        wo = customer.work_orders.order_by('-created_at').first()
+        if wo:
+            ctx['work_order_number'] = wo.work_order_number or ''
+            ctx['service_description'] = wo.diagnosis_notes or wo.service_type or ''
+            tech = getattr(wo, 'primary_technician', None)
+            ctx['technician_name'] = tech.get_full_name() if tech else ''
+    except Exception:
+        pass
+
+    # Latest appointment
+    try:
+        apt = customer.appointments.order_by('-appointment_date', '-appointment_time').first()
+        if apt:
+            ctx['appointment_number'] = getattr(apt, 'appointment_number', '') or ''
+            ctx['appointment_date'] = str(apt.appointment_date) if apt.appointment_date else ''
+            ctx['appointment_time'] = str(apt.appointment_time) if apt.appointment_time else ''
+    except Exception:
+        pass
+
+    # Latest invoice
+    try:
+        inv = customer.invoices.order_by('-invoice_date').first()
+        if inv:
+            ctx['invoice_number'] = inv.invoice_number or ''
+            ctx['invoice_date'] = str(inv.invoice_date) if inv.invoice_date else ''
+            ctx['total'] = str(inv.total or '')
+            ctx['due_date'] = str(inv.due_date) if inv.due_date else ''
+            ctx['balance_due'] = str(inv.amount_due or '')
+            ctx['amount_paid'] = str(inv.amount_paid or '')
+            # Payment method from latest payment
+            try:
+                payment = inv.payments.order_by('-created_at').first()
+                ctx['payment_method'] = payment.payment_method if payment else ''
+            except Exception:
+                ctx['payment_method'] = ''
+            # Days until/overdue
+            if inv.due_date:
+                delta = (inv.due_date - timezone.now().date()).days
+                ctx['days_until_due'] = str(delta) if delta >= 0 else '0'
+                ctx['days_overdue'] = str(abs(delta)) if delta < 0 else '0'
+    except Exception:
+        pass
+
+    return ctx
+
+
 class SMSConsoleViewSet(viewsets.ViewSet):
     """
     ViewSet for SMS Console operations (Single & Bulk)
@@ -521,23 +606,52 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         # Case 1: Send to Recipient (System User) - Creates Notification
         if recipient_id:
             try:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                customer = None
+                # Resolve customer profile ID → user ID if needed
+                if not User.objects.filter(id=recipient_id).exists():
+                    from apps.customers.models import Customer
+                    try:
+                        customer = Customer.objects.get(id=recipient_id)
+                        recipient_id = customer.user_id
+                    except Customer.DoesNotExist:
+                        return Response({'error': 'Recipient not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Build variable context for {variable} substitution in message
+                if customer is None:
+                    try:
+                        from apps.customers.models import Customer
+                        customer = Customer.objects.filter(user_id=recipient_id).first()
+                    except Exception:
+                        pass
+
+                context = _build_sms_context(customer)
+                rendered_message = NotificationService()._render_template(message, context)
+
                 notification = Notification.objects.create(
                     recipient_id=recipient_id,
                     notification_type='custom',
                     channel='sms',
                     priority='normal',
-                    title='SMS Console Message', # SMS usually doesn't show title but it's required field
-                    message=message,
+                    title='SMS Console Message',
+                    message=rendered_message,
                     status='pending',
                     scheduled_for=scheduled_for
                 )
                 
                 service = NotificationService()
                 success = service.send_notification(notification)
-                
+
+                if not success:
+                    return Response(
+                        {'error': notification.error_message or 'SMS failed to send'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 return Response({
-                    'status': 'success' if success else 'failed',
-                    'message': 'SMS scheduled' if scheduled_for else ('SMS sent via Notification system' if success else notification.error_message),
+                    'status': 'success',
+                    'message': 'SMS scheduled' if scheduled_for else 'SMS sent successfully',
                     'notification_id': notification.id
                 })
             except Exception as e:
@@ -548,8 +662,24 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         
         # Case 2: Send to Raw Phone - Direct Hubtel Call
         if phone:
-            success, response = send_sms(phone, message)
-            
+            rendered_message = NotificationService()._render_template(message, _build_sms_context(None))
+            success, response = send_sms(phone, rendered_message)
+
+            # Log the direct phone SMS so it appears in history
+            log_status = 'sent' if success else 'failed'
+            Notification.objects.create(
+                recipient=None,
+                notification_type='custom',
+                channel='sms',
+                priority='normal',
+                title='Direct SMS',
+                message=rendered_message,
+                status=log_status,
+                scheduled_for=scheduled_for,
+                data={'phone_number': phone, 'direct_send': True},
+                error_message=str(response) if not success else ''
+            )
+
             if success:
                 return Response({
                     'status': 'success',
@@ -617,7 +747,7 @@ class SMSConsoleViewSet(viewsets.ViewSet):
             recipient_name = "Unknown"
             recipient_phone = ""
             recipient_initials = "U"
-            
+
             if n.recipient:
                 # Name
                 full_name = n.recipient.get_full_name()
@@ -627,12 +757,12 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                             full_name = n.recipient.customer_profile.company_name
                     except:
                         pass
-                
+
                 recipient_name = full_name or n.recipient.username or n.recipient.email or f"User #{n.recipient.id}"
-                
+
                 # Phone
                 recipient_phone = n.recipient.phone or ""
-                
+
                 # Initials
                 if full_name:
                     parts = full_name.split()
@@ -642,6 +772,12 @@ class SMSConsoleViewSet(viewsets.ViewSet):
                         recipient_initials = parts[0][:2].upper()
                 else:
                     recipient_initials = recipient_name[:2].upper()
+            elif n.data.get('direct_send'):
+                # Direct phone SMS — no registered user
+                phone_number = n.data.get('phone_number', '')
+                recipient_name = phone_number
+                recipient_phone = phone_number
+                recipient_initials = phone_number[:2] if phone_number else 'DP'
             
             data.append({
                 'id': n.id,
@@ -660,30 +796,89 @@ class SMSConsoleViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'])
     def ai_assist(self, request):
         """
-        Mock AI Assist for message completion
+        AI-powered SMS assistant using Google Gemini.
+        Supports multi-turn conversation via a 'messages' list.
+
+        Request body:
+            messages: list of {role: 'user'|'model', content: str}
+            current_draft: str (optional — current message in compose box)
+            mode: 'sms'|'template' (optional, default 'sms')
         """
-        prompt = request.data.get('prompt', '').lower()
-        
-        # Simple rule-based mock for AI completions
-        suggestions = [
-            "Your vehicle service is complete and ready for pickup.",
-            "Reminder: You have an appointment tomorrow at 10:00 AM.",
-            "Invoice #INV-123 is now available for payment. Thank you!",
-            "We've noticed your brake pads need replacement. Would you like to schedule a service?",
-            "Your parts order has arrived. Please visit our shop for installation."
-        ]
-        
-        import random
-        suggested = random.choice(suggestions)
-        
-        if 'appointment' in prompt:
-            suggested = "Reminder: Your appointment at Antigravity Garage is confirmed for tomorrow."
-        elif 'ready' in prompt or 'complete' in prompt:
-            suggested = "Good news! Your vehicle service is now complete and ready for collection."
-        elif 'payment' in prompt or 'invoice' in prompt:
-            suggested = "Hello, your invoice is ready. You can view and pay online at your convenience."
-            
-        return Response({'suggestion': suggested})
+        from django.conf import settings
+
+        messages = request.data.get('messages', [])
+        current_draft = request.data.get('current_draft', '')
+        mode = request.data.get('mode', 'sms')
+
+        if not messages:
+            return Response({'error': 'messages list is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        api_key = getattr(settings, 'GEMINI_API_KEY', '')
+        if not api_key:
+            return Response({'error': 'AI assistant is not configured'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        try:
+            from google import genai
+            from google.genai import types as genai_types
+
+            client = genai.Client(api_key=api_key)
+
+            system_prompt = (
+                "You are an expert SMS copywriter for an automotive repair shop. "
+                "You help staff craft professional, clear, and friendly SMS messages for customers. "
+                "Keep messages concise (under 160 characters when possible). "
+                "Use plain, warm language — no HTML, no emojis unless asked. "
+                "Available template variables: {customer_name}, {appointment_date}, {appointment_time}, "
+                "{vehicle}, {service_description}, {technician_name}, {invoice_number}, {total}, "
+                "{due_date}, {balance_due}, {company_name}, {company_phone}. "
+                "When you suggest a final SMS message, wrap ONLY the message text in [SMS]...[/SMS] tags "
+                "so the system can extract it. You may explain or revise without those tags."
+            )
+            if current_draft:
+                system_prompt += f"\n\nCurrent draft in compose box: \"{current_draft}\""
+            if mode == 'template':
+                system_prompt += "\n\nThe user is writing a reusable template — use variable placeholders freely."
+
+            # Build contents list for Gemini
+            contents = []
+            for msg in messages:
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                if role not in ('user', 'model'):
+                    role = 'user'
+                contents.append(genai_types.Content(
+                    role=role,
+                    parts=[genai_types.Part(text=content)]
+                ))
+
+            response = client.models.generate_content(
+                model='gemini-flash-lite-latest',
+                contents=contents,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=400,
+                    temperature=0.7,
+                )
+            )
+
+            reply = response.text or ''
+
+            # Extract [SMS]...[/SMS] suggestion if present
+            import re
+            match = re.search(r'\[SMS\](.*?)\[/SMS\]', reply, re.DOTALL)
+            suggestion = match.group(1).strip() if match else None
+
+            return Response({'reply': reply, 'suggestion': suggestion})
+
+        except Exception as e:
+            err_str = str(e)
+            logger.error(f"Gemini AI assist error: {err_str}")
+            if '429' in err_str or 'RESOURCE_EXHAUSTED' in err_str:
+                return Response(
+                    {'error': 'AI assistant is temporarily unavailable (quota exceeded). Please try again later.'},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+            return Response({'error': 'AI assistant encountered an error. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['get'])
     def stats(self, request):

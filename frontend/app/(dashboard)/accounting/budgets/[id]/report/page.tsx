@@ -32,7 +32,7 @@ export default function BudgetReportPage() {
     };
 
     const getVarianceIcon = (status: string) => {
-        if (status === 'over') return <TrendingUp className="w-4 h-4 text-red-600" />;
+        if (status === 'over') return <TrendingUp className="w-4 h-4 text-destructive" />;
         if (status === 'under') return <TrendingDown className="w-4 h-4 text-success" />;
         return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
     };
@@ -76,7 +76,7 @@ export default function BudgetReportPage() {
                             <CardTitle className="text-sm font-medium text-muted-foreground">Variance</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className={`text-2xl font-bold ${report.summary.total_variance >= 0 ? 'text-red-600' : 'text-success'}`}>
+                            <div className={`text-2xl font-bold ${report.summary.total_variance >= 0 ? 'text-destructive' : 'text-success'}`}>
                                 {formatCurrency(report.summary.total_variance)}
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -123,11 +123,11 @@ export default function BudgetReportPage() {
                                         <TableCell className="uppercase">{line.period}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(line.budget)}</TableCell>
                                         <TableCell className="text-right">{formatCurrency(line.actual)}</TableCell>
-                                        <TableCell className={`text-right font-semibold ${line.variance >= 0 ? 'text-red-600' : 'text-success'}`}>
+                                        <TableCell className={`text-right font-semibold ${line.variance >= 0 ? 'text-destructive' : 'text-success'}`}>
                                             {formatCurrency(line.variance)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <span className={`font-semibold ${Math.abs(line.variance_percent) > 10 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                            <span className={`font-semibold ${Math.abs(line.variance_percent) > 10 ? 'text-destructive' : 'text-muted-foreground'}`}>
                                                 {line.variance_percent.toFixed(1)}%
                                             </span>
                                         </TableCell>

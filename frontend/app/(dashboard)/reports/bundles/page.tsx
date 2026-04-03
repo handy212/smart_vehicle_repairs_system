@@ -58,7 +58,7 @@ export default function ServiceBundleReportPage() {
                     {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
                 </div>
             ) : error ? (
-                <div className="p-8 text-center text-red-500 bg-red-50 rounded-lg">
+                <div className="p-8 text-center text-destructive bg-destructive/10 rounded-lg">
                     <AlertCircle className="w-8 h-8 mx-auto mb-2" />
                     <p>Error loading report</p>
                 </div>

@@ -254,7 +254,7 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col text-sm">
-                        <span className={schedule.is_due ? "font-semibold text-red-600 dark:text-red-400" : "text-card-foreground"}>
+                        <span className={schedule.is_due ? "font-semibold text-destructive dark:text-red-400" : "text-card-foreground"}>
                           {schedule.next_service_due_date
                             ? format(new Date(schedule.next_service_due_date), "MMM dd, yyyy")
                             : "Not set"}
@@ -316,9 +316,9 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => openDeleteDialog(schedule)}
-                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            className="h-8 w-8 p-0 hover:bg-destructive/10 dark:hover:bg-red-900/20"
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
                           </Button>
                         </PermissionGuard>
                       </div>

@@ -147,7 +147,7 @@ export default function DiagnosisListPage() {
               Total Fees
             </span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
+              <span className="text-xl font-bold text-primary dark:text-purple-400">
                 {formatCurrency(stats.totalFee)}
               </span>
               <DollarSign className="w-5 h-5 text-purple-400 mb-0.5" />

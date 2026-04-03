@@ -387,10 +387,10 @@ export default function StaffDetailPage() {
                                         <div className="space-y-3">
                                             {trainingRecords!.results.map((record) => {
                                                 const statusColors: Record<string, string> = {
-                                                    completed: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
-                                                    in_progress: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
-                                                    enrolled: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
-                                                    failed: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
+                                                    completed: "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
+                                                    in_progress: "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
+                                                    enrolled: "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+                                                    failed: "bg-destructive/10 text-destructive border-destructive/20 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
                                                     withdrawn: "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
                                                 };
                                                 return (
@@ -492,7 +492,7 @@ export default function StaffDetailPage() {
                                                 <div className="flex flex-wrap gap-1.5 mt-2">
 
                                                     {technician?.skills.map((skill: any) => (
-                                                        <Badge key={skill.id} variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-medium">
+                                                        <Badge key={skill.id} variant="secondary" className="bg-info/10 text-blue-700 border-blue-100 font-medium">
                                                             {skill.name}
                                                         </Badge>
                                                     )) || <span className="text-muted-foreground italic text-sm">No skills listed</span>}
@@ -503,8 +503,8 @@ export default function StaffDetailPage() {
                                                 <p className="text-lg font-bold text-foreground">{technician?.years_of_experience || 0} Years</p>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col justify-center items-center p-6 border-2 border-dashed rounded-xl bg-orange-50/50 dark:bg-orange-950/20">
-                                            <Briefcase className="h-10 w-10 text-orange-500 mb-3 opacity-70" />
+                                        <div className="flex flex-col justify-center items-center p-6 border-2 border-dashed rounded-xl bg-warning/10/50 dark:bg-orange-950/20">
+                                            <Briefcase className="h-10 w-10 text-warning mb-3 opacity-70" />
                                             <h3 className="text-sm font-semibold mb-1 text-center">Operational Dashboard</h3>
                                             <p className="text-xs text-muted-foreground text-center mb-4 max-w-[180px]">View shifts, performance metrics, and job history.</p>
                                             <Button size="sm" asChild className="w-full">

@@ -137,7 +137,7 @@ export function ContactsView({ customerId }: ContactsViewProps) {
             cell: (item: any) => (
                 <div className="flex gap-2 justify-end">
                     <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }}>Edit</Button>
-                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={(e) => { e.stopPropagation(); if (confirm('Delete contact?')) deleteMutation.mutate(item.id); }}>Delete</Button>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); if (confirm('Delete contact?')) deleteMutation.mutate(item.id); }}>Delete</Button>
                 </div>
             )
         }
@@ -171,19 +171,19 @@ export function ContactsView({ customerId }: ContactsViewProps) {
                             <div className="space-y-2">
                                 <Label htmlFor="first_name">First Name</Label>
                                 <Input {...register("first_name")} />
-                                {errors.first_name && <p className="text-red-500 text-xs">{errors.first_name.message}</p>}
+                                {errors.first_name && <p className="text-destructive text-xs">{errors.first_name.message}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="last_name">Last Name</Label>
                                 <Input {...register("last_name")} />
-                                {errors.last_name && <p className="text-red-500 text-xs">{errors.last_name.message}</p>}
+                                {errors.last_name && <p className="text-destructive text-xs">{errors.last_name.message}</p>}
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input {...register("email")} type="email" />
-                            {errors.email && <p className="text-red-500 text-xs">{errors.email.message}</p>}
+                            {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
                         </div>
 
                         <div className="space-y-2">

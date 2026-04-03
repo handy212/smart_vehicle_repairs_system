@@ -210,7 +210,7 @@ export default function CashFlowPage() {
                     <Loader2 className="w-8 h-8 animate-spin" />
                 </div>
             ) : isError ? (
-                <div className="p-4 text-red-500">Error loading report</div>
+                <div className="p-4 text-destructive">Error loading report</div>
             ) : (
                 <Card>
                     <CardHeader className="border-b bg-muted/10">

@@ -165,7 +165,7 @@ export function NotesView({ customerId }: NotesViewProps) {
                                         {note.is_important && <Badge variant="danger">Important</Badge>}
                                         <div className="flex gap-1 ml-2">
                                             <Button variant="ghost" size="sm" className="h-6 px-2 text-muted-foreground" onClick={() => startEdit(note)}>Edit</Button>
-                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-red-500 hover:text-red-600" onClick={() => { if (confirm("Delete note?")) deleteMutation.mutate(note.id); }}>Delete</Button>
+                                            <Button variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:text-destructive" onClick={() => { if (confirm("Delete note?")) deleteMutation.mutate(note.id); }}>Delete</Button>
                                         </div>
                                     </div>
                                 </div>

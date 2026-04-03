@@ -178,7 +178,7 @@ export default function ServiceBundlesPage() {
                                                         <PermissionGuard permission="manage_bundles">
                                                             <DropdownMenuItem
                                                                 onClick={() => handleDelete(bundle.id)}
-                                                                className="text-red-600 focus:text-red-700 cursor-pointer"
+                                                                className="text-destructive focus:text-destructive cursor-pointer"
                                                                 disabled={deleteMutation.isPending}
                                                             >
                                                                 <Trash2 className="w-4 h-4 mr-2" />

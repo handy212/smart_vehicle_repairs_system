@@ -233,13 +233,13 @@ export function PaymentAllocationModal({
                         </div>
                         <div>
                             <Label className="text-xs text-muted-foreground">Allocated</Label>
-                            <div className={`text-lg font-bold ${isOverAllocated ? 'text-red-600' : 'text-green-600'}`}>
+                            <div className={`text-lg font-bold ${isOverAllocated ? 'text-destructive' : 'text-success'}`}>
                                 {formatCurrency(totalAllocated)}
                             </div>
                         </div>
                         <div>
                             <Label className="text-xs text-muted-foreground">Remaining</Label>
-                            <div className={`text-lg font-bold ${remainingAmount < 0 ? 'text-red-600' : 'text-primary'}`}>
+                            <div className={`text-lg font-bold ${remainingAmount < 0 ? 'text-destructive' : 'text-primary'}`}>
                                 {formatCurrency(remainingAmount)}
                             </div>
                         </div>
@@ -247,9 +247,9 @@ export function PaymentAllocationModal({
 
                     {/* Validation Message */}
                     {isOverAllocated && (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                            <AlertCircle className="w-4 h-4 text-red-600" />
-                            <span className="text-sm text-red-700">
+                        <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                            <AlertCircle className="w-4 h-4 text-destructive" />
+                            <span className="text-sm text-destructive">
                                 Total allocation exceeds payment amount
                             </span>
                         </div>
@@ -296,7 +296,7 @@ export function PaymentAllocationModal({
                                                 <TableCell className="text-right font-medium">
                                                     {formatCurrency(parseFloat(invoice.total))}
                                                 </TableCell>
-                                                <TableCell className="text-right font-bold text-red-600">
+                                                <TableCell className="text-right font-bold text-destructive">
                                                     {formatCurrency(balanceDue)}
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -307,11 +307,11 @@ export function PaymentAllocationModal({
                                                         max={balanceDue}
                                                         value={allocations[invoice.id] || ""}
                                                         onChange={(e) => handleAllocationChange(invoice.id, e.target.value)}
-                                                        className={`w-32 text-right ${isInvalid ? 'border-red-500' : ''}`}
+                                                        className={`w-32 text-right ${isInvalid ? 'border-destructive' : ''}`}
                                                         placeholder="0.00"
                                                     />
                                                     {isInvalid && (
-                                                        <p className="text-xs text-red-600 mt-1">
+                                                        <p className="text-xs text-destructive mt-1">
                                                             Exceeds balance
                                                         </p>
                                                     )}

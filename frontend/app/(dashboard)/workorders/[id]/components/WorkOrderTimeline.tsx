@@ -138,7 +138,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                 <div
                                     className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${workOrder.quality_check_passed
                                         ? "bg-success/100"
-                                        : "bg-red-500"
+                                        : "bg-destructive/100"
                                         }`}
                                 ></div>
                                 <div className="flex-1 pt-0.5">
@@ -195,7 +195,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                                 className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${note.note_type === "customer"
                                                     ? "bg-primary"
                                                     : note.is_important
-                                                        ? "bg-red-500"
+                                                        ? "bg-destructive/100"
                                                         : "bg-gray-400"
                                                     }`}
                                             ></div>

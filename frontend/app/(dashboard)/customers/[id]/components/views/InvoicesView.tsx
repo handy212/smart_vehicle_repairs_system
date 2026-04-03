@@ -56,7 +56,7 @@ export function InvoicesView({ customerId }: InvoicesViewProps) {
             label: "Past Due",
             value: formatCurrency(pastDue),
             icon: AlertCircle,
-            color: "text-red-600 dark:text-red-400"
+            color: "text-destructive"
         },
         {
             label: "Total Paid",

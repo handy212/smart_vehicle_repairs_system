@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field, inline_serializer
+from drf_spectacular.types import OpenApiTypes
 from .models import (
     WorkOrder, ServiceTask, WorkOrderPart, 
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
@@ -39,32 +41,39 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'task_count', 'parts_count'
         ]
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
         """Get customer name from user"""
         if obj.customer and obj.customer.user:
             return obj.customer.user.get_full_name() or obj.customer.user.username or "N/A"
         return "N/A"
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_info(self, obj):
         if obj.vehicle:
             return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} - {obj.vehicle.license_plate}"
         return "N/A"
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         return self.get_vehicle_info(obj)
     
+    @extend_schema_field(OpenApiTypes.DECIMAL)
     def get_total_cost(self, obj):
         """Get total cost (use actual_total if available, otherwise estimated_total)"""
         return obj.actual_total if obj.actual_total else obj.estimated_total
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_primary_technician_name(self, obj):
         if obj.primary_technician:
             return f"{obj.primary_technician.first_name} {obj.primary_technician.last_name}"
         return None
     
+    @extend_schema_field(OpenApiTypes.INT)
     def get_task_count(self, obj):
         return obj.tasks.count()
     
+    @extend_schema_field(OpenApiTypes.INT)
     def get_parts_count(self, obj):
         return obj.parts.count()
 
@@ -122,26 +131,30 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'cost_variance', 'cost_variance_percentage', 'has_completed_inspection'
         ]
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_completed_inspection(self, obj):
         return obj.inspections.filter(status__in=['completed', 'approved']).exists()
 
-
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
         """Get customer name from user"""
         if obj.customer and obj.customer.user:
             return obj.customer.user.get_full_name() or obj.customer.user.username or "N/A"
         return "N/A"
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if obj.vehicle:
             return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} - {obj.vehicle.license_plate}"
         return "N/A"
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_primary_technician_name(self, obj):
         if obj.primary_technician:
             return f"{obj.primary_technician.first_name} {obj.primary_technician.last_name}"
         return None
     
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_assigned_technicians_detail(self, obj):
         return [
             {
@@ -152,11 +165,13 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             for tech in obj.assigned_technicians.all()
         ]
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_created_by_name(self, obj):
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}"
         return None
     
+    @extend_schema_field(serializers.DictField())
     def get_related_work_order_detail(self, obj):
         """Get details of related work order if this is a rework"""
         if obj.related_work_order:
@@ -168,6 +183,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             }
         return None
     
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_rework_work_orders(self, obj):
         """Get list of rework work orders that reference this one"""
         reworks = obj.rework_work_orders.all()
@@ -557,6 +573,7 @@ class ServiceTaskSerializer(serializers.ModelSerializer):
         model = ServiceTask
         fields = '__all__'
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
             return f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}"
@@ -566,6 +583,7 @@ class ServiceTaskSerializer(serializers.ModelSerializer):
             return f"{sc.first_name} {sc.last_name}"
         return None
     
+    @extend_schema_field(OpenApiTypes.FLOAT)
     def get_calculated_hours(self, obj):
         """Return calculated actual hours from time logs or actual_hours field"""
         try:
@@ -606,16 +624,27 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
     
     work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
         if obj.work_order.customer and obj.work_order.customer.user:
             return obj.work_order.customer.user.get_full_name()
         return "Unknown"
         
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_info(self, obj):
         if obj.work_order.vehicle:
             return f"{obj.work_order.vehicle.year} {obj.work_order.vehicle.make} {obj.work_order.vehicle.model}"
         return "Unknown Vehicle"
     
+    @extend_schema_field(inline_serializer(
+        name='InventoryStatus',
+        fields={
+            'available': serializers.BooleanField(),
+            'quantity': serializers.DecimalField(max_digits=10, decimal_places=2),
+            'part_id': serializers.IntegerField(allow_null=True),
+            'message': serializers.CharField(),
+        }
+    ))
     def get_inventory_status(self, obj):
         from apps.inventory.models import Part
         if not obj.part_number:
@@ -643,21 +672,25 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
             'message': 'In Stock' if is_available else 'Insufficient Stock'
         }
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_purchase_order_number(self, obj):
         if obj.purchase_order_item and obj.purchase_order_item.purchase_order:
             return obj.purchase_order_item.purchase_order.po_number
         return None
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_installed_by_name(self, obj):
         if obj.installed_by:
             return f"{obj.installed_by.first_name} {obj.installed_by.last_name}"
         return None
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_requested_by_name(self, obj):
         if obj.requested_by:
             return f"{obj.requested_by.first_name} {obj.requested_by.last_name}"
         return None
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_approved_by_name(self, obj):
         if obj.approved_by:
             return f"{obj.approved_by.first_name} {obj.approved_by.last_name}"
@@ -705,6 +738,7 @@ class TechnicianTimeLogSerializer(serializers.ModelSerializer):
         model = TechnicianTimeLog
         fields = '__all__'
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_technician_name(self, obj):
         return f"{obj.technician.first_name} {obj.technician.last_name}"
 
@@ -795,6 +829,7 @@ class WorkOrderPhotoSerializer(serializers.ModelSerializer):
         model = WorkOrderPhoto
         fields = '__all__'
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_taken_by_name(self, obj):
         if obj.taken_by:
             return f"{obj.taken_by.first_name} {obj.taken_by.last_name}"
@@ -863,16 +898,26 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
         if obj.customer and obj.customer.user:
             return obj.customer.user.get_full_name() or obj.customer.user.username
         return "Valued Customer"
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_info(self, obj):
         if obj.vehicle:
             return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
         return "Unknown Vehicle"
         
+    @extend_schema_field(inline_serializer(
+        name='VehicleDetailsPublic',
+        fields={
+            'vin': serializers.CharField(),
+            'license_plate': serializers.CharField(),
+            'color': serializers.CharField(),
+        }
+    ))
     def get_vehicle_details(self, obj):
         if obj.vehicle:
             return {
@@ -902,6 +947,7 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
             for t in tasks
         ]
 
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_approved_jobs(self, obj):
         """Get list of completed tasks"""
         tasks = obj.tasks.filter(status='completed')
@@ -915,6 +961,7 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
             for t in tasks
         ]
 
+    @extend_schema_field(serializers.DictField())
     def get_timeline_status(self, obj):
         return {
             'current_status': obj.status,

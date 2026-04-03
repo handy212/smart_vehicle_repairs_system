@@ -68,7 +68,7 @@ function OrgChartViewer() {
 
     if (isError || !data) {
         return (
-            <div className="flex flex-col items-center justify-center p-24 text-red-500">
+            <div className="flex flex-col items-center justify-center p-24 text-destructive">
                 <AlertCircle className="h-8 w-8 mb-4" />
                 <p>Failed to load org chart data.</p>
             </div>

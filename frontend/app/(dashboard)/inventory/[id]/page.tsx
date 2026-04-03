@@ -54,9 +54,9 @@ export default function PartDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+        <Card className="border-destructive/20 bg-destructive/10 dark:bg-red-900/20">
           <CardContent className="pt-6">
-            <p className="text-red-600 dark:text-red-400">Error loading part. Please try again.</p>
+            <p className="text-destructive dark:text-red-400">Error loading part. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -201,7 +201,7 @@ export default function PartDetailPage() {
                 <Card>
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Reserved</p>
-                    <p className="text-3xl font-bold mt-1 text-orange-500">{part.quantity_reserved || 0}</p>
+                    <p className="text-3xl font-bold mt-1 text-warning">{part.quantity_reserved || 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">on work orders</p>
                   </CardContent>
                 </Card>
@@ -262,7 +262,7 @@ export default function PartDetailPage() {
                   <div className="flex flex-wrap gap-2">
                     {part.is_taxable && <Badge variant="outline">Taxable</Badge>}
                     {part.is_core && <Badge variant="outline">Core Part</Badge>}
-                    {part.is_active ? <Badge variant="outline" className="border-green-200 text-green-700">Active</Badge> : <Badge variant="outline" className="border-red-200 text-red-700">Inactive</Badge>}
+                    {part.is_active ? <Badge variant="outline" className="border-green-200 text-green-700">Active</Badge> : <Badge variant="outline" className="border-destructive/20 text-destructive">Inactive</Badge>}
                   </div>
                 </CardContent>
               </Card>
@@ -327,7 +327,7 @@ export default function PartDetailPage() {
                                   case 'sale':
                                   case 'use':
                                   case 'damage':
-                                  case 'adjustment_out': return 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+                                  case 'adjustment_out': return 'bg-destructive/10 text-destructive border-destructive/10 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
                                   default: return 'bg-muted text-foreground border-border bg-muted text-muted-foreground border-border';
                                 }
                               };
@@ -357,7 +357,7 @@ export default function PartDetailPage() {
                                       <span className="text-gray-300 text-muted-foreground">—</span>
                                     )}
                                   </td>
-                                  <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-success' : 'text-red-600 dark:text-red-400'}`}>
+                                  <td className={`px-4 py-3 text-right font-bold text-sm ${isPositive ? 'text-success' : 'text-destructive dark:text-red-400'}`}>
                                     <div className="flex flex-col items-end">
                                       <span>{isPositive ? '+' : ''}{txn.quantity}</span>
                                       <span className="text-[9px] font-normal uppercase opacity-60">{part.unit || 'units'}</span>

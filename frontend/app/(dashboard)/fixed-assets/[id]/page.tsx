@@ -51,7 +51,7 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                 return "bg-muted text-foreground bg-muted text-foreground";
             case "disposed":
             case "sold":
-                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+                return "bg-red-100 text-destructive dark:bg-red-900 dark:text-red-300";
             case "retired":
                 return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
             default:

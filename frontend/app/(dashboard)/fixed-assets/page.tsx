@@ -287,7 +287,7 @@ function FixedAssetsContent() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+                                        <div className="w-10 h-10 rounded-lg bg-warning/10 dark:bg-orange-900/20 flex items-center justify-center">
                                             <TrendingDown className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>

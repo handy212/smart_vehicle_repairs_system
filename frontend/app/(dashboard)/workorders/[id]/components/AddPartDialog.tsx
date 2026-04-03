@@ -155,7 +155,7 @@ export default function AddPartDialog({
 
           <div className="space-y-4">
             {serverError && (
-              <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded text-sm">
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded text-sm">
                 {serverError}
               </div>
             )}
@@ -168,10 +168,10 @@ export default function AddPartDialog({
                 <Input
                   id="part_number"
                   {...register("part_number")}
-                  className={`w-full ${errors.part_number ? "border-red-500" : ""}`}
+                  className={`w-full ${errors.part_number ? "border-destructive" : ""}`}
                 />
                 {errors.part_number && (
-                  <p className="mt-1 text-sm text-red-600">{errors.part_number.message}</p>
+                  <p className="mt-1 text-sm text-destructive">{errors.part_number.message}</p>
                 )}
               </div>
               <div>
@@ -181,10 +181,10 @@ export default function AddPartDialog({
                 <Input
                   id="part_name"
                   {...register("part_name")}
-                  className={`w-full ${errors.part_name ? "border-red-500" : ""}`}
+                  className={`w-full ${errors.part_name ? "border-destructive" : ""}`}
                 />
                 {errors.part_name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.part_name.message}</p>
+                  <p className="mt-1 text-sm text-destructive">{errors.part_name.message}</p>
                 )}
               </div>
             </div>
@@ -210,10 +210,10 @@ export default function AddPartDialog({
                   id="quantity"
                   type="number"
                   {...register("quantity", { valueAsNumber: true })}
-                  className={`w-full ${errors.quantity ? "border-red-500" : ""}`}
+                  className={`w-full ${errors.quantity ? "border-destructive" : ""}`}
                 />
                 {errors.quantity && (
-                  <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>
+                  <p className="mt-1 text-sm text-destructive">{errors.quantity.message}</p>
                 )}
               </div>
               <div>
@@ -225,10 +225,10 @@ export default function AddPartDialog({
                   type="number"
                   step="0.01"
                   {...register("unit_cost", { valueAsNumber: true })}
-                  className={`w-full ${errors.unit_cost ? "border-red-500" : ""}`}
+                  className={`w-full ${errors.unit_cost ? "border-destructive" : ""}`}
                 />
                 {errors.unit_cost && (
-                  <p className="mt-1 text-sm text-red-600">{errors.unit_cost.message}</p>
+                  <p className="mt-1 text-sm text-destructive">{errors.unit_cost.message}</p>
                 )}
               </div>
               <div>

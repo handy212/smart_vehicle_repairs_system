@@ -177,7 +177,7 @@ export function PerformanceMetrics({ technicianId }: PerformanceMetricsProps) {
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">Based on productivity & quality</p>
                                 </div>
-                                <Award className="h-12 w-12 text-green-500 opacity-50" />
+                                <Award className="h-12 w-12 text-success opacity-50" />
                             </div>
                         </CardContent>
                     </Card>
@@ -204,8 +204,8 @@ function MetricCard({ title, value, icon: Icon, color }: MetricCardProps) {
 
     const iconColors = {
         blue: "text-primary",
-        green: "text-green-500 dark:text-green-400",
-        orange: "text-orange-500 dark:text-orange-400",
+        green: "text-success dark:text-green-400",
+        orange: "text-warning dark:text-orange-400",
         purple: "text-purple-500 dark:text-purple-400",
     };
 

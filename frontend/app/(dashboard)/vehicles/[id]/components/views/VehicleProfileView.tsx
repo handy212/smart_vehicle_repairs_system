@@ -143,7 +143,7 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                                         label="Health Score"
                                         value={
                                             <div className="flex items-center gap-2">
-                                                <span className={`font-bold ${vehicle.health_score && vehicle.health_score < 50 ? 'text-red-500' : vehicle.health_score && vehicle.health_score < 80 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                                <span className={`font-bold ${vehicle.health_score && vehicle.health_score < 50 ? 'text-destructive' : vehicle.health_score && vehicle.health_score < 80 ? 'text-warning' : 'text-success'}`}>
                                                     {vehicle.health_score || 100}%
                                                 </span>
                                             </div>

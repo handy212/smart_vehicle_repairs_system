@@ -121,7 +121,7 @@ export function PartSelector({ onSelect, selectedPartId, branchId }: PartSelecto
                                     <div className="text-xs text-muted-foreground mt-1 flex justify-between">
                                         <span>Stock: {part.quantity_in_stock}</span>
                                         {part.quantity_in_stock <= part.minimum_stock && (
-                                            <Badge variant="outline" className="text-[10px] h-4 px-1 text-amber-600 border-amber-200">
+                                            <Badge variant="outline" className="text-[10px] h-4 px-1 text-warning border-warning/20">
                                                 Low Stock
                                             </Badge>
                                         )}

@@ -361,13 +361,13 @@ export default function EditEstimatePage() {
   if (!isValidId) {
     return (
       <div className="p-8">
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-destructive/20 bg-destructive/10">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-red-800">Invalid Estimate ID</p>
-                <p className="text-sm text-red-700 mt-1">The estimate ID in the URL is invalid.</p>
+                <p className="text-sm font-medium text-destructive">Invalid Estimate ID</p>
+                <p className="text-sm text-destructive mt-1">The estimate ID in the URL is invalid.</p>
               </div>
             </div>
           </CardContent>
@@ -786,7 +786,7 @@ export default function EditEstimatePage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 text-red-500 hover:bg-red-50"
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                           onClick={() => removeLineItem(index)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -808,7 +808,7 @@ export default function EditEstimatePage() {
               <span>{formatCurrency(subtotal)}</span>
             </div>
             {discountType !== 'none' && (
-              <div className="flex justify-between text-sm text-red-600">
+              <div className="flex justify-between text-sm text-destructive">
                 <span>Discount ({discountPercentage}%)</span>
                 <span>- {formatCurrency(discountAmount)}</span>
               </div>

@@ -100,8 +100,8 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
                                 <p className="text-[10px] text-muted-foreground uppercase">Days of Stock</p>
                                 <p className={cn(
                                     "text-lg font-bold",
-                                    item.metrics.days_of_stock < 10 ? "text-red-500" :
-                                        item.metrics.days_of_stock > 60 ? "text-orange-500" : "text-green-500"
+                                    item.metrics.days_of_stock < 10 ? "text-destructive" :
+                                        item.metrics.days_of_stock > 60 ? "text-warning" : "text-success"
                                 )}>
                                     {item.metrics.days_of_stock}d
                                 </p>

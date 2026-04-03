@@ -105,7 +105,7 @@ export function StatementView({ customerId }: StatementViewProps) {
         { label: "Beginning Balance", value: formatCurrency(summary.beginning_balance) },
         { label: "Invoiced Amount", value: formatCurrency(summary.invoiced), color: "text-primary" },
         { label: "Payments Made", value: formatCurrency(summary.payments), color: "text-success" },
-        { label: "Balance Due", value: formatCurrency(summary.balance_due), color: "text-red-600 dark:text-red-400" }
+        { label: "Balance Due", value: formatCurrency(summary.balance_due), color: "text-destructive" }
     ];
 
     return (
@@ -157,7 +157,7 @@ export function StatementView({ customerId }: StatementViewProps) {
                                     <th className="px-4 py-3">Status</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            <tbody className="divide-y divide-border">
                                 {transactions.length === 0 ? (
                                     <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No transactions found</td></tr>
                                 ) : (

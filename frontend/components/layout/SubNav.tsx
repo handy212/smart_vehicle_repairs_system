@@ -91,14 +91,12 @@ interface SubNavProps {
 export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed, sidebarCollapsed = false, module }: SubNavProps) {
   const { user } = useAuthStore();
   const pathname = usePathname();
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, theme: activeTheme } = useTheme();
   const { isModuleEnabled } = useModules();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
-  // Calculate left position based on sidebar state
-  // Sidebar: 256px (w-64) when expanded, 64px (w-16) when collapsed
-  const sidebarLeft = sidebarCollapsed ? 64 : 256;
+
 
   const { data: brandingSettings } = useQuery<SystemSetting[]>({
     queryKey: ["settings", "branding", "public"],
@@ -144,164 +142,176 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     return item.href === longestMatch.href;
   };
 
+  const isPerfexTheme = activeTheme === "perfex";
   const isDark = resolvedTheme === "dark";
   const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;
+  const sidebarLeft = sidebarCollapsed ? 64 : (isPerfexTheme ? 230 : 256);
 
   // If module is disabled, hide the entire SubNav
   if (module && !isModuleEnabled(module)) {
     return null;
   }
 
+  const filteredItems = items.filter(item =>
+    (!item.module || isModuleEnabled(item.module)) &&
+    (!item.requiredRole || user?.role === item.requiredRole)
+  );
+
+  const renderItem = (item: SubNavItem, variant: "mobile" | "desktop") => {
+    const isActive = getIsActive(item);
+    const collapsed = variant === "desktop" && isCollapsed;
+
+    let linkClass: string;
+    let linkStyle: React.CSSProperties | undefined;
+    let content: React.ReactNode;
+
+    if (isPerfexTheme) {
+      if (variant === "mobile") {
+        linkClass = cn(
+          "flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium whitespace-nowrap shrink-0 transition-colors border-b-2",
+          isActive
+            ? "border-primary text-foreground font-semibold"
+            : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+        );
+        linkStyle = isActive ? { borderColor: visiblePrimary, color: visiblePrimary } : undefined;
+        content = (
+          <>
+            {item.icon && <item.icon className="h-3.5 w-3.5 shrink-0" style={isActive ? { color: visiblePrimary } : undefined} />}
+            <span>{item.name}</span>
+          </>
+        );
+      } else {
+        // Perfex desktop: full-width item with left border accent when active
+        linkClass = cn(
+          "flex items-center w-full transition-colors relative",
+          collapsed ? "justify-center px-2 py-2" : "px-3 py-[6px]",
+          isActive
+            ? "bg-white dark:bg-white/5 font-semibold border-l-[3px]"
+            : "border-l-[3px] border-transparent text-[#6b7280] hover:bg-[#f3f4f6] dark:hover:bg-white/5 hover:text-foreground text-[13px]"
+        );
+        linkStyle = isActive
+          ? { borderLeftColor: visiblePrimary, color: visiblePrimary, backgroundColor: `${visiblePrimary}0d` }
+          : undefined;
+        content = (
+          <>
+            {item.icon && (
+              <item.icon
+                className={cn("h-[14px] w-[14px] shrink-0 transition-colors", !collapsed && "mr-2.5")}
+                style={isActive ? { color: visiblePrimary } : undefined}
+              />
+            )}
+            {!collapsed && <span className="text-[13px] leading-none">{item.name}</span>}
+          </>
+        );
+      }
+    } else {
+      if (variant === "mobile") {
+        linkClass = cn(
+          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200 whitespace-nowrap shrink-0 relative overflow-hidden",
+          isActive
+            ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+        );
+        linkStyle = isActive ? { backgroundColor: `${visiblePrimary}15`, color: visiblePrimary } : undefined;
+        content = (
+          <>
+            {item.icon && (
+              <item.icon
+                className={cn("h-3.5 w-3.5 shrink-0 transition-colors", isActive ? "" : "text-muted-foreground")}
+                style={isActive ? { color: visiblePrimary } : undefined}
+              />
+            )}
+            <span>{item.name}</span>
+          </>
+        );
+      } else {
+        linkClass = cn(
+          "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
+          isActive
+            ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+            : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+          collapsed && "justify-center"
+        );
+        linkStyle = isActive ? { backgroundColor: `${visiblePrimary}15`, color: visiblePrimary } : undefined;
+        content = (
+          <>
+            {isActive && <div className="absolute inset-0 opacity-5" style={{ backgroundColor: visiblePrimary }} />}
+            {item.icon && (
+              <item.icon
+                className={cn("h-4 w-4 shrink-0 transition-colors", isActive ? "text-primary" : "text-muted-foreground", !collapsed && "mr-3")}
+                style={isActive ? { color: visiblePrimary } : undefined}
+              />
+            )}
+            {!collapsed && (
+              <>
+                <span className="relative z-10">{item.name}</span>
+                {isActive && (
+                  <div className="w-1 h-1 rounded-full ml-auto absolute right-2 top-1/2 -translate-y-1/2" style={{ backgroundColor: branding.primary_color }} />
+                )}
+              </>
+            )}
+          </>
+        );
+      }
+    }
+
+    const link = (
+      <Link key={item.name} href={item.href} className={linkClass} style={linkStyle} title={collapsed ? item.name : undefined}>
+        {content}
+      </Link>
+    );
+
+    if (item.permission) {
+      return <PermissionGuard key={item.name} permission={item.permission}>{link}</PermissionGuard>;
+    }
+    return link;
+  };
+
   return (
     <>
       {/* Mobile: Horizontal scrollable tab bar */}
-      <div
-        className="fixed top-16 left-0 right-0 z-20 border-b border-border bg-background shadow-sm lg:hidden"
-      >
-        <nav className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto scrollbar-none">
-          {items.filter(item => 
-            (!item.module || isModuleEnabled(item.module)) && 
-            (!item.requiredRole || user?.role === item.requiredRole)
-          ).map((item) => {
-            const isActive = getIsActive(item);
-
-            const navItem = (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200 whitespace-nowrap shrink-0 relative overflow-hidden",
-                  isActive
-                    ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                )}
-                style={isActive ? {
-                  backgroundColor: `${visiblePrimary}15`,
-                  color: visiblePrimary,
-                } : undefined}
-              >
-                {item.icon && (
-                  <item.icon
-                    className={cn(
-                      "h-3.5 w-3.5 shrink-0 transition-colors",
-                      isActive ? "" : "text-muted-foreground"
-                    )}
-                    style={isActive ? { color: visiblePrimary } : undefined}
-                  />
-                )}
-                <span>{item.name}</span>
-              </Link>
-            );
-
-            if (item.permission) {
-              return (
-                <PermissionGuard key={item.name} permission={item.permission}>
-                  {navItem}
-                </PermissionGuard>
-              );
-            }
-
-            return navItem;
-          })}
+      <div className={cn(
+        "fixed top-16 left-0 right-0 z-20 border-b border-border bg-background shadow-sm lg:hidden",
+        isPerfexTheme && "bg-[#f9f9f9]"
+      )}>
+        <nav className="flex items-center gap-0 px-2 overflow-x-auto scrollbar-none">
+          {filteredItems.map((item) => renderItem(item, "mobile"))}
         </nav>
       </div>
 
-      {/* Desktop: Vertical sidebar (unchanged) */}
+      {/* Desktop: Vertical sidebar */}
       <aside
         className={cn(
           "fixed top-16 bottom-0 z-10 transition-all duration-200",
           "hidden lg:block",
-          "border-r border-border bg-background shadow-sm",
-          isCollapsed ? "w-12" : "w-52"
+          isPerfexTheme
+            ? cn("border-r border-border bg-[#f9f9f9]", isCollapsed ? "w-12" : "w-52")
+            : cn("border-r border-border bg-background shadow-sm", isCollapsed ? "w-12" : "w-52")
         )}
         style={{ left: `${sidebarLeft}px` }}
       >
-        <div className={cn("p-3", isCollapsed && "px-2")}>
-          <div className={cn("flex items-center mb-3", isCollapsed ? "justify-center" : "justify-between")}>
+        <div className={cn(isPerfexTheme ? "pt-2" : "p-3", isCollapsed && "px-2")}>
+          <div className={cn("flex items-center", isPerfexTheme ? "mb-1 px-3 py-2" : "mb-3", isCollapsed ? "justify-center" : "justify-between")}>
             {!isCollapsed && (
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <h2 className={cn(
+                "text-xs font-semibold uppercase tracking-wider",
+                isPerfexTheme ? "text-[#9ca3af] text-[10px]" : "text-muted-foreground"
+              )}>
                 {title}
               </h2>
             )}
             <Button
               variant="ghost"
               size="icon"
-              className={cn("h-6 w-6", !isCollapsed && "ml-auto")}
+              className={cn("h-6 w-6 shrink-0", !isCollapsed && "ml-auto")}
               onClick={handleToggle}
               title={isCollapsed ? "Expand" : "Collapse"}
             >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
+              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
           </div>
-          <nav className="space-y-1">
-            {items.filter(item => 
-              (!item.module || isModuleEnabled(item.module)) && 
-              (!item.requiredRole || user?.role === item.requiredRole)
-            ).map((item) => {
-              const isActive = getIsActive(item);
-
-              const navItem = (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
-                    isActive
-                      ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground ",
-                    isCollapsed && "justify-center"
-                  )}
-                  style={isActive ? {
-                    backgroundColor: `${visiblePrimary}15`,
-                    color: visiblePrimary,
-                  } : undefined}
-                  title={isCollapsed ? item.name : undefined}
-                >
-                  {isActive && (
-                    <div
-                      className="absolute inset-0 opacity-5"
-                      style={{ backgroundColor: visiblePrimary }}
-                    />
-                  )}
-
-                  {item.icon && (
-                    <item.icon className={cn(
-                      "h-4 w-4 shrink-0 transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground",
-                      !isCollapsed && "mr-3"
-                    )}
-                      style={isActive ? { color: visiblePrimary } : undefined}
-                    />
-                  )}
-
-                  {!isCollapsed && (
-                    <>
-                      <span className="relative z-10">{item.name}</span>
-                      {isActive && (
-                        <div
-                          className="w-1 h-1 rounded-full ml-auto absolute right-2 top-1/2 -translate-y-1/2"
-                          style={{ backgroundColor: branding.primary_color }}
-                        />
-                      )}
-                    </>
-                  )}
-                </Link>
-              );
-
-              if (item.permission) {
-                return (
-                  <PermissionGuard key={item.name} permission={item.permission}>
-                    {navItem}
-                  </PermissionGuard>
-                );
-              }
-
-              return navItem;
-            })}
+          <nav className={isPerfexTheme ? "space-y-0" : "space-y-1"}>
+            {filteredItems.map((item) => renderItem(item, "desktop"))}
           </nav>
         </div>
       </aside>
@@ -373,6 +383,10 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Training", href: "/hr/training", permission: "view_training", icon: GraduationCap },
     { name: "Compliance", href: "/hr/compliance", permission: "view_compliance", icon: FileCheck },
   ],
+  sms: [
+    { name: "Console", href: "/sms", permission: "send_notifications", icon: MessageSquare },
+    { name: "Templates", href: "/sms/templates", permission: "send_notifications", icon: Settings2 },
+  ],
 };
 
 // Helper function to get sub-nav config based on pathname
@@ -416,6 +430,14 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
       items: subNavConfig.hr,
       title: "HR Management",
       module: "hr",
+    };
+  }
+
+  if (pathname.startsWith("/sms")) {
+    return {
+      items: subNavConfig.sms,
+      title: "Communications",
+      module: "sms",
     };
   }
 

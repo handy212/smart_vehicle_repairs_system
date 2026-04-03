@@ -85,7 +85,7 @@ function TrainingDetailContent() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => setShowEdit(true)}><Pencil className="h-4 w-4 mr-2" />Edit Program</DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-red-600" onClick={() => setShowDelete(true)}><Trash2 className="h-4 w-4 mr-2" />Delete Program</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive" onClick={() => setShowDelete(true)}><Trash2 className="h-4 w-4 mr-2" />Delete Program</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </PermissionGuard>
@@ -138,7 +138,7 @@ function TrainingDetailContent() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem onClick={() => setEditingEnrollment(rec)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-red-600" onClick={() => setDeletingEnrollmentId(rec.id)}><Trash2 className="h-4 w-4 mr-2" />Unenroll</DropdownMenuItem>
+                                                            <DropdownMenuItem className="text-destructive" onClick={() => setDeletingEnrollmentId(rec.id)}><Trash2 className="h-4 w-4 mr-2" />Unenroll</DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </PermissionGuard>

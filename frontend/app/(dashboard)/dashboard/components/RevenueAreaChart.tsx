@@ -56,8 +56,8 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
               {formatMoney(d.revenue)}
             </span>
             <div className="flex items-center gap-1.5 mt-1">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-              <span className="text-[10px] font-bold text-emerald-500 uppercase">Settled Revenue</span>
+              <div className="w-2 h-2 rounded-full bg-success/100 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+              <span className="text-[10px] font-bold text-success uppercase">Settled Revenue</span>
             </div>
           </div>
         </div>

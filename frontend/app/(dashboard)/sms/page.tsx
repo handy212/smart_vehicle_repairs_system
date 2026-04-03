@@ -8,23 +8,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/lib/hooks/useToast';
-import { 
-    Loader2, Send, Users, UserPlus, X, Phone, 
+import {
+    Loader2, Send, Users, UserPlus, X,
     Search, TrendingUp, AlertCircle, DollarSign,
     Sparkles, Paperclip, Clock, Calendar, MoreVertical,
-    CheckCircle2, XCircle, Info, History
+    CheckCircle2, History
 } from 'lucide-react';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import smsApi, { SMSRecipient, SMSHistoryItem } from '@/services/sms';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { AIAssistDialog } from '@/components/sms/AIAssistDialog';
+import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { DataTable, Column } from '@/components/shared/DataTable';
 import api from '@/lib/api/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSearchParams } from 'next/navigation';
-import { TemplateManager } from '@/components/sms/TemplateManager';
 import { RecipientSelector } from '@/components/sms/RecipientSelector';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
@@ -34,10 +32,12 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils/cn';
+import { useTheme } from '@/lib/hooks/useTheme';
 
 
 interface Customer {
     id: number;
+    user_id?: number;
     company_name: string;
     full_name: string;
     first_name: string;
@@ -56,6 +56,8 @@ const customersApi = {
 export default function SMSConsolePage() {
     const { toast } = useToast();
     const searchParams = useSearchParams();
+    const { theme: activeTheme } = useTheme();
+    const isPerfex = activeTheme === "perfex";
     const [message, setMessage] = useState('');
     const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
     const [isSending, setIsSending] = useState(false);
@@ -63,6 +65,7 @@ export default function SMSConsolePage() {
     const [customerSearch, setCustomerSearch] = useState('');
     const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
     const [scheduledFor, setScheduledFor] = useState('');
+    const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
 
     // Queries
     const { data: templates } = useQuery({
@@ -93,17 +96,6 @@ export default function SMSConsolePage() {
     });
     const customers = customersData?.results || [];
 
-    // AI Assist Mutation
-    const aiAssistMutation = useMutation({
-        mutationFn: (prompt: string) => smsApi.aiAssist(prompt),
-        onSuccess: (data) => {
-            setMessage(data.suggestion);
-            toast({ title: 'AI Assist', description: 'Message suggestion generated.' });
-        },
-        onError: () => {
-            toast({ title: 'Error', description: 'Failed to generate suggestion.', variant: 'destructive' });
-        }
-    });
 
     useEffect(() => {
         const rId = searchParams.get('recipient_id');
@@ -192,49 +184,125 @@ export default function SMSConsolePage() {
 
     const smsInfo = getSMSInfo();
 
+    const handleToggleCustomerSelection = (customerId: number) => {
+        setSelectedCustomerIds(prev =>
+            prev.includes(customerId)
+                ? prev.filter(id => id !== customerId)
+                : [...prev, customerId]
+        );
+    };
+
+    const handleAddSelectedCustomers = () => {
+        const selected = customers.filter((c: Customer) => selectedCustomerIds.includes(c.id));
+        let addedCount = 0;
+        selected.forEach((customer: Customer) => {
+            if (!customer.phone) return;
+            const uid = (customer.user_id ?? customer.id).toString();
+            if (recipients.some(r => r.value === uid && r.type === 'user')) return;
+            const name = customer.company_name || `${customer.first_name} ${customer.last_name}`;
+            setRecipients(prev => [...prev, { type: 'user', value: uid, name: `${name} (${customer.phone})` }]);
+            addedCount++;
+        });
+        if (addedCount > 0) {
+            toast({ title: 'Added', description: `${addedCount} customer(s) added.` });
+        }
+        setSelectedCustomerIds([]);
+        setIsCustomerDialogOpen(false);
+    };
+
+    const filteredCustomers: Customer[] = customers.filter((c: Customer) => {
+        if (!customerSearch) return true;
+        const search = customerSearch.toLowerCase();
+        return (
+            c.first_name?.toLowerCase().includes(search) ||
+            c.last_name?.toLowerCase().includes(search) ||
+            c.company_name?.toLowerCase().includes(search) ||
+            c.email?.toLowerCase().includes(search) ||
+            c.phone?.toLowerCase().includes(search)
+        );
+    });
+    const filteredCustomersWithPhone = filteredCustomers.filter((c) => c.phone);
+    const allFilteredSelected =
+        filteredCustomersWithPhone.length > 0 &&
+        filteredCustomersWithPhone.every((c) => selectedCustomerIds.includes(c.id));
+
+    const handleSelectAll = () => {
+        if (allFilteredSelected) {
+            setSelectedCustomerIds((prev) =>
+                prev.filter((id) => !filteredCustomersWithPhone.some((c) => c.id === id))
+            );
+        } else {
+            setSelectedCustomerIds((prev) => {
+                const toAdd = filteredCustomersWithPhone
+                    .map((c) => c.id)
+                    .filter((id) => !prev.includes(id));
+                return [...prev, ...toAdd];
+            });
+        }
+    };
+
     return (
         <PermissionGuard permission="send_notifications">
-            <div className="space-y-6 max-w-[1600px] mx-auto px-4 py-4 lg:px-8">
+            <div className={isPerfex ? "space-y-4 p-4 max-w-[1600px] mx-auto" : "space-y-6 max-w-[1600px] mx-auto px-4 py-4 lg:px-8"}>
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                        <h1 className={isPerfex ? "text-base font-semibold text-foreground" : "text-2xl font-bold text-foreground tracking-tight flex items-center gap-2"}>
                             SMS Console
                         </h1>
                         <p className="text-sm text-muted-foreground mt-0.5">Manage customer communications and messaging stats</p>
                     </div>
                 </div>
 
-                {/* Stats Cards - Modern Premium Style */}
+                {/* Stats Cards */}
+                {isPerfex ? (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        {[
+                            { label: "Sent Today", value: stats?.sent_today || 0, icon: <TrendingUp className="w-4 h-4" />, color: "bg-success/10 text-success" },
+                            { label: "Scheduled", value: stats?.scheduled || 0, icon: <Clock className="w-4 h-4" />, color: "bg-info/10 text-primary" },
+                            { label: "Failed Today", value: stats?.failed_today || 0, icon: <AlertCircle className="w-4 h-4" />, color: "bg-destructive/10 text-destructive" },
+                            { label: "SMS Balance", value: balance?.success ? balance.balance.toLocaleString() : 'N/A', icon: <DollarSign className="w-4 h-4" />, color: "bg-warning/10 text-warning" },
+                        ].map((s) => (
+                            <div key={s.label} className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] p-3 flex items-center gap-3">
+                                <div className={`h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0 ${s.color}`}>{s.icon}</div>
+                                <div className="min-w-0">
+                                    <p className="text-lg font-bold text-foreground leading-tight">{s.value}</p>
+                                    <p className="text-[11px] text-muted-foreground">{s.label}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                    <StatCard 
-                        label="SENT TODAY" 
-                        value={stats?.sent_today || 0} 
-                        icon={<TrendingUp className="h-5 w-5 text-green-600" />}
+                    <StatCard
+                        label="SENT TODAY"
+                        value={stats?.sent_today || 0}
+                        icon={<TrendingUp className="h-5 w-5 text-success" />}
                         iconBg="bg-green-100"
                     />
-                    <StatCard 
-                        label="SCHEDULED" 
-                        value={stats?.scheduled || 0} 
-                        icon={<Clock className="h-5 w-5 text-blue-600" />}
+                    <StatCard
+                        label="SCHEDULED"
+                        value={stats?.scheduled || 0}
+                        icon={<Clock className="h-5 w-5 text-primary" />}
                         iconBg="bg-blue-100"
                         variant="primary"
                     />
-                    <StatCard 
-                        label="FAILED TODAY" 
-                        value={stats?.failed_today || 0} 
-                        icon={<AlertCircle className="h-5 w-5 text-red-600" />}
+                    <StatCard
+                        label="FAILED TODAY"
+                        value={stats?.failed_today || 0}
+                        icon={<AlertCircle className="h-5 w-5 text-destructive" />}
                         iconBg="bg-red-100"
                         variant="danger"
                     />
-                    <StatCard 
-                        label="SMS BALANCE" 
-                        value={balance?.success ? balance.balance.toLocaleString() : 'N/A'} 
-                        icon={<DollarSign className="h-5 w-5 text-orange-600" />}
+                    <StatCard
+                        label="SMS BALANCE"
+                        value={balance?.success ? balance.balance.toLocaleString() : 'N/A'}
+                        icon={<DollarSign className="h-5 w-5 text-warning" />}
                         iconBg="bg-orange-100"
                         symbol={balance?.currency || ""}
                     />
                 </div>
+                )}
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     {/* Left Column: Composer */}
@@ -245,14 +313,13 @@ export default function SMSConsolePage() {
                                     <Send className="h-4 w-4 text-primary" />
                                     <span>Compose Message</span>
                                 </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="text-primary h-8 hover:bg-primary/10 transition-colors"
-                                    onClick={() => aiAssistMutation.mutate(message)}
-                                    disabled={aiAssistMutation.isPending}
+                                    onClick={() => setIsAIDialogOpen(true)}
                                 >
-                                    {aiAssistMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                                    <Sparkles className="h-4 w-4 mr-2" />
                                     AI Assist
                                 </Button>
                             </div>
@@ -380,7 +447,7 @@ export default function SMSConsolePage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-500 rounded-lg"
+                                                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive rounded-lg"
                                                     onClick={() => handleRemoveRecipient(i)}
                                                 >
                                                     <X className="h-4 w-4" />
@@ -395,7 +462,7 @@ export default function SMSConsolePage() {
                                 <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold"
+                                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg text-xs font-semibold"
                                     onClick={() => setRecipients([])}
                                 >
                                     Clear All Recipients
@@ -413,8 +480,8 @@ export default function SMSConsolePage() {
                                         <DialogHeader className="p-6 pb-2">
                                             <DialogTitle>Select Customers</DialogTitle>
                                         </DialogHeader>
-                                        <div className="px-6 pb-4">
-                                            <div className="relative">
+                                        <div className="px-6 pb-4 flex items-center gap-3">
+                                            <div className="relative flex-1">
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                                                 <Input
                                                     type="text"
@@ -424,20 +491,19 @@ export default function SMSConsolePage() {
                                                     className="pl-10 h-11 rounded-xl bg-muted/20 border-muted"
                                                 />
                                             </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-11 px-4 rounded-xl whitespace-nowrap flex-shrink-0"
+                                                onClick={handleSelectAll}
+                                                disabled={filteredCustomersWithPhone.length === 0}
+                                            >
+                                                {allFilteredSelected ? 'Deselect All' : `Select All (${filteredCustomersWithPhone.length})`}
+                                            </Button>
                                         </div>
                                         <ScrollArea className="flex-1 px-6">
                                             <div className="space-y-2">
-                                                {customers.filter((c: Customer) => {
-                                                    if (!customerSearch) return true;
-                                                    const search = customerSearch.toLowerCase();
-                                                    return (
-                                                        c.first_name?.toLowerCase().includes(search) ||
-                                                        c.last_name?.toLowerCase().includes(search) ||
-                                                        c.company_name?.toLowerCase().includes(search) ||
-                                                        c.email?.toLowerCase().includes(search) ||
-                                                        c.phone?.toLowerCase().includes(search)
-                                                    );
-                                                }).map((c: Customer) => (
+                                                {filteredCustomers.map((c: Customer) => (
                                                     <div 
                                                         key={c.id} 
                                                         className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 border border-transparent hover:border-muted-foreground/10 transition-all cursor-pointer"
@@ -460,16 +526,16 @@ export default function SMSConsolePage() {
                                                                 <p className="text-xs text-muted-foreground">{c.phone}</p>
                                                             </div>
                                                         </div>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="sm" 
-                                                            disabled={recipients.some(r => r.value === c.id.toString() && r.type === 'user')}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={recipients.some(r => r.value === (c.user_id ?? c.id).toString() && r.type === 'user')}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const name = c.company_name || `${c.first_name} ${c.last_name}`;
                                                                 handleAddRecipient({
                                                                     type: 'user',
-                                                                    value: c.id.toString(),
+                                                                    value: (c.user_id ?? c.id).toString(),
                                                                     name: `${name} (${c.phone})`
                                                                 });
                                                             }}
@@ -574,7 +640,7 @@ export default function SMSConsolePage() {
                                                 <DropdownMenuContent align="end" className="rounded-xl shadow-lg border-muted">
                                                     <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1">Resend Message</DropdownMenuItem>
                                                     <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1">View Details</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1 text-red-500 hover:text-red-600 focus:text-red-500">Delete Log</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-xs cursor-pointer rounded-lg m-1 text-destructive hover:text-destructive focus:text-destructive">Delete Log</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </td>
@@ -595,33 +661,16 @@ export default function SMSConsolePage() {
                     </div>
                 </Card>
             </div>
+
+            <AIAssistDialog
+                open={isAIDialogOpen}
+                onOpenChange={setIsAIDialogOpen}
+                currentDraft={message}
+                mode="sms"
+                onUseSuggestion={(text) => setMessage(text)}
+            />
         </PermissionGuard>
     );
-
-    function handleToggleCustomerSelection(customerId: number) {
-        setSelectedCustomerIds(prev =>
-            prev.includes(customerId)
-                ? prev.filter(id => id !== customerId)
-                : [...prev, customerId]
-        );
-    }
-
-    function handleAddSelectedCustomers() {
-        const selected = customers.filter((c: Customer) => selectedCustomerIds.includes(c.id));
-        let addedCount = 0;
-        selected.forEach((customer: Customer) => {
-            if (!customer.phone) return;
-            if (recipients.some(r => r.value === customer.id.toString() && r.type === 'user')) return;
-            const name = customer.company_name || `${customer.first_name} ${customer.last_name}`;
-            setRecipients(prev => [...prev, { type: 'user', value: customer.id.toString(), name: `${name} (${customer.phone})` }]);
-            addedCount++;
-        });
-        if (addedCount > 0) {
-            toast({ title: 'Added', description: `${addedCount} customer(s) added.` });
-        }
-        setSelectedCustomerIds([]);
-        setIsCustomerDialogOpen(false);
-    }
 }
 
 
@@ -644,7 +693,7 @@ function StatCard({ label, value, icon, iconBg, symbol = "", variant = "default"
                             <p className={cn(
                                 "text-2xl lg:text-3xl font-black tracking-tight",
                                 variant === "primary" && "text-primary",
-                                variant === "danger" && "text-red-500",
+                                variant === "danger" && "text-destructive",
                                 variant === "default" && "text-foreground"
                             )}>{value}</p>
                         </div>
@@ -667,11 +716,11 @@ function StatusBadge({ status }: { status: string }) {
     };
 
     if (s === 'sent' || s === 'delivered') {
-        config = { label: "SENT", dot: "bg-green-500", bg: "bg-green-50 shadow-sm text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200/50" };
+        config = { label: "SENT", dot: "bg-success/100", bg: "bg-success/10 shadow-sm text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200/50" };
     } else if (s === 'failed') {
-        config = { label: "FAILED", dot: "bg-red-500", bg: "bg-red-50 shadow-sm text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200/50" };
+        config = { label: "FAILED", dot: "bg-destructive/100", bg: "bg-destructive/10 shadow-sm text-destructive dark:bg-red-900/20 dark:text-red-400 border-destructive/20/50" };
     } else if (s === 'scheduled' || s === 'pending') {
-        config = { label: "SCHEDULED", dot: "bg-blue-500", bg: "bg-blue-50 shadow-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200/50" };
+        config = { label: "SCHEDULED", dot: "bg-info/100", bg: "bg-info/10 shadow-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-info/20/50" };
     }
 
     return (

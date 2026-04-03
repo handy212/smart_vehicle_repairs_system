@@ -41,7 +41,7 @@ export function ServiceReminders({ vehicles, isLoading }: ServiceRemindersProps)
             
             {reminders.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-10 text-center">
-                    <PremiumIcons.CheckCircle className="mb-3 h-10 w-10 text-emerald-500" />
+                    <PremiumIcons.CheckCircle className="mb-3 h-10 w-10 text-success" />
                     <p className="text-sm font-semibold text-foreground">No service reminders need attention right now.</p>
                     <p className="mt-2 max-w-sm text-xs leading-5 text-muted-foreground">
                         When vehicles become overdue based on mileage or service history, they will appear here for quick follow-up.
@@ -60,8 +60,8 @@ export function ServiceReminders({ vehicles, isLoading }: ServiceRemindersProps)
                         : PremiumIcons.AlertTriangle;
                     
                     const iconColor = statusType === 'danger' 
-                        ? 'text-red-500' 
-                        : 'text-amber-500';
+                        ? 'text-destructive' 
+                        : 'text-warning';
 
                     return (
                         <Link

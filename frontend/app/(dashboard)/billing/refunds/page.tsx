@@ -134,7 +134,7 @@ export default function RefundsPage() {
                                     setSearch("");
                                     setStatusFilter("");
                                 }}
-                                className="h-8 text-muted-foreground hover:text-red-600"
+                                className="h-8 text-muted-foreground hover:text-destructive"
                             >
                                 <XCircle className="w-4 h-4 mr-1" />
                                 Clear
@@ -219,7 +219,7 @@ export default function RefundsPage() {
                                                                 size="sm"
                                                                 onClick={() => rejectMutation.mutate(refund.id)}
                                                                 disabled={rejectMutation.isPending}
-                                                                className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                                                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                                                             >
                                                                 <XCircle className="h-3.5 w-3.5" />
                                                             </Button>

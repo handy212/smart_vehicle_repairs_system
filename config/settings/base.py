@@ -374,9 +374,33 @@ CHANNEL_LAYERS = {
 # API Documentation
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Smart Vehicle Repairs API',
-    'DESCRIPTION': 'Comprehensive Vehicle Repair Management System',
+    'DESCRIPTION': 'Comprehensive Vehicle Repair Management System with modules for Customers, Inventory, Billing, and Service Tracking.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {
+        'name': 'SafeTrack Systems Support',
+        'url': 'https://safetracksystems.com',
+        'email': 'support@safetracksystems.com',
+    },
+    'COMPONENT_SPLIT_PATCH': True,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'filter': True,
+    },
+    'ENUM_NAME_OVERRIDES': {
+        'WorkOrderStatusEnum': 'apps.workorders.models.WorkOrder.STATUS_CHOICES',
+        'InvoiceStatusEnum': 'apps.billing.models.Invoice.STATUS_CHOICES',
+        'PaymentStatusEnum': 'apps.billing.models.Payment.STATUS_CHOICES',
+    },
+    'POSTPROCESSING_HOOKS': [
+        'apps.core.schema_hooks.custom_postprocessing_hook',
+    ],
     # Require staff authentication to view API docs.
     # This prevents information disclosure of all endpoints/parameters.
     'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAdminUser'],

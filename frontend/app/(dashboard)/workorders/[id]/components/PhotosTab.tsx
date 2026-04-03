@@ -358,7 +358,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                   {analysisResult && (
                     <div className="space-y-4">
                       <Alert className="bg-purple-50/50 border-purple-100 italic">
-                        <Info className="h-4 w-4 text-purple-600" />
+                        <Info className="h-4 w-4 text-primary" />
                         <AlertDescription className="text-purple-900">
                           {analysisResult.summary}
                         </AlertDescription>
@@ -409,7 +409,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
                               variant="outline"
                               className={
                                 analysisResult.suggested_severity === "critical"
-                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  ? "bg-destructive/10 text-destructive border-destructive/20"
                                 : analysisResult.suggested_severity === "major"
                                     ? "bg-warning/15 text-warning-foreground border-warning/20"
                                     : "bg-info/10 text-info border-info/20"
@@ -513,7 +513,7 @@ function UploadPhotoDialog({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Photo <span className="text-red-500">*</span>
+                Photo <span className="text-destructive">*</span>
               </label>
               <Input
                 type="file"
@@ -536,7 +536,7 @@ function UploadPhotoDialog({
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Photo Type <span className="text-red-500">*</span>
+                Photo Type <span className="text-destructive">*</span>
               </label>
               <Select
                 value={photoType}

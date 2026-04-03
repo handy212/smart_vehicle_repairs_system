@@ -390,7 +390,7 @@ export default function EditWorkOrderPage() {
         </Link>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600 dark:text-red-400">Work order not found.</p>
+            <p className="text-destructive dark:text-red-400">Work order not found.</p>
           </CardContent>
         </Card>
       </div>
@@ -413,15 +413,15 @@ export default function EditWorkOrderPage() {
       </div>
 
       {errorMessage && (
-        <Card className="border-red-500 bg-red-50 dark:bg-red-900/20">
+        <Card className="border-destructive bg-destructive/10 dark:bg-red-900/20">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                <p className="text-sm font-medium text-destructive dark:text-red-200">
                   Error updating work order
                 </p>
-                <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                <p className="text-sm text-destructive dark:text-red-400 mt-1">
                   {errorMessage}
                 </p>
               </div>
@@ -479,7 +479,7 @@ export default function EditWorkOrderPage() {
                           }
                         }}
                       >
-                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-red-500" : ""}`}>
+                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-destructive" : ""}`}>
                           <SelectValue placeholder="Select a customer" />
                         </SelectTrigger>
                         <SelectContent>
@@ -492,7 +492,7 @@ export default function EditWorkOrderPage() {
                       </Select>
 
                       {errors.customer && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
                           {errors.customer.message}
                         </p>
                       )}
@@ -546,7 +546,7 @@ export default function EditWorkOrderPage() {
                         onValueChange={(val) => setValue("vehicle", parseInt(val))}
                         disabled={!selectedCustomer}
                       >
-                        <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}>
+                        <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-destructive" : ""}`}>
                           <SelectValue placeholder={!selectedCustomer
                             ? "Select a customer first"
                             : isLoadingVehicles
@@ -565,7 +565,7 @@ export default function EditWorkOrderPage() {
                       </Select>
 
                       {errors.vehicle && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p className="mt-1 text-sm text-destructive dark:text-red-400">
                           {errors.vehicle.message}
                         </p>
                       )}
@@ -706,7 +706,7 @@ export default function EditWorkOrderPage() {
                       onValueChange={(val) => setValue("status", val as any)}
                       disabled={!workOrder}
                     >
-                      <SelectTrigger id="status" className={`w-full ${errors.status ? "border-red-500" : ""}`}>
+                      <SelectTrigger id="status" className={`w-full ${errors.status ? "border-destructive" : ""}`}>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -729,7 +729,7 @@ export default function EditWorkOrderPage() {
                       </p>
                     )}
                     {errors.status && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      <p className="mt-1 text-sm text-destructive dark:text-red-400">
                         {errors.status.message}
                       </p>
                     )}

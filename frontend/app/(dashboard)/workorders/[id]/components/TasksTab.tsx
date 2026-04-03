@@ -304,7 +304,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 {workflowTasks.length > 0 && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-green-500" />
+                      <CheckCircle2 className="w-3 h-3 text-success" />
                       <span>Completed: {workflowTasks.filter(t => t.status === 'completed').length}</span>
                     </div>
                     <span>•</span>

@@ -8,10 +8,11 @@ import { vehiclesApi } from "@/lib/api/vehicles";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { workordersApi } from "@/lib/api/workorders";
 import { reportingApi, type DashboardOverview } from "@/lib/api/reporting";
+import { billingApi } from "@/lib/api/billing";
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,9 @@ import { DashboardHeader } from "./components/DashboardHeader";
 import { InventoryWatchlist } from "./components/InventoryWatchlist";
 import { SmartDiagnosisFeed } from "./components/SmartDiagnosisFeed";
 import { CompactActivityList } from "./components/CompactActivityList";
+import { PerfexDashboard } from "./components/PerfexDashboard";
+import { useTheme } from "@/lib/hooks/useTheme";
+import { useBranchStore } from "@/store/branchStore";
 
 // Lazy load heavy chart components
 const WorkOrderPieChart = dynamic(() => import("./components/WorkOrderPieChart"), {
@@ -58,10 +62,13 @@ type SnapshotCard = {
 
 export default function DashboardPage() {
   const { formatCurrency } = useCurrency();
+  const { theme: activeTheme } = useTheme();
+  const isPerfex = activeTheme === "perfex";
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   // Fetch dashboard overview from reporting API
-  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
-    queryKey: ["dashboard", "overview"],
+  const { data: dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = useQuery({
+    queryKey: ["dashboard", "overview", activeBranchId],
     queryFn: () => reportingApi.dashboard(),
     retry: 1,
     refetchOnWindowFocus: false,
@@ -69,8 +76,8 @@ export default function DashboardPage() {
   });
 
   // Fetch work order statistics
-  const { data: workOrderStats } = useQuery({
-    queryKey: ["dashboard", "workorder-stats"],
+  const { data: workOrderStats, refetch: refetchWOStats } = useQuery({
+    queryKey: ["dashboard", "workorder-stats", activeBranchId],
     queryFn: () => {
       const today = new Date();
       const startDate = new Date(today);
@@ -86,8 +93,8 @@ export default function DashboardPage() {
   });
 
   // Fetch low stock items
-  const { data: lowStockData, isLoading: lowStockLoading } = useQuery({
-    queryKey: ["dashboard", "low-stock"],
+  const { data: lowStockData, isLoading: lowStockLoading, refetch: refetchLowStock } = useQuery({
+    queryKey: ["dashboard", "low-stock", activeBranchId],
     queryFn: () => reportingApi.lowStock(),
     retry: 1,
     refetchOnWindowFocus: false,
@@ -95,40 +102,101 @@ export default function DashboardPage() {
   });
 
   // Fetch service due report
-  const { data: serviceDueData, isLoading: serviceDueLoading } = useQuery({
-    queryKey: ["dashboard", "service-due"],
+  const { data: serviceDueData, isLoading: serviceDueLoading, refetch: refetchServiceDue } = useQuery({
+    queryKey: ["dashboard", "service-due", activeBranchId],
     queryFn: () => reportingApi.serviceDue(),
     staleTime: 15 * 60 * 1000,
   });
 
-  const { data: todayAppointments } = useQuery({
-    queryKey: ["appointments", "today"],
+  const { data: todayAppointments, refetch: refetchAppointments } = useQuery({
+    queryKey: ["appointments", "today", activeBranchId],
     queryFn: () => appointmentsApi.today(),
     staleTime: 2 * 60 * 1000,
   });
 
-  const { data: activeWorkOrders } = useQuery({
-    queryKey: ["workorders", "active"],
+  const { data: activeWorkOrders, refetch: refetchActiveWOs } = useQuery({
+    queryKey: ["workorders", "active", activeBranchId],
     queryFn: () => workordersApi.active(),
     retry: 1,
     refetchOnWindowFocus: false,
     staleTime: 2 * 60 * 1000,
   });
 
+  // Perfex-only: invoice stats, recent invoices, technician performance, 7-day revenue
+  const { data: invoiceStatsData, refetch: refetchInvoiceStats } = useQuery({
+    queryKey: ["dashboard", "invoice-stats", activeBranchId],
+    queryFn: () => billingApi.invoices.stats(),
+    enabled: isPerfex,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: recentInvoicesData, refetch: refetchRecentInvoices } = useQuery({
+    queryKey: ["dashboard", "recent-invoices", activeBranchId],
+    queryFn: () => billingApi.invoices.list({ ordering: "-invoice_date", page: 1 }),
+    enabled: isPerfex,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: techPerfData, refetch: refetchTechPerf } = useQuery({
+    queryKey: ["dashboard", "tech-performance", activeBranchId],
+    queryFn: () => {
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(start.getDate() - 30);
+      return reportingApi.technicianPerformance({
+        start_date: format(start, "yyyy-MM-dd"),
+        end_date: format(today, "yyyy-MM-dd"),
+      });
+    },
+    enabled: isPerfex,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: revenueChartRaw, refetch: refetchRevenueChart } = useQuery({
+    queryKey: ["dashboard", "revenue-chart", activeBranchId],
+    queryFn: () => {
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(start.getDate() - 6);
+      return reportingApi.revenue({
+        start_date: format(start, "yyyy-MM-dd"),
+        end_date: format(today, "yyyy-MM-dd"),
+        period: "daily",
+      });
+    },
+    enabled: isPerfex,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Fetch counts only
   const { data: customerCount } = useQuery({
-    queryKey: ["customers", "count"],
+    queryKey: ["customers", "count", activeBranchId],
     queryFn: () => customersApi.list({ page: 1 }),
     select: (data) => data?.count || 0,
     staleTime: 10 * 60 * 1000,
   });
 
   const { data: vehicleCount } = useQuery({
-    queryKey: ["vehicles", "count"],
+    queryKey: ["vehicles", "count", activeBranchId],
     queryFn: () => vehiclesApi.list({ page: 1 }),
     select: (data) => data?.count || 0,
     staleTime: 10 * 60 * 1000,
   });
+
+  const handleRefresh = useCallback(() => {
+    void refetchDashboard();
+    void refetchWOStats();
+    void refetchLowStock();
+    void refetchServiceDue();
+    void refetchAppointments();
+    void refetchActiveWOs();
+    if (isPerfex) {
+      void refetchInvoiceStats();
+      void refetchRecentInvoices();
+      void refetchTechPerf();
+      void refetchRevenueChart();
+    }
+  }, [isPerfex, refetchDashboard, refetchWOStats, refetchLowStock, refetchServiceDue, refetchAppointments, refetchActiveWOs, refetchInvoiceStats, refetchRecentInvoices, refetchTechPerf, refetchRevenueChart]);
 
   const isLoading = dashboardLoading;
 
@@ -295,6 +363,70 @@ export default function DashboardPage() {
     },
   ];
 
+  if (activeTheme === "perfex") {
+    return (
+      <PerfexDashboard
+        isLoading={isLoading}
+        stats={stats}
+        workOrderSummary={workOrderStats?.summary}
+        recentWorkOrders={dashboardData?.recent_activity?.work_orders?.map((wo) => ({
+          id: wo.id,
+          wo_number: wo.wo_number,
+          status: wo.status,
+          created_at: wo.created_at,
+          diagnosis_notes: wo.diagnosis_notes ?? undefined,
+          customer: (wo as any).customer_name || (wo as any).customer || undefined,
+          vehicle: (wo as any).vehicle_display || (wo as any).vehicle || undefined,
+        }))}
+        todayAppointments={todayAppointments?.map((appt) => ({
+          id: appt.id,
+          status: appt.status,
+          customer_name: (appt as any).customer_name || (appt as any).customer?.name || undefined,
+          vehicle_display: (appt as any).vehicle_display || undefined,
+          vehicle_info: (appt as any).vehicle_info || undefined,
+          appointment_time: (appt as any).appointment_time || undefined,
+        }))}
+        lowStockItems={lowStockData?.items?.map((item: any) => ({
+          id: item.part?.id,
+          name: item.part?.name,
+          part_number: item.part?.part_number,
+          quantity: item.stock?.current ?? 0,
+          reorder_point: item.stock?.reorder_point ?? 0,
+        }))}
+        serviceDueVehicles={serviceDueData?.vehicles}
+        invoiceStats={invoiceStatsData}
+        recentInvoices={recentInvoicesData?.results?.map((inv) => ({
+          id: inv.id,
+          invoice_number: inv.invoice_number,
+          customer_name: inv.customer_name,
+          status: inv.status,
+          total: parseFloat(inv.total) || 0,
+          balance_due: parseFloat(inv.balance_due ?? "0") || 0,
+          due_date: inv.due_date,
+          invoice_date: inv.invoice_date,
+        }))}
+        technicianData={techPerfData?.technicians?.map((t: any) => ({
+          name: t.technician?.name,
+          role: t.technician?.role,
+          total_jobs: t.metrics?.total_work_orders,
+          completed_jobs: t.metrics?.completed,
+          in_progress_jobs: t.metrics?.in_progress,
+          completion_rate: t.metrics?.total_work_orders
+            ? (t.metrics.completed / t.metrics.total_work_orders) * 100
+            : 0,
+          avg_completion_days: t.metrics?.average_completion_hours != null
+            ? t.metrics.average_completion_hours / 24
+            : null,
+          total_revenue: t.metrics?.revenue,
+        }))}
+        revenueChartData={revenueChartRaw?.daily ?? revenueChartRaw}
+        onRefresh={handleRefresh}
+        todayLabel={todayLabel}
+        formatCurrency={formatCurrency}
+      />
+    );
+  }
+
   if (isLoading) {
     return <DashboardSkeleton />;
   }
@@ -330,7 +462,7 @@ export default function DashboardPage() {
             {attentionCards.map((item) => {
               const toneClasses = {
                 danger: "border-rose-200 bg-rose-50/70 hover:border-rose-300 dark:border-rose-950/60 dark:bg-rose-950/20",
-                warning: "border-amber-200 bg-amber-50/70 hover:border-amber-300 dark:border-amber-950/60 dark:bg-amber-950/20",
+                warning: "border-warning/20 bg-warning/10/70 hover:border-amber-300 dark:border-amber-950/60 dark:bg-amber-950/20",
                 info: "border-sky-200 bg-sky-50/70 hover:border-sky-300 dark:border-sky-950/60 dark:bg-sky-950/20",
               } satisfies Record<AttentionCard["tone"], string>;
 

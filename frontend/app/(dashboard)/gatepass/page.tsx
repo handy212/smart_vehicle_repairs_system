@@ -161,7 +161,7 @@ export default function GatePassPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+      <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded">
         Error loading gate passes. Please try again.
       </div>
     );
@@ -220,7 +220,7 @@ export default function GatePassPage() {
                 setAdvancedFilters({});
                 setPage(1);
               }}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
               title="Clear all filters"
             >
               <X className="w-3.5 h-3.5" />
@@ -349,7 +349,7 @@ export default function GatePassPage() {
                             <PermissionGuard permission="delete_gatepass">
                               <DropdownMenuItem
                                 onClick={() => handleDelete(gatePass)}
-                                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 text-xs"
+                                className="text-destructive dark:text-red-400 focus:text-destructive dark:focus:text-red-400 focus:bg-destructive/10 dark:focus:bg-red-900/20 text-xs"
                                 disabled={deleteMutation.isPending}
                               >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" />

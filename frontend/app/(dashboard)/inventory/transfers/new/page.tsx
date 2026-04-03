@@ -196,7 +196,7 @@ export default function NewTransferPage() {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                         onClick={() => handleRemoveItem(index)}
                                     >
                                         <Trash2 className="w-4 h-4" />

@@ -171,7 +171,7 @@ export default function NewCreditNotePage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {errors.customer && <p className="text-sm text-red-500">{errors.customer.message}</p>}
+                                {errors.customer && <p className="text-sm text-destructive">{errors.customer.message}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -241,7 +241,7 @@ export default function NewCreditNotePage() {
                                     <Label className={index !== 0 ? "sr-only" : ""}>Description</Label>
                                     <Input {...register(`line_items.${index}.description`)} placeholder="Description" />
                                     {errors.line_items?.[index]?.description && (
-                                        <p className="text-xs text-red-500">{errors.line_items[index]?.description?.message}</p>
+                                        <p className="text-xs text-destructive">{errors.line_items[index]?.description?.message}</p>
                                     )}
                                 </div>
                                 <div className="col-span-4 md:col-span-2 space-y-2">
@@ -271,7 +271,7 @@ export default function NewCreditNotePage() {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                         onClick={() => remove(index)}
                                         disabled={fields.length === 1}
                                     >

@@ -537,7 +537,7 @@ export default function AuditLogPage() {
                           <TableHeader>
                             <TableRow className="bg-muted bg-background">
                               <TableHead className="w-[25%]">Field Changed</TableHead>
-                              <TableHead className="w-[37.5%] text-red-600/80">From (Old Value)</TableHead>
+                              <TableHead className="w-[37.5%] text-destructive/80">From (Old Value)</TableHead>
                               <TableHead className="w-[37.5%] text-success/80">To (New Value)</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -553,7 +553,7 @@ export default function AuditLogPage() {
                               const formatValue = (val: any) => {
                                 if (val === null) return <span className="text-muted-foreground italic">null</span>;
                                 if (val === "") return <span className="text-muted-foreground italic">empty</span>;
-                                if (typeof val === 'boolean') return <span className={val ? "text-success font-bold" : "text-red-500 font-bold"}>{String(val)}</span>;
+                                if (typeof val === 'boolean') return <span className={val ? "text-success font-bold" : "text-destructive font-bold"}>{String(val)}</span>;
                                 if (typeof val === 'object') return <pre className="text-[10px] whitespace-pre-wrap">{JSON.stringify(val, null, 2)}</pre>;
                                 return String(val);
                               }
@@ -563,7 +563,7 @@ export default function AuditLogPage() {
                                   <TableCell className="font-medium font-mono text-xs bg-muted/50 bg-background/30">
                                     {key.replace(/_/g, " ")}
                                   </TableCell>
-                                  <TableCell className="font-mono text-xs break-all bg-red-50/30 dark:bg-red-900/10">
+                                  <TableCell className="font-mono text-xs break-all bg-destructive/10/30 dark:bg-red-900/10">
                                     {formatValue(oldValue)}
                                   </TableCell>
                                   <TableCell className="font-mono text-xs break-all bg-success/10/30 dark:bg-green-900/10">

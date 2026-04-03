@@ -32,12 +32,12 @@ export function SmartDiagnosisFeed({ logs, isLoading }: SmartDiagnosisFeedProps)
                         <p className="text-[11px] font-medium text-gray-400">Scanner activity</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20">
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 dark:bg-emerald-900/20">
                     <span className="relative flex h-1.5 w-1.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success/100"></span>
                     </span>
-                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
+                    <span className="text-[9px] font-bold text-success dark:text-emerald-400 uppercase tracking-widest">Live</span>
                 </div>
             </div>
 
@@ -59,7 +59,7 @@ export function SmartDiagnosisFeed({ logs, isLoading }: SmartDiagnosisFeedProps)
                                     className={cn(
                                         "absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full border-2 border-background shadow-sm z-10 transition-colors",
                                         log.priority === 'critical' ? "bg-rose-500" :
-                                        log.priority === 'warning' ? "bg-amber-500" : "bg-blue-500"
+                                        log.priority === 'warning' ? "bg-warning/100" : "bg-info/100"
                                     )} 
                                 />
                                 <div className="flex items-start justify-between gap-4 rounded-xl p-2 transition-colors group-hover:bg-muted/70">

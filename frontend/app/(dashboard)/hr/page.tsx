@@ -26,6 +26,8 @@ import {
     Briefcase,
     GraduationCap,
 } from "lucide-react";
+import { useTheme } from "@/lib/hooks/useTheme";
+import { cn } from "@/lib/utils/cn";
 
 export default function HRPage() {
     return (
@@ -33,6 +35,84 @@ export default function HRPage() {
             <DynamicPageTitle title="HR Management" />
             <HRDashboardContent />
         </PermissionGuard>
+    );
+}
+
+function HRKpiCards({ loadingStaff, staffSummary, loadingLeave, pendingLeave, loadingAttendance, attendanceSummary, loadingCompliance, expiringDocs }: {
+    loadingStaff: boolean; staffSummary: any;
+    loadingLeave: boolean; pendingLeave: any;
+    loadingAttendance: boolean; attendanceSummary: any;
+    loadingCompliance: boolean; expiringDocs: any;
+}) {
+    const { theme: activeTheme } = useTheme();
+    const isPerfex = activeTheme === "perfex";
+
+    const cards = [
+        {
+            label: "Total Staff", icon: Users,
+            value: loadingStaff ? "—" : staffSummary?.total_staff ?? 0,
+            sub: !loadingStaff && staffSummary ? `${staffSummary.active} active, ${staffSummary.probation} probation` : null,
+            color: "text-primary", bgColor: "bg-info/10 dark:bg-blue-900/20",
+        },
+        {
+            label: "Pending Leave", icon: Calendar,
+            value: loadingLeave ? "—" : pendingLeave?.length ?? 0,
+            sub: "Awaiting approval",
+            color: "text-warning", bgColor: "bg-warning/10 dark:bg-amber-900/20",
+        },
+        {
+            label: "Today's Attendance", icon: Clock,
+            value: loadingAttendance ? "—" : `${attendanceSummary?.attendance_rate ?? 0}%`,
+            sub: !loadingAttendance && attendanceSummary ? `${attendanceSummary.present} present, ${attendanceSummary.late} late` : null,
+            color: "text-success", bgColor: "bg-success/10 dark:bg-green-900/20",
+        },
+        {
+            label: "Expiring Docs", icon: AlertTriangle,
+            value: loadingCompliance ? "—" : expiringDocs?.length ?? 0,
+            sub: "Within 30 days",
+            color: "text-destructive", bgColor: "bg-destructive/10 dark:bg-red-900/20",
+        },
+    ];
+
+    if (isPerfex) {
+        return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {cards.map((card) => (
+                    <Card key={card.label} className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
+                        <CardContent className="p-3 flex items-center gap-3">
+                            <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md", card.bgColor)}>
+                                <card.icon className={cn("h-4 w-4", card.color)} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-lg font-bold leading-none text-foreground">{card.value}</p>
+                                <p className="mt-0.5 text-[11px] text-muted-foreground truncate">{card.label}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {cards.map((card) => (
+                <Card key={card.label} className="shadow-sm border bg-card">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{card.label}</p>
+                                <p className="text-2xl font-bold text-foreground mt-1">{card.value}</p>
+                            </div>
+                            <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", card.bgColor)}>
+                                <card.icon className={cn("h-5 w-5", card.color)} />
+                            </div>
+                        </div>
+                        {card.sub && <p className="text-xs text-muted-foreground mt-2">{card.sub}</p>}
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
     );
 }
 
@@ -92,97 +172,12 @@ function HRDashboardContent() {
             />
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Card className="shadow-sm border bg-card">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Total Staff
-                                </p>
-                                <p className="text-2xl font-bold text-foreground mt-1">
-                                    {loadingStaff ? "—" : staffSummary?.total_staff ?? 0}
-                                </p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                        </div>
-                        {!loadingStaff && staffSummary && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                                <span className="text-green-600 font-medium">{staffSummary.active}</span> active,{" "}
-                                <span className="text-amber-600 font-medium">{staffSummary.probation}</span> probation
-                            </p>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border bg-card">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Pending Leave
-                                </p>
-                                <p className="text-2xl font-bold text-foreground mt-1">
-                                    {loadingLeave ? "—" : pendingLeave?.length ?? 0}
-                                </p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                            </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Awaiting approval
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border bg-card">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Today&apos;s Attendance
-                                </p>
-                                <p className="text-2xl font-bold text-foreground mt-1">
-                                    {loadingAttendance ? "—" : `${attendanceSummary?.attendance_rate ?? 0}%`}
-                                </p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                        {!loadingAttendance && attendanceSummary && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                                <span className="text-green-600 font-medium">{attendanceSummary.present}</span> present,{" "}
-                                <span className="text-red-600 font-medium">{attendanceSummary.late}</span> late
-                            </p>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border bg-card">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Expiring Docs
-                                </p>
-                                <p className="text-2xl font-bold text-foreground mt-1">
-                                    {loadingCompliance ? "—" : expiringDocs?.length ?? 0}
-                                </p>
-                            </div>
-                            <div className="h-10 w-10 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-                                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                            </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Within 30 days
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
+            <HRKpiCards
+                loadingStaff={loadingStaff} staffSummary={staffSummary}
+                loadingLeave={loadingLeave} pendingLeave={pendingLeave}
+                loadingAttendance={loadingAttendance} attendanceSummary={attendanceSummary}
+                loadingCompliance={loadingCompliance} expiringDocs={expiringDocs}
+            />
 
             {/* Quick Actions + Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -193,13 +188,13 @@ function HRDashboardContent() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                         {[
-                            { label: "View Staff", href: "/hr/staff", icon: Users, color: "text-blue-600" },
-                            { label: "Manage Leave", href: "/hr/leave", icon: Calendar, color: "text-amber-600" },
-                            { label: "View Attendance", href: "/hr/attendance", icon: Clock, color: "text-green-600" },
-                            { label: "Payroll", href: "/hr/payroll", icon: Banknote, color: "text-purple-600" },
-                            { label: "Recruitment", href: "/hr/recruitment", icon: Briefcase, color: "text-cyan-600" },
-                            { label: "Departments", href: "/hr/departments", icon: Building2, color: "text-indigo-600" },
-                            { label: "Performance Reviews", href: "/hr/performance", icon: Target, color: "text-rose-600" },
+                            { label: "View Staff", href: "/hr/staff", icon: Users, color: "text-primary" },
+                            { label: "Manage Leave", href: "/hr/leave", icon: Calendar, color: "text-warning" },
+                            { label: "View Attendance", href: "/hr/attendance", icon: Clock, color: "text-success" },
+                            { label: "Payroll", href: "/hr/payroll", icon: Banknote, color: "text-primary" },
+                            { label: "Recruitment", href: "/hr/recruitment", icon: Briefcase, color: "text-info" },
+                            { label: "Departments", href: "/hr/departments", icon: Building2, color: "text-primary" },
+                            { label: "Performance Reviews", href: "/hr/performance", icon: Target, color: "text-destructive" },
                             { label: "Training", href: "/hr/training", icon: GraduationCap, color: "text-teal-600" },
                         ].map((action) => (
                             <Link
@@ -249,7 +244,7 @@ function HRDashboardContent() {
                                         <div className="flex items-center gap-2 ml-4">
                                             <Badge
                                                 variant="outline"
-                                                className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
+                                                className="text-[10px] px-2 py-0.5 bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
                                             >
                                                 Pending
                                             </Badge>
@@ -259,7 +254,7 @@ function HRDashboardContent() {
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                                <CheckCircle2 className="h-8 w-8 text-success mb-2" />
                                 <p className="text-sm text-muted-foreground">No pending leave requests</p>
                             </div>
                         )}

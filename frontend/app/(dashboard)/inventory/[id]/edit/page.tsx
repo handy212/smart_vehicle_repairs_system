@@ -106,7 +106,7 @@ export default function EditPartPage() {
         </Link>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Part not found.</p>
+            <p className="text-destructive">Part not found.</p>
           </CardContent>
         </Card>
       </div>
@@ -169,9 +169,9 @@ export default function EditPartPage() {
       </div>
 
       {serverError && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-800 dark:text-red-300">{serverError}</p>
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800">
+          <AlertCircle className="w-5 h-5 text-destructive dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-destructive dark:text-red-300">{serverError}</p>
         </div>
       )}
 

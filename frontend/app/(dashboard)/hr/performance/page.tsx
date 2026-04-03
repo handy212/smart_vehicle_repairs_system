@@ -96,12 +96,12 @@ function PerformanceContent() {
                                         <TableCell>
                                             {review.overall_rating ? (
                                                 <div className="flex items-center">
-                                                    <span className={cn("font-bold mr-1", review.overall_rating >= 4 ? "text-green-600" : review.overall_rating >= 3 ? "text-amber-600" : "text-red-600")}>{review.overall_rating}</span>
+                                                    <span className={cn("font-bold mr-1", review.overall_rating >= 4 ? "text-success" : review.overall_rating >= 3 ? "text-warning" : "text-destructive")}>{review.overall_rating}</span>
                                                     <span className="text-muted-foreground">/ 5</span>
                                                 </div>
                                             ) : "-"}
                                         </TableCell>
-                                        <TableCell><Badge variant="outline" className={cn("capitalize", review.status === "acknowledged" ? "bg-green-50 text-green-700 border-green-200" : review.status === "submitted" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-gray-100 text-gray-600 border-gray-200")}>{review.status}</Badge></TableCell>
+                                        <TableCell><Badge variant="outline" className={cn("capitalize", review.status === "acknowledged" ? "bg-success/10 text-green-700 border-green-200" : review.status === "submitted" ? "bg-info/10 text-blue-700 border-info/20" : "bg-gray-100 text-gray-600 border-gray-200")}>{review.status}</Badge></TableCell>
                                         <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                                             <PermissionGuard permission="manage_performance">
                                                 <DropdownMenu>
@@ -111,7 +111,7 @@ function PerformanceContent() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onClick={() => router.push(`/hr/performance/${review.id}`)}><ArrowRight className="h-4 w-4 mr-2" />Details</DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem className="text-red-600" onClick={() => setDeletingId(review.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive" onClick={() => setDeletingId(review.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </PermissionGuard>

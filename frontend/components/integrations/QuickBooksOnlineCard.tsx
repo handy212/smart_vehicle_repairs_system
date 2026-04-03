@@ -74,7 +74,7 @@ export function QuickBooksOnlineCard() {
       <CardHeader className="py-3 px-4 bg-muted/30 border-b">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs font-bold text-foreground flex items-center gap-2 uppercase tracking-tight">
-            <div className={`w-2 h-2 rounded-full ${status?.is_connected ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+            <div className={`w-2 h-2 rounded-full ${status?.is_connected ? "bg-success/100" : "bg-muted-foreground/30"}`} />
             QuickBooks Online
           </CardTitle>
           {status?.is_connected && (

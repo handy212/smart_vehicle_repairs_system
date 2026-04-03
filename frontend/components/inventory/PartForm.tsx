@@ -194,9 +194,9 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                 <TabsContent value="basic" className="p-6 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="part_number">Part Number <span className="text-red-500">*</span></Label>
-                                            <Input id="part_number" {...register("part_number")} className={errors.part_number ? "border-red-500" : ""} placeholder="PART-001" />
-                                            {errors.part_number && <p className="text-xs text-red-500">{errors.part_number.message}</p>}
+                                            <Label htmlFor="part_number">Part Number <span className="text-destructive">*</span></Label>
+                                            <Input id="part_number" {...register("part_number")} className={errors.part_number ? "border-destructive" : ""} placeholder="PART-001" />
+                                            {errors.part_number && <p className="text-xs text-destructive">{errors.part_number.message}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="barcode">Barcode (UPC/EAN)</Label>
@@ -215,7 +215,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                                 {...register("category", { valueAsNumber: true })}
                                                 className={cn(
                                                     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                                                    errors.category ? "border-red-500" : ""
+                                                    errors.category ? "border-destructive" : ""
                                                 )}
                                             >
                                                 <option value="">Select Category</option>
@@ -224,13 +224,13 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                                     <option key={cat.id} value={cat.id}>{cat.full_path || cat.name}</option>
                                                 ))}
                                             </select>
-                                            {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
+                                            {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Part Name <span className="text-red-500">*</span></Label>
-                                        <Input id="name" {...register("name")} className={errors.name ? "border-red-500" : ""} placeholder="Brake Pad Set" />
-                                        {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+                                        <Label htmlFor="name">Part Name <span className="text-destructive">*</span></Label>
+                                        <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : ""} placeholder="Brake Pad Set" />
+                                        {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="description">Description</Label>
@@ -262,15 +262,15 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
 
                                 {/* Inventory Tab */}
                                 <TabsContent value="inventory" className="p-6 space-y-4">
-                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-4">
-                                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                                    <div className="bg-info/10 border border-info/20 rounded-md p-3 mb-4">
+                                        <p className="text-sm text-info">
                                             <strong>Note:</strong> Stock quantities are managed per branch via Stock Items.
                                             Set initial stock after creating the part, or use purchase orders to receive inventory.
                                         </p>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="unit">Unit <span className="text-red-500">*</span></Label>
+                                            <Label htmlFor="unit">Unit <span className="text-destructive">*</span></Label>
                                             <select
                                                 id="unit"
                                                 {...register("unit")}
@@ -329,7 +329,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                         <div className="space-y-2">
                                             <Label htmlFor="cost_price">Cost Price</Label>
                                             <Input type="number" step="0.01" id="cost_price" {...register("cost_price", { valueAsNumber: true })} placeholder="0.00" />
-                                            {errors.cost_price && <p className="text-xs text-red-500">{errors.cost_price.message}</p>}
+                                            {errors.cost_price && <p className="text-xs text-destructive">{errors.cost_price.message}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="markup_percentage">Markup %</Label>
@@ -341,7 +341,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                             <Label htmlFor="selling_price">Selling Price</Label>
                                             <Input type="number" step="0.01" id="selling_price" {...register("selling_price", { valueAsNumber: true })} placeholder="0.00" />
                                             {calculatedSellingPrice && <p className="text-xs text-muted-foreground">Calculated: {formatCurrency(calculatedSellingPrice)}</p>}
-                                            {errors.selling_price && <p className="text-xs text-red-500">{errors.selling_price.message}</p>}
+                                            {errors.selling_price && <p className="text-xs text-destructive">{errors.selling_price.message}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="list_price">List Price (MSRP)</Label>
@@ -390,7 +390,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                     <Card>
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
-                                <Package className="w-4 h-4 text-orange-500" />
+                                <Package className="w-4 h-4 text-warning" />
                                 Supplier
                             </CardTitle>
                         </CardHeader>

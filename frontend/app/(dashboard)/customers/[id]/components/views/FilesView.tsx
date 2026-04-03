@@ -82,7 +82,7 @@ export function FilesView({ customerId }: FilesViewProps) {
                     <Button variant="ghost" size="sm" asChild>
                         <a href={item.file} target="_blank" rel="noopener noreferrer"><ExternalLink className="w-4 h-4" /></a>
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => { if (confirm("Delete file?")) deleteMutation.mutate(item.id); }}>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { if (confirm("Delete file?")) deleteMutation.mutate(item.id); }}>
                         <Trash2 className="w-4 h-4" />
                     </Button>
                 </div>

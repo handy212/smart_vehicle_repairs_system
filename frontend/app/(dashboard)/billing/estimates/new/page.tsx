@@ -366,9 +366,9 @@ export default function NewEstimatePage() {
       </div>
 
       {serverError && (
-        <Card className="bg-red-50 border-red-200">
+        <Card className="bg-destructive/10 border-destructive/20">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800">
+            <div className="flex items-center space-x-2 text-destructive">
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">{serverError}</p>
             </div>
@@ -410,7 +410,7 @@ export default function NewEstimatePage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.customer && <p className="text-xs text-red-500">{errors.customer.message}</p>}
+                  {errors.customer && <p className="text-xs text-destructive">{errors.customer.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Vehicle</label>
@@ -707,7 +707,7 @@ export default function NewEstimatePage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => removeLineItem(index)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -736,7 +736,7 @@ export default function NewEstimatePage() {
             </div>
 
             {watch("discount_type") !== 'none' && (
-              <div className="flex justify-between text-sm text-red-600">
+              <div className="flex justify-between text-sm text-destructive">
                 <span>Discount ({discountPercentage || 0}%)</span>
                 <span>- {formatCurrency(discountAmount)}</span>
               </div>

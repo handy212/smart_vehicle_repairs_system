@@ -39,7 +39,7 @@ export function ExportDropdown({
                     Export as CSV
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onExportExcel} className="cursor-pointer">
-                    <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+                    <FileSpreadsheet className="w-4 h-4 mr-2 text-success" />
                     Export as Excel
                 </DropdownMenuItem>
             </DropdownMenuContent>

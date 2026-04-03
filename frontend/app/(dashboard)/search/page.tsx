@@ -201,7 +201,7 @@ export default function SearchPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <p className="text-red-600 font-medium mb-2">Search Error</p>
+              <p className="text-destructive font-medium mb-2">Search Error</p>
               <p className="text-muted-foreground text-sm">
                 {error instanceof Error ? error.message : "An error occurred while searching"}
               </p>

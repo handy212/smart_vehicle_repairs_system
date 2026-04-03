@@ -2290,27 +2290,42 @@ Please review and approve or decline this estimate to proceed.'''
                 'company_name': self._get_company_name(),
             })
         
-        notification = Notification.objects.create(
-            recipient=estimate.customer.user,
-            notification_type='estimate',
-            channel='email',
-            priority='high',
-            template=template,
-            title=title,
-            message=message,
-            data={
-                'estimate_id': estimate.id,
-                'estimate_number': estimate.estimate_number,
-                'total': str(estimate.total),
-                'valid_until': str(estimate.valid_until),
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-                'description': estimate.description or "See estimate for details",
-            },
-            related_object_type='estimate',
-            related_object_id=estimate.id
-        )
-        self.service.send_notification(notification)
+        # Determine enabled channels
+        channels = ['email']
+        
+        # Check if WhatsApp is enabled globally and for the user
+        whatsapp_settings = get_whatsapp_settings()
+        whatsapp_enabled = whatsapp_settings.get('whatsapp_enabled', 'false').lower() == 'true'
+        
+        user_whatsapp_enabled = True
+        if hasattr(estimate.customer.user, 'notification_preferences'):
+            user_whatsapp_enabled = estimate.customer.user.notification_preferences.whatsapp_enabled
+            
+        if whatsapp_enabled and user_whatsapp_enabled:
+            channels.append('whatsapp')
+            
+        for channel in channels:
+            notification = Notification.objects.create(
+                recipient=estimate.customer.user,
+                notification_type='estimate',
+                channel=channel,
+                priority='high',
+                template=self._get_template('estimate_sent', channel),
+                title=title,
+                message=message,
+                data={
+                    'estimate_id': estimate.id,
+                    'estimate_number': estimate.estimate_number,
+                    'total': str(estimate.total),
+                    'valid_until': str(estimate.valid_until),
+                    'customer_name': customer_name,
+                    'vehicle_display': vehicle_display,
+                    'description': estimate.description or "See estimate for details",
+                },
+                related_object_type='estimate',
+                related_object_id=estimate.id
+            )
+            self.service.send_notification(notification)
     
     def estimate_expiring_soon(self, estimate, days_until_expiration):
         """Remind customer that estimate is expiring soon"""
