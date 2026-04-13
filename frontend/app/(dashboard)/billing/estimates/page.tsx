@@ -913,7 +913,7 @@ export default function EstimatesPage() {
           {data && data.count > 0 && (
             <div className="mt-4 flex items-center justify-between">
               <div className="text-sm text-foreground">
-                Showing page {page} of {Math.ceil(data.count / 10)}
+                Showing page {page} of {Math.ceil(data.count / 20)}
               </div>
               <div className="flex space-x-2">
                 <Button

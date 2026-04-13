@@ -101,12 +101,10 @@ export default function SearchPage() {
         </div>
       ) : debouncedQuery.length >= 2 && totalResults > 0 ? (
         <div className="space-y-6">
-        // Results Summary
           <div className="text-sm text-muted-foreground">
-            Found {totalResults} result{totalResults !== 1 ? "s" : ""} for "{debouncedQuery}"
+            Found {totalResults} result{totalResults !== 1 ? "s" : ""} for &quot;{debouncedQuery}&quot;
           </div>
 
-        // Vehicles
           {groupedResults.vehicles.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
@@ -140,7 +138,6 @@ export default function SearchPage() {
             </div>
           )}
 
-        // Appointments
           {groupedResults.appointments.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
@@ -181,7 +178,6 @@ export default function SearchPage() {
             </div>
           )}
 
-        // Invoices
           {groupedResults.invoices.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
@@ -230,7 +226,6 @@ export default function SearchPage() {
             </div>
           )}
 
-        // Estimates
           {groupedResults.estimates.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
@@ -279,7 +274,6 @@ export default function SearchPage() {
             </div>
           )}
 
-        // Payments
           {groupedResults.payments.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">

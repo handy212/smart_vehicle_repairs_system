@@ -5,10 +5,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.accounts.permissions import HasPermission, user_has_permission, IsModuleEnabled
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
+from django.http import Http404
 from django.utils import timezone
 from django.db.models import Q, Sum, Count, F, Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 # Notification triggers
 from apps.notifications_app.triggers import notification_triggers
@@ -136,6 +138,42 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         
         return queryset
 
+    def get_object(self):
+        """
+        Return a clearer branch-context error for detail routes.
+
+        Without an active branch, or with the wrong active branch selected,
+        branch-scoped records used to look like a generic 404.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        filter_kwargs = {self.lookup_field: lookup_value}
+
+        obj = queryset.filter(**filter_kwargs).first()
+        if obj is not None:
+            self.check_object_permissions(self.request, obj)
+            return obj
+
+        unscoped_obj = super().get_queryset().filter(**filter_kwargs).first()
+        if unscoped_obj is not None:
+            active_branch = resolve_branch(self.request)
+            record_branch = getattr(unscoped_obj, 'branch', None)
+
+            if record_branch and active_branch and record_branch.id != active_branch.id:
+                raise DRFValidationError({
+                    'error': (
+                        f"Active branch context does not match this record. "
+                        f"Select branch '{record_branch.name}' or send the correct X-Branch-ID header."
+                    )
+                })
+
+            raise DRFValidationError({
+                'error': 'Active branch context is required to access this work order. Select the correct branch or send X-Branch-ID.'
+            })
+
+        raise Http404
+
     def get_serializer_class(self):
         if self.action == 'list':
             return WorkOrderListSerializer
@@ -211,43 +249,55 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
             )
         
         try:
-            from apps.diagnosis.models import Diagnosis, RepairRecommendation
+            from apps.diagnosis.models import Diagnosis
             from apps.vehicles.models import Vehicle
             
             vehicle = Vehicle.objects.get(id=vehicle_id)
             
-            # Get completed/invoiced/closed work orders for this vehicle
-            completed_work_orders = WorkOrder.objects.filter(
-                vehicle=vehicle,
-                status__in=['completed', 'invoiced', 'closed']
-            ).select_related('customer', 'branch')
-            
+            # Look at completed diagnoses for this vehicle rather than relying on a
+            # fully closed work order. Recommendations often remain open while the
+            # work order sits in awaiting_approval.
+            completed_diagnoses = Diagnosis.objects.filter(
+                work_order__vehicle=vehicle,
+                completed_at__isnull=False,
+            ).exclude(
+                work_order__status='cancelled'
+            ).select_related(
+                'work_order',
+                'work_order__customer',
+                'work_order__branch',
+            ).order_by('-completed_at')
+
             open_recommendations = []
             
-            for wo in completed_work_orders:
-                diagnosis = Diagnosis.objects.filter(work_order=wo).first()
-                if diagnosis:
-                    recommendations = diagnosis.repair_recommendations.filter(
-                        approval_status__in=['pending_approval', 'deferred']
-                    )
-                    for rec in recommendations:
-                        open_recommendations.append({
-                            'id': rec.id,
-                            'description': rec.description,
-                            'priority': rec.priority,
-                            'priority_display': rec.get_priority_display(),
-                            'recommendation_type': rec.recommendation_type,
-                            'recommendation_type_display': rec.get_recommendation_type_display(),
-                            'approval_status': rec.approval_status,
-                            'approval_status_display': rec.get_approval_status_display(),
-                            'quotation_status': rec.quotation_status,
-                            'quotation_status_display': rec.get_quotation_status_display(),
-                            'parts_needed': rec.parts_needed,
-                            'work_order_id': wo.id,
-                            'work_order_number': wo.work_order_number,
-                            'work_order_completed_at': wo.completed_at.isoformat() if wo.completed_at else None,
-                            'diagnosis_id': diagnosis.id,
-                        })
+            for diagnosis in completed_diagnoses:
+                wo = diagnosis.work_order
+                recommendations = diagnosis.repair_recommendations.filter(
+                    approval_status__in=['pending_approval', 'deferred'],
+                    converted_to_task__isnull=True,
+                )
+                for rec in recommendations:
+                    open_recommendations.append({
+                        'id': rec.id,
+                        'description': rec.description,
+                        'priority': rec.priority,
+                        'priority_display': rec.get_priority_display(),
+                        'recommendation_type': rec.recommendation_type,
+                        'recommendation_type_display': rec.get_recommendation_type_display(),
+                        'approval_status': rec.approval_status,
+                        'approval_status_display': rec.get_approval_status_display(),
+                        'quotation_status': rec.quotation_status,
+                        'quotation_status_display': rec.get_quotation_status_display(),
+                        'parts_needed': rec.parts_needed,
+                        'work_order_id': wo.id,
+                        'work_order_number': wo.work_order_number,
+                        'work_order_completed_at': (
+                            wo.completed_at.isoformat()
+                            if wo.completed_at
+                            else diagnosis.completed_at.isoformat()
+                        ),
+                        'diagnosis_id': diagnosis.id,
+                    })
             
             return Response({
                 'vehicle_id': vehicle_id,
@@ -881,14 +931,13 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
         
         # Check if parts for this specific task are available
-        unavailable_parts = []
-        for part in task.parts.filter(status__in=['pending', 'ordered']):
-            if part.status in ['pending', 'ordered']:
-                unavailable_parts.append(part.part_name)
+        unavailable_parts = list(
+            task.parts.exclude(status__in=['ready', 'installed']).values_list('part_name', flat=True)
+        )
                 
         if unavailable_parts:
             return Response(
-                {'error': f"Cannot start task. Missing parts: {', '.join(unavailable_parts)}"},
+                {'error': f"Cannot start task. Parts must be allocated to the workshop first: {', '.join(unavailable_parts)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
             
@@ -934,10 +983,7 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
         actual_hours = request.data.get('actual_hours')
         notes = request.data.get('notes', '')
-        
-        task.status = 'completed'
-        task.completed_at = timezone.now()
-        
+
         # Handle Time Logs (Clock Out)
         user = request.user
         if user.role in ['technician', 'manager']:
@@ -958,10 +1004,28 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
                     else:
                         log.notes = f"Completion Note: {notes}"
                 log.save()
-        
+
         if actual_hours:
-            task.actual_hours = actual_hours
-        
+            try:
+                task.actual_hours = Decimal(str(actual_hours))
+            except (InvalidOperation, TypeError, ValueError):
+                return Response(
+                    {'error': 'Actual hours must be a valid number.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        if task.calculated_actual_hours <= 0:
+            return Response(
+                {
+                    'error': 'Actual labor hours are required before completing this task. '
+                             'Enter hours directly or use technician clock-in/out logs.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        task.status = 'completed'
+        task.completed_at = timezone.now()
+
         if notes:
             task.detailed_notes = notes
         
@@ -1488,11 +1552,56 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
     def mark_installed(self, request, pk=None):
         """Mark part as installed"""
         part = self.get_object()
+        if part.status not in ['ready', 'received']:
+            return Response(
+                {'error': f'Only allocated or received parts can be marked as installed. Current status: {part.status}.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         part.status = 'installed'
         part.installed_at = timezone.now()
         part.installed_by = request.user
         part.save()
         
+        serializer = self.get_serializer(part)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def mark_returned(self, request, pk=None):
+        """Mark part as returned to stores with a reason."""
+        from apps.inventory.models import InventoryTransaction, Part
+
+        part = self.get_object()
+        if part.status in ['installed', 'returned']:
+            return Response(
+                {'error': f'Cannot return a part in {part.status} status.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return Response(
+                {'error': 'A return reason is required when a part is not used.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        previous_status = part.status
+        part.status = 'returned'
+        part.resolution_notes = reason
+        part.save()
+
+        if previous_status == 'ready' and part.inventory_part_id:
+            inventory_part = Part.objects.filter(id=part.inventory_part_id).first()
+            if inventory_part:
+                InventoryTransaction.objects.create(
+                    part=inventory_part,
+                    transaction_type='adjustment',
+                    quantity=part.quantity,
+                    balance_after=inventory_part.quantity_in_stock + part.quantity,
+                    work_order=part.work_order,
+                    reason=f"Returned from WO #{part.work_order.id}: {reason}",
+                    created_by=request.user,
+                )
+
         serializer = self.get_serializer(part)
         return Response(serializer.data)
 

@@ -22,6 +22,11 @@ interface OverviewTabProps {
 export default function WorkOrderOverviewTab({
   workOrder, onStatusChange }: OverviewTabProps) {
   const { formatCurrency } = useCurrency();
+  const estimateSummary = (workOrder as any).estimate_summary;
+  const invoiceSummary = (workOrder as any).invoice_summary;
+  const displayedEstimatedTotal = parseFloat(
+    estimateSummary?.total || (workOrder as any).estimated_total || workOrder.total_cost || "0"
+  );
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
     const sc = workOrder?.service_coordinator;
@@ -103,6 +108,7 @@ export default function WorkOrderOverviewTab({
   };
 
   const getServiceCoordinatorName = () => {
+    if (workOrder?.service_coordinator_name) return workOrder.service_coordinator_name;
     const sc = workOrder?.service_coordinator;
     if (!sc) return "Not assigned";
     if (typeof sc === "object" && sc !== null) {
@@ -413,20 +419,77 @@ export default function WorkOrderOverviewTab({
         {/* Financial Summary */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <CardTitle>Financial Summary</CardTitle>
-
-              {(workOrder as any).estimate && (
-                <Link href={`/billing/estimates/${(workOrder as any).estimate}`}>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs">
-                    <FileText className="w-3 h-3 mr-1" />
-                    View Estimate
-                  </Button>
-                </Link>
-              )}
+              <div className="flex items-center gap-2">
+                {estimateSummary?.id && (
+                  <Link href={`/billing/estimates/${estimateSummary.id}`}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs">
+                      <FileText className="w-3 h-3 mr-1" />
+                      Quote
+                    </Button>
+                  </Link>
+                )}
+                {invoiceSummary?.id && (
+                  <Link href={`/billing/invoices/${invoiceSummary.id}`}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs">
+                      <FileText className="w-3 h-3 mr-1" />
+                      Invoice
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {estimateSummary && (
+              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Stores Quote</p>
+                    <p className="text-sm font-medium text-foreground">{estimateSummary.estimate_number}</p>
+                  </div>
+                  <Badge variant="outline" className="capitalize">
+                    {estimateSummary.status.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Quoted Total</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(parseFloat(estimateSummary.total || "0"))}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {invoiceSummary && (
+              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Invoice</p>
+                    <p className="text-sm font-medium text-foreground">{invoiceSummary.invoice_number}</p>
+                  </div>
+                  <Badge variant={invoiceSummary.status === "paid" ? "success" : "outline"} className="capitalize">
+                    {invoiceSummary.status.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Total</span>
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(parseFloat(invoiceSummary.total || "0"))}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Paid</span>
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(parseFloat(invoiceSummary.amount_paid || "0"))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Estimated Labor</span>
               <span className="text-sm font-medium text-foreground">
@@ -445,12 +508,12 @@ export default function WorkOrderOverviewTab({
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-card-foreground">Estimated Total</span>
 
-                <span className={`text-lg font-bold ${parseFloat((workOrder as any).estimated_total || "0") > 0
+                <span className={`text-lg font-bold ${displayedEstimatedTotal > 0
                   ? "text-foreground"
                   : "text-muted-foreground"
                   }`}>
 
-                  {formatCurrency(parseFloat((workOrder as any).estimated_total || workOrder.total_cost || "0"))}
+                  {formatCurrency(displayedEstimatedTotal)}
                 </span>
               </div>
             </div>
@@ -481,19 +544,19 @@ export default function WorkOrderOverviewTab({
                   </div>
                 </div>
 
-                {parseFloat((workOrder as any).estimated_total || "0") > 0 && (
+                {displayedEstimatedTotal > 0 && (
                   <div className="pt-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">Variance</span>
 
-                      <span className={`font-medium ${parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0")
+                      <span className={`font-medium ${parseFloat((workOrder as any).actual_total) > displayedEstimatedTotal
                         ? "text-destructive dark:text-red-400"
                         : "text-success"
                         }`}>
 
-                        {parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0") ? "+" : ""}
+                        {parseFloat((workOrder as any).actual_total) > displayedEstimatedTotal ? "+" : ""}
 
-                        {formatCurrency((parseFloat((workOrder as any).actual_total) - parseFloat((workOrder as any).estimated_total || "0")))}
+                        {formatCurrency(parseFloat((workOrder as any).actual_total) - displayedEstimatedTotal)}
                       </span>
                     </div>
                   </div>

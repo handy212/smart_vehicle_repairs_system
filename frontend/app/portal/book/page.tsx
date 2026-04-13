@@ -54,11 +54,13 @@ export default function BookAppointmentPage() {
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  // Fetch User Vehicles
-  const { data: vehicles = [], isLoading: vehiclesLoading } = useQuery({
-    queryKey: ["portal", "vehicles"],
+  // Fetch User Vehicles — use a distinct cache key to avoid colliding with the
+  // vehicles list page which caches a paginated {count, results} object.
+  const { data: vehiclesRaw, isLoading: vehiclesLoading } = useQuery({
+    queryKey: ["portal", "vehicles-book"],
     queryFn: portalApi.getVehicles,
   });
+  const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : (vehiclesRaw as any)?.results ?? [];
 
   // Fetch Service Bundles
   const { data: bundles = [] } = useQuery({
@@ -163,19 +165,19 @@ export default function BookAppointmentPage() {
       />
 
       {vehiclesLoading ? (
-        <div className="p-8 text-center bg-card rounded-xl border border-border">
+        <div className="p-8 text-center bg-card rounded-lg border border-border">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-muted-foreground">Loading vehicles...</p>
+          <p className="text-sm text-muted-foreground">Loading vehicles...</p>
         </div>
       ) : vehicles.length === 0 ? (
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardContent className="py-8 text-center flex flex-col items-center">
-            <Car className="w-12 h-12 text-yellow-500 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Vehicles Found</h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
-              You need to have a registered vehicle to book a service. Please contact us to add your vehicle.
+        <Card>
+          <CardContent className="py-10 text-center flex flex-col items-center">
+            <Car className="w-10 h-10 text-muted-foreground/40 mb-3" />
+            <h3 className="text-sm font-semibold mb-1">No Vehicles Found</h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+              You need a registered vehicle to book a service.
             </p>
-            <Button onClick={() => router.push("/portal/vehicles/new")}>
+            <Button size="sm" onClick={() => router.push("/portal/vehicles/new")}>
               Add Vehicle
             </Button>
           </CardContent>
@@ -189,7 +191,6 @@ export default function BookAppointmentPage() {
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
-            // 1. Vehicle Selection
               <div className="space-y-2">
                 <Label htmlFor="vehicle_id">Select Vehicle <span className="text-red-500">*</span></Label>
                 <Controller
@@ -214,7 +215,6 @@ export default function BookAppointmentPage() {
                 {errors.vehicle_id && <p className="text-xs text-red-500 font-medium">{errors.vehicle_id.message}</p>}
               </div>
 
-            // 2. Service Selection (Bundle or Custom)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="service_bundle_id">Service Bundle (Recommended)</Label>
@@ -264,7 +264,6 @@ export default function BookAppointmentPage() {
                 </div>
               </div>
 
-            // 3. Date & Time Selection
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
                 <div className="space-y-2">
                   <Label htmlFor="appointment_date">Preferred Date <span className="text-red-500">*</span></Label>
@@ -312,7 +311,6 @@ export default function BookAppointmentPage() {
                 </div>
               </div>
 
-            // 4. Concerns
               <div className="space-y-2">
                 <Label htmlFor="customer_concerns">Notes / Concerns</Label>
                 <Textarea
@@ -323,8 +321,7 @@ export default function BookAppointmentPage() {
                 />
               </div>
 
-            // Submit
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end pt-4 border-t border-border">
                 <Button
                   type="submit"
                   size="lg"

@@ -109,7 +109,7 @@ class NotificationTriggers:
         # If created by staff, notify customer (Confirmation request or just info)
         elif appointment.status == 'pending':
             # Notify customer
-             if appointment.customer.user:
+            if appointment.customer.user:
                 customer_name = self._build_customer_name(appointment.customer)
                 vehicle_display = self._build_vehicle_display(appointment.vehicle)
                 
@@ -856,9 +856,9 @@ Please contact us to schedule an appointment or book online.'''
         
         # Fallback to managers if no parts manager found
         if not parts_managers.exists():
-             parts_managers = User.objects.filter(
-                managed_branches=work_order.branch, 
-                role='manager', 
+            parts_managers = User.objects.filter(
+                managed_branches=work_order.branch,
+                role='manager',
                 is_active=True
             )
             
@@ -913,26 +913,6 @@ Please review the parts required and provide an estimate.
             count += 1
             
         return count
-        
-        # Create push notification
-        push_notification = Notification.objects.create(
-            recipient=service_coordinator,
-            notification_type='work_order',
-            channel='push',
-            priority='normal',
-            title=f'New Work Order Assignment - {work_order.work_order_number}',
-            message=f'You have been assigned as Service Coordinator for work order {work_order.work_order_number}. Please review and coordinate the diagnosis process.',
-            data={
-                'work_order_id': work_order.id,
-                'work_order_number': work_order.work_order_number,
-                'customer_name': customer_name,
-                'vehicle': vehicle_info,
-                'status': work_order.status,
-            },
-            related_object_type='work_order',
-            related_object_id=work_order.id
-        )
-        self.service.send_notification(push_notification)
     
     def part_requisition_created(self, part):
         """Notify Parts Managers when a part is requested via requisition"""
@@ -948,7 +928,7 @@ Please review the parts required and provide an estimate.
         )
         
         if not recipients.exists():
-             return
+            return
 
         customer_name = self._build_customer_name(work_order.customer)
         vehicle_display = self._build_vehicle_display(work_order.vehicle)
@@ -1090,7 +1070,41 @@ Thank you for your business!'''
             related_object_id=invoice.id
         )
         self.service.send_notification(notification)
-    
+
+        # --- SMS delivery ---
+        prefs = getattr(invoice.customer.user, 'notification_preferences', None)
+        sms_enabled = not prefs or (prefs.sms_enabled and getattr(prefs, 'invoice_sms', True))
+        customer_phone = (
+            (prefs.phone_number if prefs else None)
+            or getattr(invoice.customer, 'phone', None)
+            or getattr(invoice.customer.user, 'phone', None)
+        )
+        if sms_enabled and customer_phone:
+            sms_body = (
+                f"Invoice {invoice.invoice_number} ready. "
+                f"Amount: {invoice.total}. "
+                f"Due: {invoice.due_date}. "
+                f"Thank you!"
+            )
+            sms_notification = Notification.objects.create(
+                recipient=invoice.customer.user,
+                notification_type='invoice',
+                channel='sms',
+                priority='high',
+                title=f'Invoice {invoice.invoice_number}',
+                message=sms_body,
+                data=context,
+                related_object_type='invoice',
+                related_object_id=invoice.id
+            )
+            self.service.send_notification(sms_notification)
+
+        # --- Delivery tracking: stamp sent_at on the invoice ---
+        from django.utils import timezone as tz
+        if not invoice.sent_at:
+            from apps.billing.models import Invoice as _Invoice
+            _Invoice.objects.filter(pk=invoice.pk).update(sent_at=tz.now())
+
     def invoice_due_soon(self, invoice, days_until_due):
         """Remind customer that invoice is due soon"""
         if not invoice.customer.user:
@@ -1216,7 +1230,7 @@ Late fees may apply. Please contact us to arrange payment.'''
             'payment_id': payment.id,
             'invoice_id': payment.invoice.id,
             'amount': str(payment.amount),
-            'balance_due': str(payment.invoice.balance_due),
+            'balance_due': str(payment.invoice.amount_due),
             'balance_remaining': str(payment.invoice.amount_due),
             'customer_name': customer_name,
             'payment_number': payment.payment_number if hasattr(payment, 'payment_number') else str(payment.id),
@@ -1699,7 +1713,6 @@ Requires dispatch assignment.''',
                     'technician_name': technician_name,
                     'customer_name': customer_name,
                     'vehicle_display': vehicle_display,
-                    'request_number': roadside_request.request_number,
                     'service_type': roadside_request.get_service_type_display(),
                     'breakdown_location': roadside_request.breakdown_location,
                 })

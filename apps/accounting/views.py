@@ -133,7 +133,7 @@ class CashFlowView(APIView):
 
 class TaxReportView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
-    
+
     @extend_schema(
         summary="Tax Liability Report",
         description="Generates a report of tax liabilities for the specified date range.",
@@ -142,12 +142,47 @@ class TaxReportView(APIView):
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
-        
+
         start_date = parse_date(start_date_str) if start_date_str else None
         end_date = parse_date(end_date_str) if end_date_str else None
-            
+
         branch_id = get_report_branch_id(request)
         report = ReportingService.get_tax_report(start_date, end_date, branch_id=branch_id)
+        return Response(report)
+
+
+class ExpenseBreakdownView(APIView):
+    """
+    Expense dashboard broken down by category: parts, labor, and overhead.
+    Query params: start_date, end_date (YYYY-MM-DD), branch (optional)
+    """
+    permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
+
+    @extend_schema(
+        summary="Expense Breakdown by Category",
+        description="Returns expenses split into parts, direct labor, and overhead for the given period.",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    def get(self, request):
+        start_str = request.query_params.get('start_date')
+        end_str = request.query_params.get('end_date')
+
+        if not start_str or not end_str:
+            today = timezone.now().date()
+            start_date = today.replace(day=1)
+            end_date = today
+        else:
+            start_date = parse_date(start_str)
+            end_date = parse_date(end_str)
+
+        if not start_date or not end_date:
+            return Response(
+                {"error": "Invalid date format. Use YYYY-MM-DD."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_expense_breakdown(start_date, end_date, branch_id=branch_id)
         return Response(report)
 
 

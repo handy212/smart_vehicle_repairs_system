@@ -308,12 +308,12 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRe
     """
     def get(self, request):
         config = QuickBooksService.get_config(active_only=False)
-        
+
         has_keys = config and config.client_id and config.client_secret
         has_token = config and hasattr(config, 'token') and config.token is not None
-        
+
         last_sync = QBOSyncLog.objects.order_by('-finished_at').first()
-        
+
         return JsonResponse({
             'is_connected': config.is_active and has_token if config else False,
             'has_keys': bool(has_keys),
@@ -322,3 +322,92 @@ class QBOStatusView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserRe
             'last_sync': last_sync.finished_at if last_sync else None,
             'company_name': config.company_name if config and hasattr(config, 'company_name') else None,
         })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class QBOWebhookView(View):
+    """
+    Receives real-time Event Notifications from QuickBooks Online.
+
+    QBO sends a POST with a JSON payload containing entity change events.
+    We validate the HMAC-SHA256 signature, then queue targeted sync tasks
+    so only changed entities are re-pulled — avoiding full scans.
+
+    Webhook verification token must be set in SystemSettings as
+    'quickbooks_webhook_token' (the verifier token from Intuit Developer Portal).
+
+    Reference:
+      https://developer.intuit.com/app/developer/qbo/docs/develop/webhooks
+    """
+
+    def post(self, request):
+        import hashlib
+        import hmac
+        import json
+
+        # --- Signature verification ---
+        signature = request.headers.get('intuit-signature', '')
+        payload_bytes = request.body
+
+        try:
+            from apps.accounts.admin_models import SystemSettings
+            webhook_token = SystemSettings.get_setting('quickbooks_webhook_token', '')
+        except Exception:
+            webhook_token = ''
+
+        if webhook_token:
+            expected = hmac.new(
+                webhook_token.encode('utf-8'),
+                payload_bytes,
+                hashlib.sha256
+            ).digest()
+            import base64
+            expected_b64 = base64.b64encode(expected).decode('utf-8')
+            if not hmac.compare_digest(signature, expected_b64):
+                logger.warning("QBO webhook: invalid signature — request rejected.")
+                return JsonResponse({'error': 'Invalid signature'}, status=401)
+
+        # --- Parse payload ---
+        try:
+            data = json.loads(payload_bytes)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        # QBO payload structure:
+        # { "eventNotifications": [ { "realmId": "...", "dataChangeEvent": { "entities": [...] } } ] }
+        notifications = data.get('eventNotifications', [])
+        queued = []
+
+        for notification in notifications:
+            realm_id = notification.get('realmId')
+            config = QuickBooksService.get_config()
+            if not config or config.realm_id != realm_id:
+                logger.warning(f"QBO webhook: unknown realmId {realm_id}, skipping.")
+                continue
+
+            entities = notification.get('dataChangeEvent', {}).get('entities', [])
+            for entity in entities:
+                entity_name = entity.get('name', '').lower()
+                operation = entity.get('operation', '').lower()
+
+                if operation == 'delete':
+                    # We don't auto-delete local records from QBO deletes
+                    continue
+
+                # Queue targeted pull for changed entity types
+                if entity_name == 'invoice':
+                    from .tasks import task_pull_invoices_from_qbo
+                    task_pull_invoices_from_qbo.delay()
+                    queued.append('invoice')
+                elif entity_name in ('vendor', 'supplier'):
+                    from .tasks import task_pull_vendors_from_qbo
+                    task_pull_vendors_from_qbo.delay()
+                    queued.append('vendor')
+                elif entity_name == 'bill':
+                    from .tasks import task_pull_bills_from_qbo
+                    task_pull_bills_from_qbo.delay()
+                    queued.append('bill')
+
+        logger.info(f"QBO webhook processed. Queued syncs: {list(set(queued))}")
+        # QBO expects a 200 response
+        return JsonResponse({'received': True, 'queued': list(set(queued))})

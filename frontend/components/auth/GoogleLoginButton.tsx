@@ -16,10 +16,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import type { User } from '@/lib/api/auth';
 
 interface GoogleLoginButtonProps {
 
-    onSuccess?: (data: { access: string; refresh: string; user: any }) => void;
+    onSuccess?: (data: { access: string; refresh: string; user: User }) => void;
     onError?: (error: string) => void;
 
     onRegistrationRequired?: (data: { user_data: any, google_token_info: any }) => void;

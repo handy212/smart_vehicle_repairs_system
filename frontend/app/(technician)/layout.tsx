@@ -7,7 +7,6 @@ import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, LogOut, Wrench } from "lucide-react";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function TechnicianLayout({
     children,
@@ -86,7 +85,6 @@ export default function TechnicianLayout({
                         <span className="text-sm font-medium text-foreground">{user?.first_name} {user?.last_name}</span>
                         <span className="text-xs text-muted-foreground capitalize">{user?.role}</span>
                     </div>
-                    <ThemeToggle />
                     <Button variant="ghost" size="icon" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10">
                         <LogOut className="h-5 w-5" />
                     </Button>

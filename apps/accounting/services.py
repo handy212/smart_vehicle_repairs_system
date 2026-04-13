@@ -325,7 +325,7 @@ class AccountingService:
 
             # 2. Create Header
             je = JournalEntry.objects.create(
-                date=payment.payment_date.date() if payment.payment_date else timezone.now().date(),
+                date=payment.payment_date.date() if payment.payment_date and hasattr(payment.payment_date, 'date') else timezone.now().date(),
                 description=f"Payment {payment.payment_number} from {str(payment.customer)}",
                 reference=payment.reference_number or payment.payment_number,
                 posted=True,
@@ -1394,57 +1394,87 @@ class ReportingService:
     @staticmethod
     def get_job_profitability(work_order_id=None, start_date=None, end_date=None, branch_id=None):
         """
-        Calculate job profitability by work order.
-        Returns: revenue, direct_costs, gross_profit, margin%
+        Calculate job profitability by work order with per-category margin breakdown.
+        Returns: revenue, direct_costs, gross_profit, margin% broken down by labor/parts/other.
+        Uses actual costs when available, falls back to estimated.
         """
         from apps.workorders.models import WorkOrder
-        from apps.billing.models import Invoice
+        from apps.billing.models import Invoice, InvoiceLineItem
         from apps.inventory.models import InventoryTransaction
         from django.db import models
         from decimal import Decimal
         from django.db.models import Sum
-        
+
+        def _margin(revenue, cost):
+            if revenue > 0:
+                return float(((revenue - cost) / revenue * 100).quantize(Decimal('0.01')))
+            return 0.0
+
         # Build query
         wo_qs = WorkOrder.objects.select_related('customer', 'vehicle', 'branch')
-        
+
         if work_order_id:
             wo_qs = wo_qs.filter(id=work_order_id)
         if start_date and end_date:
             wo_qs = wo_qs.filter(created_at__range=[start_date, end_date])
         if branch_id:
             wo_qs = wo_qs.filter(branch_id=branch_id)
-        
+
         # Only include work orders with invoices
         wo_qs = wo_qs.filter(status__in=['invoiced', 'completed', 'closed'])
-        
+
         results = []
         for wo in wo_qs:
             # Revenue from invoices
             invoices = Invoice.objects.filter(
                 work_order=wo,
-                status__in=['open', 'paid', 'partial']
+                status__in=['sent', 'viewed', 'partial', 'paid', 'overdue']
             )
             revenue = invoices.aggregate(total=Sum('total'))['total'] or Decimal('0')
-            
+
             if revenue == 0:
                 continue  # Skip work orders with no revenue
-            
-            # Parts cost from inventory transactions
+
+            # --- Per-category revenue from invoice line items ---
+            line_items = InvoiceLineItem.objects.filter(invoice__in=invoices)
+            labor_revenue = line_items.filter(item_type='labor').aggregate(
+                total=Sum('total'))['total'] or Decimal('0')
+            parts_revenue = line_items.filter(item_type='part').aggregate(
+                total=Sum('total'))['total'] or Decimal('0')
+            other_revenue = line_items.exclude(item_type__in=['labor', 'part']).aggregate(
+                total=Sum('total'))['total'] or Decimal('0')
+
+            # Fall back to invoice-level subtotals if no line items recorded
+            if labor_revenue == 0 and parts_revenue == 0 and other_revenue == 0:
+                first_inv = invoices.first()
+                if first_inv:
+                    labor_revenue = first_inv.labor_subtotal or Decimal('0')
+                    parts_revenue = first_inv.parts_subtotal or Decimal('0')
+                    other_revenue = first_inv.sublet_subtotal or Decimal('0')
+
+            # --- Parts cost from inventory transactions (actual) ---
             parts_cost = InventoryTransaction.objects.filter(
                 work_order=wo,
                 transaction_type='issue'
             ).aggregate(
                 total=Sum(models.F('quantity') * models.F('unit_cost'))
             )['total'] or Decimal('0')
-            
-            # Labor cost - use actual from work order
-            # (In a real system, this would come from time tracking)
-            labor_cost = wo.estimated_labor_cost or Decimal('0')
-            
+
+            # Fall back to work order actual_parts_cost when no inventory transactions
+            if parts_cost == 0:
+                parts_cost = wo.actual_parts_cost or Decimal('0')
+
+            # --- Labor cost: prefer actual, fall back to estimated ---
+            labor_cost = (
+                wo.actual_labor_cost
+                if wo.actual_labor_cost and wo.actual_labor_cost > 0
+                else wo.estimated_labor_cost
+            ) or Decimal('0')
+
             direct_costs = parts_cost + labor_cost
             gross_profit = revenue - direct_costs
             margin = (gross_profit / revenue * 100) if revenue > 0 else Decimal('0')
-            
+
             results.append({
                 'work_order_id': wo.id,
                 'work_order_number': wo.work_order_number,
@@ -1454,21 +1484,34 @@ class ReportingService:
                 'status': wo.status,
                 'created_at': wo.created_at,
                 'completed_at': wo.completed_at,
+                # Totals
                 'revenue': float(revenue),
                 'parts_cost': float(parts_cost),
                 'labor_cost': float(labor_cost),
                 'direct_costs': float(direct_costs),
                 'gross_profit': float(gross_profit),
-                'margin_percent': float(margin.quantize(Decimal('0.01')))
+                'margin_percent': float(margin.quantize(Decimal('0.01'))),
+                # Per-category breakdown
+                'labor_revenue': float(labor_revenue),
+                'parts_revenue': float(parts_revenue),
+                'other_revenue': float(other_revenue),
+                'labor_margin_percent': _margin(labor_revenue, labor_cost),
+                'parts_margin_percent': _margin(parts_revenue, parts_cost),
+                'other_margin_percent': _margin(other_revenue, Decimal('0')),
+                # Cost basis flag
+                'labor_cost_is_actual': bool(wo.actual_labor_cost and wo.actual_labor_cost > 0),
+                'parts_cost_is_actual': bool(
+                    InventoryTransaction.objects.filter(work_order=wo, transaction_type='issue').exists()
+                ),
             })
-        
+
         # Sort by gross profit descending
         results.sort(key=lambda x: x['gross_profit'], reverse=True)
-        
+
         total_revenue = sum(j['revenue'] for j in results)
         total_costs = sum(j['direct_costs'] for j in results)
         total_profit = sum(j['gross_profit'] for j in results)
-        
+
         return {
             'jobs': results,
             'totals': {
@@ -1476,7 +1519,12 @@ class ReportingService:
                 'revenue': total_revenue,
                 'direct_costs': total_costs,
                 'gross_profit': total_profit,
-                'avg_margin_percent': float((total_profit / total_revenue * 100) if total_revenue > 0 else Decimal('0'))
+                'avg_margin_percent': float((total_profit / total_revenue * 100) if total_revenue > 0 else Decimal('0')),
+                'total_labor_revenue': sum(j['labor_revenue'] for j in results),
+                'total_parts_revenue': sum(j['parts_revenue'] for j in results),
+                'total_other_revenue': sum(j['other_revenue'] for j in results),
+                'total_labor_cost': sum(j['labor_cost'] for j in results),
+                'total_parts_cost': sum(j['parts_cost'] for j in results),
             }
         }
     
@@ -1573,13 +1621,102 @@ class ReportingService:
             return credits - debits
         return Decimal('0')
 
+    @classmethod
+    def get_expense_breakdown(cls, start_date, end_date, branch_id=None):
+        """
+        Returns business expenses categorized by type:
+        - parts: cost of parts/inventory purchased (GL 5100-5199 or inventory transactions)
+        - labor: direct labor expense (GL 5200-5299 or work order actual labor cost)
+        - overhead: all other operating expenses (GL 5300+)
+        Also aggregates totals and % of total for each category.
+        """
+        from apps.billing.models import InvoiceLineItem, Invoice
+        from apps.workorders.models import WorkOrder
+        from apps.inventory.models import InventoryTransaction
+        from django.db.models import Sum, F
+        from decimal import Decimal
+
+        # --- Parts expense: sum of inventory issues in the period (actual COGS) ---
+        it_qs = InventoryTransaction.objects.filter(
+            transaction_type='issue',
+            created_at__date__range=[start_date, end_date],
+        )
+        if branch_id:
+            it_qs = it_qs.filter(work_order__branch_id=branch_id)
+        parts_expense = it_qs.aggregate(
+            total=Sum(F('quantity') * F('unit_cost'))
+        )['total'] or Decimal('0')
+
+        # Fall back to GL accounts 5100-5199 (Purchases/Inventory accounts) if no inv. transactions
+        if parts_expense == 0:
+            parts_expense = sum(
+                cls.get_account_balance(acc, start_date=start_date, end_date=end_date, branch_id=branch_id)
+                for acc in Account.objects.filter(
+                    account_type='expense', code__gte='5100', code__lt='5200', is_active=True
+                )
+            ) or Decimal('0')
+
+        # --- Labor expense: sum of actual labor costs from work orders in the period ---
+        wo_qs = WorkOrder.objects.filter(
+            created_at__date__range=[start_date, end_date],
+        )
+        if branch_id:
+            wo_qs = wo_qs.filter(branch_id=branch_id)
+        labor_expense = wo_qs.aggregate(
+            total=Sum('actual_labor_cost')
+        )['total'] or Decimal('0')
+
+        # Fall back to GL accounts 5200-5299 (Labor accounts) if no actual labor recorded
+        if labor_expense == 0:
+            labor_expense = sum(
+                cls.get_account_balance(acc, start_date=start_date, end_date=end_date, branch_id=branch_id)
+                for acc in Account.objects.filter(
+                    account_type='expense', code__gte='5200', code__lt='5300', is_active=True
+                )
+            ) or Decimal('0')
+
+        # --- Overhead: GL expense accounts outside parts/labor ranges ---
+        overhead_expense = Decimal('0')
+        overhead_detail = []
+        for acc in Account.objects.filter(account_type='expense', is_active=True).exclude(
+            code__range=('5100', '5299')
+        ):
+            bal = cls.get_account_balance(acc, start_date=start_date, end_date=end_date, branch_id=branch_id)
+            if bal > 0:
+                overhead_expense += bal
+                overhead_detail.append({'code': acc.code, 'name': acc.name, 'amount': float(bal)})
+
+        total = parts_expense + labor_expense + overhead_expense
+
+        def pct(val):
+            return float((val / total * 100).quantize(Decimal('0.01'))) if total > 0 else 0.0
+
+        return {
+            'period': {'start': str(start_date), 'end': str(end_date)},
+            'total_expenses': float(total),
+            'categories': {
+                'parts': {
+                    'amount': float(parts_expense),
+                    'percent': pct(parts_expense),
+                    'label': 'Parts & Inventory',
+                },
+                'labor': {
+                    'amount': float(labor_expense),
+                    'percent': pct(labor_expense),
+                    'label': 'Direct Labor',
+                },
+                'overhead': {
+                    'amount': float(overhead_expense),
+                    'percent': pct(overhead_expense),
+                    'label': 'Overhead & Operating',
+                    'detail': overhead_detail,
+                },
+            },
+        }
+
     # ========================================================================
     # PHASE 10: BUDGETING & CONTROLS
     # ========================================================================
-    
-    @staticmethod
-
-
 
     @staticmethod
     def get_budget_vs_actual(budget_id, start_date=None, end_date=None):

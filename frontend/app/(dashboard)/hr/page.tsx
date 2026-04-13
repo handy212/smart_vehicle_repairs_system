@@ -16,18 +16,18 @@ import {
     Clock,
     Banknote,
     UserPlus,
-    Target,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Shield,
     AlertTriangle,
     CheckCircle2,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    TrendingUp,
     Briefcase,
-    GraduationCap,
+    FileCheck,
+    ArrowRight,
+    UserCheck,
+    UserX,
+    Coffee,
+    Timer,
 } from "lucide-react";
-import { useTheme } from "@/lib/hooks/useTheme";
 import { cn } from "@/lib/utils/cn";
+import { format, differenceInDays, parseISO } from "date-fns";
 
 export default function HRPage() {
     return (
@@ -38,82 +38,31 @@ export default function HRPage() {
     );
 }
 
-function HRKpiCards({ loadingStaff, staffSummary, loadingLeave, pendingLeave, loadingAttendance, attendanceSummary, loadingCompliance, expiringDocs }: {
-    loadingStaff: boolean; staffSummary: any;
-    loadingLeave: boolean; pendingLeave: any;
-    loadingAttendance: boolean; attendanceSummary: any;
-    loadingCompliance: boolean; expiringDocs: any;
+function StatBar({ label, value, total, colorClass }: {
+    label: string;
+    value: number;
+    total: number;
+    colorClass: string;
 }) {
-    const { theme: activeTheme } = useTheme();
-    const isPerfex = activeTheme === "perfex";
-
-    const cards = [
-        {
-            label: "Total Staff", icon: Users,
-            value: loadingStaff ? "—" : staffSummary?.total_staff ?? 0,
-            sub: !loadingStaff && staffSummary ? `${staffSummary.active} active, ${staffSummary.probation} probation` : null,
-            color: "text-primary", bgColor: "bg-info/10 dark:bg-blue-900/20",
-        },
-        {
-            label: "Pending Leave", icon: Calendar,
-            value: loadingLeave ? "—" : pendingLeave?.length ?? 0,
-            sub: "Awaiting approval",
-            color: "text-warning", bgColor: "bg-warning/10 dark:bg-amber-900/20",
-        },
-        {
-            label: "Today's Attendance", icon: Clock,
-            value: loadingAttendance ? "—" : `${attendanceSummary?.attendance_rate ?? 0}%`,
-            sub: !loadingAttendance && attendanceSummary ? `${attendanceSummary.present} present, ${attendanceSummary.late} late` : null,
-            color: "text-success", bgColor: "bg-success/10 dark:bg-green-900/20",
-        },
-        {
-            label: "Expiring Docs", icon: AlertTriangle,
-            value: loadingCompliance ? "—" : expiringDocs?.length ?? 0,
-            sub: "Within 30 days",
-            color: "text-destructive", bgColor: "bg-destructive/10 dark:bg-red-900/20",
-        },
-    ];
-
-    if (isPerfex) {
-        return (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {cards.map((card) => (
-                    <Card key={card.label} className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]">
-                        <CardContent className="p-3 flex items-center gap-3">
-                            <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md", card.bgColor)}>
-                                <card.icon className={cn("h-4 w-4", card.color)} />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-lg font-bold leading-none text-foreground">{card.value}</p>
-                                <p className="mt-0.5 text-[11px] text-muted-foreground truncate">{card.label}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        );
-    }
-
+    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {cards.map((card) => (
-                <Card key={card.label} className="shadow-sm border bg-card">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{card.label}</p>
-                                <p className="text-2xl font-bold text-foreground mt-1">{card.value}</p>
-                            </div>
-                            <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", card.bgColor)}>
-                                <card.icon className={cn("h-5 w-5", card.color)} />
-                            </div>
-                        </div>
-                        {card.sub && <p className="text-xs text-muted-foreground mt-2">{card.sub}</p>}
-                    </CardContent>
-                </Card>
-            ))}
+        <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{label}</span>
+                <span className="font-semibold text-foreground">{value} <span className="font-normal text-muted-foreground">({pct}%)</span></span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                    className={cn("h-full rounded-full transition-all duration-500", colorClass)}
+                    style={{ width: `${pct}%` }}
+                />
+            </div>
         </div>
     );
+}
+
+function Skeleton({ className }: { className?: string }) {
+    return <div className={cn("rounded bg-muted animate-pulse", className)} />;
 }
 
 function HRDashboardContent() {
@@ -149,6 +98,70 @@ function HRDashboardContent() {
         },
     });
 
+    const { data: openJobsData, isLoading: loadingJobs } = useQuery({
+        queryKey: ["hr", "open-jobs"],
+        queryFn: async () => {
+            const res = await hrApi.jobOpenings.list({ status: "open" });
+            return res.data;
+        },
+    });
+
+    const openJobs = openJobsData?.results ?? [];
+
+    // KPI values
+    const totalStaff = staffSummary?.total_staff ?? 0;
+    const activeStaff = staffSummary?.active ?? 0;
+    const probationStaff = staffSummary?.probation ?? 0;
+    const terminatedStaff = staffSummary?.terminated ?? 0;
+    const resignedStaff = staffSummary?.resigned ?? 0;
+    const pendingLeaveCount = pendingLeave?.length ?? 0;
+    const attendanceRate = attendanceSummary?.attendance_rate ?? 0;
+    const presentCount = attendanceSummary?.present ?? 0;
+    const lateCount = attendanceSummary?.late ?? 0;
+    const absentCount = attendanceSummary?.absent ?? 0;
+    const onLeaveCount = attendanceSummary?.on_leave ?? 0;
+    const attendanceTotal = attendanceSummary?.total ?? totalStaff;
+    const expiringCount = expiringDocs?.length ?? 0;
+
+    const kpis = [
+        {
+            label: "Total Staff",
+            value: loadingStaff ? null : totalStaff,
+            sub: loadingStaff ? null : `${activeStaff} active · ${probationStaff} probation`,
+            icon: Users,
+            iconBg: "bg-blue-50 dark:bg-blue-950/30",
+            iconColor: "text-blue-600 dark:text-blue-400",
+            href: "/hr/staff",
+        },
+        {
+            label: "Pending Leave",
+            value: loadingLeave ? null : pendingLeaveCount,
+            sub: "Awaiting approval",
+            icon: Calendar,
+            iconBg: "bg-amber-50 dark:bg-amber-950/30",
+            iconColor: "text-amber-600 dark:text-amber-400",
+            href: "/hr/leave",
+        },
+        {
+            label: "Today's Attendance",
+            value: loadingAttendance ? null : `${attendanceRate}%`,
+            sub: loadingAttendance ? null : `${presentCount} present · ${lateCount} late`,
+            icon: Clock,
+            iconBg: "bg-green-50 dark:bg-green-950/30",
+            iconColor: "text-green-600 dark:text-green-400",
+            href: "/hr/attendance",
+        },
+        {
+            label: "Expiring Docs",
+            value: loadingCompliance ? null : expiringCount,
+            sub: "Within 30 days",
+            icon: AlertTriangle,
+            iconBg: expiringCount > 0 ? "bg-red-50 dark:bg-red-950/30" : "bg-muted",
+            iconColor: expiringCount > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
+            href: "/hr/compliance",
+        },
+    ];
+
     return (
         <div className="space-y-4">
             <StaffPageHeader
@@ -158,137 +171,384 @@ function HRDashboardContent() {
                     { label: "HR Management" },
                 ]}
                 actions={
-                    <div className="flex gap-2">
-                        <PermissionGuard permission="manage_staff">
-                            <Button size="sm" asChild>
-                                <Link href="/hr/staff/new">
-                                    <UserPlus className="h-4 w-4 mr-2" />
-                                    Add Staff
-                                </Link>
-                            </Button>
-                        </PermissionGuard>
-                    </div>
+                    <PermissionGuard permission="manage_staff">
+                        <Button size="sm" asChild>
+                            <Link href="/hr/staff/new">
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Add Staff
+                            </Link>
+                        </Button>
+                    </PermissionGuard>
                 }
             />
 
-            {/* KPI Cards */}
-            <HRKpiCards
-                loadingStaff={loadingStaff} staffSummary={staffSummary}
-                loadingLeave={loadingLeave} pendingLeave={pendingLeave}
-                loadingAttendance={loadingAttendance} attendanceSummary={attendanceSummary}
-                loadingCompliance={loadingCompliance} expiringDocs={expiringDocs}
-            />
-
-            {/* Quick Actions + Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Quick Actions */}
-                <Card className="shadow-sm border">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        {[
-                            { label: "View Staff", href: "/hr/staff", icon: Users, color: "text-primary" },
-                            { label: "Manage Leave", href: "/hr/leave", icon: Calendar, color: "text-warning" },
-                            { label: "View Attendance", href: "/hr/attendance", icon: Clock, color: "text-success" },
-                            { label: "Payroll", href: "/hr/payroll", icon: Banknote, color: "text-primary" },
-                            { label: "Recruitment", href: "/hr/recruitment", icon: Briefcase, color: "text-info" },
-                            { label: "Departments", href: "/hr/departments", icon: Building2, color: "text-primary" },
-                            { label: "Performance Reviews", href: "/hr/performance", icon: Target, color: "text-destructive" },
-                            { label: "Training", href: "/hr/training", icon: GraduationCap, color: "text-teal-600" },
-                        ].map((action) => (
-                            <Link
-                                key={action.href}
-                                href={action.href}
-                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/80 transition-colors group"
-                            >
-                                <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center group-hover:bg-background transition-colors">
-                                    <action.icon className={`h-4 w-4 ${action.color}`} />
+            {/* KPI Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {kpis.map((kpi) => (
+                    <Link key={kpi.label} href={kpi.href} className="block group">
+                        <Card className="border border-border bg-card shadow-sm h-full transition-shadow hover:shadow-md">
+                            <CardContent className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{kpi.label}</p>
+                                        {kpi.value === null ? (
+                                            <Skeleton className="h-7 w-16 mt-1" />
+                                        ) : (
+                                            <p className="text-2xl font-bold text-foreground mt-0.5 leading-none">{kpi.value}</p>
+                                        )}
+                                        {kpi.sub && (
+                                            <p className="text-[11px] text-muted-foreground mt-1.5 leading-snug">{kpi.sub}</p>
+                                        )}
+                                    </div>
+                                    <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", kpi.iconBg)}>
+                                        <kpi.icon className={cn("h-4 w-4", kpi.iconColor)} />
+                                    </div>
                                 </div>
-                                <span className="text-sm font-medium text-foreground">{action.label}</span>
-                            </Link>
-                        ))}
+                            </CardContent>
+                        </Card>
+                    </Link>
+                ))}
+            </div>
+
+            {/* Main content: 3-column grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                {/* Staff Status Breakdown */}
+                <Card className="border border-border bg-card shadow-sm">
+                    <CardHeader className="pb-3 pt-4 px-4">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-semibold">Staff Breakdown</CardTitle>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" asChild>
+                                <Link href="/hr/staff">View all <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4 space-y-4">
+                        {loadingStaff ? (
+                            <div className="space-y-3">
+                                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-6 w-full" />)}
+                            </div>
+                        ) : (
+                            <>
+                                <div className="space-y-3">
+                                    <StatBar label="Active" value={activeStaff} total={totalStaff} colorClass="bg-green-500" />
+                                    <StatBar label="Probation" value={probationStaff} total={totalStaff} colorClass="bg-amber-500" />
+                                    <StatBar label="Terminated" value={terminatedStaff} total={totalStaff} colorClass="bg-red-400" />
+                                    <StatBar label="Resigned" value={resignedStaff} total={totalStaff} colorClass="bg-slate-400" />
+                                </div>
+
+                                {staffSummary?.by_department && staffSummary.by_department.length > 0 && (
+                                    <div className="pt-2 border-t border-border">
+                                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">By Department</p>
+                                        <div className="space-y-1.5">
+                                            {staffSummary.by_department.slice(0, 5).map((dept) => (
+                                                <div key={dept.department__name} className="flex items-center justify-between text-xs">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                        <span className="text-muted-foreground truncate">{dept.department__name || "Unassigned"}</span>
+                                                    </div>
+                                                    <span className="font-semibold text-foreground ml-2 shrink-0">{dept.count}</span>
+                                                </div>
+                                            ))}
+                                            {staffSummary.by_department.length > 5 && (
+                                                <p className="text-[11px] text-muted-foreground pt-1">
+                                                    +{staffSummary.by_department.length - 5} more departments
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Today's Attendance Detail */}
+                <Card className="border border-border bg-card shadow-sm">
+                    <CardHeader className="pb-3 pt-4 px-4">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-semibold">Today's Attendance</CardTitle>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" asChild>
+                                <Link href="/hr/attendance">Details <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                            </Button>
+                        </div>
+                        {!loadingAttendance && attendanceSummary && (
+                            <p className="text-xs text-muted-foreground">{format(new Date(), "EEEE, d MMMM yyyy")}</p>
+                        )}
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        {loadingAttendance ? (
+                            <div className="space-y-4">
+                                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {/* Rate circle + summary */}
+                                <div className="flex items-center gap-4 pb-3 border-b border-border">
+                                    <div className="relative flex items-center justify-center h-14 w-14 shrink-0">
+                                        <svg className="h-14 w-14 -rotate-90" viewBox="0 0 36 36">
+                                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-muted/40" />
+                                            <circle
+                                                cx="18" cy="18" r="15.9" fill="none"
+                                                stroke="currentColor" strokeWidth="2.5"
+                                                strokeDasharray={`${attendanceRate} ${100 - attendanceRate}`}
+                                                strokeLinecap="round"
+                                                className="text-green-500"
+                                            />
+                                        </svg>
+                                        <span className="absolute text-xs font-bold text-foreground">{attendanceRate}%</span>
+                                    </div>
+                                    <div className="text-sm">
+                                        <p className="font-semibold text-foreground">{attendanceRate >= 90 ? "Excellent" : attendanceRate >= 75 ? "Good" : attendanceRate >= 60 ? "Fair" : "Low"}</p>
+                                        <p className="text-muted-foreground text-xs">{attendanceTotal} staff total</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { icon: UserCheck, label: "Present", value: presentCount, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
+                                        { icon: Timer, label: "Late", value: lateCount, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
+                                        { icon: UserX, label: "Absent", value: absentCount, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+                                        { icon: Coffee, label: "On Leave", value: onLeaveCount, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
+                                    ].map((item) => (
+                                        <div key={item.label} className={cn("flex items-center gap-2 p-2.5 rounded-lg", item.bg)}>
+                                            <item.icon className={cn("h-4 w-4 shrink-0", item.color)} />
+                                            <div>
+                                                <p className={cn("text-sm font-bold leading-none", item.color)}>{item.value}</p>
+                                                <p className="text-[11px] text-muted-foreground mt-0.5">{item.label}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
                 {/* Pending Leave Requests */}
-                <Card className="shadow-sm border lg:col-span-2">
-                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                        <CardTitle className="text-sm font-semibold">Pending Leave Requests</CardTitle>
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href="/hr/leave">View All</Link>
-                        </Button>
+                <Card className="border border-border bg-card shadow-sm">
+                    <CardHeader className="pb-3 pt-4 px-4">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-semibold">
+                                Pending Leave
+                                {pendingLeaveCount > 0 && (
+                                    <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                        {pendingLeaveCount}
+                                    </Badge>
+                                )}
+                            </CardTitle>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" asChild>
+                                <Link href="/hr/leave">View all <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                            </Button>
+                        </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="px-4 pb-4">
                         {loadingLeave ? (
-                            <div className="space-y-3">
-                                {[1, 2, 3].map((i) => (
-                                    <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
-                                ))}
+                            <div className="space-y-2">
+                                {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
                             </div>
                         ) : pendingLeave && pendingLeave.length > 0 ? (
                             <div className="space-y-2">
                                 {pendingLeave.slice(0, 5).map((req) => (
-                                    <div
+                                    <Link
                                         key={req.id}
-                                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                                        href="/hr/leave"
+                                        className="flex items-start gap-3 p-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors group"
                                     >
+                                        <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                                            {req.staff_name?.charAt(0)?.toUpperCase() ?? "?"}
+                                        </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground truncate">
-                                                {req.staff_name}
+                                            <p className="text-xs font-semibold text-foreground truncate">{req.staff_name}</p>
+                                            <p className="text-[11px] text-muted-foreground leading-snug">
+                                                {req.leave_type_name} · {req.days_count}d
                                             </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {req.leave_type_name} • {req.start_date} to {req.end_date} ({req.days_count} days)
+                                            <p className="text-[11px] text-muted-foreground">
+                                                {req.start_date} → {req.end_date}
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-2 ml-4">
-                                            <Badge
-                                                variant="outline"
-                                                className="text-[10px] px-2 py-0.5 bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800"
-                                            >
-                                                Pending
-                                            </Badge>
-                                        </div>
-                                    </div>
+                                    </Link>
                                 ))}
+                                {pendingLeave.length > 5 && (
+                                    <p className="text-xs text-center text-muted-foreground pt-1">
+                                        +{pendingLeave.length - 5} more requests
+                                    </p>
+                                )}
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <CheckCircle2 className="h-8 w-8 text-success mb-2" />
-                                <p className="text-sm text-muted-foreground">No pending leave requests</p>
+                                <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                                <p className="text-sm font-medium text-foreground">All clear</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">No pending leave requests</p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Department Breakdown */}
-            {!loadingStaff && staffSummary?.by_department && staffSummary.by_department.length > 0 && (
-                <Card className="shadow-sm border">
-                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                        <CardTitle className="text-sm font-semibold">Staff by Department</CardTitle>
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href="/hr/departments">Manage Departments</Link>
-                        </Button>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                            {staffSummary.by_department.map((dept) => (
-                                <div
-                                    key={dept.department__name}
-                                    className="flex flex-col items-center p-3 rounded-lg border bg-muted/30 hover:bg-muted/60 transition-colors"
-                                >
-                                    <Building2 className="h-5 w-5 text-muted-foreground mb-1" />
-                                    <p className="text-lg font-bold text-foreground">{dept.count}</p>
-                                    <p className="text-xs text-muted-foreground text-center truncate w-full">
-                                        {dept.department__name || "Unassigned"}
-                                    </p>
-                                </div>
-                            ))}
+            {/* Bottom row: Compliance + Recruitment */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                {/* Expiring Compliance Docs */}
+                <Card className="border border-border bg-card shadow-sm">
+                    <CardHeader className="pb-3 pt-4 px-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CardTitle className="text-sm font-semibold">Expiring Compliance Docs</CardTitle>
+                                {expiringCount > 0 && (
+                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                        {expiringCount}
+                                    </Badge>
+                                )}
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" asChild>
+                                <Link href="/hr/compliance">Manage <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                            </Button>
                         </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        {loadingCompliance ? (
+                            <div className="space-y-2">
+                                {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                            </div>
+                        ) : expiringDocs && expiringDocs.length > 0 ? (
+                            <div className="space-y-2">
+                                {expiringDocs.slice(0, 6).map((doc) => {
+                                    const daysLeft = doc.days_until_expiry ?? (doc.expiry_date
+                                        ? differenceInDays(parseISO(doc.expiry_date), new Date())
+                                        : null);
+                                    const isExpired = daysLeft !== null && daysLeft < 0;
+                                    const isCritical = daysLeft !== null && daysLeft <= 7 && !isExpired;
+                                    return (
+                                        <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-card">
+                                            <div className={cn(
+                                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                                                isExpired ? "bg-red-100 dark:bg-red-950/30" :
+                                                    isCritical ? "bg-orange-100 dark:bg-orange-950/30" : "bg-amber-50 dark:bg-amber-950/30"
+                                            )}>
+                                                <FileCheck className={cn("h-4 w-4", isExpired ? "text-red-600" : isCritical ? "text-orange-600" : "text-amber-600")} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-semibold text-foreground truncate">{doc.staff_name}</p>
+                                                <p className="text-[11px] text-muted-foreground truncate">{doc.name || doc.document_type}</p>
+                                            </div>
+                                            <Badge variant="outline" className={cn(
+                                                "text-[10px] px-1.5 shrink-0",
+                                                isExpired ? "border-red-300 text-red-700 bg-red-50 dark:bg-red-950/30 dark:text-red-400" :
+                                                    isCritical ? "border-orange-300 text-orange-700 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400" :
+                                                        "border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400"
+                                            )}>
+                                                {isExpired ? "Expired" : daysLeft !== null ? `${daysLeft}d left` : "Expiring"}
+                                            </Badge>
+                                        </div>
+                                    );
+                                })}
+                                {expiringDocs.length > 6 && (
+                                    <Link href="/hr/compliance" className="text-xs text-center text-muted-foreground hover:text-foreground block pt-1 transition-colors">
+                                        +{expiringDocs.length - 6} more documents →
+                                    </Link>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                                <p className="text-sm font-medium text-foreground">All documents valid</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">No documents expiring within 30 days</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
-            )}
+
+                {/* Open Job Openings */}
+                <Card className="border border-border bg-card shadow-sm">
+                    <CardHeader className="pb-3 pt-4 px-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CardTitle className="text-sm font-semibold">Open Positions</CardTitle>
+                                {openJobs.length > 0 && (
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                        {openJobs.length}
+                                    </Badge>
+                                )}
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" asChild>
+                                <Link href="/hr/recruitment">All jobs <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        {loadingJobs ? (
+                            <div className="space-y-2">
+                                {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+                            </div>
+                        ) : openJobs.length > 0 ? (
+                            <div className="space-y-2">
+                                {openJobs.slice(0, 6).map((job) => (
+                                    <Link
+                                        key={job.id}
+                                        href={`/hr/recruitment/${job.id}`}
+                                        className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors group"
+                                    >
+                                        <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center shrink-0">
+                                            <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">{job.title}</p>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                {job.department_name} · {job.applicant_count} applicant{job.applicant_count !== 1 ? "s" : ""}
+                                            </p>
+                                        </div>
+                                        <Badge variant="outline" className="text-[10px] px-1.5 shrink-0 border-green-300 text-green-700 bg-green-50 dark:bg-green-950/30 dark:text-green-400">
+                                            Open
+                                        </Badge>
+                                    </Link>
+                                ))}
+                                {openJobs.length > 6 && (
+                                    <Link href="/hr/recruitment" className="text-xs text-center text-muted-foreground hover:text-foreground block pt-1 transition-colors">
+                                        +{openJobs.length - 6} more positions →
+                                    </Link>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <Briefcase className="h-8 w-8 text-muted-foreground mb-2" />
+                                <p className="text-sm font-medium text-foreground">No open positions</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Post a job to start hiring</p>
+                                <Button size="sm" variant="outline" className="mt-3" asChild>
+                                    <Link href="/hr/recruitment/new">
+                                        <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                                        Post a Job
+                                    </Link>
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Payroll quick link footer strip */}
+            <Card className="border border-border bg-card shadow-sm">
+                <CardContent className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide shrink-0">Quick access</span>
+                        {[
+                            { label: "Payroll", href: "/hr/payroll", icon: Banknote },
+                            { label: "Performance", href: "/hr/performance", icon: Users },
+                            { label: "Training", href: "/hr/training", icon: Users },
+                            { label: "Departments", href: "/hr/departments", icon: Building2 },
+                        ].map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md hover:bg-muted/70 border border-transparent hover:border-border"
+                            >
+                                <item.icon className="h-3.5 w-3.5" />
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

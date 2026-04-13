@@ -271,7 +271,6 @@ export default function WorkOrderDetailPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
-                            // Pending Items
                                 {pendingRecommendations.length > 0 && (
                                     <div className="divide-y border-b">
                                         <div className="p-3 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -329,7 +328,6 @@ export default function WorkOrderDetailPage() {
                                     </div>
                                 )}
 
-                            // Approved Items
                                 {approvedRecommendations.length > 0 && (
                                     <div className="divide-y">
                                         <div className="p-3 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -364,7 +362,6 @@ export default function WorkOrderDetailPage() {
                                     </div>
                                 )}
 
-                            // Empty state handled by parent condition
                             </CardContent>
                         </Card>
                     )}

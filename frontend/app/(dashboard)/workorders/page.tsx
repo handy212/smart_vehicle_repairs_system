@@ -684,7 +684,7 @@ export default function WorkOrdersPage() {
           {data && data.count > 0 && (
             <div className="p-2 border-t border-border flex items-center justify-between">
               <div className="text-[10px] text-muted-foreground pl-2">
-                Page {page} of {Math.ceil(data.count / 10)} ({data.count} items)
+                Page {page} of {Math.ceil(data.count / 20)} ({data.count} items)
               </div>
               <div className="flex space-x-2">
                 <Button

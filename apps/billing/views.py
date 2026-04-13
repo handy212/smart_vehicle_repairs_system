@@ -187,6 +187,20 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_estimates')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_estimates')]
+        elif self.action in ['history', 'pdf', 'print', 'next_number']:
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
+        elif self.action in ['bulk_update_status', 'send', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_estimates')]
+        elif self.action == 'approve':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('approve_estimates')]
+        elif self.action == 'decline':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('reject_estimates')]
+        elif self.action == 'duplicate':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_estimates')]
+        elif self.action == 'convert_to_invoice':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('convert_estimate_to_invoice')]
+        elif self.action == 'convert_to_work_order':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_workorders')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('manage_billing')]
         return [IsAuthenticated(), IsModuleEnabled('billing')]
@@ -561,10 +575,16 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_invoices')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
+        elif self.action in ['history', 'pdf', 'print', 'unpaid', 'overdue']:
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
+        elif self.action in ['bulk_update_status', 'send', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
+        elif self.action == 'convert_to_invoice':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_invoices')]
+        elif self.action == 'void':
+            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('delete_invoices')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('delete_invoices')]
-        elif self.action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
-            return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_invoices')]
         return [IsAuthenticated(), IsModuleEnabled('billing')]
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]

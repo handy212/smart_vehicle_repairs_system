@@ -44,7 +44,7 @@ export default function TrialBalancePage() {
         rows.push([]);
 
 
-        report.accounts.forEach((account: any) => {
+        report?.accounts.forEach((account: any) => {
             rows.push([
                 account.code,
                 account.name,
@@ -54,7 +54,7 @@ export default function TrialBalancePage() {
             ]);
         });
 
-        rows.push(['', '', 'Totals', report.totals.debits, report.totals.credits]);
+        rows.push(['', '', 'Totals', report?.totals.debits, report?.totals.credits]);
 
         const filename = generateFilenameWithTimestamp('trial-balance', 'csv');
         exportToCSV(rows, filename, ['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
@@ -71,7 +71,7 @@ export default function TrialBalancePage() {
 
         // Data
 
-        report.accounts.forEach((account: any) => {
+        report?.accounts.forEach((account: any) => {
             rows.push([
                 account.code,
                 account.name,
@@ -82,7 +82,7 @@ export default function TrialBalancePage() {
         });
 
         // Totals
-        rows.push(['', '', 'TOTALS', report.totals.debits, report.totals.credits]);
+        rows.push(['', '', 'TOTALS', report?.totals.debits, report?.totals.credits]);
 
         const filename = generateFilenameWithTimestamp('trial-balance', 'xlsx');
         exportToExcel(rows, filename, {

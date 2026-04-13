@@ -165,18 +165,21 @@ export default function MyRoadsideRequestsPage() {
             href={`/portal/roadside/${req.id}`}
             icon={<Navigation className="w-5 h-5 text-primary" />}
             title={`${req.request_number} • ${getServiceTypeDisplay(req.service_type)}`}
-            subtitle={format(new Date(req.requested_at), "MMM d, h:mm a")}
-            status={
-              <Badge variant={getStatusVariant(req.status || 'requested')} className="text-[10px] h-5 px-1.5">
-                {req.status_display || req.status}
-              </Badge>
+            subtitle={
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <MapPin className="w-3 h-3 mt-0.5" />
+                  <span className="line-clamp-1">{req.breakdown_location}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{format(new Date(req.requested_at), "MMM d, h:mm a")}</span>
+                  <Badge variant={getStatusVariant(req.status || 'requested')} className="text-[10px] h-5 px-1.5">
+                    {req.status_display || req.status}
+                  </Badge>
+                </div>
+              </div>
             }
-          >
-            <div className="flex items-start gap-2 text-xs text-muted-foreground mt-1">
-              <MapPin className="w-3 h-3 mt-0.5" />
-              <span className="line-clamp-1">{req.breakdown_location}</span>
-            </div>
-          </PortalCard>
+          />
         )}
       />
     </div>

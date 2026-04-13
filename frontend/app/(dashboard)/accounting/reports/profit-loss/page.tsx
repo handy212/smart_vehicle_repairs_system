@@ -51,8 +51,8 @@ export default function ProfitLossPage() {
     });
 
 
-    const totalIncome = report?.income?.reduce((sum, item) => sum + parseFloat(String(item.balance || 0)), 0) || 0;
-    const totalExpenses = report?.expenses?.reduce((sum, item) => sum + parseFloat(String(item.balance || 0)), 0) || 0;
+    const totalIncome = report?.income?.reduce((sum, item) => sum + Number(item.balance || 0), 0) || 0;
+    const totalExpenses = report?.expenses?.reduce((sum, item) => sum + Number(item.balance || 0), 0) || 0;
     const netIncome = totalIncome - totalExpenses;
 
     const handleExportCSV = () => {
@@ -69,8 +69,8 @@ export default function ProfitLossPage() {
         // Income section
         rows.push(['INCOME']);
 
-        report.income?.forEach((item) => {
-            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        report?.income?.forEach((item) => {
+            rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Income', totalIncome]);
         rows.push([]);
@@ -78,8 +78,8 @@ export default function ProfitLossPage() {
         // Expenses section
         rows.push(['EXPENSES']);
 
-        report.expenses?.forEach((item) => {
-            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        report?.expenses?.forEach((item) => {
+            rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Expenses', totalExpenses]);
         rows.push([]);
@@ -106,8 +106,8 @@ export default function ProfitLossPage() {
         rows.push(['INCOME', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report.income?.forEach((item) => {
-            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        report?.income?.forEach((item) => {
+            rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Income', totalIncome]);
         rows.push([]);
@@ -116,8 +116,8 @@ export default function ProfitLossPage() {
         rows.push(['EXPENSES', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report.expenses?.forEach((item) => {
-            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        report?.expenses?.forEach((item) => {
+            rows.push([item.code, item.name, Number(item.balance || 0)]);
         });
         rows.push(['', 'Total Expenses', totalExpenses]);
         rows.push([]);
@@ -128,7 +128,8 @@ export default function ProfitLossPage() {
         const filename = generateFilenameWithTimestamp('profit-loss', 'xlsx');
 
         // Bold rows: title, headers, totals
-        const boldRows = [0, 4, 3 + report.income.length + 2, 3 + report.income.length + 2 + 1, rows.length - 1];
+        const incomeLength = report?.income?.length || 0;
+        const boldRows = [0, 4, 3 + incomeLength + 2, 3 + incomeLength + 2 + 1, rows.length - 1];
 
         exportToExcel(rows, filename, {
             sheetName: 'Profit & Loss',
@@ -139,7 +140,7 @@ export default function ProfitLossPage() {
             colorRows: [
                 { row: 0, color: '3B82F6' },  // Blue for title
                 { row: 3, color: '10B981' },  // Green for income header
-                { row: 3 + report.income.length + 2, color: 'EF4444' }, // Red for expenses header
+                { row: 3 + (report?.income?.length || 0) + 2, color: 'EF4444' }, // Red for expenses header
             ],
             freezePane: { row: 1, col: 0 },
             showTimestamp: true,
@@ -194,6 +195,10 @@ export default function ProfitLossPage() {
                 <div className="flex justify-center p-12">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
+            ) : !report ? (
+                <div className="flex justify-center p-12 text-destructive">
+                    Report data not available
+                </div>
             ) : (
                 <>
                     <Card className="overflow-hidden">
@@ -216,7 +221,7 @@ export default function ProfitLossPage() {
                                                 {item.name}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-sm text-foreground text-right font-mono">
-                                                {formatCurrency(parseFloat(item.balance || 0))}
+                                                {formatCurrency(Number(item.balance || 0))}
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -253,7 +258,7 @@ export default function ProfitLossPage() {
                                                 {item.name}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-sm text-foreground text-right font-mono">
-                                                {formatCurrency(parseFloat(item.balance || 0))}
+                                                {formatCurrency(Number(item.balance || 0))}
                                             </TableCell>
                                         </TableRow>
                                     ))}

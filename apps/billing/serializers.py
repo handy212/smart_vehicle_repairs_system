@@ -182,6 +182,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     sent_by_name = serializers.CharField(source='sent_by.get_full_name', read_only=True)
     tax_breakdown = serializers.SerializerMethodField()
     work_order_number = serializers.SerializerMethodField()
+    latest_invoice_summary = serializers.SerializerMethodField()
     
     is_expired = serializers.BooleanField(read_only=True)
     days_until_expiration = serializers.IntegerField(read_only=True)
@@ -201,6 +202,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'discount_amount', 'discount_percentage', 'discount_type', 'discount_reason',
             'tax_amount', 'shop_supplies_fee', 'environmental_fee', 'total',
             'taxable_subtotal', 'tax_breakdown', 'line_items',
+            'latest_invoice_summary',
             'is_expired', 'days_until_expiration', 'can_be_approved', 'can_be_converted',
             'approved_date', 'declined_date', 'converted_date',
             'created_by', 'created_by_name',
@@ -221,6 +223,21 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
         if obj.work_order:
             return obj.work_order.work_order_number
         return None
+
+    @extend_schema_field(serializers.DictField())
+    def get_latest_invoice_summary(self, obj):
+        invoice = obj.invoices.exclude(status='void').order_by('-created_at').first()
+        if not invoice:
+            return None
+
+        return {
+            'id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'status': invoice.status,
+            'total': str(invoice.total),
+            'amount_paid': str(invoice.amount_paid),
+            'amount_due': str(invoice.amount_due),
+        }
 
     @extend_schema_field(inline_serializer(
         name='TaxBreakdownEstimate',

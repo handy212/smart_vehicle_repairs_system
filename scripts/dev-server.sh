@@ -22,6 +22,9 @@ FRONTEND_DIR="$PROJECT_DIR/frontend"
 # Ports (different from production to avoid conflicts)
 DJANGO_PORT=8001
 NEXTJS_PORT=3001
+DJANGO_BIND_ADDRESS="${DJANGO_BIND_ADDRESS:-127.0.0.1}"
+NEXTJS_BIND_ADDRESS="${NEXTJS_BIND_ADDRESS:-127.0.0.1}"
+PUBLIC_HOST="${PUBLIC_HOST:-${DJANGO_HOST:-localhost}}"
 
 # Virtualenv settings
 # Use a dedicated dev venv so we don't conflict with the production venv under /var/www/svr
@@ -31,6 +34,10 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Development Server${NC}"
 echo -e "${BLUE}========================================${NC}"
+echo ""
+echo -e "${BLUE}Backend bind:${NC} $DJANGO_BIND_ADDRESS:$DJANGO_PORT"
+echo -e "${BLUE}Frontend bind:${NC} $NEXTJS_BIND_ADDRESS:$NEXTJS_PORT"
+echo -e "${BLUE}Public host:${NC} $PUBLIC_HOST"
 echo ""
 
 # Check if .env.development exists
@@ -198,7 +205,7 @@ cat > "$FRONTEND_ENV_FILE" << EOF
 NEXT_PUBLIC_API_URL=http://${DJANGO_HOST:-localhost}:$DJANGO_PORT/api
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 EOF
-echo -e "${GREEN}✓ Frontend API URL set to http://localhost:$DJANGO_PORT/api${NC}"
+echo -e "${GREEN}✓ Frontend API URL set to http://$PUBLIC_HOST:$DJANGO_PORT/api${NC}"
 echo ""
 
 # Check if development database exists
@@ -280,9 +287,9 @@ fi
 # echo ""
 
 # Create superuser if it doesn't exist (optional)
-echo -e "${BLUE}Backend:${NC} http://localhost:$DJANGO_PORT"
-echo -e "${BLUE}Frontend:${NC} http://localhost:$NEXTJS_PORT"
-echo -e "${BLUE}Admin:${NC} http://localhost:$DJANGO_PORT/admin"
+echo -e "${BLUE}Backend:${NC} http://$PUBLIC_HOST:$DJANGO_PORT"
+echo -e "${BLUE}Frontend:${NC} http://$PUBLIC_HOST:$NEXTJS_PORT"
+echo -e "${BLUE}Admin:${NC} http://$PUBLIC_HOST:$DJANGO_PORT/admin"
 echo ""
 echo -e "${YELLOW}Starting servers...${NC}"
 echo -e "${YELLOW}(Press Ctrl+C to stop all servers)${NC}"
@@ -305,7 +312,7 @@ echo -e "${GREEN}Starting Django backend on port $DJANGO_PORT...${NC}"
 cd "$BACKEND_DIR"
 export DJANGO_SETTINGS_MODULE=config.settings.development
 source "$VENV_DIR/bin/activate"
-python manage.py runserver ${DJANGO_BIND_ADDRESS:-127.0.0.1}:$DJANGO_PORT > /tmp/django-dev.log 2>&1 &
+python manage.py runserver "$DJANGO_BIND_ADDRESS:$DJANGO_PORT" > /tmp/django-dev.log 2>&1 &
 DJANGO_PID=$!
 
 # Wait a moment for Django to start
@@ -314,7 +321,7 @@ sleep 3
 # Start Next.js development server
 echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
 cd "$FRONTEND_DIR"
-NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api PORT=$NEXTJS_PORT npm run dev > /tmp/nextjs-dev.log 2>&1 &
+NEXT_PUBLIC_API_URL="http://$PUBLIC_HOST:$DJANGO_PORT/api" npx next dev --turbo --hostname "$NEXTJS_BIND_ADDRESS" --port "$NEXTJS_PORT" > /tmp/nextjs-dev.log 2>&1 &
 NEXTJS_PID=$!
 
 # Start Celery Worker
@@ -334,9 +341,9 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}Development servers are running!${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
-echo -e "Backend API:  ${GREEN}http://localhost:$DJANGO_PORT${NC}"
-echo -e "Frontend:     ${GREEN}http://localhost:$NEXTJS_PORT${NC}"
-echo -e "Django Admin: ${GREEN}http://localhost:$DJANGO_PORT/admin${NC}"
+echo -e "Backend API:  ${GREEN}http://$PUBLIC_HOST:$DJANGO_PORT${NC}"
+echo -e "Frontend:     ${GREEN}http://$PUBLIC_HOST:$NEXTJS_PORT${NC}"
+echo -e "Django Admin: ${GREEN}http://$PUBLIC_HOST:$DJANGO_PORT/admin${NC}"
 echo ""
 echo -e "${YELLOW}Logs:${NC}"
 echo -e "  Django: tail -f /tmp/django-dev.log"
@@ -347,4 +354,3 @@ echo ""
 
 # Wait for all processes
 wait $DJANGO_PID $NEXTJS_PID $CELERY_WORKER_PID $CELERY_BEAT_PID
-

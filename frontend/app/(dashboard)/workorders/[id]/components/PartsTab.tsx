@@ -5,9 +5,11 @@ import { useMutation } from "@tanstack/react-query";
 import { workOrderPartsApi, WorkOrderPart } from "@/lib/api/workorder-parts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, CheckCircle2, Package, ThumbsUp } from "lucide-react";
+import { Plus, CheckCircle2, Package, ThumbsUp, Undo2 } from "lucide-react";
 import AddPartDialog from "./AddPartDialog";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -21,8 +23,10 @@ export default function WorkOrderPartsTab({
   workOrderId, parts, onRefresh }: PartsTabProps) {
   const { formatCurrency } = useCurrency();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [returningPart, setReturningPart] = useState<WorkOrderPart | null>(null);
+  const [returnReason, setReturnReason] = useState("");
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): BadgeProps["variant"] => {
     switch (status) {
       case "installed":
         return "success";
@@ -44,6 +48,14 @@ export default function WorkOrderPartsTab({
 
   const approveMutation = useMutation({
     mutationFn: (partId: number) => workOrderPartsApi.approve(partId),
+    onSuccess: () => {
+      onRefresh();
+    },
+  });
+
+  const markReturnedMutation = useMutation({
+    mutationFn: ({ partId, reason }: { partId: number; reason: string }) =>
+      workOrderPartsApi.markReturned(partId, reason),
     onSuccess: () => {
       onRefresh();
     },
@@ -108,13 +120,18 @@ export default function WorkOrderPartsTab({
                       {part.requisition_number || "-"}
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{part.part_name}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{part.part_number}</div>
-                        {part.description && (
-                          <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">{part.description}</div>
-                        )}
-                      </div>
+                        <div>
+                          <div className="font-medium">{part.part_name}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{part.part_number}</div>
+                          {part.description && (
+                            <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">{part.description}</div>
+                          )}
+                          {part.resolution_notes && (
+                            <div className="text-xs text-amber-700 mt-1">
+                              Return note: {part.resolution_notes}
+                            </div>
+                          )}
+                        </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
@@ -128,7 +145,7 @@ export default function WorkOrderPartsTab({
                     </TableCell>
                     <TableCell>
 
-                      <Badge variant={getStatusVariant(part.status) as any}>
+                      <Badge variant={getStatusVariant(part.status)}>
                         {part.status?.replace(/_/g, " ")}
                       </Badge>
                     </TableCell>
@@ -147,15 +164,32 @@ export default function WorkOrderPartsTab({
                               Approve
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => markInstalledMutation.mutate(part.id)}
-                            disabled={markInstalledMutation.isPending}
-                          >
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Mark Installed
-                          </Button>
+                          {(part.status === "ready" || part.status === "received") && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="mr-2"
+                              onClick={() => markInstalledMutation.mutate(part.id)}
+                              disabled={markInstalledMutation.isPending}
+                            >
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Mark Installed
+                            </Button>
+                          )}
+                          {part.status !== "returned" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setReturningPart(part);
+                                setReturnReason(part.resolution_notes || "");
+                              }}
+                              disabled={markReturnedMutation.isPending}
+                            >
+                              <Undo2 className="w-3 h-3 mr-1" />
+                              Mark Returned
+                            </Button>
+                          )}
                         </>
                       )}
                     </TableCell>
@@ -178,7 +212,63 @@ export default function WorkOrderPartsTab({
           }}
         />
       )}
+
+      <Dialog
+        open={!!returningPart}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReturningPart(null);
+            setReturnReason("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Return Part to Stores</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Explain why <span className="font-medium text-foreground">{returningPart?.part_name}</span> was not used.
+              This note is required before quality check and completion.
+            </p>
+            <Textarea
+              value={returnReason}
+              onChange={(event) => setReturnReason(event.target.value)}
+              rows={4}
+              placeholder="Example: Ordered for inspection, but the original part tested good and was kept in service."
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReturningPart(null);
+                setReturnReason("");
+              }}
+              disabled={markReturnedMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!returningPart || !returnReason.trim()) return;
+                markReturnedMutation.mutate(
+                  { partId: returningPart.id, reason: returnReason.trim() },
+                  {
+                    onSuccess: () => {
+                      setReturningPart(null);
+                      setReturnReason("");
+                    },
+                  }
+                );
+              }}
+              disabled={markReturnedMutation.isPending || !returnReason.trim()}
+            >
+              Confirm Return
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
-

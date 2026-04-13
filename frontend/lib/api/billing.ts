@@ -46,6 +46,8 @@ export interface Invoice {
   vehicle?: number | { id: number };
   vehicle_display?: string;
   vehicle_vin?: string;
+  estimate?: number | { id: number };
+  estimate_number?: string;
   work_order?: number | { id: number };
   work_order_number?: string;
   invoice_date: string;
@@ -219,6 +221,14 @@ export interface Estimate {
   viewed_at?: string;
   created_at?: string;
   updated_at?: string;
+  latest_invoice_summary?: {
+    id: number;
+    invoice_number: string;
+    status: string;
+    total: string;
+    amount_paid?: string;
+    amount_due?: string;
+  } | null;
 }
 
 export interface EstimateListResponse {

@@ -366,6 +366,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Cash Flow", href: "/accounting/reports/cash-flow", permission: "view_financial_reports", icon: Activity },
     { name: "Tax Report", href: "/accounting/reports/tax", permission: "view_financial_reports", icon: Percent },
     { name: "Job Profitability", href: "/accounting/reports/job-profitability", permission: "view_financial_reports", icon: Target },
+    { name: "Expense Breakdown", href: "/accounting/reports/expense-breakdown", permission: "view_financial_reports", icon: BarChart3 },
     { name: "Budgets", href: "/accounting/budgets", permission: "view_accounting_settings", icon: Wallet },
     { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_accounting_settings", icon: Repeat },
     { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting_settings", icon: Zap },

@@ -24,6 +24,8 @@ export interface RepairRecommendation {
   quotation_requested_at?: string | null;
   quotation_requested_by?: number | null;
   quotation_requested_by_name?: string | null;
+  quotation_estimate_id?: number | null;
+  quotation_estimate_number?: string | null;
   quoted_at?: string | null;
   quoted_by?: number | null;
   quoted_by_name?: string | null;
@@ -43,6 +45,15 @@ export interface RepairRecommendation {
   order?: number;
   created_at: string;
   updated_at?: string;
+}
+
+export interface QuotationQueueRecommendation extends RepairRecommendation {
+  diagnosis_id: number;
+  work_order_id: number;
+  work_order_number: string;
+  vehicle_display?: string | null;
+  customer_name?: string | null;
+  branch_name?: string | null;
 }
 
 // Phase 2: Structured Data Types
@@ -339,7 +350,7 @@ export const diagnosisApi = {
     count: number;
     next: string | null;
     previous: string | null;
-    results: RepairRecommendation[];
+    results: QuotationQueueRecommendation[];
   }> => {
     const response = await apiClient.get(`/diagnosis/recommendations/quotation_queue/`, { params });
     return response.data;

@@ -228,6 +228,11 @@ export const customersApi = {
       return response.data.results || response.data;
     },
 
+    listAll: async (params?: { search?: string; page?: number; is_active?: boolean }): Promise<any> => {
+      const response = await apiClient.get("/customers/customer-contacts/", { params });
+      return response.data;
+    },
+
     create: async (data: any): Promise<any> => {
       const response = await apiClient.post("/customers/customer-contacts/", data);
       return response.data;
@@ -237,6 +242,12 @@ export const customersApi = {
       const response = await apiClient.put(`/customers/customer-contacts/${id}/`, data);
       return response.data;
     },
+
+    patch: async (id: number, data: any): Promise<any> => {
+      const response = await apiClient.patch(`/customers/customer-contacts/${id}/`, data);
+      return response.data;
+    },
+
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/customers/customer-contacts/${id}/`);
     },

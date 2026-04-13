@@ -84,32 +84,32 @@ export default function CashFlowPage() {
         rows.push(['Cash Flow Statement']);
         rows.push([`Period: ${startDate} to ${endDate}`]);
         rows.push([]);
-        rows.push(['Opening Balance', report.opening_balance]);
+        rows.push(['Opening Balance', report?.opening_balance]);
         rows.push([]);
 
         // Operating Activities
         rows.push(['Operating Activities']);
-        rows.push(['Cash Inflows', report.operating_activities.inflows]);
-        rows.push(['Cash Outflows', report.operating_activities.outflows]);
-        rows.push(['Net Cash from Operating', report.operating_activities.net]);
+        rows.push(['Cash Inflows', report?.operating_activities.inflows]);
+        rows.push(['Cash Outflows', report?.operating_activities.outflows]);
+        rows.push(['Net Cash from Operating', report?.operating_activities.net]);
         rows.push([]);
 
         // Investing Activities
         rows.push(['Investing Activities']);
-        rows.push(['Cash Inflows', report.investing_activities.inflows]);
-        rows.push(['Cash Outflows', report.investing_activities.outflows]);
-        rows.push(['Net Cash from Investing', report.investing_activities.net]);
+        rows.push(['Cash Inflows', report?.investing_activities.inflows]);
+        rows.push(['Cash Outflows', report?.investing_activities.outflows]);
+        rows.push(['Net Cash from Investing', report?.investing_activities.net]);
         rows.push([]);
 
         // Financing Activities
         rows.push(['Financing Activities']);
-        rows.push(['Cash Inflows', report.financing_activities.inflows]);
-        rows.push(['Cash Outflows', report.financing_activities.outflows]);
-        rows.push(['Net Cash from Financing', report.financing_activities.net]);
+        rows.push(['Cash Inflows', report?.financing_activities.inflows]);
+        rows.push(['Cash Outflows', report?.financing_activities.outflows]);
+        rows.push(['Net Cash from Financing', report?.financing_activities.net]);
         rows.push([]);
 
-        rows.push(['Net Increase/Decrease in Cash', report.net_increase_decrease]);
-        rows.push(['Closing Balance', report.closing_balance]);
+        rows.push(['Net Increase/Decrease in Cash', report?.net_increase_decrease]);
+        rows.push(['Closing Balance', report?.closing_balance]);
 
         const filename = generateFilenameWithTimestamp('cash-flow', 'csv');
         exportToCSV(rows, filename, ['Item', 'Amount']);
@@ -122,32 +122,32 @@ export default function CashFlowPage() {
         const rows: ExportCell[][] = [];
 
         // Summary
-        rows.push(['Opening Balance', report.opening_balance]);
+        rows.push(['Opening Balance', report?.opening_balance]);
         rows.push([]);
 
         // Operating Activities
         rows.push(['OPERATING ACTIVITIES', '']);
-        rows.push(['Cash Inflows', report.operating_activities.inflows]);
-        rows.push(['Cash Outflows', report.operating_activities.outflows]);
-        rows.push(['Net Cash from Operating', report.operating_activities.net]);
+        rows.push(['Cash Inflows', report?.operating_activities.inflows]);
+        rows.push(['Cash Outflows', report?.operating_activities.outflows]);
+        rows.push(['Net Cash from Operating', report?.operating_activities.net]);
         rows.push([]);
 
         // Investing Activities
         rows.push(['INVESTING ACTIVITIES', '']);
-        rows.push(['Cash Inflows', report.investing_activities.inflows]);
-        rows.push(['Cash Outflows', report.investing_activities.outflows]);
-        rows.push(['Net Cash from Investing', report.investing_activities.net]);
+        rows.push(['Cash Inflows', report?.investing_activities.inflows]);
+        rows.push(['Cash Outflows', report?.investing_activities.outflows]);
+        rows.push(['Net Cash from Investing', report?.investing_activities.net]);
         rows.push([]);
 
         // Financing Activities
         rows.push(['FINANCING ACTIVITIES', '']);
-        rows.push(['Cash Inflows', report.financing_activities.inflows]);
-        rows.push(['Cash Outflows', report.financing_activities.outflows]);
-        rows.push(['Net Cash from Financing', report.financing_activities.net]);
+        rows.push(['Cash Inflows', report?.financing_activities.inflows]);
+        rows.push(['Cash Outflows', report?.financing_activities.outflows]);
+        rows.push(['Net Cash from Financing', report?.financing_activities.net]);
         rows.push([]);
 
-        rows.push(['Net Increase/Decrease in Cash', report.net_increase_decrease]);
-        rows.push(['Closing Balance', report.closing_balance]);
+        rows.push(['Net Increase/Decrease in Cash', report?.net_increase_decrease]);
+        rows.push(['Closing Balance', report?.closing_balance]);
 
         const filename = generateFilenameWithTimestamp('cash-flow', 'xlsx');
         exportToExcel(rows, filename, {
@@ -209,7 +209,7 @@ export default function CashFlowPage() {
                 <div className="flex items-center justify-center h-64">
                     <Loader2 className="w-8 h-8 animate-spin" />
                 </div>
-            ) : isError ? (
+            ) : isError || !report ? (
                 <div className="p-4 text-destructive">Error loading report</div>
             ) : (
                 <Card>
@@ -217,32 +217,32 @@ export default function CashFlowPage() {
                         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <CardTitle className="text-base">Cash Flow Summary</CardTitle>
                             <div className="text-sm font-medium">
-                                Opening Balance: <span className="text-foreground">{formatCurrency(report.opening_balance)}</span>
+                                Opening Balance: <span className="text-foreground">{formatCurrency(report?.opening_balance)}</span>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
-                        <ActivitySection title="Operating Activities" data={report.operating_activities} formatCurrency={formatCurrency} />
+                        <ActivitySection title="Operating Activities" data={report?.operating_activities} formatCurrency={formatCurrency} />
                         <Separator />
-                        <ActivitySection title="Investing Activities" data={report.investing_activities} formatCurrency={formatCurrency} />
+                        <ActivitySection title="Investing Activities" data={report?.investing_activities} formatCurrency={formatCurrency} />
                         <Separator />
-                        <ActivitySection title="Financing Activities" data={report.financing_activities} formatCurrency={formatCurrency} />
+                        <ActivitySection title="Financing Activities" data={report?.financing_activities} formatCurrency={formatCurrency} />
                         <Separator />
 
                         <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-4">
                             <span className="text-lg font-semibold">Net Increase / Decrease in Cash</span>
                             <span className={cn(
                                 "text-xl font-semibold",
-                                report.net_increase_decrease >= 0 ? "text-success" : "text-destructive"
+                                report?.net_increase_decrease >= 0 ? "text-success" : "text-destructive"
                             )}>
-                                {formatCurrency(report.net_increase_decrease)}
+                                {formatCurrency(report?.net_increase_decrease)}
                             </span>
                         </div>
 
                         <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/10 p-4">
                             <span className="text-lg font-semibold text-foreground">Closing Cash Balance</span>
                             <span className="text-xl font-semibold text-primary">
-                                {formatCurrency(report.closing_balance)}
+                                {formatCurrency(report?.closing_balance)}
                             </span>
                         </div>
                     </CardContent>

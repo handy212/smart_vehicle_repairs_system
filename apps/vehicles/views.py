@@ -35,7 +35,7 @@ from .vin_decoder import VehicleVINDecoder, get_vehicle_specs
 class VehicleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for vehicle operations
-    
+
     list: Get list of vehicles
     retrieve: Get vehicle details
     create: Register new vehicle
@@ -43,7 +43,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
     destroy: Delete vehicle
     """
     permission_classes = [IsAuthenticated, IsModuleEnabled('vehicles')]
-    
+
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         user = self.request.user

@@ -84,10 +84,10 @@ export default function TaxReportPage() {
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">Tax Collected</p>
                                         <p className="text-2xl font-semibold text-success">
-                                            {formatCurrency(report.tax_collected.total)}
+                                            {formatCurrency(report?.tax_collected.total)}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            {report.invoice_count} invoices
+                                            {report?.invoice_count} invoices
                                         </p>
                                     </div>
                                     <div className="rounded-md border border-success/20 bg-success/10 p-2.5">
@@ -103,10 +103,10 @@ export default function TaxReportPage() {
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">Tax Paid</p>
                                         <p className="text-2xl font-semibold text-primary">
-                                            {formatCurrency(report.tax_paid.total)}
+                                            {formatCurrency(report?.tax_paid.total)}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            {report.bill_count} bills
+                                            {report?.bill_count} bills
                                         </p>
                                     </div>
                                     <div className="rounded-md border border-primary/20 bg-primary/10 p-2.5">
@@ -121,15 +121,15 @@ export default function TaxReportPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-medium text-muted-foreground">Net Tax Liability</p>
-                                        <p className={`text-2xl font-semibold ${report.net_tax_liability >= 0 ? "text-destructive" : "text-success"}`}>
-                                            {formatCurrency(report.net_tax_liability)}
+                                        <p className={`text-2xl font-semibold ${report?.net_tax_liability >= 0 ? "text-destructive" : "text-success"}`}>
+                                            {formatCurrency(report?.net_tax_liability)}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            {report.net_tax_liability >= 0 ? "Payable" : "Receivable"}
+                                            {report?.net_tax_liability >= 0 ? "Payable" : "Receivable"}
                                         </p>
                                     </div>
-                                    <div className={`rounded-md border p-2.5 ${report.net_tax_liability >= 0 ? "border-destructive/20 bg-destructive/10" : "border-success/20 bg-success/10"}`}>
-                                        <FileText className={`w-6 h-6 ${report.net_tax_liability >= 0 ? "text-destructive" : "text-success"}`} />
+                                    <div className={`rounded-md border p-2.5 ${report?.net_tax_liability >= 0 ? "border-destructive/20 bg-destructive/10" : "border-success/20 bg-success/10"}`}>
+                                        <FileText className={`w-6 h-6 ${report?.net_tax_liability >= 0 ? "text-destructive" : "text-success"}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -147,23 +147,23 @@ export default function TaxReportPage() {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
                                     <span className="font-medium">VAT</span>
-                                    <span className="font-bold">{formatCurrency(report.tax_collected.vat)}</span>
+                                    <span className="font-bold">{formatCurrency(report?.tax_collected.vat)}</span>
                                 </div>
                                 <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
                                     <span className="font-medium">NHIL</span>
-                                    <span className="font-bold">{formatCurrency(report.tax_collected.nhil)}</span>
+                                    <span className="font-bold">{formatCurrency(report?.tax_collected.nhil)}</span>
                                 </div>
                                 <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
                                     <span className="font-medium">GETFund</span>
-                                    <span className="font-bold">{formatCurrency(report.tax_collected.getfund)}</span>
+                                    <span className="font-bold">{formatCurrency(report?.tax_collected.getfund)}</span>
                                 </div>
                                 <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
                                     <span className="font-medium">COVID-19 HRL</span>
-                                    <span className="font-bold">{formatCurrency(report.tax_collected.hrl)}</span>
+                                    <span className="font-bold">{formatCurrency(report?.tax_collected.hrl)}</span>
                                 </div>
                                 <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/10 p-3">
                                     <span className="text-lg font-semibold">Total Collected</span>
-                                    <span className="text-lg font-semibold text-success">{formatCurrency(report.tax_collected.total)}</span>
+                                    <span className="text-lg font-semibold text-success">{formatCurrency(report?.tax_collected.total)}</span>
                                 </div>
                             </div>
                         </CardContent>

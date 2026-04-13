@@ -26,12 +26,16 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   // Handle hydration - only access localStorage after mount
   useEffect(() => {
-    setMounted(true);
-    const subNavCollapsed = localStorage.getItem("subNavCollapsed") === "true";
-    setIsSubNavCollapsed(subNavCollapsed);
+    const initializeLayout = () => {
+      setMounted(true);
+      const subNavCollapsed = localStorage.getItem("subNavCollapsed") === "true";
+      setIsSubNavCollapsed(subNavCollapsed);
 
-    const sidebarCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-    setIsSidebarCollapsed(sidebarCollapsed);
+      const sidebarCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+      setIsSidebarCollapsed(sidebarCollapsed);
+
+      checkDesktop();
+    };
 
     // Check if desktop (debounced)
     const checkDesktop = () => {
@@ -47,9 +51,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       resizeTimer = setTimeout(checkDesktop, 150);
     };
 
-    checkDesktop();
+    const initFrame = window.requestAnimationFrame(initializeLayout);
     window.addEventListener("resize", debouncedCheckDesktop);
     return () => {
+      window.cancelAnimationFrame(initFrame);
       clearTimeout(resizeTimer);
       window.removeEventListener("resize", debouncedCheckDesktop);
     };
@@ -110,11 +115,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (mounted) {
-      const style = getComputedStyle(document.documentElement);
-      const width = parseInt(style.getPropertyValue('--sidebar-width'));
-      const height = parseInt(style.getPropertyValue('--header-height'));
-      if (!isNaN(width)) setSidebarWidthExpanded(width);
-      if (!isNaN(height)) setHeaderHeight(height);
+      const frameId = window.requestAnimationFrame(() => {
+        const style = getComputedStyle(document.documentElement);
+        const width = parseInt(style.getPropertyValue('--sidebar-width'));
+        const height = parseInt(style.getPropertyValue('--header-height'));
+        if (!isNaN(width)) setSidebarWidthExpanded(width);
+        if (!isNaN(height)) setHeaderHeight(height);
+      });
+
+      return () => window.cancelAnimationFrame(frameId);
     }
   }, [mounted, activeTheme]);
 
@@ -131,7 +140,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const totalMargin = isDesktop ? sidebarWidth + subNavWidth : 0;
 
   return (
-    <div className="min-h-screen bg-muted bg-background">
+    <div className="dashboard-shell">
       <div className="print:hidden">
         <Navbar
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -175,7 +184,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         )}
       </div>
       <main
-        className="min-h-screen px-2 py-0 sm:px-3 lg:px-3 pb-2 sm:pb-3 lg:pb-4 transition-all duration-300 print:!m-0 print:!p-0"
+        className="dashboard-content min-h-screen px-2 py-0 pb-2 transition-all duration-300 sm:px-3 sm:pb-3 lg:px-3 lg:pb-4 print:!m-0 print:!p-0"
         style={{
           marginLeft: isDesktop ? `${totalMargin}px` : '0',
           paddingTop: !isDesktop && hasSubNav ? `${headerHeight + 56}px` : `${headerHeight + 16}px`
@@ -202,4 +211,3 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

@@ -1,127 +1,54 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 interface PortalCardProps {
-    title: React.ReactNode;
-    subtitle?: React.ReactNode;
-    status?: React.ReactNode;
-    children?: React.ReactNode;
-    onClick?: () => void;
-    href?: string;
+    title: string;
+    subtitle?: string | React.ReactNode;
     icon?: React.ReactNode;
+    href?: string;
+    onClick?: () => void;
     className?: string;
+    variant?: "default" | "glass" | "gradient";
 }
 
 export function PortalCard({
     title,
     subtitle,
-    status,
-    children,
-    onClick,
-    href,
     icon,
-    className
+    href,
+    onClick,
+    className,
 }: PortalCardProps) {
     const Content = (
-        <div className="flex items-start justify-between gap-4">
-            <div className="flex gap-3 min-w-0">
-                {icon && (
-                    <div className="flex-shrink-0 mt-0.5 max-w-[24px]">
-                        {icon}
-                    </div>
-                )}
-                <div className="min-w-0 space-y-1">
-                    <div className="font-semibold text-sm text-foreground truncate">
-                        {title}
-                    </div>
-                    {subtitle && (
-                        <div className="text-xs text-muted-foreground">
-                            {subtitle}
-                        </div>
-                    )}
-                    {children && (
-                        <div className="pt-2 text-sm">
-                            {children}
-                        </div>
-                    )}
+        <div className={cn(
+            "flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors",
+            (onClick || href) ? "cursor-pointer" : "",
+            className
+        )}>
+            {icon && (
+                <div className="shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    {icon}
                 </div>
-            </div>
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                {status}
-                {(href || onClick) && (
-                    <ChevronRight className="w-4 h-4 text-gray-300" />
+            )}
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{title}</p>
+                {subtitle && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                        {subtitle}
+                    </div>
                 )}
             </div>
+            {(href || onClick) && (
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            )}
         </div>
     );
 
-    const wrapperClasses = cn(
-        "relative block p-4 bg-card border border-border rounded-xl transition-all hover:bg-muted hover:bg-muted/50 hover:shadow-sm",
-        className
-    );
-
-    // If there's an href, we render a div with a stretched link inside
-    // If there's children, they need to be clickable, so we give them relative z-10
-    const InnerContent = (
-        <>
-            {href && <Link href={href} className="absolute inset-0 z-0" />}
-            <div className="relative z-10 pointer-events-none">
-                {/* Enable pointer events for actual content elements if they are interactive, 
-               but commonly the whole card is clickable. 
-               However, if we have buttons inside children, we need them to be clickable.
-               The stretched link covers the parent. 
-               Children naturally sit on top if z-indexed.
-            */}
-                <div className="flex items-start justify-between gap-4 pointer-events-auto">
-                    <div className="flex gap-3 min-w-0">
-                        {icon && (
-                            <div className="flex-shrink-0 mt-0.5 max-w-[24px]">
-                                {icon}
-                            </div>
-                        )}
-                        <div className="min-w-0 space-y-1">
-                            <div className="font-semibold text-sm text-foreground truncate">
-                                {title}
-                            </div>
-                            {subtitle && (
-                                <div className="text-xs text-muted-foreground">
-                                    {subtitle}
-                                </div>
-                            )}
-                            {children && (
-                                <div className="pt-2 text-sm">
-                                    {children}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                        {status}
-                        {(href || onClick) && (
-                            <ChevronRight className="w-4 h-4 text-gray-300" />
-                        )}
-                    </div>
-                </div>
-            </div>
-        </>
-    );
-
-    if (onClick) {
-        return (
-            <div onClick={onClick} className={cn(wrapperClasses, "cursor-pointer")}>
-                {Content}
-            </div>
-        );
+    if (href) {
+        return <Link href={href}>{Content}</Link>;
     }
-
-    return (
-        <div className={wrapperClasses}>
-            {InnerContent}
-        </div>
-    );
+    return <div onClick={onClick}>{Content}</div>;
 }

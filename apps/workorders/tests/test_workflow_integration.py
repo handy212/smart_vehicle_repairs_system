@@ -10,6 +10,7 @@ from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.diagnosis.models import Diagnosis, RepairRecommendation
 from apps.accounts.permission_models import Role, Permission
+from apps.inspections.models import InspectionTemplate
 
 class WorkOrderWorkflowTests(TestCase):
     def setUp(self):
@@ -54,6 +55,72 @@ class WorkOrderWorkflowTests(TestCase):
         
         # Authenticate as Coordinator initially
         self.client.force_authenticate(user=self.coordinator)
+
+    def test_start_intake_uses_existing_service_coordinator_assignment(self):
+        """Starting intake should auto-advance to assigned when the coordinator is already set."""
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Intermittent no-start condition',
+            odometer_in=50000,
+            priority='normal',
+            service_coordinator=self.coordinator,
+            status='draft',
+        )
+        inspection_template = InspectionTemplate.objects.create(
+            name='Workflow Intake Template',
+            description='Template used for workflow transition tests',
+            created_by=self.manager,
+        )
+        from apps.inspections.models import VehicleInspection
+
+        VehicleInspection.objects.create(
+            work_order=work_order,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            template=inspection_template,
+            performed_by=self.technician,
+            status='approved',
+            approved_by=self.manager,
+        )
+
+        url_intake = reverse('api_workorders:workorder-start-intake', args=[work_order.id])
+        response = self.client.post(url_intake, {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'assigned')
+        self.assertEqual(int(response.data['service_coordinator']), self.coordinator.id)
+
+    def test_start_diagnosis_creates_diagnosis_record_when_missing(self):
+        """Starting diagnosis should create the linked diagnosis record the UI expects."""
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Loss of power under acceleration',
+            special_instructions='Check intake airflow before recommending repairs.',
+            odometer_in=50000,
+            priority='normal',
+            service_coordinator=self.coordinator,
+            primary_technician=self.technician,
+            status='assigned',
+            requires_approval=True,
+        )
+
+        url_diagnosis = reverse('api_workorders:workorder-start-diagnosis', args=[work_order.id])
+        response = self.client.post(url_diagnosis, {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'diagnosis')
+        self.assertIn('diagnosis_id', response.data)
+        self.assertTrue(response.data['diagnosis_created'])
+
+        diagnosis = Diagnosis.objects.get(work_order=work_order)
+        self.assertEqual(diagnosis.id, response.data['diagnosis_id'])
+        self.assertEqual(diagnosis.technician, self.technician)
+        self.assertEqual(diagnosis.customer_complaint, work_order.customer_concerns)
+        self.assertEqual(diagnosis.initial_observations, work_order.special_instructions)
 
     def setup_permissions(self):
         # Create Permissions
@@ -208,4 +275,3 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'completed')
         self.assertIsNotNone(response.data['completed_at'])
-

@@ -254,8 +254,9 @@ export default function WorkOrderDetailPage() {
   });
 
   const unapprovedRecommendations = diagnosis?.repair_recommendations?.filter(
-
-    (r: any) => !r.customer_approved
+    (r: any) =>
+      ["pending_approval", "deferred"].includes(r.approval_status) &&
+      !r.converted_to_task_id
   ) || [];
 
   const { data: notes = [] } = useQuery({
@@ -362,7 +363,7 @@ export default function WorkOrderDetailPage() {
                 Print
                 <ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
-              {/* Unapproved Recommendations Button - Header */}
+              {/* Open Recommendations Button - Header */}
               {workOrder.status === "closed" && unapprovedRecommendations.length > 0 && (
                 <Button
                   variant="outline"
@@ -371,7 +372,7 @@ export default function WorkOrderDetailPage() {
                   className="absolute right-full mr-2 min-w-max h-9 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
                 >
                   <AlertTriangle className="w-3.5 h-3.5 mr-2" />
-                  Unapproved Items
+                  Open Recommendations
                 </Button>
               )}
               {showPrintMenu && (
@@ -562,7 +563,7 @@ export default function WorkOrderDetailPage() {
   );
 }
 
-// Unapproved Recommendations Dialog Component
+// Open Recommendations Dialog Component
 function UnapprovedRecommendationsDialog({
   open,
   onOpenChange,
@@ -587,8 +588,9 @@ function UnapprovedRecommendationsDialog({
   });
 
   const unapprovedRecommendations = diagnosis?.repair_recommendations?.filter(
-
-    (r: any) => !r.customer_approved
+    (r: any) =>
+      ["pending_approval", "deferred"].includes(r.approval_status) &&
+      !r.converted_to_task_id
   ) || [];
 
   return (
@@ -597,11 +599,11 @@ function UnapprovedRecommendationsDialog({
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <AlertTriangle className="w-5 h-5 text-primary" />
-            Unapproved Recommendations
+            Open Vehicle Recommendations
           </DialogTitle>
-          {/* <DialogDescription className="text-xs">
-            Review recommendations not approved by the customer.
-          </DialogDescription> */}
+          <DialogDescription className="text-xs">
+            These items were not turned into completed workshop work and should follow the vehicle into future visits.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-2">
@@ -620,9 +622,9 @@ function UnapprovedRecommendationsDialog({
             <div className="space-y-3">
 
               {unapprovedRecommendations.map((rec: any) => (
-                <div key={rec.id} className="rounded-md border border-primary/15 bg-primary/5 p-3">
-                  <div className="flex items-start justify-between mb-1.5">
-                    <div className="flex flex-col">
+              <div key={rec.id} className="rounded-md border border-primary/15 bg-primary/5 p-3">
+                <div className="flex items-start justify-between mb-1.5">
+                  <div className="flex flex-col">
                       <span className="font-medium text-sm text-foreground">
                         {rec.description}
                       </span>
@@ -636,6 +638,11 @@ function UnapprovedRecommendationsDialog({
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
                           {rec.recommendation_type_display || rec.recommendation_type}
                         </Badge>
+                        {rec.approval_status_display && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 capitalize">
+                            {rec.approval_status_display}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
@@ -644,6 +651,11 @@ function UnapprovedRecommendationsDialog({
                       </span>
                     )}
                   </div>
+                  {Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Parts: {rec.parts_needed.map((part: any) => `${part.part_name} x${part.quantity}`).join(", ")}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -663,7 +675,7 @@ function UnapprovedRecommendationsDialog({
                 className="flex-1"
               >
                 <Printer className="w-3.5 h-3.5 mr-1.5" />
-                Print Recommendations (PDF)
+                Print Follow-Up List
               </Button>
             </div>
           </DialogFooter>

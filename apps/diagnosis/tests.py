@@ -12,6 +12,7 @@ from model_bakery import baker
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder
+from apps.branches.models import Branch
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
     DiagnosticCode, DiagnosticTest,
@@ -19,6 +20,7 @@ from apps.diagnosis.models import (
     TestProcedureLibrary, DiagnosticCodeLibrary,
     DiagnosisHistory
 )
+from apps.inventory.models import Part, PartCategory
 from apps.diagnosis.services.baseline_test_procedures import (
     BASELINE_TEST_PROCEDURES,
     seed_baseline_test_procedures,
@@ -407,6 +409,22 @@ class TestDiagnosisAPI:
         response = api_client.get('/api/diagnosis/diagnoses/')
         assert response.status_code == status.HTTP_200_OK
 
+    def test_retrieve_diagnosis_with_wrong_active_branch_returns_clear_error(self, api_client, admin_user):
+        """Diagnosis detail should explain branch-context mismatches instead of returning a misleading 404."""
+        branch_a = baker.make(Branch, name='Branch A', code='BRA', is_active=True)
+        branch_b = baker.make(Branch, name='Branch B', code='BRB', is_active=True)
+        diagnosis = baker.make(Diagnosis, work_order__branch=branch_a)
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/',
+            HTTP_X_BRANCH_ID=str(branch_b.id),
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'Active branch context does not match this diagnosis' in response.data['error']
+        assert 'X-Branch-ID' in response.data['error']
+
     def test_create_diagnosis(self, api_client, admin_user):
         """Test creating a diagnosis."""
         work_order = baker.make(WorkOrder)
@@ -477,6 +495,27 @@ class TestDiagnosisAPI:
         assert response.status_code == status.HTTP_201_CREATED
         code = DiagnosticCode.objects.get(diagnosis=diagnosis, code_number='C0031')
         assert code.code_type == 'chassis'
+        assert response.data['id'] == code.id
+
+    def test_create_test_response_includes_id(self, api_client, admin_user):
+        """Diagnostic test creation responses should include the created id for UI chaining."""
+        diagnosis = baker.make(Diagnosis)
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            '/api/diagnosis/tests/',
+            {
+                'diagnosis': diagnosis.id,
+                'test_name': 'Air Intake Restriction Check',
+                'category': 'mechanical',
+                'status': 'fail',
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        created_test = DiagnosticTest.objects.get(diagnosis=diagnosis, test_name='Air Intake Restriction Check')
+        assert response.data['id'] == created_test.id
 
     def test_add_recommendation_cannot_set_customer_approved(self, api_client, admin_user):
         """Recommendation approval state must not be writable through create/update payloads."""
@@ -559,6 +598,119 @@ class TestDiagnosisAPI:
         assert response.status_code == status.HTTP_201_CREATED
         recommendation = diagnosis.repair_recommendations.get()
         assert list(recommendation.findings.values_list('id', flat=True)) == [finding.id]
+
+    def test_add_recommendation_reuses_existing_inventory_part(self, api_client, admin_user):
+        """Manual recommendation parts should preserve the selected catalog part."""
+        diagnosis = baker.make(Diagnosis)
+        category = PartCategory.objects.create(name='Recommendation Catalog')
+        part = Part.objects.create(
+            part_number='REC-001',
+            name='Catalog Brake Pad',
+            category=category,
+            branch=diagnosis.work_order.branch,
+            cost_price='45.00',
+            selling_price='60.00',
+            created_by=admin_user,
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/add_recommendation/',
+            {
+                'recommendation_type': 'replace',
+                'description': 'Replace worn brake pads',
+                'priority': 'necessary',
+                'parts_needed': [
+                    {
+                        'part_id': part.id,
+                        'part_name': 'Catalog Brake Pad',
+                        'part_number': 'REC-001',
+                        'quantity': 2,
+                    }
+                ],
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        recommendation = diagnosis.repair_recommendations.get()
+        assert recommendation.parts_needed[0]['part_id'] == part.id
+        assert recommendation.parts_needed[0]['part_name'] == part.name
+        assert recommendation.parts_needed[0]['part_number'] == part.part_number
+
+    def test_add_recommendation_creates_placeholder_inventory_part_for_manual_entry(self, api_client, admin_user):
+        """Manual recommendation parts should create a catalog record when no match exists."""
+        diagnosis = baker.make(Diagnosis)
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/add_recommendation/',
+            {
+                'recommendation_type': 'replace',
+                'description': 'Replace custom hose clamp',
+                'priority': 'necessary',
+                'parts_needed': [
+                    {
+                        'part_name': 'Custom Hose Clamp',
+                        'part_number': 'CUST-HOSE-001',
+                        'quantity': 1,
+                    }
+                ],
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        recommendation = diagnosis.repair_recommendations.get()
+        created_part = Part.objects.get(part_number='CUST-HOSE-001')
+
+        assert recommendation.parts_needed[0]['part_id'] == created_part.id
+        assert created_part.name == 'Custom Hose Clamp'
+        assert str(created_part.cost_price) == '0.01'
+        assert str(created_part.selling_price) == '0.01'
+
+    def test_create_diagnosis_returns_detail_payload_with_id(self, api_client, admin_user):
+        """Diagnosis create should return a usable detail payload for the frontend."""
+        work_order = baker.make(WorkOrder)
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            '/api/diagnosis/diagnoses/',
+            {
+                'work_order': work_order.id,
+                'customer_complaint': 'Brake noise',
+                'initial_observations': 'Initial observation text',
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['id']
+        assert response.data['work_order'] == work_order.id
+        assert response.data['technician'] == admin_user.id
+
+    def test_create_finding_returns_detail_payload_with_id(self, api_client, admin_user):
+        """Finding create should return the read serializer payload with its id."""
+        diagnosis = baker.make(Diagnosis)
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            '/api/diagnosis/findings/',
+            {
+                'diagnosis': diagnosis.id,
+                'finding_title': 'Brake pad wear confirmed',
+                'category': 'brakes',
+                'description': 'Pads below spec.',
+                'severity': 'major',
+                'status': 'confirmed',
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['id']
+        assert response.data['finding_title'] == 'Brake pad wear confirmed'
+        assert response.data['status'] == 'confirmed'
 
     def test_add_recommendation_rejects_findings_from_another_diagnosis(self, api_client, admin_user):
         """Recommendations must not link to findings from a different diagnosis."""

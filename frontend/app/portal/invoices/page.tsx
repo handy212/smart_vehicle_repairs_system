@@ -4,9 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { authApi } from "@/lib/api/auth";
-import { Card, CardContent } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { FileText, DollarSign, Download, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -16,6 +13,9 @@ import { PortalPageHeader } from "../components/PortalPageHeader";
 import { PortalList } from "../components/PortalList";
 import { PortalCard } from "../components/PortalCard";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { PremiumIcons } from "@/components/ui/icons";
+import { cn } from "@/lib/utils/cn";
+import { Invoice } from "@/lib/api/billing";
 
 export default function MyInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -28,181 +28,162 @@ export default function MyInvoicesPage() {
   const { data: invoicesData, isLoading } = useQuery({
     queryKey: ["portal", "invoices", statusFilter],
     queryFn: () => {
-
-      const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
+      const customerId = user?.customer_profile?.id || user?.customer?.id;
       if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
-      const params: any = {
+      const params: Record<string, string | number | boolean> = {
         customer: customerId,
         ordering: "-invoice_date",
       };
-      if (statusFilter !== "all") {
+      if (statusFilter !== "all" && statusFilter !== "unpaid" && statusFilter !== "paid" && statusFilter !== "overdue") {
         params.status = statusFilter;
       }
       return billingApi.invoices.list(params);
     },
-
-    enabled: !!user && !!(user?.customer_profile?.id || (user as any)?.customer?.id),
+    enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
   });
 
+  const invoices = (invoicesData?.results || invoicesData || []) as Invoice[];
 
-  const invoices = (invoicesData?.results || invoicesData || []) as any[];
-
-  // Calculate stats from all invoices (in a real app, this should come from a separate stats API or aggregated query)
-
-  const pendingInvoices = invoices.filter((inv: any) => ["sent", "viewed", "proforma", "partial", "overdue"].includes(inv.status));
+  const pendingInvoices = invoices.filter((inv) => ["sent", "viewed", "proforma", "partial", "overdue"].includes(inv.status));
   const totalPending = pendingInvoices.reduce(
-
-    (sum: number, inv: any) => sum + parseFloat(inv.total || 0),
+    (sum: number, inv) => sum + parseFloat(inv.total ? String(inv.total) : "0"),
     0
   );
 
-  const getStatusVariant = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case "paid": return "success";
+      case "paid": return { variant: "success" as const, className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" };
       case "pending":
       case "sent":
       case "viewed":
       case "proforma":
-      case "partial": return "warning";
-      case "overdue": return "danger";
-      default: return "secondary";
+      case "partial": return { variant: "warning" as const, className: "bg-amber-500/10 text-amber-600 border-amber-500/20" };
+      case "overdue": return { variant: "danger" as const, className: "bg-destructive/10 text-destructive border-destructive/20" };
+      default: return { variant: "secondary" as const, className: "" };
     }
   };
 
   return (
-    <div>
+    <div className="space-y-6 max-w-7xl mx-auto">
       <PortalPageHeader
-        title="My Invoices"
+        title="Billing & Invoices"
+        description="Review your service history, download invoices, and manage pending payments."
       />
 
-      {/* Compact Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-warning/10 dark:bg-yellow-900/10">
-          <CardContent className="p-4 flex flex-col justify-center h-full">
-            <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Pending Amount</p>
-            <div className="text-2xl font-bold text-foreground mt-1">
-              {formatCurrency(totalPending)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-primary/10 dark:bg-orange-900/10">
-          <CardContent className="p-4 flex flex-col justify-center h-full">
-            <p className="text-xs font-medium text-primary uppercase tracking-wider">Total Invoices</p>
-            <div className="text-2xl font-bold text-foreground mt-1">
-              {invoices.length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary row */}
+      {pendingInvoices.length > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-warning/30 bg-warning/5 text-sm">
+          <PremiumIcons.Clock className="w-4 h-4 text-warning shrink-0" />
+          <span className="text-foreground font-medium">
+            {formatCurrency(totalPending)} outstanding across {pendingInvoices.length} unpaid invoice{pendingInvoices.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+      )}
 
-      <div className="mt-8">
-        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="unpaid">Pending</TabsTrigger>
-            <TabsTrigger value="paid">Paid</TabsTrigger>
-            <TabsTrigger value="overdue">Overdue</TabsTrigger>
-          </TabsList>
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="unpaid">Pending</TabsTrigger>
+          <TabsTrigger value="paid">Paid</TabsTrigger>
+          <TabsTrigger value="overdue">Overdue</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value={statusFilter} className="mt-0">
-            <PortalList
-              data={invoices}
-              isLoading={isLoading}
-              emptyMessage="No invoices found."
-              columns={[
-                {
-                  header: "Invoice #",
-                  cell: (inv) => (
-                    <div className="font-mono text-sm font-medium text-foreground">
-                      #{inv.invoice_number}
+        <TabsContent value={statusFilter} className="mt-0 outline-none">
+          <PortalList
+            data={invoices}
+            isLoading={isLoading}
+            emptyMessage="No invoices found for this selection."
+            columns={[
+              {
+                header: "Invoice",
+                cell: (inv) => (
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <PremiumIcons.FileText className="w-4 h-4" />
                     </div>
-                  )
-                },
-                {
-                  header: "Date",
-                  cell: (inv) => (
-                    <div className="text-sm text-muted-foreground">
-                      {format(new Date(inv.invoice_date), "MMM d, yyyy")}
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">#{inv.invoice_number}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {format(new Date(inv.invoice_date), "MMM d, yyyy")}
+                      </div>
                     </div>
-                  )
-                },
-                {
-                  header: "Amount",
-                  cell: (inv) => (
-                    <div className="font-bold text-foreground">
-                      {formatCurrency(inv.total || 0)}
-                    </div>
-                  )
-                },
-                {
-                  header: "Status",
-                  cell: (inv) => (
-                    <Badge variant={getStatusVariant(inv.status)} className="capitalize">
+                  </div>
+                )
+              },
+              {
+                header: "Amount",
+                cell: (inv) => (
+                  <span className="text-sm font-semibold text-foreground">
+                    {formatCurrency(inv.total || 0)}
+                  </span>
+                )
+              },
+              {
+                header: "Status",
+                cell: (inv) => {
+                  const config = getStatusConfig(inv.status);
+                  return (
+                    <Badge
+                      variant={config.variant}
+                      className={cn("capitalize text-[10px] font-semibold border", config.className)}
+                    >
                       {inv.status}
                     </Badge>
-                  )
-                },
-                {
-                  header: "Work Order",
-                  className: "hidden md:table-cell",
-                  cell: (inv) => inv.work_order ? (
-                    <span className="text-xs text-muted-foreground">
-                      #{typeof inv.work_order === "object" ? inv.work_order.work_order_number : inv.work_order}
-                    </span>
-                  ) : <span className="text-muted-foreground">-</span>
-                },
-                {
-                  header: "Action",
-                  className: "text-right",
-                  cell: (inv) => (
-                    <div className="flex justify-end gap-2">
-                      {["pending", "sent", "overdue"].includes(inv.status) && (
-                        <Link href={`/portal/payment/${inv.id}`}>
-                          <Button size="sm" className="h-8 text-xs">Pay</Button>
-                        </Link>
-                      )}
-                      <Link href={`/portal/invoices/${inv.id}`}>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  )
+                  );
                 }
-              ]}
-              renderMobileItem={(inv) => (
+              },
+              {
+                header: "Work Order",
+                className: "hidden md:table-cell",
+                cell: (inv) => inv.work_order_number ? (
+                  <span className="text-xs text-muted-foreground">WO-{inv.work_order_number}</span>
+                ) : <span className="text-muted-foreground/40">—</span>
+              },
+              {
+                header: "Actions",
+                className: "text-right",
+                cell: (inv) => (
+                  <div className="flex justify-end gap-2">
+                    {["pending", "sent", "overdue"].includes(inv.status) && (
+                      <Link href={`/portal/payment/${inv.id}`}>
+                        <Button size="sm">Pay Now</Button>
+                      </Link>
+                    )}
+                    <Link href={`/portal/invoices/${inv.id}`}>
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                        <PremiumIcons.Download className="w-3.5 h-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                )
+              }
+            ]}
+            renderMobileItem={(inv) => {
+              const config = getStatusConfig(inv.status);
+              return (
                 <PortalCard
                   key={inv.id}
                   href={`/portal/invoices/${inv.id}`}
-                  icon={<FileText className="w-5 h-5 text-primary" />}
+                  icon={<PremiumIcons.FileText className="w-4 h-4" />}
                   title={`Invoice #${inv.invoice_number}`}
-                  subtitle={format(new Date(inv.invoice_date), "MMM d, yyyy")}
-                  status={
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="font-bold text-foreground">
-                        {formatCurrency(inv.total || 0)}
-                      </span>
-                      <Badge variant={getStatusVariant(inv.status)} className="capitalize text-[10px] h-5 px-1.5">
-                        {inv.status}
-                      </Badge>
+                  subtitle={
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-muted-foreground">{format(new Date(inv.invoice_date), "MMM d, yyyy")}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={config.variant} className={cn("capitalize text-[10px] font-semibold border", config.className)}>
+                          {inv.status}
+                        </Badge>
+                        <span className="text-sm font-bold text-foreground">{formatCurrency(inv.total || 0)}</span>
+                      </div>
                     </div>
                   }
-                >
-                  {["pending", "sent", "overdue"].includes(inv.status) && (
-                    <div className="mt-3 flex justify-end">
-                      <Link href={`/portal/payment/${inv.id}`} className="w-full">
-                        <Button size="sm" className="w-full">Pay Now</Button>
-                      </Link>
-                    </div>
-                  )}
-                </PortalCard>
-              )}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+                />
+              );
+            }}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
-

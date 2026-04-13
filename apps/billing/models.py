@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+from datetime import timedelta
 from decimal import Decimal
 from apps.accounts.models import User
 from apps.customers.models import Customer
@@ -414,8 +415,10 @@ class Estimate(models.Model):
     @property
     def can_be_converted(self):
         """Check if estimate can be converted to work order or invoice"""
-        # Can be converted if approved and not already converted
-        return self.status == 'approved'
+        # Can be converted if approved and no invoice has already been created from it
+        if self.status != 'approved':
+            return False
+        return not self.invoices.exclude(status='void').exists()
     
     @property
     def subtotal_after_discount(self):
@@ -477,6 +480,10 @@ class Estimate(models.Model):
     def convert_to_invoice(self):
         """Convert estimate to an Invoice"""
         from apps.billing.models import Invoice, InvoiceLineItem
+
+        existing_invoice = self.invoices.exclude(status='void').order_by('-created_at').first()
+        if existing_invoice is not None:
+            return existing_invoice
         
         # Create invoice
         invoice = Invoice.objects.create(
@@ -1105,10 +1112,14 @@ class Payment(models.Model):
         
         is_new = self.pk is None
         old_status = None
+        old_amount = None
+        old_refund_amount = None
         
         if not is_new:
             old_payment = Payment.objects.get(pk=self.pk)
             old_status = old_payment.status
+            old_amount = old_payment.amount
+            old_refund_amount = old_payment.refund_amount
         else:
             # For new payments, validate that invoice can accept payments
             if self.invoice_id:
@@ -1128,7 +1139,14 @@ class Payment(models.Model):
         super().save(*args, **kwargs)
         
         # Update invoice amount_paid when payment is completed
-        if self.status == 'completed' and (is_new or old_status != 'completed'):
+        completed_amount_changed = (
+            not is_new and
+            self.status == 'completed' and
+            old_status == 'completed' and
+            (old_amount != self.amount or old_refund_amount != self.refund_amount)
+        )
+
+        if self.status == 'completed' and (is_new or old_status != 'completed' or completed_amount_changed):
             self.update_invoice_payment()
         elif old_status == 'completed' and self.status != 'completed':
             # Payment was completed but now is not (refunded, cancelled, failed)

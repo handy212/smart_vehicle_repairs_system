@@ -138,7 +138,7 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 {/* Right side: Forgot Password Form */}
-                <div className="flex items-start justify-center bg-muted/50 p-4 pt-10 lg:items-center lg:p-8">
+                <div className="flex items-start justify-center bg-background p-4 pt-10 lg:items-center lg:p-8">
                     <div className="w-full max-w-sm space-y-6 animate-in fade-in duration-500">
                         <button
                             onClick={() => router.push("/login")}
@@ -157,14 +157,12 @@ export default function ForgotPasswordPage() {
                             </p>
                         </div>
 
-                        <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden p-5 lg:p-8">
+                        <Card className="border border-border shadow-sm bg-card rounded-lg p-5 lg:p-8">
                             {!isSubmitted ? (
                                 <div className="space-y-4 lg:space-y-6">
                                     <div>
                                         <h2 className="text-xl lg:text-2xl font-bold text-foreground">Forgot Password</h2>
-                                        <p className="mt-1 lg:mt-2 text-xs lg:text-sm text-muted-foreground">
-                                            Enter the email address associated with your account.
-                                        </p>
+
                                     </div>
 
                                     {error && (

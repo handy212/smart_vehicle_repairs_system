@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Package, Plus, Trash2 } from "lucide-react";
 
 import { DiagnosisFinding } from "@/lib/api/diagnosis";
+import { Part } from "@/lib/api/inventory";
 import {
   Dialog,
   DialogContent,
@@ -11,24 +12,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import InventoryPartSearch from "../../components/InventoryPartSearch";
 
 type PartLine = {
+  part_id?: number;
   part_name: string;
   part_number?: string;
   quantity: number;
 };
 
 type RecommendationDialogRecommendation = {
+  id?: number;
   recommendation_type?: "repair" | "replace" | "service" | "adjust" | "clean" | "inspect";
   description?: string;
   priority?: "critical" | "necessary" | "recommended" | "advisory";
   parts_needed?: Array<{
+    part_id?: number;
     part_name?: string;
     part_number?: string;
     quantity?: number | string;
@@ -59,41 +65,7 @@ interface RecommendationDialogProps {
   isLoading: boolean;
 }
 
-const emptyPartLine = (): PartLine => ({
-  part_name: "",
-  part_number: "",
-  quantity: 1,
-});
-
-const buildFormData = (recommendation?: RecommendationDialogRecommendation): FormData => {
-  if (!recommendation) {
-    return {
-      recommendation_type: "repair",
-      description: "",
-      priority: "necessary",
-      parts_needed: [emptyPartLine()],
-      findings: [],
-    };
-  }
-
-  const existingParts = Array.isArray(recommendation.parts_needed) && recommendation.parts_needed.length > 0
-    ? recommendation.parts_needed.map((part) => ({
-        part_name: part.part_name || "",
-        part_number: part.part_number || "",
-        quantity: Number(part.quantity || 1),
-      }))
-    : [emptyPartLine()];
-
-  return {
-    recommendation_type: recommendation.recommendation_type || "repair",
-    description: recommendation.description || "",
-    priority: recommendation.priority || "necessary",
-    parts_needed: existingParts,
-    findings: Array.isArray(recommendation.linked_findings) ? recommendation.linked_findings.map((finding) => finding.id) : [],
-  };
-};
-
-export function RecommendationDialog({
+function RecommendationDialogForm({
   open,
   onOpenChange,
   onSave,
@@ -118,8 +90,39 @@ export function RecommendationDialog({
           return { ...part, quantity: Number.isNaN(quantity) || quantity < 1 ? 1 : quantity };
         }
 
+        if (field === "part_name" || field === "part_number") {
+          return { ...part, [field]: value, part_id: undefined };
+        }
+
         return { ...part, [field]: value };
       }),
+    }));
+  };
+
+  const applyInventoryPart = (index: number, inventoryPart: Part) => {
+    setFormData((prev) => ({
+      ...prev,
+      parts_needed: prev.parts_needed.map((part, currentIndex) => (
+        currentIndex === index
+          ? {
+              ...part,
+              part_id: inventoryPart.id,
+              part_name: inventoryPart.name,
+              part_number: inventoryPart.part_number,
+            }
+          : part
+      )),
+    }));
+  };
+
+  const clearInventoryLink = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      parts_needed: prev.parts_needed.map((part, currentIndex) => (
+        currentIndex === index
+          ? { ...part, part_id: undefined }
+          : part
+      )),
     }));
   };
 
@@ -153,6 +156,7 @@ export function RecommendationDialog({
 
     const normalizedParts = formData.parts_needed
       .map((part) => ({
+        ...(part.part_id ? { part_id: part.part_id } : {}),
         part_name: part.part_name.trim(),
         part_number: (part.part_number || "").trim(),
         quantity: Number(part.quantity || 1),
@@ -300,37 +304,102 @@ export function RecommendationDialog({
 
               <div className="space-y-2 p-4">
                 {formData.parts_needed.map((part, index) => (
-                  <div key={`${index}-${part.part_name}`} className="grid gap-2 rounded-md border bg-background p-3 md:grid-cols-[1.5fr_1fr_90px_44px]">
-                    <Input
-                      value={part.part_name}
-                      onChange={(event) => updatePartLine(index, "part_name", event.target.value)}
-                      placeholder="Part name"
-                      className="h-9"
-                    />
-                    <Input
-                      value={part.part_number || ""}
-                      onChange={(event) => updatePartLine(index, "part_number", event.target.value)}
-                      placeholder="Part number"
-                      className="h-9"
-                    />
-                    <Input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={part.quantity}
-                      onChange={(event) => updatePartLine(index, "quantity", event.target.value)}
-                      placeholder="Qty"
-                      className="h-9"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-muted-foreground"
-                      onClick={() => removePartLine(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div key={`${index}-${part.part_id || part.part_name || "part"}`} className="space-y-2 rounded-md border bg-background p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={part.part_id ? "success" : "outline"}>
+                          {part.part_id ? "Catalog Part" : "Manual Part"}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          Part {index + 1}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {part.part_id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => clearInventoryLink(index)}
+                          >
+                            Switch to manual
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground"
+                          onClick={() => removePartLine(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <InventoryPartSearch onSelect={(inventoryPart) => applyInventoryPart(index, inventoryPart)} />
+
+                    <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/40 px-3 py-2">
+                      {part.part_id ? (
+                        <>
+                          <span className="text-sm font-medium text-foreground">
+                            {part.part_name || "Selected catalog part"}
+                          </span>
+                          {part.part_number && (
+                            <Badge variant="secondary" className="font-mono">
+                              {part.part_number}
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            Linked to inventory and will stay connected through quotation and task conversion.
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          No catalog match selected. Enter the part manually and the system will create it in the parts module for stores.
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid gap-2 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_96px]">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Part Name
+                        </Label>
+                        <Input
+                          value={part.part_name}
+                          onChange={(event) => updatePartLine(index, "part_name", event.target.value)}
+                          placeholder="Part name"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Part Number
+                        </Label>
+                        <Input
+                          value={part.part_number || ""}
+                          onChange={(event) => updatePartLine(index, "part_number", event.target.value)}
+                          placeholder="Part number"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Qty
+                        </Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={part.quantity}
+                          onChange={(event) => updatePartLine(index, "quantity", event.target.value)}
+                          placeholder="Qty"
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -348,5 +417,62 @@ export function RecommendationDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const emptyPartLine = (): PartLine => ({
+  part_id: undefined,
+  part_name: "",
+  part_number: "",
+  quantity: 1,
+});
+
+const buildFormData = (recommendation?: RecommendationDialogRecommendation): FormData => {
+  if (!recommendation) {
+    return {
+      recommendation_type: "repair",
+      description: "",
+      priority: "necessary",
+      parts_needed: [emptyPartLine()],
+      findings: [],
+    };
+  }
+
+  const existingParts = Array.isArray(recommendation.parts_needed) && recommendation.parts_needed.length > 0
+    ? recommendation.parts_needed.map((part) => ({
+        part_id: part.part_id,
+        part_name: part.part_name || "",
+        part_number: part.part_number || "",
+        quantity: Number(part.quantity || 1),
+      }))
+    : [emptyPartLine()];
+
+  return {
+    recommendation_type: recommendation.recommendation_type || "repair",
+    description: recommendation.description || "",
+    priority: recommendation.priority || "necessary",
+    parts_needed: existingParts,
+    findings: Array.isArray(recommendation.linked_findings) ? recommendation.linked_findings.map((finding) => finding.id) : [],
+  };
+};
+
+export function RecommendationDialog({
+  open,
+  onOpenChange,
+  onSave,
+  recommendation,
+  findings = [],
+  isLoading,
+}: RecommendationDialogProps) {
+  return (
+    <RecommendationDialogForm
+      key={recommendation?.id ?? (open ? "new-open" : "new-closed")}
+      open={open}
+      onOpenChange={onOpenChange}
+      onSave={onSave}
+      recommendation={recommendation}
+      findings={findings}
+      isLoading={isLoading}
+    />
   );
 }

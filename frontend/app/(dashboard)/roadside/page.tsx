@@ -480,7 +480,7 @@ export default function RoadsidePage() {
                     {requestsData && requestsData.count > 0 && (
                         <div className="p-4 border-t border-border flex items-center justify-between">
                             <div className="text-xs text-muted-foreground">
-                                Showing page {page} of {Math.ceil(requestsData.count / 10)}
+                                Showing page {page} of {Math.ceil(requestsData.count / 20)}
                             </div>
                             <div className="flex space-x-2">
                                 <Button

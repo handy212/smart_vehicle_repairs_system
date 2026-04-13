@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { authApi } from "@/lib/api/auth";
-import { Calendar, Clock, Car, Plus, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -13,6 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PortalPageHeader } from "../components/PortalPageHeader";
 import { PortalList } from "../components/PortalList";
 import { PortalCard } from "../components/PortalCard";
+import { PremiumIcons } from "@/components/ui/icons";
+import { cn } from "@/lib/utils/cn";
+import { Appointment } from "@/lib/api/appointments";
 
 export default function MyAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -24,56 +26,49 @@ export default function MyAppointmentsPage() {
   const { data: appointmentsData, isLoading } = useQuery({
     queryKey: ["portal", "appointments", statusFilter],
     queryFn: () => {
-
-      const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
+      const customerId = user?.customer_profile?.id || user?.customer?.id;
       if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
-      const params: any = {
+      const params: Record<string, string | number | boolean> = {
         customer: customerId,
         ordering: "-appointment_date,-appointment_time",
       };
       if (statusFilter !== "all" && statusFilter !== "upcoming" && statusFilter !== "past") {
-        // Direct status filter
         params.status = statusFilter;
       }
       return appointmentsApi.list(params);
     },
-
-    enabled: !!user && !!(user?.customer_profile?.id || (user as any)?.customer?.id),
+    enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
   });
 
+  const appointments = (appointmentsData?.results || appointmentsData || []) as Appointment[];
 
-  const appointments = (appointmentsData?.results || appointmentsData || []) as any[];
-
-  // Client-side filtering for "upcoming" vs "past" tabs if needed, 
-  // but for simplicity we'll just show the list based on the API response for now.
-  // Ideally, "upcoming" and "past" would filter by date in the backend.
-
-  const getStatusVariant = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case "confirmed": return "success";
-      case "pending": return "warning";
-      case "completed": return "default";
-      case "cancelled": return "danger";
-      default: return "secondary";
+      case "confirmed": return { variant: "success" as const, className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" };
+      case "pending": return { variant: "warning" as const, className: "bg-amber-500/10 text-amber-500 border-amber-500/20" };
+      case "completed": return { variant: "default" as const, className: "bg-blue-500/10 text-blue-500 border-blue-500/20" };
+      case "cancelled": return { variant: "danger" as const, className: "bg-destructive/10 text-destructive border-destructive/20" };
+      default: return { variant: "secondary" as const, className: "bg-muted text-muted-foreground border-transparent" };
     }
   };
 
   return (
-    <div>
+    <div className="space-y-8 max-w-7xl mx-auto">
       <PortalPageHeader
         title="Appointments"
+        description="View and manage your service bookings. Stay on top of your vehicle's health."
         action={
           <Link href="/portal/book">
             <Button size="sm" className="gap-2">
-              <Plus className="w-4 h-4" />
-              Book Appointment
+              <PremiumIcons.Calendar className="w-4 h-4" />
+              Book New Appointment
             </Button>
           </Link>
         }
       />
 
-      <div className="mt-6">
+      <div className="space-y-6">
         <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="all">All</TabsTrigger>
@@ -81,104 +76,124 @@ export default function MyAppointmentsPage() {
             <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
-
-          <TabsContent value={statusFilter} className="mt-0">
+          <div>
+              <TabsContent value={statusFilter} className="mt-0 outline-none">
             <PortalList
               data={appointments}
               isLoading={isLoading}
-              emptyMessage="No appointments found."
+              emptyMessage="No appointments found for this status."
               emptyAction={
                 <Link href="/portal/book">
-                  <Button variant="outline" size="sm" className="mt-4 gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Book Appointment
+                  <Button variant="outline" size="sm" className="mt-4 gap-2 border-primary/20 hover:bg-primary/5 rounded-xl px-6 py-5 font-bold">
+                    <PremiumIcons.Plus className="w-4 h-4 text-primary" />
+                    Book Now
                   </Button>
                 </Link>
               }
               columns={[
                 {
-                  header: "Date & Time",
+                  header: "Schedule",
                   cell: (apt) => (
-                    <div>
-                      <div className="font-semibold text-foreground">
-                        {format(new Date(apt.appointment_date), "MMM d, yyyy")}
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-muted/50 flex flex-col items-center justify-center border border-border/50 group-hover/row:border-primary/30 transition-colors">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground/60 leading-none mb-0.5">
+                          {format(new Date(apt.appointment_date), "MMM")}
+                        </span>
+                        <span className="text-sm font-semibold text-foreground leading-none">
+                          {format(new Date(apt.appointment_date), "d")}
+                        </span>
                       </div>
-                      <div className="flex items-center text-xs text-muted-foreground gap-1 mt-0.5">
-                        <Clock className="w-3 h-3" />
-                        {apt.appointment_time}
+                      <div>
+                        <div className="font-bold text-foreground">
+                          {format(new Date(apt.appointment_date), "EEEE, MMMM d")}
+                        </div>
+                        <div className="flex items-center text-[11px] text-muted-foreground font-semibold uppercase tracking-widest gap-1.5 mt-0.5 opacity-60">
+                          <PremiumIcons.Clock className="w-3 h-3 text-primary/60" />
+                          {apt.appointment_time}
+                        </div>
                       </div>
                     </div>
                   )
                 },
                 {
-                  header: "Vehicle",
+                  header: "Vehicle & Service",
                   cell: (apt) => (
-                    <div className="flex items-center gap-2 text-sm text-card-foreground">
-                      <Car className="w-4 h-4 text-muted-foreground" />
-                      {apt.vehicle_info || "N/A"}
-                    </div>
-                  )
-                },
-                {
-                  header: "Service",
-                  cell: (apt) => (
-                    <div className="max-w-xs">
-                      <div className="text-sm font-medium text-foreground">{apt.service_type || "Service"}</div>
-                      {apt.customer_concerns && (
-                        <div className="text-xs text-muted-foreground truncate">{apt.customer_concerns}</div>
-                      )}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
+                        <PremiumIcons.Car className="w-4 h-4 opacity-40" />
+                        {apt.vehicle_info || "Premium Vehicle"}
+                      </div>
+                      <div className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                        <PremiumIcons.Tool className="w-3.5 h-3.5 opacity-40" />
+                        {apt.service_type || "Standard Maintenance"}
+                      </div>
                     </div>
                   )
                 },
                 {
                   header: "Status",
-                  cell: (apt) => (
-                    <Badge variant={getStatusVariant(apt.status)} className="capitalize">
-                      {apt.status}
-                    </Badge>
-                  )
+                  cell: (apt) => {
+                    const config = getStatusConfig(apt.status);
+                    return (
+                      <Badge 
+                        variant={config.variant} 
+                        className={cn("capitalize text-[10px] font-semibold tracking-widest px-3 py-1 rounded-full border", config.className)}
+                      >
+                        {apt.status}
+                      </Badge>
+                    );
+                  }
                 },
                 {
-                  header: "Action",
+                  header: "Actions",
                   className: "text-right",
                   cell: (apt) => (
                     <div className="flex justify-end">
                       <Link href={`/portal/appointments/${apt.id}`}>
-                        <Button variant="ghost" size="sm" className="gap-1">
+                        <Button variant="ghost" size="sm" className="gap-2 hover:bg-primary/5 hover:text-primary rounded-lg font-bold group/btn">
                           Details
-                          <ArrowRight className="w-4 h-4" />
+                          <PremiumIcons.ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                         </Button>
                       </Link>
                     </div>
                   )
                 }
               ]}
-              renderMobileItem={(apt) => (
-                <PortalCard
-                  key={apt.id}
-                  href={`/portal/appointments/${apt.id}`}
-                  icon={<Calendar className="w-5 h-5 text-primary" />}
-                  title={format(new Date(apt.appointment_date), "EEEE, MMM d")}
-                  subtitle={
-                    <span className="flex flex-col gap-1 mt-1">
-                      <span className="flex items-center gap-1.5 font-medium text-card-foreground">
-                        <Clock className="w-3 h-3" /> {apt.appointment_time}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{apt.vehicle_info}</span>
-                    </span>
-                  }
-                  status={
-                    <Badge variant={getStatusVariant(apt.status)} className="capitalize text-[10px] h-5 px-1.5">
-                      {apt.status}
-                    </Badge>
-                  }
-                />
-              )}
+              renderMobileItem={(apt) => {
+                const config = getStatusConfig(apt.status);
+                return (
+                  <PortalCard
+                    key={apt.id}
+                    href={`/portal/appointments/${apt.id}`}
+                    icon={<PremiumIcons.Calendar className="w-6 h-6" />}
+                    title={format(new Date(apt.appointment_date), "EEEE, MMM d")}
+                    subtitle={
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        <div className="flex items-center gap-2 font-bold text-foreground">
+                          <PremiumIcons.Clock className="w-3.5 h-3.5 text-primary" /> {apt.appointment_time}
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-semibold uppercase text-muted-foreground/60 tracking-widest">{apt.vehicle_info}</span>
+                          <span className="text-[10px] font-medium opacity-50">{apt.service_type}</span>
+                        </div>
+                        <div className="mt-1">
+                          <Badge 
+                            variant={config.variant} 
+                            className={cn("capitalize text-[9px] font-semibold tracking-widest px-2 py-0.5 rounded-full border", config.className)}
+                          >
+                            {apt.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    }
+                  />
+                );
+              }}
             />
-          </TabsContent>
+              </TabsContent>
+          </div>
         </Tabs>
       </div>
     </div>
   );
 }
-

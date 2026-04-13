@@ -35,6 +35,27 @@ export interface WorkOrder {
   estimated_parts_cost?: string;
   estimated_total?: string;
   actual_total?: string;
+  estimate_summary?: {
+    id: number;
+    estimate_number: string;
+    status: string;
+    total: string;
+    reference_number?: string;
+    estimate_date?: string | null;
+    approved_date?: string | null;
+    created_at?: string | null;
+  } | null;
+  invoice_summary?: {
+    id: number;
+    invoice_number: string;
+    status: string;
+    total: string;
+    amount_paid?: string;
+    amount_due?: string;
+    invoice_date?: string | null;
+    paid_at?: string | null;
+    created_at?: string | null;
+  } | null;
   quality_check_required?: boolean;
   quality_check_completed?: boolean;
   quality_check_passed?: boolean;
@@ -445,6 +466,10 @@ export const workordersApi = {
       const response = await apiClient.post(`/workorders/parts/${id}/allocate/`);
       return response.data;
     },
+    markReturned: async (id: number, reason: string): Promise<WorkOrderPart> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/mark_returned/`, { reason });
+      return response.data;
+    },
     order: async (id: number): Promise<{ status: string; po_number: string; po_id: number; message: string }> => {
       const response = await apiClient.post(`/workorders/parts/${id}/order/`);
       return response.data;
@@ -506,6 +531,7 @@ export interface WorkOrderPart {
   installed_at?: string;
   installed_by?: number;
   installed_by_name?: string;
+  resolution_notes?: string;
   warranty_months?: number;
   warranty_notes?: string;
   inventory_part?: number;

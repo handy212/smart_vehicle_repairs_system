@@ -82,7 +82,12 @@ export default function InspectionDetailPage() {
     mutationFn: () => inspectionsApi.sendToCustomer(inspectionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
-      toast({ title: "Success", description: "Inspection sent to customer.", variant: "success" });
+      const alreadySent = !!inspection?.sent_to_customer_at;
+      toast({
+        title: "Success",
+        description: alreadySent ? "Inspection resent to customer." : "Inspection sent to customer.",
+        variant: "success",
+      });
     },
 
     onError: (error: any) => {
@@ -211,10 +216,19 @@ export default function InspectionDetailPage() {
             </>
           )}
 
-          {(inspection.status === "completed" || inspection.status === "approved") && !inspection.sent_to_customer_at && (
-            <Button size="sm" onClick={() => sendToCustomerMutation.mutate()} disabled={sendToCustomerMutation.isPending}>
+          {(inspection.status === "completed" || inspection.status === "approved") && (
+            <Button
+              size="sm"
+              variant={inspection.sent_to_customer_at ? "outline" : "default"}
+              onClick={() => sendToCustomerMutation.mutate()}
+              disabled={sendToCustomerMutation.isPending}
+            >
               <Send className="w-3.5 h-3.5 mr-2" />
-              Send to Customer
+              {sendToCustomerMutation.isPending
+                ? "Sending..."
+                : inspection.sent_to_customer_at
+                ? "Resend to Customer"
+                : "Send to Customer"}
             </Button>
           )}
         </div>

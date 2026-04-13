@@ -1,14 +1,10 @@
 "use client";
 
-import {
-    Car,
-    Calendar,
-    FileText,
-    DollarSign
-} from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { PremiumIcons } from "@/components/ui/icons";
 
 interface PortalStats {
     total_vehicles: number;
@@ -28,58 +24,64 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
         {
             label: "My Vehicles",
             value: stats.total_vehicles,
-            icon: Car,
-            color: "text-primary",
-            bg: "bg-primary/10 dark:bg-orange-900/20",
+            icon: PremiumIcons.Car,
+            iconClass: "text-primary",
+            iconBg: "bg-primary/10",
             href: "/portal/vehicles"
         },
         {
             label: "Upcoming Service",
             value: stats.upcoming_appointments_count,
-            icon: Calendar,
-            color: "text-success",
-            bg: "bg-success/10 dark:bg-green-900/20",
+            icon: PremiumIcons.Calendar,
+            iconClass: "text-success",
+            iconBg: "bg-success/10",
             href: "/portal/appointments",
             alert: stats.upcoming_appointments_count > 0
         },
         {
             label: "Pending Invoices",
             value: stats.pending_invoices_count,
-            icon: FileText,
-            color: "text-yellow-600 dark:text-yellow-400",
-            bg: "bg-warning/10 dark:bg-yellow-900/20",
+            icon: PremiumIcons.Receipt,
+            iconClass: "text-warning",
+            iconBg: "bg-warning/10",
             href: "/portal/invoices",
             alert: stats.pending_invoices_count > 0
         },
         {
             label: "Total Spent",
             value: formatCurrency(stats.total_spent || 0),
-            icon: DollarSign,
-            color: "text-purple-600 dark:text-purple-400",
-            bg: "bg-purple-50 dark:bg-purple-900/20",
-            href: "/portal/history" // or invoices
+            icon: PremiumIcons.CreditCard,
+            iconClass: "text-muted-foreground",
+            iconBg: "bg-muted",
+            href: "/portal/history"
         }
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {items.map((item, index) => (
-                <Card key={index} className="border-none shadow-sm bg-card/50 bg-background/50 hover:bg-card  transition-colors group">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{item.label}</p>
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl font-bold text-foreground">{item.value}</span>
-                                {item.alert && (
-                                    <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                                )}
+                <Link key={index} href={item.href}>
+                    <Card className="hover:bg-muted/40 transition-colors cursor-pointer">
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">
+                                    {item.label}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl font-bold text-foreground">
+                                        {item.value}
+                                    </span>
+                                    {item.alert && (
+                                        <span className="inline-flex h-2 w-2 rounded-full bg-red-500" />
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                        <div className={cn("p-2 rounded-xl transition-all duration-300 group-hover:scale-110", item.bg)}>
-                            <item.icon className={cn("w-5 h-5", item.color)} />
-                        </div>
-                    </CardContent>
-                </Card>
+                            <div className={cn("p-2 rounded-lg", item.iconBg)}>
+                                <item.icon className={cn("w-5 h-5", item.iconClass)} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
             ))}
         </div>
     );

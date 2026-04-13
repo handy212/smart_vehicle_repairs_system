@@ -1,10 +1,12 @@
 import uuid
 import logging
+from django.apps import apps as django_apps
 from django.db import models
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+from django.utils.text import slugify
 from decimal import Decimal, InvalidOperation
 from apps.accounts.models import User
 from apps.customers.models import Customer
@@ -475,23 +477,57 @@ class WorkOrder(models.Model):
         if new_status == 'quality_check':
             if not self.tasks.filter(is_workflow_task=False).exists():
                 return False, "At least one mechanical task must exist before quality check"
-            completed_tasks = self.tasks.filter(is_workflow_task=False, status='completed').count()
-            if completed_tasks == 0:
-                return False, "At least one mechanical task must be completed before quality check"
-        
+            incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+            if incomplete_tasks.exists():
+                return False, "All mechanical tasks must be completed or skipped before quality check"
+
         if new_status == 'completed':
             if not self.tasks.filter(is_workflow_task=False).exists():
                 return False, "At least one mechanical task must exist before completing"
             if self.quality_check_required and not self.quality_check_completed:
                 return False, "Quality check must be completed first"
-            # Check if all parts are installed, returned, or ready (ready parts will be consumed during transition)
-            pending_parts = self.parts.exclude(status__in=['installed', 'returned', 'ready'])
-            if pending_parts.exists():
-                return False, f"{pending_parts.count()} part(s) are not ready, installed, or returned"
+            incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+            if incomplete_tasks.exists():
+                return False, "All mechanical tasks must be completed or skipped before completing"
+
+            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+            if unresolved_parts.exists():
+                return False, f"{unresolved_parts.count()} part(s) must be installed or formally returned before completing"
+
+            returned_without_reason = self.parts.filter(status='returned').filter(
+                Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
+            )
+            if returned_without_reason.exists():
+                return False, "Every returned part must include a return reason before completing"
+
+            tasks_missing_labor = [
+                task.description
+                for task in self.tasks.filter(is_workflow_task=False, status='completed')
+                if task.calculated_actual_hours <= 0
+            ]
+            if tasks_missing_labor:
+                return False, "Actual labor hours are required for every completed mechanical task before completing the work order"
         
         if new_status == 'invoiced':
             if not self.odometer_out:
                 return False, "Odometer out is required before invoicing"
+            if django_apps.is_installed('apps.billing'):
+                Invoice = django_apps.get_model('billing', 'Invoice')
+                invoice = Invoice.objects.filter(work_order=self).exclude(status='proforma').first()
+                if not invoice:
+                    return False, "A finalized invoice must be created before the work order can be marked as invoiced."
+                if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
+                    return False, "Invoice total must be greater than zero before the work order can be marked as invoiced."
+
+        if new_status == 'closed' and django_apps.is_installed('apps.billing'):
+            Invoice = django_apps.get_model('billing', 'Invoice')
+            invoice = Invoice.objects.filter(work_order=self).exclude(status='proforma').first()
+            if not invoice:
+                return False, "A finalized invoice is required before the work order can be closed."
+            if invoice.status == 'draft':
+                return False, "Invoice must be issued before the work order can be closed."
+            if not (self.is_warranty or self.is_recall) and invoice.total <= 0:
+                return False, "Invoice total must be greater than zero before the work order can be closed."
         
         return True, None
     
@@ -517,9 +553,27 @@ class WorkOrder(models.Model):
                 errors.append("Work order must be approved")
         
         if new_status == 'completed':
-            pending_parts = self.parts.exclude(status__in=['installed', 'returned', 'ready'])
-            if pending_parts.exists():
-                errors.append(f"{pending_parts.count()} part(s) are not ready, installed, or returned")
+            incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+            if incomplete_tasks.exists():
+                errors.append("All mechanical tasks must be completed or skipped")
+
+            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+            if unresolved_parts.exists():
+                errors.append(f"{unresolved_parts.count()} part(s) must be installed or formally returned")
+
+            returned_without_reason = self.parts.filter(status='returned').filter(
+                Q(resolution_notes__isnull=True) | Q(resolution_notes__exact='')
+            )
+            if returned_without_reason.exists():
+                errors.append("Every returned part must include a return reason")
+
+            tasks_missing_labor = [
+                task.description
+                for task in self.tasks.filter(is_workflow_task=False, status='completed')
+                if task.calculated_actual_hours <= 0
+            ]
+            if tasks_missing_labor:
+                errors.append("Actual labor hours are required for every completed mechanical task")
         
         if new_status == 'invoiced':
             if not self.odometer_out:
@@ -837,6 +891,119 @@ class WorkOrder(models.Model):
             if not assigned_user:
                 assigned_user = self.assigned_technicians.first()
             
+            InventoryPart = self._meta.apps.get_model('inventory', 'Part')
+            PartCategory = self._meta.apps.get_model('inventory', 'PartCategory')
+            WorkOrderPart = self._meta.apps.get_model('workorders', 'WorkOrderPart')
+
+            def resolve_default_labor_rate():
+                if assigned_user:
+                    user_rate = getattr(assigned_user, 'hourly_rate', None)
+                    if user_rate:
+                        return Decimal(str(user_rate))
+
+                try:
+                    Estimate = self._meta.apps.get_model('billing', 'Estimate')
+                except LookupError:
+                    return Decimal('0')
+
+                estimate = (
+                    Estimate.objects.filter(work_order=self)
+                    .exclude(status='void')
+                    .order_by('-created_at')
+                    .first()
+                )
+
+                if not estimate:
+                    estimate = (
+                        Estimate.objects.filter(
+                            reference_number=f"WO:{self.id}",
+                            customer=self.customer,
+                            vehicle=self.vehicle,
+                        )
+                        .exclude(status='void')
+                        .order_by('-created_at')
+                        .first()
+                    )
+
+                if not estimate:
+                    return Decimal('0')
+
+                labor_lines = estimate.line_items.filter(item_type='labor')
+                total_hours = Decimal('0')
+                total_amount = Decimal('0')
+
+                for line in labor_lines:
+                    total_hours += line.labor_hours or Decimal('0')
+                    total_amount += line.total or Decimal('0')
+
+                if total_hours > 0 and total_amount > 0:
+                    return (total_amount / total_hours).quantize(Decimal('0.01'))
+
+                first_line = labor_lines.first()
+                if first_line and first_line.quantity and first_line.total:
+                    return (first_line.total / first_line.quantity).quantize(Decimal('0.01'))
+
+                return Decimal('0')
+
+            default_labor_rate = resolve_default_labor_rate()
+
+            def ensure_catalog_part(part_data):
+                inventory_part = None
+                part_id = part_data.get('part_id') or part_data.get('inventory_part')
+                part_name = (part_data.get('part_name') or '').strip()
+                part_number = (part_data.get('part_number') or '').strip()
+
+                if part_id:
+                    inventory_part = InventoryPart.objects.filter(pk=part_id).first()
+                    if inventory_part:
+                        return inventory_part
+
+                if part_number:
+                    inventory_part = InventoryPart.objects.filter(part_number__iexact=part_number).first()
+                    if inventory_part:
+                        return inventory_part
+
+                if part_name:
+                    part_by_name = InventoryPart.objects.filter(name__iexact=part_name)
+                    if self.branch:
+                        inventory_part = part_by_name.filter(branch=self.branch).first()
+                        if inventory_part:
+                            return inventory_part
+                    inventory_part = part_by_name.filter(branch__isnull=True).first() or part_by_name.first()
+                    if inventory_part:
+                        return inventory_part
+
+                if not part_name and not part_number:
+                    return None
+
+                category = (
+                    PartCategory.objects.filter(name__iexact='Uncategorized').first()
+                    or PartCategory.objects.first()
+                    or PartCategory.objects.create(
+                        name='Uncategorized',
+                        description='Fallback category for parts created from diagnosis recommendations.',
+                    )
+                )
+
+                generated_base = part_number or f"DIAG-{self.id}-{(slugify(part_name or 'part').upper()[:32] or 'PART')}"
+                generated_part_number = generated_base
+                suffix = 2
+                while InventoryPart.objects.filter(part_number=generated_part_number).exists():
+                    generated_part_number = f"{generated_base}-{suffix}"
+                    suffix += 1
+
+                return InventoryPart.objects.create(
+                    part_number=generated_part_number,
+                    name=part_name or generated_part_number,
+                    description=f"Auto-created from diagnosis recommendation on {self.work_order_number}.",
+                    category=category,
+                    branch=self.branch,
+                    unit='piece',
+                    cost_price=Decimal('0.01'),
+                    selling_price=Decimal('0.01'),
+                    created_by=user,
+                )
+
             for rec in recommendations:
                 # Map recommendation type to task type
                 task_type_map = {
@@ -859,7 +1026,7 @@ class WorkOrder(models.Model):
                     sequence_order=max_sequence + tasks_created + 1,
                     assigned_to=assigned_user,
                     estimated_hours=rec.estimated_labor_hours or Decimal('0'),
-                    labor_rate=(getattr(self.primary_technician, 'hourly_rate', None) or Decimal('0')) if self.primary_technician else Decimal('0'),
+                    labor_rate=default_labor_rate,
                     workflow_phase=None,
                     is_workflow_task=False,
                 )
@@ -877,30 +1044,48 @@ class WorkOrder(models.Model):
                 
                 # Link parts from recommendation to task
                 if rec.parts_needed and isinstance(rec.parts_needed, list):
-                    WorkOrderPart = self._meta.apps.get_model('workorders', 'WorkOrderPart')
                     for part_data in rec.parts_needed:
                         try:
                             if not isinstance(part_data, dict):
                                 continue
-                                
+
+                            inventory_part = ensure_catalog_part(part_data)
                             part_name = part_data.get('part_name', '').strip()
                             part_number = part_data.get('part_number', '').strip()
+                            if inventory_part:
+                                part_name = inventory_part.name
+                                part_number = inventory_part.part_number
+
                             try:
                                 quantity = Decimal(str(part_data.get('quantity', 1)))
                             except (ValueError, TypeError, InvalidOperation):
                                 quantity = Decimal('1')
-                                
+
                             try:
                                 unit_cost = Decimal(str(part_data.get('unit_cost', 0)))
                             except (ValueError, TypeError, InvalidOperation):
                                 unit_cost = Decimal('0')
-                            
-                            if not part_name:
+
+                            if inventory_part and unit_cost <= 0:
+                                unit_cost = inventory_part.cost_price or Decimal('0')
+
+                            if not part_name and not inventory_part:
                                 continue
-                            
-                            # Try to find existing WorkOrderPart by part_name or part_number
+
+                            # Try to find existing WorkOrderPart by inventory part first, then part number/name.
                             existing_part = None
-                            if part_number:
+                            if inventory_part:
+                                existing_part = self.parts.filter(
+                                    inventory_part=inventory_part,
+                                    task__isnull=True
+                                ).first()
+
+                                if not existing_part:
+                                    existing_part = self.parts.filter(
+                                        inventory_part=inventory_part
+                                    ).first()
+
+                            if not existing_part and part_number:
                                 existing_part = self.parts.filter(
                                     part_number=part_number,
                                     task__isnull=True  # Prefer unlinked parts
@@ -926,10 +1111,16 @@ class WorkOrder(models.Model):
                                 # Link existing part to task if not already linked
                                 if not existing_part.task:
                                     existing_part.task = task
+                                    if inventory_part and not existing_part.inventory_part:
+                                        existing_part.inventory_part = inventory_part
                                     # If it's a "blank" part (draft/pending), update its specs from recommendation
                                     if existing_part.status in ['draft', 'pending']:
                                         existing_part.quantity = quantity
                                         existing_part.unit_cost = unit_cost
+                                        if not existing_part.part_name:
+                                            existing_part.part_name = part_name
+                                        if not existing_part.part_number:
+                                            existing_part.part_number = part_number
                                         if not existing_part.requested_by:
                                             existing_part.requested_by = user
                                     existing_part.save()
@@ -939,6 +1130,7 @@ class WorkOrder(models.Model):
                                     new_part = WorkOrderPart.objects.create(
                                         work_order=self,
                                         task=task,
+                                        inventory_part=inventory_part,
                                         part_name=part_name,
                                         part_number=part_number,
                                         quantity=quantity,
@@ -960,6 +1152,7 @@ class WorkOrder(models.Model):
                                 new_part = WorkOrderPart.objects.create(
                                     work_order=self,
                                     task=task,
+                                    inventory_part=inventory_part,
                                     part_name=part_name,
                                     part_number=part_number,
                                     quantity=quantity,
@@ -1010,15 +1203,14 @@ class WorkOrder(models.Model):
     
     def check_parts_ready(self):
         """
-        Check if all required parts are ready for installation.
-        Returns True if all parts are received or installed.
+        Check if all required parts are allocated for workshop use.
+        Returns True if all parts are ready, installed, or formally returned.
         """
         if not self.parts.exists():
             return True
         
-        # Check if any parts are still pending or ordered
-        pending_parts = self.parts.filter(status__in=['pending', 'ordered'])
-        return pending_parts.count() == 0
+        unresolved_parts = self.parts.exclude(status__in=['ready', 'installed', 'returned'])
+        return unresolved_parts.count() == 0
     
     
 
@@ -1368,6 +1560,10 @@ class WorkOrderPart(models.Model):
         related_name='installed_parts',
         limit_choices_to={'role__in': ['technician', 'manager']}
     )
+    resolution_notes = models.TextField(
+        blank=True,
+        help_text="Reason when the part is returned or not used on the repair"
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1383,6 +1579,10 @@ class WorkOrderPart(models.Model):
         self._original_selling_price = self.selling_price if self.pk else None
     
     def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None:
+            update_fields = set(update_fields)
+
         # Generate Requisition Number
         if not self.requisition_number:
             # Format: REQ-YYYY-XXXXX (e.g. REQ-2024-00001)
@@ -1415,6 +1615,12 @@ class WorkOrderPart(models.Model):
             self.selling_price = self.total_cost * (1 + (self.markup_percentage / 100))
         else:
             self.selling_price = self.total_cost
+
+        if update_fields is not None:
+            update_fields.update({'total_cost', 'selling_price'})
+            if not self.requisition_number:
+                update_fields.add('requisition_number')
+            kwargs['update_fields'] = list(update_fields)
             
         is_new = self.pk is None
         cost_changed = is_new or self._original_selling_price != self.selling_price

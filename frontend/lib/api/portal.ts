@@ -53,6 +53,19 @@ export interface PortalInvoice {
   status: string;
 }
 
+export interface Estimate {
+  id: number;
+  customer: number;
+  vehicle: number;
+  vehicle_info: string;
+  status: string;
+  total: number | string;
+  created_at: string;
+  expires_at?: string;
+  notes?: string;
+  items: any[];
+}
+
 export interface PortalDashboardStats {
   total_vehicles: number;
   upcoming_appointments_count: number;
@@ -60,10 +73,18 @@ export interface PortalDashboardStats {
   total_spent: number;
 }
 
+export interface PortalRecentAppointment {
+  id: number;
+  appointment_date: string;
+  appointment_time: string;
+  status: string;
+  vehicle_info: string;
+  service_type: string;
+}
+
 export interface PortalDashboardResponse {
   stats: PortalDashboardStats;
-
-  recent_appointments: any[]; // Using any for simplicty or define specific Appt type
+  recent_appointments: PortalRecentAppointment[];
   recent_invoices: PortalInvoice[];
 }
 
@@ -111,6 +132,21 @@ export const portalApi = {
 
   dashboard: async (): Promise<PortalDashboardResponse> => {
     const response = await apiClient.get("/portal/dashboard/");
+    return response.data;
+  },
+
+  listEstimates: async (params?: Record<string, any>): Promise<any> => {
+    const response = await apiClient.get("/portal/estimates/", { params });
+    return response.data;
+  },
+
+  approveEstimate: async (id: number, data: { notes?: string }): Promise<any> => {
+    const response = await apiClient.post(`/portal/estimates/${id}/approve/`, data);
+    return response.data;
+  },
+
+  declineEstimate: async (id: number, data: { reason?: string }): Promise<any> => {
+    const response = await apiClient.post(`/portal/estimates/${id}/decline/`, data);
     return response.data;
   }
 };

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { billingApi } from "@/lib/api/billing";
+import { billingApi, Estimate, EstimateLineItem } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeProps } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, Edit, Mail, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle } from "lucide-react";
@@ -23,6 +23,7 @@ import { EstimateNotes } from "./components/EstimateNotes";
 import { EstimateReminders } from "./components/EstimateReminders";
 import { EstimateActivityLog } from "./components/EstimateActivityLog";
 import { useAuthStore } from "@/store/authStore";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -34,12 +35,12 @@ export default function EstimateDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isConverting, setIsConverting] = useState(false);
-  const [localStatus, setLocalStatus] = useState<string | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
   const [activeTab, setActiveTab] = useState("estimate");
   const { user: currentUser } = useAuthStore();
+  const { hasPermission, hasAnyPermission } = usePermissions();
 
   // Validate estimateId to prevent NaN API calls
   const isValidId = !isNaN(estimateId) && estimateId > 0;
@@ -50,12 +51,24 @@ export default function EstimateDetailPage() {
     enabled: isValidId,
   });
 
-  // Update local status when estimate data changes
-  useEffect(() => {
-    if (estimate?.status) {
-      setLocalStatus(estimate.status);
+  const isAdminUser =
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super-admin" ||
+    Boolean((currentUser as { is_superuser?: boolean } | null)?.is_superuser);
+  const canEditEstimate = isAdminUser || hasPermission("edit_estimates");
+  const canApproveEstimate = isAdminUser || hasAnyPermission(["approve_estimates", "edit_estimates"]);
+  const canSendEstimate = isAdminUser || hasAnyPermission(["edit_estimates", "send_notifications"]);
+  const canConvertEstimateToInvoice =
+    isAdminUser || hasAnyPermission(["convert_estimate_to_invoice", "create_invoices"]);
+  const canConvertEstimateToWorkOrder = isAdminUser || hasPermission("create_workorders");
+  const currentStatus = estimate?.status ?? null;
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error && "response" in error) {
+      const response = (error as { response?: { data?: { error?: string; detail?: string } } }).response;
+      return response?.data?.error || response?.data?.detail || fallback;
     }
-  }, [estimate?.status]);
+    return fallback;
+  };
 
   const statusChangeMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -65,18 +78,14 @@ export default function EstimateDetailPage() {
       await queryClient.cancelQueries({ queryKey: ["estimate", estimateId] });
       const previousEstimate = queryClient.getQueryData(["estimate", estimateId]);
 
-      queryClient.setQueryData(["estimate", estimateId], (old: any) => ({
-        ...old,
-        status: newStatus,
-      }));
-      setLocalStatus(newStatus);
+      queryClient.setQueryData<Estimate | undefined>(["estimate", estimateId], (old) =>
+        old ? { ...old, status: newStatus } : old
+      );
       return { previousEstimate };
     },
     onError: (err, newStatus, context) => {
       if (context?.previousEstimate) {
         queryClient.setQueryData(["estimate", estimateId], context.previousEstimate);
-
-        setLocalStatus((context.previousEstimate as any)?.status || estimate?.status || null);
       }
     },
     onSuccess: () => {
@@ -119,11 +128,11 @@ export default function EstimateDetailPage() {
       router.push(`/billing/invoices/${invoice.id}`);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       setIsConverting(false);
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to convert estimate",
+        description: getApiErrorMessage(error, "Failed to convert estimate"),
         variant: "destructive",
       });
     },
@@ -143,11 +152,11 @@ export default function EstimateDetailPage() {
       router.push(`/workorders/${data.work_order_id}`);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       setIsConverting(false);
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to convert estimate",
+        description: getApiErrorMessage(error, "Failed to convert estimate"),
         variant: "destructive",
       });
     },
@@ -162,13 +171,12 @@ export default function EstimateDetailPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
-      setLocalStatus("approved");
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || error.response?.data?.error || "Failed to approve estimate",
+        description: getApiErrorMessage(error, "Failed to approve estimate"),
         variant: "destructive",
       });
     },
@@ -176,7 +184,7 @@ export default function EstimateDetailPage() {
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
-    if (newStatus && newStatus !== localStatus) {
+    if (newStatus && newStatus !== currentStatus) {
       statusChangeMutation.mutate(newStatus);
     }
   };
@@ -291,6 +299,9 @@ export default function EstimateDetailPage() {
     taxBreakdown.getfundAmount > 0 ||
     taxBreakdown.hrlAmount > 0 ||
     taxBreakdown.vatAmount > 0;
+  const latestInvoice = estimate.latest_invoice_summary;
+  const hasLinkedInvoice = Boolean(latestInvoice?.id);
+  const isStoresQuote = Boolean(estimate.work_order || estimate.reference_number?.startsWith("WO:"));
 
   return (
     <>
@@ -312,13 +323,21 @@ export default function EstimateDetailPage() {
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground bg-muted/50 border-border text-foreground">
-                  Estimate #{estimate.estimate_number}
+                  {isStoresQuote ? "Stores Quote" : "Estimate"} #{estimate.estimate_number}
                 </span>
                 {estimate.work_order && estimate.work_order_number && (
                   <Link href={`/workorders/${typeof estimate.work_order === 'object' ? estimate.work_order.id : estimate.work_order}`}>
                     <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-orange-100 transition-colors dark:bg-orange-950/20 dark:border-orange-800 text-primary">
                       <span className="h-2 w-2 rounded-full bg-primary" />
                       Work Order #{estimate.work_order_number}
+                    </span>
+                  </Link>
+                )}
+                {latestInvoice?.id && (
+                  <Link href={`/billing/invoices/${latestInvoice.id}`}>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      Invoice #{latestInvoice.invoice_number}
                     </span>
                   </Link>
                 )}
@@ -329,7 +348,7 @@ export default function EstimateDetailPage() {
             </div>
           </div>
           <div className="relative no-print">
-            {estimate.can_be_converted && estimate.status !== "converted" && (
+            {!hasLinkedInvoice && canConvertEstimateToInvoice && estimate.can_be_converted && estimate.status !== "converted" && (
               <Button
                 onClick={handleConvertToInvoice}
                 disabled={isConverting}
@@ -382,27 +401,31 @@ export default function EstimateDetailPage() {
                       <Download className="w-4 h-4" />
                       {isDownloading ? 'Generating...' : 'Download PDF'}
                     </button>
-                    <button
-                      onClick={() => {
-                        handleSendEmail();
-                        setShowActionsMenu(false);
-                      }}
-                      disabled={sendEmailMutation.isPending}
-                      className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Mail className="w-4 h-4" />
-                      {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
-                    </button>
-                    <Link href={`/billing/estimates/${estimateId}/edit`}>
+                    {canSendEstimate && (
                       <button
-                        onClick={() => setShowActionsMenu(false)}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
+                        onClick={() => {
+                          handleSendEmail();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={sendEmailMutation.isPending}
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Edit className="w-4 h-4" />
-                        Edit
+                        <Mail className="w-4 h-4" />
+                        {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                       </button>
-                    </Link>
-                    {estimate.can_be_approved && estimate.status !== "approved" && (
+                    )}
+                    {canEditEstimate && (
+                      <Link href={`/billing/estimates/${estimateId}/edit`}>
+                        <button
+                          onClick={() => setShowActionsMenu(false)}
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                      </Link>
+                    )}
+                    {canApproveEstimate && estimate.can_be_approved && estimate.status !== "approved" && (
                       <button
                         onClick={() => {
                           handleApproveEstimate();
@@ -415,31 +438,35 @@ export default function EstimateDetailPage() {
                         {approveEstimateMutation.isPending ? "Approving..." : "Approve Estimate"}
                       </button>
                     )}
-                    {estimate.can_be_converted && estimate.status !== "converted" && (
+                    {!hasLinkedInvoice && estimate.can_be_converted && estimate.status !== "converted" && (canConvertEstimateToInvoice || canConvertEstimateToWorkOrder) && (
                       <>
                         <div className="border-t border-border my-1" />
-                        <button
-                          onClick={() => {
-                            handleConvertToInvoice();
-                            setShowActionsMenu(false);
-                          }}
-                          disabled={isConverting}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <FileText className="w-4 h-4" />
-                          To Invoice
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleConvertToWorkOrder();
-                            setShowActionsMenu(false);
-                          }}
-                          disabled={isConverting}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Wrench className="w-4 h-4" />
-                          To Work Order
-                        </button>
+                        {canConvertEstimateToInvoice && (
+                          <button
+                            onClick={() => {
+                              handleConvertToInvoice();
+                              setShowActionsMenu(false);
+                            }}
+                            disabled={isConverting}
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <FileText className="w-4 h-4" />
+                            To Invoice
+                          </button>
+                        )}
+                        {canConvertEstimateToWorkOrder && (
+                          <button
+                            onClick={() => {
+                              handleConvertToWorkOrder();
+                              setShowActionsMenu(false);
+                            }}
+                            disabled={isConverting}
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Wrench className="w-4 h-4" />
+                            To Work Order
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
@@ -484,6 +511,45 @@ export default function EstimateDetailPage() {
           </TabsList>
 
           <TabsContent value="estimate" className="space-y-6">
+            <Card className="border shadow-sm">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="rounded-md border bg-muted/30 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Quote Type</p>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      {isStoresQuote ? "Stores quotation from diagnosis" : "Customer estimate"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {estimate.reference_number || "No external reference"}
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-muted/30 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current Status</p>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      {(currentStatus || estimate.status)?.replace(/_/g, " ")}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Total quoted: {formatCurrency(parseFloat(estimate.total || "0"))}
+                    </p>
+                  </div>
+                  <div className="rounded-md border bg-muted/30 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Invoice Handoff</p>
+                    {latestInvoice ? (
+                      <>
+                        <Link href={`/billing/invoices/${latestInvoice.id}`} className="mt-2 inline-flex text-sm font-semibold text-primary hover:underline">
+                          {latestInvoice.invoice_number}
+                        </Link>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {latestInvoice.status.replace(/_/g, " ")} • {formatCurrency(parseFloat(latestInvoice.total || "0"))}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-sm font-semibold text-foreground">No invoice created yet</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* 1. Header Information (Estimate Details, Dates, etc.) - Full Width */}
             <Card>
@@ -509,13 +575,13 @@ export default function EstimateDetailPage() {
                     <h3 className="text-sm font-medium text-muted-foreground mb-2">Details</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-muted-foreground w-24">Date:</span>
+                        <span className="text-sm text-muted-foreground w-24">{isStoresQuote ? "Quoted:" : "Date:"}</span>
                         <span className="text-sm font-medium text-foreground">
                           {estimate.estimate_date ? format(new Date(estimate.estimate_date), "MMM dd, yyyy") : "-"}
                         </span>
                       </div>
                       <div className="flex justify-between md:justify-start md:gap-8">
-                        <span className="text-sm text-muted-foreground w-24">Valid Until:</span>
+                        <span className="text-sm text-muted-foreground w-24">{isStoresQuote ? "Valid Until:" : "Valid Until:"}</span>
                         <span className="text-sm font-medium text-foreground">
                           {estimate.valid_until ? format(new Date(estimate.valid_until), "MMM dd, yyyy") : "-"}
                         </span>
@@ -555,25 +621,37 @@ export default function EstimateDetailPage() {
                         <span className="text-sm text-muted-foreground mb-1">Status</span>
                         <div className="flex items-center gap-2">
 
-                          <Badge variant={getStatusVariant(localStatus || estimate.status) as any}>
-                            {(localStatus || estimate.status)?.replace("_", " ").toUpperCase()}
+                          <Badge variant={getStatusVariant(currentStatus || estimate.status) as BadgeProps["variant"]}>
+                            {(currentStatus || estimate.status)?.replace("_", " ").toUpperCase()}
                           </Badge>
-                          {/* inline status editor could go here but redundant if we have actions? let's keep the select for quick edits if previously available */}
-                          <select
-                            value={localStatus || estimate.status}
-                            onChange={handleStatusChange}
-                            disabled={statusChangeMutation.isPending}
-                            className="px-2 py-1 text-xs border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
-                          >
-                            <option value="draft">Draft</option>
-                            <option value="sent">Sent</option>
-                            <option value="viewed">Viewed</option>
-                            <option value="approved">Approved</option>
-                            <option value="declined">Declined</option>
-                            <option value="converted">Converted</option>
-                          </select>
+                          {canEditEstimate && (
+                            <select
+                              value={currentStatus || estimate.status}
+                              onChange={handleStatusChange}
+                              disabled={statusChangeMutation.isPending}
+                              className="px-2 py-1 text-xs border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                            >
+                              <option value="draft">Draft</option>
+                              <option value="sent">Sent</option>
+                              <option value="viewed">Viewed</option>
+                              <option value="approved">Approved</option>
+                              <option value="declined">Declined</option>
+                              <option value="converted">Converted</option>
+                            </select>
+                          )}
                         </div>
                       </div>
+                      {latestInvoice && (
+                        <div className="flex flex-col mt-2">
+                          <span className="text-sm text-muted-foreground">Invoice</span>
+                          <Link href={`/billing/invoices/${latestInvoice.id}`} className="text-sm font-medium text-primary hover:underline">
+                            {latestInvoice.invoice_number}
+                          </Link>
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {latestInvoice.status.replace(/_/g, " ")}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -582,7 +660,7 @@ export default function EstimateDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t">
                     {(estimate.title || estimate.description) && (
                       <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Description</h4>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{isStoresQuote ? "Quotation Scope" : "Description"}</h4>
                         {estimate.title && <p className="text-sm font-medium text-foreground mb-1">{estimate.title}</p>}
                         {estimate.description && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{estimate.description}</p>}
                       </div>
@@ -617,7 +695,7 @@ export default function EstimateDetailPage() {
                     <TableBody>
                       {estimate.line_items && estimate.line_items.length > 0 ? (
 
-                        estimate.line_items.map((item: any, index: number) => (
+                        estimate.line_items.map((item: EstimateLineItem, index: number) => (
                           <TableRow key={item.id || index}>
                             <TableCell className="align-top py-3">
                               <div className="flex flex-col">

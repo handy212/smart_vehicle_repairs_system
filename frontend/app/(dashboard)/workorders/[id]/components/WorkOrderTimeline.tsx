@@ -2,16 +2,87 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Clock } from "lucide-react";
+import { Clock, FileCheck, Receipt, CreditCard } from "lucide-react";
+import { WorkOrder } from "@/lib/api/workorders";
 
 interface TimelineProps {
-
-    workOrder: any;
-
-    notes: any[];
+    workOrder: WorkOrder;
+    notes: Array<{
+        id?: number | string;
+        created_at?: string;
+        note?: string;
+        text?: string;
+        content?: string;
+        note_type?: string;
+        is_important?: boolean;
+        created_by_name?: string;
+        author_name?: string;
+    }>;
 }
 
 export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
+    const formatWorkflowTimestamp = (timestamp?: string | null) => {
+        if (!timestamp) {
+            return "";
+        }
+
+        const isMidnightStamp = /T00:00:00(?:\.000)?(?:Z|[+-]\d{2}:\d{2})?$/.test(timestamp);
+        return format(
+            new Date(timestamp),
+            isMidnightStamp ? "MMM dd, yyyy" : "MMM dd, yyyy 'at' h:mm a"
+        );
+    };
+
+    const commercialEvents = [
+        workOrder.estimate_summary?.created_at
+            ? {
+                id: `estimate-created-${workOrder.estimate_summary.id}`,
+                title: "Stores Quote Created",
+                timestamp: workOrder.estimate_summary.created_at,
+                subtitle: `${workOrder.estimate_summary.estimate_number} • ${workOrder.estimate_summary.status.replace(/_/g, " ")}`,
+                color: "bg-primary",
+                icon: FileCheck,
+            }
+            : null,
+        workOrder.estimate_summary?.approved_date
+            ? {
+                id: `estimate-approved-${workOrder.estimate_summary.id}`,
+                title: "Stores Quote Approved",
+                timestamp: workOrder.estimate_summary.approved_date,
+                subtitle: `${workOrder.estimate_summary.estimate_number} • Total ${workOrder.estimate_summary.total}`,
+                color: "bg-success/100",
+                icon: FileCheck,
+            }
+            : null,
+        workOrder.invoice_summary?.created_at
+            ? {
+                id: `invoice-created-${workOrder.invoice_summary.id}`,
+                title: "Invoice Created",
+                timestamp: workOrder.invoice_summary.created_at,
+                subtitle: `${workOrder.invoice_summary.invoice_number} • ${workOrder.invoice_summary.status.replace(/_/g, " ")}`,
+                color: "bg-warning/100",
+                icon: Receipt,
+            }
+            : null,
+        workOrder.invoice_summary?.paid_at
+            ? {
+                id: `invoice-paid-${workOrder.invoice_summary.id}`,
+                title: "Invoice Paid",
+                timestamp: workOrder.invoice_summary.paid_at,
+                subtitle: `${workOrder.invoice_summary.invoice_number} • Paid ${workOrder.invoice_summary.amount_paid}`,
+                color: "bg-success",
+                icon: CreditCard,
+            }
+            : null,
+    ].filter(Boolean) as Array<{
+        id: string;
+        title: string;
+        timestamp: string;
+        subtitle: string;
+        color: string;
+        icon: typeof Clock;
+    }>;
+
     return (
         <Card>
             <CardHeader>
@@ -35,10 +106,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         Work Order Created
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(
-                                            new Date(workOrder.created_at),
-                                            "MMM dd, yyyy 'at' h:mm a"
-                                        )}
+                                        {formatWorkflowTimestamp(workOrder.created_at)}
                                     </p>
                                     {workOrder.created_by && (
                                         <p className="text-xs text-muted-foreground mt-1">
@@ -63,10 +131,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         Diagnosis Completed
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(
-                                            new Date(workOrder.diagnosis_completed_at),
-                                            "MMM dd, yyyy 'at' h:mm a"
-                                        )}
+                                        {formatWorkflowTimestamp(workOrder.diagnosis_completed_at)}
                                     </p>
                                 </div>
                             </div>
@@ -80,10 +145,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         Approval Requested
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(
-                                            new Date(workOrder.approval_requested_at),
-                                            "MMM dd, yyyy 'at' h:mm a"
-                                        )}
+                                        {formatWorkflowTimestamp(workOrder.approval_requested_at)}
                                     </p>
                                 </div>
                             </div>
@@ -97,10 +159,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         Work Order Approved
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(
-                                            new Date(workOrder.approved_at),
-                                            "MMM dd, yyyy 'at' h:mm a"
-                                        )}
+                                        {formatWorkflowTimestamp(workOrder.approved_at)}
                                     </p>
                                     {workOrder.approval_method && (
                                         <p className="text-xs text-muted-foreground mt-1">
@@ -119,10 +178,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         Work Started
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(
-                                            new Date(workOrder.started_at),
-                                            "MMM dd, yyyy 'at' h:mm a"
-                                        )}
+                                        {formatWorkflowTimestamp(workOrder.started_at)}
                                     </p>
                                     {workOrder.primary_technician_name && (
                                         <p className="text-xs text-muted-foreground mt-1">
@@ -147,10 +203,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         {workOrder.quality_check_passed ? "Passed" : "Failed"}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(
-                                            new Date(workOrder.quality_check_at),
-                                            "MMM dd, yyyy 'at' h:mm a"
-                                        )}
+                                        {formatWorkflowTimestamp(workOrder.quality_check_at)}
                                     </p>
                                 </div>
                             </div>
@@ -164,13 +217,37 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         Work Order Completed
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {format(
-                                            new Date(workOrder.completed_at),
-                                            "MMM dd, yyyy 'at' h:mm a"
-                                        )}
+                                        {formatWorkflowTimestamp(workOrder.completed_at)}
                                     </p>
                                 </div>
                             </div>
+                        )}
+
+                        {commercialEvents.length > 0 && (
+                            <>
+                                <div className="border-t border-border pt-6 mt-4">
+                                    <p className="text-sm font-semibold text-card-foreground mb-4">
+                                        Commercial Flow
+                                    </p>
+                                </div>
+                                {commercialEvents.map((event) => {
+                                    const Icon = event.icon;
+                                    return (
+                                        <div key={event.id} className="relative flex items-start">
+                                            <div className={`absolute -left-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white border-border shadow-sm ${event.color}`}>
+                                                <Icon className="h-3 w-3 text-white" />
+                                            </div>
+                                            <div className="flex-1 pt-0.5">
+                                                <p className="text-sm font-semibold text-foreground">{event.title}</p>
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                    {formatWorkflowTimestamp(event.timestamp)}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">{event.subtitle}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </>
                         )}
 
                         {/* Notes Timeline */}
@@ -183,13 +260,11 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                 </div>
                                 {notes
                                     .sort(
-
-                                        (a: any, b: any) =>
-                                            new Date(b.created_at).getTime() -
-                                            new Date(a.created_at).getTime()
+                                        (a, b) =>
+                                            new Date(b.created_at || 0).getTime() -
+                                            new Date(a.created_at || 0).getTime()
                                     )
-
-                                    .map((note: any) => (
+                                    .map((note) => (
                                         <div key={note.id} className="relative flex items-start">
                                             <div
                                                 className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${note.note_type === "customer"
@@ -210,13 +285,10 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                                     </p>
                                                 </div>
                                                 <p className="text-sm text-card-foreground mt-1 whitespace-pre-wrap">
-                                                    {note.note}
+                                                    {note.note || note.text || note.content}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground mt-1">
-                                                    {format(
-                                                        new Date(note.created_at),
-                                                        "MMM dd, yyyy 'at' h:mm a"
-                                                    )}
+                                                    {formatWorkflowTimestamp(note.created_at)}
                                                     {note.created_by_name &&
                                                         ` • ${note.created_by_name}`}
                                                 </p>

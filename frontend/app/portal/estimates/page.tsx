@@ -2,24 +2,24 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { billingApi } from "@/lib/api/billing";
+import { portalApi } from "@/lib/api/portal";
 import { authApi } from "@/lib/api/auth";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Filter, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/lib/hooks/useToast";
-import { useCurrency } from "@/lib/hooks/useCurrency";
+import { PremiumIcons } from "@/components/ui/icons";
+import { PortalPageHeader } from "../components/PortalPageHeader";
+import { PortalList } from "../components/PortalList";
+import { PortalCard } from "../components/PortalCard";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils/cn";
+import { Estimate } from "@/lib/api/portal";
+import { ExternalLink } from "lucide-react";
 
 export default function MyEstimatesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { formatCurrency } = useCurrency();
+
   const { data: user } = useQuery({
     queryKey: ["user"],
     queryFn: () => authApi.getCurrentUser(),
@@ -28,240 +28,222 @@ export default function MyEstimatesPage() {
   const { data: estimatesData, isLoading } = useQuery({
     queryKey: ["portal", "estimates", statusFilter],
     queryFn: () => {
-
-      const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
+      const customerId = user?.customer_profile?.id || user?.customer?.id;
       if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
-      const params: any = {
+      const params: Record<string, string | number | boolean> = {
         customer: customerId,
         ordering: "-created_at",
       };
       if (statusFilter !== "all") {
         params.status = statusFilter;
       }
-      return billingApi.estimates.list(params);
+      return portalApi.listEstimates(params);
     },
-
-    enabled: !!user && !!(user?.customer_profile?.id || (user as any)?.customer?.id),
+    enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
   });
 
+  const estimates = (estimatesData?.results || estimatesData || []) as Estimate[];
+
   const approveMutation = useMutation({
-    mutationFn: (id: number) => billingApi.estimates.approve(id),
+    mutationFn: (id: number) => portalApi.approveEstimate(id, { notes: "Approved via portal" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal", "estimates"] });
-      toast({
-        title: "Estimate Approved",
+      toast.success("Estimate Approved", {
         description: "The estimate has been approved. Work will begin shortly.",
       });
     },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
+    onError: (error: { response?: { data?: { detail?: string } } }) => {
+      toast.error("Error", {
         description: error.response?.data?.detail || "Failed to approve estimate",
-        variant: "destructive",
       });
     },
   });
 
   const declineMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
-      billingApi.estimates.decline(id, reason),
+    mutationFn: ({ id, reason }: { id: number; reason?: string }) => 
+      portalApi.declineEstimate(id, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal", "estimates"] });
-      toast({
-        title: "Estimate Declined",
-        description: "The estimate has been declined.",
+      toast.success("Estimate Declined", {
+        description: "The estimate has been declined successfully.",
       });
     },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
+    onError: (error: { response?: { data?: { detail?: string } } }) => {
+      toast.error("Error", {
         description: error.response?.data?.detail || "Failed to decline estimate",
-        variant: "destructive",
       });
     },
   });
 
-
-  const estimates = (estimatesData?.results || estimatesData || []) as any[];
-
-  const pendingEstimates = estimates.filter((est: any) => est.status === "sent");
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <Skeleton className="h-8 w-48 mb-2" />
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <Skeleton className="h-6 w-48 mb-4" />
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const getStatusVariant = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case "approved":
-        return "success";
-      case "sent":
-        return "warning";
-      case "declined":
-        return "danger";
-      case "expired":
-        return "secondary";
-      default:
-        return "secondary";
+      case "approved": return { variant: "success" as const, className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" };
+      case "sent": return { variant: "warning" as const, className: "bg-amber-500/10 text-amber-500 border-amber-500/20" };
+      case "declined": return { variant: "danger" as const, className: "bg-destructive/10 text-destructive border-destructive/20" };
+      case "expired": return { variant: "secondary" as const, className: "opacity-50" };
+      default: return { variant: "secondary" as const, className: "bg-muted text-muted-foreground" };
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">My Estimates</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          View and approve your service estimates
-        </p>
-      </div>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      <PortalPageHeader
+        title="Repairs Estimates"
+        description="Review and manage your vehicle repair quotes. Get your car back on the road."
+      />
 
-      {pendingEstimates.length > 0 && (
-        <Card className="border-yellow-300 bg-warning/10 dark:bg-yellow-900/20">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-              <div>
-                <p className="font-medium text-yellow-900 dark:text-yellow-100">
-                  {pendingEstimates.length} estimate(s) pending your approval
-                </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                  Please review and approve or decline these estimates
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Filter */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-4">
-            <Filter className="w-5 h-5 text-muted-foreground" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="all">All Status</option>
-              <option value="sent">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="declined">Declined</option>
-              <option value="expired">Expired</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Estimates List */}
-      {estimates.length > 0 ? (
-        <div className="space-y-4">
-
-          {estimates.map((estimate: any) => (
-            <Card key={estimate.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <FileText className="w-5 h-5 text-primary" />
-                      <h3 className="text-lg font-semibold text-foreground">
-                        Estimate #{estimate.estimate_number}
-                      </h3>
-                    </div>
-                    <div className="ml-8 space-y-1">
-                      <p className="text-sm text-muted-foreground">
-                        Date: {format(new Date(estimate.estimate_date || estimate.created_at), "MMM d, yyyy")}
-                      </p>
-                      {estimate.expiration_date && (
-                        <p className="text-sm text-muted-foreground">
-                          Expires: {format(new Date(estimate.expiration_date), "MMM d, yyyy")}
-                        </p>
-                      )}
-                      {estimate.work_order && (
-                        <p className="text-sm text-muted-foreground">
-                          Work Order: #{typeof estimate.work_order === "object" ? estimate.work_order.work_order_number : estimate.work_order}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right space-y-2">
-                    <div className="text-2xl font-bold text-foreground">
-                      {formatCurrency(estimate.total || 0)}
-                    </div>
-                    <Badge variant={getStatusVariant(estimate.status)}>{estimate.status}</Badge>
-                    <div className="flex items-center space-x-2 mt-2">
-                      <Link href={`/portal/estimates/${estimate.id}`}>
-                        <Button variant="secondary" size="sm">
-                          View Details
-                        </Button>
-                      </Link>
-                      {estimate.status === "sent" && estimate.can_be_approved && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => approveMutation.mutate(estimate.id)}
-                            disabled={approveMutation.isPending}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                              const reason = prompt("Reason for declining (optional):");
-                              declineMutation.mutate({ id: estimate.id, reason: reason || undefined });
-                            }}
-                            disabled={declineMutation.isPending}
-                          >
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Decline
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="space-y-10">
+        <div className="flex flex-wrap gap-2">
+            {["all", "sent", "approved", "declined"].map((status) => (
+                <Button
+                    key={status}
+                    variant={statusFilter === status ? "default" : "outline"}
+                    onClick={() => setStatusFilter(status)}
+                    className="capitalize"
+                    size="sm"
+                >
+                    {status}
+                </Button>
+            ))}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              No estimates found
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              {statusFilter !== "all"
-                ? `No estimates with status "${statusFilter}" found.`
-                : "You don't have any estimates yet. Estimates will appear here when services are quoted."}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        
+        <div>
+            <PortalList
+          data={estimates}
+          isLoading={isLoading}
+          emptyMessage="No estimates found."
+          columns={[
+            {
+              header: "Reference",
+              cell: (est) => (
+                <div className="flex flex-col">
+                  <span className="font-bold text-foreground">EST-{est.id.toString().padStart(4, '0')}</span>
+                  <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest opacity-60">
+                    {est.created_at ? format(new Date(est.created_at), "MMM d, yyyy") : "Draft"}
+                  </span>
+                </div>
+              ),
+            },
+            {
+              header: "Vehicle",
+              cell: (est) => (
+                <div className="flex items-center gap-2 text-sm font-bold text-foreground group-hover/row:text-primary transition-colors">
+                  <PremiumIcons.Car className="w-4 h-4 opacity-40" />
+                  {est.vehicle_info || "Premium Vehicle"}
+                </div>
+              ),
+            },
+            {
+              header: "Amount",
+              cell: (est) => (
+                <div className="font-semibold text-foreground">
+                  ${parseFloat(String(est.total || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+              ),
+            },
+            {
+              header: "Status",
+              cell: (est) => {
+                const config = getStatusConfig(est.status);
+                return (
+                  <Badge 
+                    variant={config.variant} 
+                    className={cn("capitalize text-[10px] font-semibold tracking-widest px-3 py-1 rounded-full border", config.className)}
+                  >
+                    {est.status}
+                  </Badge>
+                );
+              },
+            },
+            {
+              header: "Actions",
+              className: "text-right",
+              cell: (est) => (
+                <div className="flex justify-end gap-2">
+                  {est.status === "sent" && (
+                    <>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl px-4 font-bold shadow-lg shadow-emerald-500/20"
+                        onClick={() => approveMutation.mutate(est.id)}
+                        disabled={approveMutation.isPending}
+                      >
+                        {approveMutation.isPending ? "..." : "Approve"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive/20 text-destructive hover:bg-destructive/5 rounded-xl px-4 font-bold"
+                        onClick={() => {
+                          const reason = prompt("Reason for declining (optional):");
+                          declineMutation.mutate({ id: est.id, reason: reason || undefined });
+                        }}
+                        disabled={declineMutation.isPending}
+                      >
+                        Decline
+                      </Button>
+                    </>
+                  )}
+                  <Button variant="ghost" size="sm" className="gap-2 hover:bg-primary/5 hover:text-primary rounded-lg font-bold group/btn">
+                    View
+                    <ExternalLink className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+          renderMobileItem={(est) => {
+            const config = getStatusConfig(est.status);
+            return (
+              <PortalCard
+                key={est.id}
+                icon={<PremiumIcons.FileText className="w-6 h-6" />}
+                title={`Estimate EST-${est.id.toString().padStart(4, '0')}`}
+                subtitle={
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold uppercase text-muted-foreground/60 tracking-widest">{est.vehicle_info}</span>
+                      <span className="font-semibold text-foreground">${parseFloat(String(est.total || 0)).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <Badge 
+                        variant={config.variant} 
+                        className={cn("capitalize text-[9px] font-semibold tracking-widest px-2 py-0.5 rounded-full border", config.className)}
+                      >
+                        {est.status}
+                      </Badge>
+                      {est.status === "sent" && (
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold h-10"
+                                onClick={() => approveMutation.mutate(est.id)}
+                            >
+                                Approve
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-destructive/20 text-destructive hover:bg-destructive/5 rounded-xl font-bold h-10"
+                                onClick={() => {
+                                    const reason = prompt("Reason for declining (optional):");
+                                    declineMutation.mutate({ id: est.id, reason: reason || undefined });
+                                }}
+                            >
+                                Decline
+                            </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                }
+              />
+            );
+          }}
+        />
+        </div>
+      </div>
     </div>
   );
 }
-

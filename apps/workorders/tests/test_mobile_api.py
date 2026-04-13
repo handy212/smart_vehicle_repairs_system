@@ -88,7 +88,7 @@ class MobileAPITestCase(TestCase):
         )
         
         # Create a task
-        ServiceTask.objects.create(
+        self.task = ServiceTask.objects.create(
             work_order=self.work_order,
             description='Change Oil',
             status='pending',
@@ -162,8 +162,18 @@ class MobileAPITestCase(TestCase):
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'in_progress')
         
-        # 4. Request Quality Check (if applicable)
-        # Usually requires completing tasks, but let's see if we can force it or skip tasks check
+        # 4. Complete the mechanical task with actual labor
+        response = self.client.post(f'/api/workorders/tasks/{self.task.id}/start/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.post(
+            f'/api/workorders/tasks/{self.task.id}/complete/',
+            {'actual_hours': '0.50', 'notes': 'Oil and filter replaced'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 5. Request Quality Check
         self.work_order.quality_check_required = True
         self.work_order.save()
         
@@ -172,7 +182,7 @@ class MobileAPITestCase(TestCase):
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'quality_check')
         
-        # 5. Perform Quality Check (Pass)
+        # 6. Perform Quality Check (Pass)
         # Verify complete flow via quality check success
         qc_data = {
             'passed': True,
@@ -187,6 +197,50 @@ class MobileAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'completed')
+
+    def test_cannot_complete_task_without_actual_hours_or_time_logs(self, mock_filter):
+        self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/start_work/')
+        self.client.post(f'/api/workorders/tasks/{self.task.id}/start/')
+
+        response = self.client.post(
+            f'/api/workorders/tasks/{self.task.id}/complete/',
+            {'notes': 'Done'},
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Actual labor hours are required', response.data['error'])
+
+    def test_request_quality_check_is_idempotent_when_already_requested(self, mock_filter):
+        """Repeated QC requests should return the current work order instead of failing."""
+        self.work_order.status = 'quality_check'
+        self.work_order.quality_check_required = True
+        self.work_order.save(update_fields=['status', 'quality_check_required'])
+
+        response = self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/request_quality_check/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'quality_check')
+        self.assertEqual(response.data['workflow_message'], 'Quality check already requested.')
+
+    def test_request_quality_check_is_idempotent_when_already_completed(self, mock_filter):
+        """QC requests after completion should return a clear already-completed message."""
+        self.work_order.status = 'completed'
+        self.work_order.quality_check_required = True
+        self.work_order.quality_check_completed = True
+        self.work_order.quality_check_passed = True
+        self.work_order.save(update_fields=[
+            'status',
+            'quality_check_required',
+            'quality_check_completed',
+            'quality_check_passed',
+        ])
+
+        response = self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/request_quality_check/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'completed')
+        self.assertEqual(response.data['workflow_message'], 'Quality check already completed.')
 
     def test_assigned_work_orders(self, mock_filter):
         """Test retrieving assigned work orders"""

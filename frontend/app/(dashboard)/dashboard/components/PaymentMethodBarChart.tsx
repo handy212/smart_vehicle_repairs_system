@@ -2,7 +2,7 @@
 
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 import { memo, useMemo } from "react";
-import { CreditCard, Smartphone, DollarSign } from "lucide-react";
+import { CreditCard, Smartphone, DollarSign, Banknote, Building2 } from "lucide-react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface PaymentMethodBarChartProps {

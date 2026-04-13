@@ -46,30 +46,30 @@ export default function BalanceSheetPage() {
         // Assets
         rows.push(['ASSETS']);
 
-        report.assets.forEach((acc: any) => {
+        report?.assets.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
-        rows.push(['', 'Total Assets', report.totals.assets]);
+        rows.push(['', 'Total Assets', report?.totals.assets]);
         rows.push([]);
 
         // Liabilities
         rows.push(['LIABILITIES']);
 
-        report.liabilities.forEach((acc: any) => {
+        report?.liabilities.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
-        rows.push(['', 'Total Liabilities', report.totals.liabilities]);
+        rows.push(['', 'Total Liabilities', report?.totals.liabilities]);
         rows.push([]);
 
         // Equity
         rows.push(['EQUITY']);
 
-        report.equity.forEach((acc: any) => {
+        report?.equity.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
-        rows.push(['', 'Total Equity', report.totals.equity]);
+        rows.push(['', 'Total Equity', report?.totals.equity]);
         rows.push([]);
-        rows.push(['', 'Total Liabilities + Equity', report.totals.liabilities_plus_equity]);
+        rows.push(['', 'Total Liabilities + Equity', report?.totals.liabilities_plus_equity]);
 
         const filename = generateFilenameWithTimestamp('balance-sheet', 'csv');
         exportToCSV(rows, filename, ['Account Code', 'Account Name', 'Amount']);
@@ -88,32 +88,32 @@ export default function BalanceSheetPage() {
         rows.push(['ASSETS', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report.assets.forEach((acc: any) => {
+        report?.assets.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
-        rows.push(['', 'Total Assets', report.totals.assets]);
+        rows.push(['', 'Total Assets', report?.totals.assets]);
         rows.push([]);
 
         // Liabilities
         rows.push(['LIABILITIES', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report.liabilities.forEach((acc: any) => {
+        report?.liabilities.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
-        rows.push(['', 'Total Liabilities', report.totals.liabilities]);
+        rows.push(['', 'Total Liabilities', report?.totals.liabilities]);
         rows.push([]);
 
         // Equity
         rows.push(['EQUITY', '', '']);
         rows.push(['Account Code', 'Account Name', 'Amount']);
 
-        report.equity.forEach((acc: any) => {
+        report?.equity.forEach((acc: any) => {
             rows.push([acc.code, acc.name, acc.balance]);
         });
-        rows.push(['', 'Total Equity', report.totals.equity]);
+        rows.push(['', 'Total Equity', report?.totals.equity]);
         rows.push([]);
-        rows.push(['', 'Total Liabilities + Equity', report.totals.liabilities_plus_equity]);
+        rows.push(['', 'Total Liabilities + Equity', report?.totals.liabilities_plus_equity]);
 
         const filename = generateFilenameWithTimestamp('balance-sheet', 'xlsx');
         exportToExcel(rows, filename, {
@@ -197,7 +197,7 @@ export default function BalanceSheetPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {report.assets.map((acc) => (
+                                    {report?.assets.map((acc) => (
                                         <TableRow key={acc.code}>
                                             <TableCell>
                                                 <span className="font-medium text-foreground">{acc.code}</span> - {acc.name}
@@ -207,14 +207,14 @@ export default function BalanceSheetPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    {report.assets.length === 0 && (
+                                    {report?.assets.length === 0 && (
                                         <TableRow>
                                             <TableCell colSpan={2} className="text-center text-muted-foreground">No assets found</TableCell>
                                         </TableRow>
                                     )}
                                     <TableRow className="font-bold bg-muted/50">
                                         <TableCell>Total Assets</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(report.totals.assets)}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(report?.totals.assets)}</TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
@@ -236,7 +236,7 @@ export default function BalanceSheetPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {report.liabilities.map((acc) => (
+                                        {report?.liabilities.map((acc) => (
                                             <TableRow key={acc.code}>
                                                 <TableCell>
                                                     <span className="font-medium text-foreground">{acc.code}</span> - {acc.name}
@@ -246,14 +246,14 @@ export default function BalanceSheetPage() {
                                                 </TableCell>
                                             </TableRow>
                                         ))}
-                                        {report.liabilities.length === 0 && (
+                                        {report?.liabilities.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={2} className="text-center text-muted-foreground">No liabilities found</TableCell>
                                             </TableRow>
                                         )}
                                         <TableRow className="font-bold bg-muted/50">
                                             <TableCell>Total Liabilities</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(report.totals.liabilities)}</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(report?.totals.liabilities)}</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -274,7 +274,7 @@ export default function BalanceSheetPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {report.equity.map((acc) => (
+                                        {report?.equity.map((acc) => (
                                             <TableRow key={acc.code}>
                                                 <TableCell>
                                                     <span className="font-medium text-foreground">{acc.code}</span> - {acc.name}
@@ -284,14 +284,14 @@ export default function BalanceSheetPage() {
                                                 </TableCell>
                                             </TableRow>
                                         ))}
-                                        {report.equity.length === 0 && (
+                                        {report?.equity.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={2} className="text-center text-muted-foreground">No equity records found</TableCell>
                                             </TableRow>
                                         )}
                                         <TableRow className="font-bold bg-muted/50">
                                             <TableCell>Total Equity</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(report.totals.equity)}</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(report?.totals.equity)}</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -299,15 +299,15 @@ export default function BalanceSheetPage() {
                         </Card>
 
                         {/* Summary */}
-                        <Card className={report.is_balanced ? "border-green-200 bg-success/10" : "border-destructive/20 bg-destructive/10/50"}>
+                        <Card className={report?.is_balanced ? "border-green-200 bg-success/10" : "border-destructive/20 bg-destructive/10/50"}>
                             <CardContent className="pt-6">
                                 <div className="flex justify-between items-center">
                                     <span className="font-bold text-foreground">Total Liabilities + Equity</span>
-                                    <span className={`font-bold ${report.is_balanced ? "text-green-700" : "text-destructive"}`}>
-                                        {formatCurrency(report.totals.liabilities_plus_equity)}
+                                    <span className={`font-bold ${report?.is_balanced ? "text-green-700" : "text-destructive"}`}>
+                                        {formatCurrency(report?.totals.liabilities_plus_equity)}
                                     </span>
                                 </div>
-                                {!report.is_balanced && (
+                                {!report?.is_balanced && (
                                     <p className="text-xs text-destructive mt-1">Warning: Balance Sheet is not balanced!</p>
                                 )}
                             </CardContent>

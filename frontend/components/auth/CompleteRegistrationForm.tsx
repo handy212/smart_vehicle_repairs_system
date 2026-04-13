@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import type { User as AuthUser } from '@/lib/api/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,7 @@ interface CompleteRegistrationFormData {
 interface CompleteRegistrationSuccess {
     access: string;
     refresh: string;
-    user: unknown;
+    user: AuthUser;
 }
 
 type ApiErrorResponse = {

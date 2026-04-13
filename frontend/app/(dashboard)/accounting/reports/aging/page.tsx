@@ -84,18 +84,18 @@ export default function AgingReportPage() {
 
         // Summary
         rows.push(['Summary']);
-        rows.push(['Current', report.summary.current]);
-        rows.push(['1-30 Days', report.summary['1-30']]);
-        rows.push(['31-60 Days', report.summary['31-60']]);
-        rows.push(['61-90 Days', report.summary['61-90']]);
-        rows.push(['90+ Days', report.summary['90+']]);
-        rows.push(['Total', report.summary.total]);
+        rows.push(['Current', report?.summary.current]);
+        rows.push(['1-30 Days', report?.summary['1-30']]);
+        rows.push(['31-60 Days', report?.summary['31-60']]);
+        rows.push(['61-90 Days', report?.summary['61-90']]);
+        rows.push(['90+ Days', report?.summary['90+']]);
+        rows.push(['Total', report?.summary.total]);
         rows.push([]);
 
         // Details
         rows.push(['Details']);
 
-        report.details.forEach((item) => {
+        report?.details.forEach((item) => {
             rows.push([item.number, item.entity, item.date, item.due_date || "N/A", item.bucket, item.amount]);
         });
 
@@ -112,19 +112,19 @@ export default function AgingReportPage() {
         // Summary section
         rows.push(['SUMMARY', '', '', '', '', '']);
         rows.push(['Aging Bucket', 'Amount', '', '', '', '']);
-        rows.push(['Current', report.summary.current, '', '', '', '']);
-        rows.push(['1-30 Days', report.summary['1-30'], '', '', '', '']);
-        rows.push(['31-60 Days', report.summary['31-60'], '', '', '', '']);
-        rows.push(['61-90 Days', report.summary['61-90'], '', '', '', '']);
-        rows.push(['90+ Days', report.summary['90+'], '', '', '', '']);
-        rows.push(['Total', report.summary.total, '', '', '', '']);
+        rows.push(['Current', report?.summary.current, '', '', '', '']);
+        rows.push(['1-30 Days', report?.summary['1-30'], '', '', '', '']);
+        rows.push(['31-60 Days', report?.summary['31-60'], '', '', '', '']);
+        rows.push(['61-90 Days', report?.summary['61-90'], '', '', '', '']);
+        rows.push(['90+ Days', report?.summary['90+'], '', '', '', '']);
+        rows.push(['Total', report?.summary.total, '', '', '', '']);
         rows.push([]);
 
         // Details section
         rows.push(['DETAILS', '', '', '', '', '']);
         rows.push(['Number', 'Entity', 'Date', 'Due Date', 'Bucket', 'Amount']);
 
-        report.details.forEach((item) => {
+        report?.details.forEach((item) => {
             rows.push([item.number, item.entity, item.date, item.due_date || "N/A", item.bucket, item.amount]);
         });
 
@@ -197,7 +197,7 @@ export default function AgingReportPage() {
                                         <CardTitle className="text-sm font-medium text-muted-foreground">Current</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-semibold">{formatCurrency(report.summary.current)}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report?.summary.current)}</div>
                                     </CardContent>
                                 </Card>
                                 <Card className={bucketCardStyles.soon}>
@@ -205,7 +205,7 @@ export default function AgingReportPage() {
                                         <CardTitle className="text-sm font-medium">1-30 Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["1-30"])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report?.summary["1-30"])}</div>
                                     </CardContent>
                                 </Card>
                                 <Card className={bucketCardStyles.elevated}>
@@ -213,7 +213,7 @@ export default function AgingReportPage() {
                                         <CardTitle className="text-sm font-medium">31-60 Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["31-60"])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report?.summary["31-60"])}</div>
                                     </CardContent>
                                 </Card>
                                 <Card className={bucketCardStyles.overdue}>
@@ -221,7 +221,7 @@ export default function AgingReportPage() {
                                         <CardTitle className="text-sm font-medium">61-90 Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["61-90"])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report?.summary["61-90"])}</div>
                                     </CardContent>
                                 </Card>
                                 <Card className={bucketCardStyles.critical}>
@@ -229,7 +229,7 @@ export default function AgingReportPage() {
                                         <CardTitle className="text-sm font-medium">90+ Days</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-semibold">{formatCurrency(report.summary["90+"])}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report?.summary["90+"])}</div>
                                     </CardContent>
                                 </Card>
                                 <Card className={bucketCardStyles.current}>
@@ -237,7 +237,7 @@ export default function AgingReportPage() {
                                         <CardTitle className="text-sm font-medium text-foreground">Total</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="text-lg font-semibold">{formatCurrency(report.summary.total)}</div>
+                                        <div className="text-lg font-semibold">{formatCurrency(report?.summary.total)}</div>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -259,7 +259,7 @@ export default function AgingReportPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {report.details.length === 0 ? (
+                                            {report?.details.length === 0 ? (
                                                 <TableRow>
                                                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                                                         No {activeTab.toUpperCase()} records found.
@@ -267,7 +267,7 @@ export default function AgingReportPage() {
                                                 </TableRow>
                                             ) : (
 
-                                                report.details.map((item) => (
+                                                report?.details.map((item) => (
                                                     <TableRow key={item.id}>
                                                         <TableCell className="font-medium">{item.number}</TableCell>
                                                         <TableCell>{item.entity}</TableCell>

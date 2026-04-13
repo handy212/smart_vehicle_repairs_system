@@ -319,7 +319,7 @@ export default function PaymentPage() {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4 mr-2" />
-                        Pay with Paystack
+                        Pay Now
                       </>
                     )}
                   </Button>

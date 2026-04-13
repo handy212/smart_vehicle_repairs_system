@@ -4,16 +4,19 @@ Tests for workorders app.
 import pytest
 from decimal import Decimal
 from django.test import TestCase
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 from model_bakery import baker
 
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder, ServiceTask, WorkOrderPart, TechnicianTimeLog
+from apps.workorders.serializers import WorkOrderDetailSerializer
 from apps.inventory.models import Part
+from apps.diagnosis.models import Diagnosis, RepairRecommendation
 
 User = get_user_model()
 
@@ -115,6 +118,221 @@ class WorkOrderModelTest(TestCase):
         )
         expected_total = Decimal('150.00')
         self.assertEqual(workorder.actual_total, expected_total)
+
+    def test_workorder_detail_serializer_includes_service_coordinator_name(self):
+        coordinator = User.objects.create_user(
+            email='coordinator@test.com',
+            username='coordinator',
+            password='test123',
+            first_name='Efua',
+            last_name='Adjei',
+            role='manager'
+        )
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            service_coordinator=coordinator,
+        )
+
+        serializer = WorkOrderDetailSerializer(workorder)
+
+        self.assertEqual(serializer.data['service_coordinator_name'], 'Efua Adjei')
+
+    def test_workorder_detail_serializer_includes_estimate_and_invoice_summaries(self):
+        from apps.billing.models import Estimate, Invoice
+
+        accountant = User.objects.create_user(
+            email='accounting@test.com',
+            username='accounting',
+            password='test123',
+            first_name='Ama',
+            last_name='Mensah',
+            role='accountant'
+        )
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+        )
+        estimate = baker.make(
+            Estimate,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=workorder,
+            reference_number=f'WO:{workorder.id}',
+            estimate_number='HQ-EST000099',
+            status='approved',
+            total=Decimal('250.00'),
+        )
+        baker.make(
+            Invoice,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=workorder,
+            estimate=estimate,
+            invoice_number='HQ-INV000099',
+            status='partial',
+            total=Decimal('300.00'),
+            amount_paid=Decimal('120.00'),
+            amount_due=Decimal('180.00'),
+            created_by=accountant,
+        )
+
+        serializer = WorkOrderDetailSerializer(workorder)
+
+        self.assertEqual(serializer.data['estimate_summary']['estimate_number'], 'HQ-EST000099')
+        self.assertEqual(serializer.data['estimate_summary']['total'], '250.00')
+        self.assertEqual(serializer.data['invoice_summary']['invoice_number'], 'HQ-INV000099')
+        self.assertEqual(serializer.data['invoice_summary']['amount_paid'], '120.00')
+
+    def test_workorder_detail_serializer_reflects_paid_invoice_and_quote_approval_dates(self):
+        from apps.billing.models import Estimate, Invoice, Payment
+
+        accountant = User.objects.create_user(
+            email='billing@test.com',
+            username='billing_user',
+            password='test123',
+            first_name='Kojo',
+            last_name='Asare',
+            role='accountant'
+        )
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+        )
+        estimate = baker.make(
+            Estimate,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=workorder,
+            reference_number=f'WO:{workorder.id}',
+            estimate_number='HQ-EST000120',
+            status='approved',
+            total=Decimal('315.00'),
+            approved_date=timezone.now(),
+        )
+        invoice = baker.make(
+            Invoice,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            work_order=workorder,
+            estimate=estimate,
+            invoice_number='HQ-INV000120',
+            status='sent',
+            total=Decimal('315.00'),
+            amount_paid=Decimal('0.00'),
+            amount_due=Decimal('315.00'),
+            created_by=accountant,
+        )
+        Payment.objects.create(
+            invoice=invoice,
+            customer=self.customer,
+            payment_method='cash',
+            status='completed',
+            amount=Decimal('315.00'),
+            processed_by=accountant,
+        )
+
+        invoice.refresh_from_db()
+        serializer = WorkOrderDetailSerializer(workorder)
+
+        self.assertEqual(serializer.data['estimate_summary']['estimate_number'], 'HQ-EST000120')
+        self.assertIsNotNone(serializer.data['estimate_summary']['approved_date'])
+        self.assertEqual(serializer.data['invoice_summary']['invoice_number'], 'HQ-INV000120')
+        self.assertEqual(serializer.data['invoice_summary']['status'], 'paid')
+        self.assertEqual(serializer.data['invoice_summary']['amount_paid'], '315.00')
+        self.assertIsNotNone(serializer.data['invoice_summary']['paid_at'])
+
+    def test_workorder_cannot_complete_with_allocated_part_not_installed(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='quality_check',
+            quality_check_required=True,
+            quality_check_completed=True,
+            quality_check_passed=True,
+        )
+        baker.make(
+            ServiceTask,
+            work_order=workorder,
+            status='completed',
+            is_workflow_task=False,
+            actual_hours=Decimal('1.50'),
+            labor_rate=Decimal('80.00'),
+        )
+        baker.make(
+            WorkOrderPart,
+            work_order=workorder,
+            part_name='Brake Pad Set',
+            quantity=1,
+            status='ready',
+        )
+
+        can_transition, error = workorder.can_transition_to('completed')
+
+        self.assertFalse(can_transition)
+        self.assertIn('installed or formally returned', error)
+
+    def test_workorder_cannot_complete_when_returned_part_has_no_reason(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='quality_check',
+            quality_check_required=True,
+            quality_check_completed=True,
+            quality_check_passed=True,
+        )
+        baker.make(
+            ServiceTask,
+            work_order=workorder,
+            status='completed',
+            is_workflow_task=False,
+            actual_hours=Decimal('1.00'),
+            labor_rate=Decimal('80.00'),
+        )
+        baker.make(
+            WorkOrderPart,
+            work_order=workorder,
+            part_name='Oil Filter',
+            quantity=1,
+            status='returned',
+            resolution_notes='',
+        )
+
+        can_transition, error = workorder.can_transition_to('completed')
+
+        self.assertFalse(can_transition)
+        self.assertIn('return reason', error)
+
+    def test_workorder_cannot_complete_when_completed_task_has_no_labor_hours(self):
+        workorder = baker.make(
+            WorkOrder,
+            customer=self.customer,
+            vehicle=self.vehicle,
+            status='quality_check',
+            quality_check_required=True,
+            quality_check_completed=True,
+            quality_check_passed=True,
+        )
+        baker.make(
+            ServiceTask,
+            work_order=workorder,
+            status='completed',
+            is_workflow_task=False,
+            actual_hours=Decimal('0.00'),
+            labor_rate=Decimal('80.00'),
+            started_at=None,
+            completed_at=None,
+        )
+
+        can_transition, error = workorder.can_transition_to('completed')
+
+        self.assertFalse(can_transition)
+        self.assertIn('Actual labor hours are required', error)
 
 
 class ServiceTaskModelTest(TestCase):
@@ -404,3 +622,46 @@ class TestWorkOrderSecurity:
         
         assert workorder.primary_technician == technician
         assert workorder.primary_technician.role == 'technician'
+
+
+class OpenRecommendationLookupAPITest(APITestCase):
+    """Test follow-up recommendation lookup for future work orders."""
+
+    def test_returns_open_recommendations_from_completed_diagnosis_awaiting_approval(self):
+        user = baker.make(User, role='admin', is_staff=True)
+        customer = baker.make(Customer)
+        vehicle = baker.make(Vehicle, owner=customer)
+        workorder = baker.make(
+            WorkOrder,
+            customer=customer,
+            vehicle=vehicle,
+            status='awaiting_approval',
+            completed_at=None,
+        )
+        diagnosis = baker.make(
+            Diagnosis,
+            work_order=workorder,
+            technician=user,
+            status='completed',
+            completed_at=timezone.now(),
+            is_completed=True,
+        )
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='deferred',
+            quotation_status='not_requested',
+            converted_to_task=None,
+        )
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(
+            '/api/workorders/work-orders/check_unapproved_recommendations/',
+            {'vehicle_id': vehicle.id},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['recommendations'][0]['id'], recommendation.id)
+        self.assertEqual(response.data['recommendations'][0]['work_order_id'], workorder.id)

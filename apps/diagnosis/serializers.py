@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
+from django.utils.text import slugify
+from decimal import Decimal
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
     DiagnosticCode, DiagnosticTest,
@@ -86,9 +88,10 @@ class DiagnosticCodeCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiagnosticCode
         fields = [
-            'diagnosis', 'code_number', 'code_type', 'description', 'severity',
+            'id', 'diagnosis', 'code_number', 'code_type', 'description', 'severity',
             'freeze_frame_data', 'status', 'recorded_at'
         ]
+        read_only_fields = ['id']
         extra_kwargs = {
             'code_type': {'required': False},
         }
@@ -159,10 +162,11 @@ class DiagnosticTestCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiagnosticTest
         fields = [
-            'diagnosis', 'test_name', 'category', 'test_procedure', 'expected_result',
+            'id', 'diagnosis', 'test_name', 'category', 'test_procedure', 'expected_result',
             'actual_result', 'measurements', 'tools_used', 'status',
             'performed_at', 'performed_by'
         ]
+        read_only_fields = ['id']
 
 
 class DiagnosisFindingSerializer(serializers.ModelSerializer):
@@ -277,6 +281,7 @@ class RepairRecommendationSerializer(serializers.ModelSerializer):
             'customer_approved',
             'quotation_status', 'quotation_status_display',
             'quotation_requested_at', 'quotation_requested_by', 'quotation_requested_by_name',
+            'quotation_estimate_id', 'quotation_estimate_number',
             'quoted_at', 'quoted_by', 'quoted_by_name',
             'converted_to_task_id', 'order',
             'created_at', 'updated_at'
@@ -287,6 +292,8 @@ class RepairRecommendationSerializer(serializers.ModelSerializer):
             'decision_by',
             'quotation_requested_at',
             'quotation_requested_by',
+            'quotation_estimate_id',
+            'quotation_estimate_number',
             'quoted_at',
             'quoted_by',
             'created_at',
@@ -327,6 +334,8 @@ class RepairRecommendationCreateSerializer(serializers.ModelSerializer):
         'quotation_status',
         'quotation_requested_at',
         'quotation_requested_by',
+        'quotation_estimate_id',
+        'quotation_estimate_number',
         'quoted_at',
         'quoted_by',
         'converted_to_task',
@@ -426,9 +435,103 @@ class RepairRecommendationCreateSerializer(serializers.ModelSerializer):
             normalized_parts.append(normalized_part)
 
         return normalized_parts
+
+    def _generate_catalog_part_number(self, diagnosis_id, part_name):
+        from apps.inventory.models import Part
+
+        base_slug = slugify(part_name or 'part').upper()[:32] or 'PART'
+        base_number = f"DIAG-{diagnosis_id}-{base_slug}"
+        candidate = base_number
+        suffix = 2
+
+        while Part.objects.filter(part_number=candidate).exists():
+            candidate = f"{base_number}-{suffix}"
+            suffix += 1
+
+        return candidate
+
+    def _resolve_inventory_part(self, diagnosis, part_data):
+        from apps.inventory.models import Part, PartCategory
+
+        part_id = part_data.get('part_id')
+        part_name = (part_data.get('part_name') or '').strip()
+        part_number = (part_data.get('part_number') or '').strip()
+        branch = getattr(diagnosis.work_order, 'branch', None)
+        request = self.context.get('request')
+        created_by = getattr(request, 'user', None)
+
+        if part_id:
+            part = Part.objects.filter(pk=part_id).first()
+            if part:
+                return part
+
+        if part_number:
+            part = Part.objects.filter(part_number__iexact=part_number).first()
+            if part:
+                return part
+
+        if part_name:
+            part_by_name = Part.objects.filter(name__iexact=part_name)
+            if branch:
+                part = part_by_name.filter(branch=branch).first()
+                if part:
+                    return part
+            part = part_by_name.filter(branch__isnull=True).first() or part_by_name.first()
+            if part:
+                return part
+
+        category = (
+            PartCategory.objects.filter(name__iexact='Uncategorized').first()
+            or PartCategory.objects.first()
+            or PartCategory.objects.create(
+                name='Uncategorized',
+                description='Fallback category for parts created during diagnosis.',
+            )
+        )
+
+        if not part_name and not part_number:
+            return None
+
+        generated_part_number = part_number or self._generate_catalog_part_number(diagnosis.id, part_name)
+        default_name = part_name or generated_part_number
+
+        return Part.objects.create(
+            part_number=generated_part_number,
+            name=default_name,
+            description='Auto-created from a diagnosis recommendation.',
+            category=category,
+            branch=branch,
+            unit='piece',
+            cost_price=Decimal('0.01'),
+            selling_price=Decimal('0.01'),
+            created_by=created_by if getattr(created_by, 'is_authenticated', False) else None,
+        )
+
+    def _sync_parts_to_inventory(self, diagnosis, parts_needed):
+        synced_parts = []
+
+        for part_data in parts_needed or []:
+            inventory_part = self._resolve_inventory_part(diagnosis, part_data)
+            synced_part = {
+                'part_name': (part_data.get('part_name') or '').strip(),
+                'part_number': (part_data.get('part_number') or '').strip(),
+                'quantity': int(part_data.get('quantity') or 1),
+            }
+
+            if inventory_part:
+                synced_part['part_id'] = inventory_part.id
+                synced_part['part_name'] = inventory_part.name
+                synced_part['part_number'] = inventory_part.part_number
+
+            synced_parts.append(synced_part)
+
+        return synced_parts
     
     def create(self, validated_data):
         findings = validated_data.pop('findings', [])
+        diagnosis = validated_data.get('diagnosis') or self.context.get('diagnosis')
+        if diagnosis and 'parts_needed' in validated_data:
+            validated_data['parts_needed'] = self._sync_parts_to_inventory(diagnosis, validated_data.get('parts_needed', []))
         recommendation = super().create(validated_data)
         if findings:
             recommendation.findings.set(findings)
@@ -436,6 +539,8 @@ class RepairRecommendationCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         findings = validated_data.pop('findings', None)
+        if 'parts_needed' in validated_data:
+            validated_data['parts_needed'] = self._sync_parts_to_inventory(instance.diagnosis, validated_data.get('parts_needed', []))
         recommendation = super().update(instance, validated_data)
         if findings is not None:
             recommendation.findings.set(findings)

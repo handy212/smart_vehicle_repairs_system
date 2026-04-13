@@ -2,10 +2,14 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from django.http import Http404
 from django.utils import timezone
+from django.apps import apps as django_apps
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
+from datetime import timedelta
 
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
@@ -151,6 +155,213 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             self.request, 
             branch_lookup='work_order__branch'
         )
+
+    @staticmethod
+    def _user_has_quote_submission_role(user):
+        return getattr(user, 'role', None) in {'service_coordinator', 'parts_manager', 'manager', 'admin', 'super-admin'}
+
+    @staticmethod
+    def _user_has_quote_completion_role(user):
+        return getattr(user, 'role', None) in {'parts_manager', 'manager', 'admin', 'super-admin'}
+
+    def _build_or_refresh_quote_estimate(self, diagnosis, recommendations, user):
+        """
+        Create or refresh a stores quotation estimate for the selected recommendations.
+        The estimate is linked by work-order reference number to avoid auto-syncing
+        quotation parts directly into workshop execution before authorization.
+        """
+        if not django_apps.is_installed('apps.billing'):
+            return None, None
+
+        work_order = diagnosis.work_order
+        if not work_order:
+            return None, "Diagnosis is not linked to a work order."
+
+        Estimate = django_apps.get_model('billing', 'Estimate')
+        EstimateLineItem = django_apps.get_model('billing', 'EstimateLineItem')
+        InventoryPart = django_apps.get_model('inventory', 'Part')
+
+        reference_number = f"WO:{work_order.id}"
+        estimate = getattr(work_order, 'estimate', None)
+        if estimate and estimate.status == 'converted':
+            estimate = None
+
+        if estimate is None:
+            estimate = (
+                Estimate.objects.filter(
+                    reference_number=reference_number,
+                    customer=work_order.customer,
+                    vehicle=work_order.vehicle,
+                )
+                .exclude(status='converted')
+                .order_by('-created_at')
+                .first()
+            )
+
+        if estimate is None:
+            estimate = Estimate.objects.create(
+                branch=work_order.branch,
+                customer=work_order.customer,
+                vehicle=work_order.vehicle,
+                work_order=work_order,
+                reference_number=reference_number,
+                status='draft',
+                estimate_date=timezone.now().date(),
+                valid_until=timezone.now().date() + timedelta(days=14),
+                title=f"Stores quotation for {work_order.work_order_number}",
+                description=f"Stores quotation generated from approved diagnosis recommendations for {work_order.work_order_number}.",
+                notes=f"Auto-generated from diagnosis {diagnosis.id}. Stores should complete pricing before marking recommendations as quoted.",
+                created_by=user,
+            )
+        else:
+            estimate.branch = work_order.branch
+            estimate.customer = work_order.customer
+            estimate.vehicle = work_order.vehicle
+            estimate.work_order = work_order
+            estimate.reference_number = reference_number
+            estimate.title = f"Stores quotation for {work_order.work_order_number}"
+            estimate.description = f"Stores quotation generated from approved diagnosis recommendations for {work_order.work_order_number}."
+            estimate.valid_until = timezone.now().date() + timedelta(days=14)
+            estimate.save(update_fields=[
+                'branch', 'customer', 'vehicle', 'work_order', 'reference_number',
+                'title', 'description', 'valid_until', 'updated_at'
+            ])
+
+        for recommendation in recommendations:
+            marker = f"[DIAG-REC:{recommendation.id}]"
+            estimate.line_items.filter(notes__contains=marker).delete()
+
+            created_any_lines = False
+            order = estimate.line_items.count()
+            parts = recommendation.parts_needed or []
+
+            for part_data in parts:
+                quantity = Decimal(str(part_data.get('quantity') or '1'))
+                if quantity <= 0:
+                    quantity = Decimal('1')
+
+                part_name = (part_data.get('part_name') or '').strip()
+                part_number = (part_data.get('part_number') or '').strip()
+                inventory_part = None
+                part_id = part_data.get('part_id') or part_data.get('inventory_part')
+                if part_id:
+                    inventory_part = InventoryPart.objects.filter(pk=part_id).first()
+                if inventory_part is None and part_number:
+                    inventory_part = InventoryPart.objects.filter(part_number__iexact=part_number).first()
+
+                if inventory_part and not part_name:
+                    part_name = inventory_part.name
+                if inventory_part and not part_number:
+                    part_number = inventory_part.part_number
+
+                unit_price = Decimal('0.00')
+                if inventory_part and getattr(inventory_part, 'selling_price', None):
+                    unit_price = Decimal(str(inventory_part.selling_price or '0'))
+                elif part_data.get('unit_cost') not in (None, ''):
+                    unit_price = Decimal(str(part_data.get('unit_cost') or '0'))
+
+                EstimateLineItem.objects.create(
+                    estimate=estimate,
+                    item_type='part',
+                    description=part_name or recommendation.description[:500],
+                    notes=f"{marker} Recommendation: {recommendation.description}",
+                    part=inventory_part,
+                    part_number=part_number,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    is_taxable=True,
+                    order=order,
+                )
+                order += 1
+                created_any_lines = True
+
+            if recommendation.estimated_labor_hours > 0 or recommendation.estimated_labor_cost > 0:
+                labor_rate = Decimal('0.00')
+                if recommendation.estimated_labor_hours > 0 and recommendation.estimated_labor_cost > 0:
+                    labor_rate = (recommendation.estimated_labor_cost / recommendation.estimated_labor_hours).quantize(Decimal('0.01'))
+
+                EstimateLineItem.objects.create(
+                    estimate=estimate,
+                    item_type='labor',
+                    description=f"Labor for: {recommendation.description[:460]}",
+                    notes=f"{marker} Labor allowance for recommendation.",
+                    quantity=Decimal('1.00'),
+                    unit_price=Decimal(str(recommendation.estimated_labor_cost or '0')),
+                    labor_hours=recommendation.estimated_labor_hours,
+                    labor_rate=labor_rate,
+                    is_taxable=True,
+                    order=order,
+                )
+                order += 1
+                created_any_lines = True
+
+            if not created_any_lines:
+                EstimateLineItem.objects.create(
+                    estimate=estimate,
+                    item_type='other',
+                    description=recommendation.description[:500],
+                    notes=f"{marker} Stores must complete pricing for this recommendation.",
+                    quantity=Decimal('1.00'),
+                    unit_price=Decimal('0.00'),
+                    is_taxable=True,
+                    order=order,
+                )
+
+        estimate.refresh_from_db()
+        estimate.calculate_totals()
+        estimate.refresh_from_db()
+
+        labor_hours = sum(
+            Decimal(str(item.labor_hours or '0'))
+            for item in estimate.line_items.filter(item_type='labor')
+        ) or Decimal('0')
+        work_order.estimated_parts_cost = estimate.parts_subtotal
+        work_order.estimated_labor_cost = estimate.labor_subtotal
+        work_order.estimated_labor_hours = labor_hours
+        work_order.estimated_total = estimate.total
+        work_order.save(update_fields=[
+            'estimated_parts_cost',
+            'estimated_labor_cost',
+            'estimated_labor_hours',
+            'estimated_total',
+            'updated_at',
+        ])
+
+        return estimate, None
+
+    def get_object(self):
+        """
+        Return a clearer branch-context error for diagnosis detail routes.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        filter_kwargs = {self.lookup_field: lookup_value}
+
+        obj = queryset.filter(**filter_kwargs).first()
+        if obj is not None:
+            self.check_object_permissions(self.request, obj)
+            return obj
+
+        unscoped_obj = super().get_queryset().filter(**filter_kwargs).first()
+        if unscoped_obj is not None:
+            active_branch = resolve_branch(self.request)
+            work_order = getattr(unscoped_obj, 'work_order', None)
+            record_branch = getattr(work_order, 'branch', None)
+
+            if record_branch and active_branch and record_branch.id != active_branch.id:
+                raise DRFValidationError({
+                    'error': (
+                        f"Active branch context does not match this diagnosis. "
+                        f"Select branch '{record_branch.name}' or send the correct X-Branch-ID header."
+                    )
+                })
+
+            raise DRFValidationError({
+                'error': 'Active branch context is required to access this diagnosis. Select the correct branch or send X-Branch-ID.'
+            })
+
+        raise Http404
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -160,6 +371,15 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update']:
             return DiagnosisUpdateSerializer
         return DiagnosisDetailSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Create a diagnosis and return the full detail payload."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        diagnosis = serializer.save()
+        detail_serializer = DiagnosisDetailSerializer(diagnosis, context=self.get_serializer_context())
+        headers = self.get_success_headers(detail_serializer.data)
+        return Response(detail_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
@@ -462,6 +682,11 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
     def submit_recommendations_for_quote(self, request, pk=None):
         """Submit approved recommendations to stores for quotation."""
         diagnosis = self.get_object()
+        if not self._user_has_quote_submission_role(request.user):
+            return Response(
+                {"error": "Only service coordinators, parts managers, managers, or admins can submit recommendations to stores."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         recommendation_ids = request.data.get('recommendation_ids', [])
 
         recommendations = diagnosis.repair_recommendations.filter(
@@ -487,12 +712,26 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        estimate, estimate_error = self._build_or_refresh_quote_estimate(diagnosis, recommendations, request.user)
+        if estimate_error:
+            return Response({"error": estimate_error}, status=status.HTTP_400_BAD_REQUEST)
+
         for recommendation in recommendations:
             recommendation.request_quotation(requested_by=request.user)
+            if estimate is not None:
+                recommendation.quotation_estimate_id = estimate.id
+                recommendation.quotation_estimate_number = estimate.estimate_number
+                recommendation.save(update_fields=[
+                    'quotation_estimate_id',
+                    'quotation_estimate_number',
+                    'updated_at',
+                ])
 
         serializer = RepairRecommendationSerializer(recommendations, many=True)
         return Response({
             'message': f'Submitted {recommendations.count()} recommendation(s) to stores for quotation',
+            'quotation_estimate_id': getattr(estimate, 'id', None),
+            'quotation_estimate_number': getattr(estimate, 'estimate_number', None),
             'recommendations': serializer.data,
         })
 
@@ -500,6 +739,11 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
     def mark_recommendations_quoted(self, request, pk=None):
         """Mark previously requested recommendations as quoted."""
         diagnosis = self.get_object()
+        if not self._user_has_quote_completion_role(request.user):
+            return Response(
+                {"error": "Only parts managers, managers, or admins can mark recommendations as quoted."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         recommendation_ids = request.data.get('recommendation_ids', [])
 
         recommendations = diagnosis.repair_recommendations.filter(
@@ -525,12 +769,30 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        estimate = None
+        if django_apps.is_installed('apps.billing'):
+            estimate, estimate_error = self._build_or_refresh_quote_estimate(diagnosis, recommendations, request.user)
+            if estimate_error:
+                return Response({"error": estimate_error}, status=status.HTTP_400_BAD_REQUEST)
+            if estimate is None or estimate.total <= 0:
+                return Response(
+                    {"error": "Stores must create and price the quotation estimate before recommendations can be marked as quoted."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         for recommendation in recommendations:
+            if django_apps.is_installed('apps.billing') and not recommendation.quotation_estimate_id:
+                return Response(
+                    {"error": "Each recommendation must be linked to a quotation estimate before it can be marked as quoted."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             recommendation.mark_quoted(quoted_by=request.user)
 
         serializer = RepairRecommendationSerializer(recommendations, many=True)
         return Response({
             'message': f'Marked {recommendations.count()} recommendation(s) as quotation ready',
+            'quotation_estimate_id': getattr(estimate, 'id', None),
+            'quotation_estimate_number': getattr(estimate, 'estimate_number', None),
             'recommendations': serializer.data,
         })
     
@@ -897,6 +1159,24 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
     def mark_quoted(self, request, pk=None):
         """Mark a queued recommendation as quotation ready."""
         recommendation = self.get_object()
+        if not DiagnosisViewSet._user_has_quote_completion_role(request.user):
+            return Response(
+                {'error': 'Only parts managers, managers, or admins can mark recommendations as quoted.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if django_apps.is_installed('apps.billing'):
+            if not recommendation.quotation_estimate_id:
+                return Response(
+                    {'error': 'Stores must create and price the quotation estimate before marking this recommendation as quoted.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            Estimate = django_apps.get_model('billing', 'Estimate')
+            estimate = Estimate.objects.filter(pk=recommendation.quotation_estimate_id).first()
+            if estimate is None or estimate.total <= 0:
+                return Response(
+                    {'error': 'The linked quotation estimate must have a priced total before this recommendation can be marked as quoted.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         try:
             recommendation.mark_quoted(quoted_by=request.user)
         except ValueError as exc:
@@ -1040,7 +1320,7 @@ class DiagnosticTestViewSet(viewsets.ModelViewSet):
             branch_lookup='diagnosis__work_order__branch'
         )
     
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
         if self.action in ['create', 'update', 'partial_update']:
             return DiagnosticTestCreateSerializer
         return DiagnosticTestSerializer
@@ -1077,10 +1357,19 @@ class DiagnosisFindingViewSet(viewsets.ModelViewSet):
             branch_lookup='diagnosis__work_order__branch'
         )
     
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
         if self.action in ['create', 'update', 'partial_update']:
             return DiagnosisFindingCreateSerializer
         return DiagnosisFindingSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Create a finding and return the read serializer payload with ids and links."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        finding = serializer.save()
+        detail_serializer = DiagnosisFindingSerializer(finding, context=self.get_serializer_context())
+        headers = self.get_success_headers(detail_serializer.data)
+        return Response(detail_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class DiagnosisPhotoViewSet(viewsets.ModelViewSet):
@@ -1288,9 +1577,7 @@ class DiagnosisHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['vehicle_make', 'vehicle_model']
     ordering_fields = ['diagnosis_count', 'avg_repair_cost', 'created_at']
     ordering = ['-diagnosis_count']
-    
-    def get_serializer_class(self):
-        return DiagnosisHistorySerializer
+    serializer_class = DiagnosisHistorySerializer
     
     @action(detail=False, methods=['get'])
     def similar_issues(self, request):

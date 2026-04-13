@@ -655,6 +655,16 @@ class RepairRecommendation(models.Model):
         related_name='diagnosis_recommendation_quotes_completed',
         help_text="User who marked the quotation as ready"
     )
+    quotation_estimate_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Billing estimate document created by stores for this recommendation"
+    )
+    quotation_estimate_number = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text="Human-readable estimate number for the quotation document"
+    )
     converted_to_task = models.ForeignKey(
         'workorders.ServiceTask',
         on_delete=models.SET_NULL,

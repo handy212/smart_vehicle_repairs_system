@@ -14,6 +14,8 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -199,72 +201,83 @@ def paystack_callback(request):
     
     # Record payment
     amount_ghs = data['amount_ghs']
-    
-    # Get user for processed_by (use customer's user if available, otherwise system)
+
+    # Parse paid_at — Paystack returns a string (e.g. "2026-04-12T10:30:45.000Z").
+    # Passing a raw string to a DateTimeField leaves the in-memory instance with a
+    # string value; any subsequent code (signals, accounting service) that calls
+    # .date() on it will raise "'str' object has no attribute 'date'".
+    paid_at_str = data.get('paid_at')
+    payment_date_val = parse_datetime(paid_at_str) if paid_at_str else None
+    if payment_date_val is None:
+        payment_date_val = timezone.now()
+
+    # Get user for processed_by (use customer's user if available)
     processed_by = None
     if hasattr(customer, 'user') and customer.user:
         processed_by = customer.user
-    
-    payment = Payment.objects.create(
-        invoice=invoice,
-        customer=invoice.customer,
-        amount=amount_ghs,
-        payment_method='paystack',
-        transaction_id=reference,
-        payment_date=data.get('paid_at'),
-        notes=f"Paystack payment via {data.get('channel', 'online')}",
-        processed_by=processed_by
-    )
-    
-    # Update invoice status
-    invoice.amount_paid += amount_ghs
-    invoice.amount_due = invoice.total - invoice.amount_paid
-    
-    if invoice.amount_due <= 0:
-        invoice.status = 'paid'
-    elif invoice.amount_paid > 0:
-        invoice.status = 'partial'
-    
-    invoice.save()
-    
-    # Activate subscription if this is a subscription invoice
-    if 'subscription' in invoice.description.lower():
-        from apps.subscriptions.services import SubscriptionService
-        try:
-            # Find subscription by matching invoice description with package name
-            # Invoice description format: "Subscription: {package.name} ({duration} months)"
-            subscriptions = invoice.customer.subscriptions.filter(
-                status__in=['pending'],
-                payment_status='pending'
-            ).order_by('-created_at')
-            
-            subscription = None
-            # Try to match by package name in invoice description
-            for sub in subscriptions:
-                package_name_in_desc = sub.package.name.lower() in invoice.description.lower()
-                if package_name_in_desc:
-                    subscription = sub
-                    break
-            
-            # Fallback: use most recent pending subscription if no match
-            if not subscription:
-                subscription = subscriptions.first()
-            
-            if subscription:
-                SubscriptionService.activate_subscription(subscription, invoice)
-                logger.info(f"Activated subscription {subscription.subscription_number} after payment for invoice {invoice.id}")
-            else:
-                logger.warning(f"Could not find subscription for invoice {invoice.id} (description: {invoice.description})")
-        except Exception as e:
-            logger.error(f"Failed to activate subscription on payment: {e}", exc_info=True)
-    
-    # Send payment notification
+
     try:
-        NotificationTriggers().payment_received(payment)
+        payment = Payment.objects.create(
+            invoice=invoice,
+            customer=invoice.customer,
+            amount=amount_ghs,
+            payment_method='paystack',
+            transaction_id=reference,
+            payment_date=payment_date_val,
+            notes=f"Paystack payment via {data.get('channel', 'online')}",
+            processed_by=processed_by,
+        )
+
+        # Update invoice status
+        invoice.amount_paid += amount_ghs
+        invoice.amount_due = invoice.total - invoice.amount_paid
+
+        if invoice.amount_due <= 0:
+            invoice.status = 'paid'
+        elif invoice.amount_paid > 0:
+            invoice.status = 'partial'
+
+        invoice.save()
+
+        # Activate subscription if this is a subscription invoice
+        if invoice.description and 'subscription' in invoice.description.lower():
+            from apps.subscriptions.services import SubscriptionService
+            try:
+                subscriptions = invoice.customer.subscriptions.filter(
+                    status__in=['pending'],
+                    payment_status='pending'
+                ).order_by('-created_at')
+
+                subscription = None
+                for sub in subscriptions:
+                    if sub.package.name.lower() in invoice.description.lower():
+                        subscription = sub
+                        break
+
+                if not subscription:
+                    subscription = subscriptions.first()
+
+                if subscription:
+                    SubscriptionService.activate_subscription(subscription, invoice)
+                    logger.info(f"Activated subscription {subscription.subscription_number} after payment for invoice {invoice.id}")
+                else:
+                    logger.warning(f"Could not find subscription for invoice {invoice.id}")
+            except Exception as e:
+                logger.error(f"Failed to activate subscription on payment: {e}", exc_info=True)
+
+        # Send payment notification
+        try:
+            NotificationTriggers().payment_received(payment)
+        except Exception as e:
+            logger.error(f"Failed to send payment notification: {e}")
+
     except Exception as e:
-        logger.error(f"Failed to send payment notification: {e}")
-    
-    # Redirect user to frontend success page (better UX than JSON)
+        logger.error(f"Failed to record Paystack payment for reference {reference}: {e}", exc_info=True)
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
+        qs = urlencode({"status": "failed", "reference": reference, "reason": "recording_error"})
+        return redirect(f"{frontend}/portal/payment/success?{qs}")
+
+    # Redirect user to frontend success page
     frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
     qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
     return redirect(f"{frontend}/portal/payment/success?{qs}")

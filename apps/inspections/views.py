@@ -13,6 +13,7 @@ from apps.inspections.models import (
     VehicleInspection, InspectionResult, InspectionPhoto
 )
 from apps.branches.utils import filter_queryset_for_user_branches, resolve_branch
+from apps.notifications_app.triggers import notification_triggers
 from apps.inspections.serializers import (
     InspectionTemplateListSerializer, InspectionTemplateDetailSerializer,
     InspectionTemplateCreateSerializer, InspectionCategorySerializer,
@@ -666,7 +667,6 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     def send_to_customer(self, request, pk=None):
         """Send inspection report to customer"""
         from apps.notifications_app.triggers import NotificationTriggers
-        from django.conf import settings
         
         inspection = self.get_object()
         
@@ -690,13 +690,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         
         # Send notification to customer with portal link
         try:
-            # Build portal link - use portal route from Django URLs
-            frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3001')
-            # Portal inspection detail route: /portal/inspections/<id>/ (plural)
-            portal_link = f"{frontend_url}/portal/inspections/{inspection.id}/"
-            
-            notification_triggers.inspection_completed(inspection, portal_link=portal_link)
-            
+            notification_triggers.inspection_completed(inspection)
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)

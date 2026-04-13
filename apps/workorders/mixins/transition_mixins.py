@@ -5,7 +5,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
-from apps.notifications_app import triggers as notification_triggers
+from apps.notifications_app.triggers import notification_triggers
 from apps.workorders.models import WorkOrder, WorkOrderNote
 
 class WorkOrderStateTransitionMixin:
@@ -289,14 +289,6 @@ class WorkOrderStateTransitionMixin:
         # Determine next status
         if passed:
             try:
-                # Auto-return unused parts to allow completion
-                unused_parts = work_order.parts.exclude(status__in=['installed', 'returned', 'ready'])
-                if unused_parts.exists():
-                    logger.info(f"Auto-returning {unused_parts.count()} unused parts for WO {work_order.work_order_number}")
-                    for part in unused_parts:
-                        part.status = 'returned'
-                        part.save(update_fields=['status'])
-
                 work_order.transition_to('completed', user=request.user)
             except ValidationError as e:
                 logger.warning(f"Validation error during QC completion for WO {work_order.work_order_number}: {e}")
@@ -340,6 +332,18 @@ class WorkOrderStateTransitionMixin:
     def request_quality_check(self, request, pk=None):
         """Request quality check"""
         work_order = self.get_object()
+
+        if work_order.status == 'quality_check':
+            serializer = self.get_serializer(work_order)
+            response_data = serializer.data
+            response_data['workflow_message'] = 'Quality check already requested.'
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        if work_order.quality_check_completed and work_order.status in {'completed', 'invoiced', 'closed'}:
+            serializer = self.get_serializer(work_order)
+            response_data = serializer.data
+            response_data['workflow_message'] = 'Quality check already completed.'
+            return Response(response_data, status=status.HTTP_200_OK)
         
         try:
             work_order.transition_to('quality_check', user=request.user)
@@ -755,8 +759,30 @@ class WorkOrderStateTransitionMixin:
         
         try:
             work_order.transition_to('diagnosis', user=request.user)
+            diagnosis = None
+            diagnosis_created = False
+            try:
+                from apps.diagnosis.models import Diagnosis
+
+                diagnosis, diagnosis_created = Diagnosis.objects.get_or_create(
+                    work_order=work_order,
+                    defaults={
+                        'technician': work_order.primary_technician or request.user,
+                        'customer_complaint': work_order.customer_concerns or '',
+                        'initial_observations': work_order.special_instructions or '',
+                        'requires_approval': work_order.requires_approval,
+                    },
+                )
+            except Exception:
+                diagnosis = None
+                diagnosis_created = False
+
             serializer = self.get_serializer(work_order)
-            return Response(serializer.data)
+            response_data = serializer.data
+            if diagnosis is not None:
+                response_data['diagnosis_id'] = diagnosis.id
+                response_data['diagnosis_created'] = diagnosis_created
+            return Response(response_data)
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -767,7 +793,7 @@ class WorkOrderStateTransitionMixin:
     def start_intake(self, request, pk=None):
         """Move work order to intake status, then to assigned status after Service Coordinator is assigned"""
         work_order = self.get_object()
-        service_coordinator_id = request.data.get('service_coordinator')
+        service_coordinator_id = request.data.get('service_coordinator') or work_order.service_coordinator_id
         
         try:
             # First transition to intake

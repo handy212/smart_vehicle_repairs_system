@@ -364,8 +364,8 @@ export default function VehiclesPage() {
                 </Button>
 
                 {/* Numbered Pagination */}
-                {Array.from({ length: Math.ceil(data.count / 10) }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === Math.ceil(data.count / 10) || (p >= page - 1 && p <= page + 1))
+                {Array.from({ length: Math.ceil(data.count / 20) }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === Math.ceil(data.count / 20) || (p >= page - 1 && p <= page + 1))
                   .map((p, i, arr) => (
                     <React.Fragment key={p}>
                       {i > 0 && arr[i - 1] !== p - 1 && (

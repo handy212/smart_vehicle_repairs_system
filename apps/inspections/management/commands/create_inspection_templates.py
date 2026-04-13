@@ -1,6 +1,7 @@
 """
 Management command to create pre-defined inspection templates
 """
+from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from apps.inspections.models import InspectionTemplate, InspectionCategory, InspectionItem
@@ -204,8 +205,8 @@ class Command(BaseCommand):
             order=3
         )
         InspectionItem.objects.bulk_create([
-            InspectionItem(category=cat3, name="Front Brake Pads", item_type='measurement', measurement_unit='mm', is_critical=True, order=1),
-            InspectionItem(category=cat3, name="Rear Brake Pads/Shoes", item_type='measurement', measurement_unit='mm', is_critical=True, order=2),
+            InspectionItem(category=cat3, name="Front Brake Pads", item_type='measurement', measurement_unit='mm', min_acceptable=Decimal('3.00'), is_critical=True, order=1),
+            InspectionItem(category=cat3, name="Rear Brake Pads/Shoes", item_type='measurement', measurement_unit='mm', min_acceptable=Decimal('3.00'), is_critical=True, order=2),
             InspectionItem(category=cat3, name="Brake Rotors/Drums", item_type='rating', is_critical=True, order=3),
             InspectionItem(category=cat3, name="Brake Fluid Level", item_type='pass_fail', is_critical=True, order=4),
             InspectionItem(category=cat3, name="Brake Fluid Condition", item_type='rating', order=5),
@@ -537,8 +538,8 @@ class Command(BaseCommand):
             order=1
         )
         InspectionItem.objects.bulk_create([
-            InspectionItem(category=cat1, name="Left Front Brake Pad Thickness", item_type='measurement', measurement_unit='mm', is_critical=True, order=1),
-            InspectionItem(category=cat1, name="Right Front Brake Pad Thickness", item_type='measurement', measurement_unit='mm', is_critical=True, order=2),
+            InspectionItem(category=cat1, name="Left Front Brake Pad Thickness", item_type='measurement', measurement_unit='mm', min_acceptable=Decimal('3.00'), is_critical=True, order=1),
+            InspectionItem(category=cat1, name="Right Front Brake Pad Thickness", item_type='measurement', measurement_unit='mm', min_acceptable=Decimal('3.00'), is_critical=True, order=2),
             InspectionItem(category=cat1, name="Left Front Rotor Thickness", item_type='measurement', measurement_unit='mm', is_critical=True, order=3),
             InspectionItem(category=cat1, name="Right Front Rotor Thickness", item_type='measurement', measurement_unit='mm', is_critical=True, order=4),
             InspectionItem(category=cat1, name="Front Rotor Surface Condition", item_type='rating', order=5),
@@ -554,8 +555,8 @@ class Command(BaseCommand):
             order=2
         )
         InspectionItem.objects.bulk_create([
-            InspectionItem(category=cat2, name="Left Rear Brake Pad/Shoe Thickness", item_type='measurement', measurement_unit='mm', is_critical=True, order=1),
-            InspectionItem(category=cat2, name="Right Rear Brake Pad/Shoe Thickness", item_type='measurement', measurement_unit='mm', is_critical=True, order=2),
+            InspectionItem(category=cat2, name="Left Rear Brake Pad/Shoe Thickness", item_type='measurement', measurement_unit='mm', min_acceptable=Decimal('3.00'), is_critical=True, order=1),
+            InspectionItem(category=cat2, name="Right Rear Brake Pad/Shoe Thickness", item_type='measurement', measurement_unit='mm', min_acceptable=Decimal('3.00'), is_critical=True, order=2),
             InspectionItem(category=cat2, name="Rear Rotor/Drum Condition", item_type='rating', is_critical=True, order=3),
             InspectionItem(category=cat2, name="Rear Caliper/Cylinder Condition", item_type='rating', order=4),
             InspectionItem(category=cat2, name="Rear Brake Hoses", item_type='pass_fail', is_critical=True, order=5),

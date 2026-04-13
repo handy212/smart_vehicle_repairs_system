@@ -90,13 +90,13 @@ SKIP_MODULE_PERMISSION_CHECKS = True
 INSTALLED_APPS = [
     app for app in INSTALLED_APPS
     if app not in {
+        'debug_toolbar',
         'notifications',
         'schedule',
         'apps.gatepass',
         'apps.billing',
         'apps.inspections',
         'apps.reporting',
-        'apps.notifications_app',
         'apps.documents',
         'apps.subscriptions',
         'apps.roadside',
@@ -109,4 +109,9 @@ INSTALLED_APPS = [
         'apps.feedback',
         'apps.chat',
     }
+]
+
+MIDDLEWARE = [
+    middleware for middleware in MIDDLEWARE
+    if 'debug_toolbar' not in middleware
 ]

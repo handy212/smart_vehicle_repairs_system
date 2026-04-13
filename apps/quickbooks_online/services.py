@@ -20,6 +20,13 @@ from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
 
 logger = logging.getLogger(__name__)
 
+
+def _is_stale_error(exc) -> bool:
+    """Return True if the exception is a QuickBooks Stale Object Error (5010)."""
+    msg = str(exc)
+    return '5010' in msg or 'stale object' in msg.lower()
+
+
 class QuickBooksService:
     """
     Service for interacting with QuickBooks Online API.
@@ -146,6 +153,28 @@ class QuickBooksService:
             config.is_active = False
             config.save()
 
+    @classmethod
+    def _save_qb(cls, qb_obj, client):
+        """
+        Save a QBO object. If a Stale Object Error (5010) is raised, re-fetch
+        the entity to get the current SyncToken and retry once.
+        Local data always wins — we intentionally overwrite any concurrent QBO changes.
+        """
+        try:
+            qb_obj.save(qb=client)
+        except Exception as e:
+            if _is_stale_error(e) and getattr(qb_obj, 'Id', None):
+                logger.warning(
+                    "Stale Object Error (5010) on %s id=%s — refreshing SyncToken and retrying.",
+                    type(qb_obj).__name__, qb_obj.Id,
+                )
+                fresh = type(qb_obj).get(int(qb_obj.Id), qb=client)
+                qb_obj.SyncToken = fresh.SyncToken
+                qb_obj.save(qb=client)   # propagate if it fails a second time
+            else:
+                raise
+        return qb_obj
+
     def sync_customer(self, local_customer):
         """
         Sync a local Customer to QBO.
@@ -203,8 +232,8 @@ class QuickBooksService:
             
         # Save to QBO
         try:
-            qb_customer.save(qb=client)
-            
+            self._save_qb(qb_customer, client)
+
             # Update/Create mapping
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_customer),
@@ -264,8 +293,8 @@ class QuickBooksService:
         
         # Save
         try:
-            qb_dept.save(qb=client)
-            
+            self._save_qb(qb_dept, client)
+
             # Update Mapping
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_branch),
@@ -365,8 +394,8 @@ class QuickBooksService:
             
         # Save
         try:
-            qb_invoice.save(qb=client)
-            
+            self._save_qb(qb_invoice, client)
+
             # Update Mapping
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_invoice),
@@ -494,8 +523,8 @@ class QuickBooksService:
 
         # Save
         try:
-            qb_payment.save(qb=client)
-            
+            self._save_qb(qb_payment, client)
+
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_payment),
                 object_id=local_payment.id,
@@ -560,7 +589,7 @@ class QuickBooksService:
             qb_vendor.PrimaryPhone = {"FreeFormNumber": local_supplier.phone}
             
         try:
-            qb_vendor.save(qb=client)
+            self._save_qb(qb_vendor, client)
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_supplier),
                 object_id=local_supplier.id,
@@ -651,7 +680,7 @@ class QuickBooksService:
             qb_bill.Line.append(line)
             
         try:
-            qb_bill.save(qb=client)
+            self._save_qb(qb_bill, client)
             QBOMapping.objects.update_or_create(
                 content_type=ContentType.objects.get_for_model(local_po),
                 object_id=local_po.id,
@@ -817,13 +846,27 @@ class QuickBooksService:
                     qbo_total = Decimal(str(qb_inv.TotalAmt or 0))
                     qbo_paid = qbo_total - qbo_balance
 
+                    # Conflict resolution: if local shows MORE paid than QBO,
+                    # local data wins (payment may not have synced to QBO yet).
+                    # If QBO shows MORE paid, QBO wins (payment confirmed externally).
                     if local_invoice.amount_paid != qbo_paid:
-                        local_invoice.amount_paid = qbo_paid
-                        local_invoice.amount_due = qbo_balance
-                        updated = True
+                        if qbo_paid > local_invoice.amount_paid:
+                            # QBO has more payment info — trust QBO
+                            local_invoice.amount_paid = qbo_paid
+                            local_invoice.amount_due = qbo_balance
+                            updated = True
+                            logger.info(
+                                f"Conflict resolved (QBO wins): Invoice {local_invoice.invoice_number} "
+                                f"local_paid={local_invoice.amount_paid} qbo_paid={qbo_paid}"
+                            )
+                        else:
+                            # Local is ahead of QBO — keep local, just update sync meta
+                            logger.debug(
+                                f"Conflict resolved (local wins): Invoice {local_invoice.invoice_number} "
+                                f"local_paid={local_invoice.amount_paid} qbo_paid={qbo_paid}"
+                            )
 
-                    # Update status if QBO shows as paid
-                    qbo_status = getattr(qb_inv, 'EmailStatus', None)  # Not 'PaymentStatus'; check balance
+                    # Update status if QBO shows as fully paid
                     if qbo_balance == 0 and local_invoice.status not in ('paid', 'void', 'refunded'):
                         local_invoice.status = 'paid'
                         updated = True

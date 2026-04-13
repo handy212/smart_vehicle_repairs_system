@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Branding images are admin-configured and may come from arbitrary external URLs. */
 
-import { useState, useEffect, useMemo, type ComponentProps } from "react";
+import { useState, useEffect, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,8 @@ import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/authStore";
 import { setTokens } from "@/lib/utils/token";
-import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { adminApi } from "@/lib/api/admin";
+import { useBranding } from "@/lib/hooks/useBranding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -69,24 +70,18 @@ export default function RegisterPage() {
     const [otpCode, setOtpCode] = useState("");
 
     // Google Registration State
-
     const [regData, setRegData] = useState<GoogleRegistrationData | null>(null);
 
     // reCAPTCHA state
     const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+
+    const { siteName, tagline, primaryColor, loginBackground, logoSrc, getMediaUrl } = useBranding("public");
 
     useEffect(() => {
         setIsMounted(true);
         // Force light mode for auth pages
         document.documentElement.classList.remove('dark');
     }, []);
-
-    const { data: brandingSettings } = useQuery<SystemSetting[]>({
-        queryKey: ["settings", "branding", "public"],
-        queryFn: () => adminApi.settings.publicBranding(),
-        staleTime: 5 * 60 * 1000,
-        retry: 2,
-    });
 
     const { data: integrations } = useQuery<{
         recaptcha_site_key?: string;
@@ -103,53 +98,9 @@ export default function RegisterPage() {
         integrations?.recaptcha_enabled === "true" &&
         !!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
-    const branding = useMemo(() => {
-        if (!brandingSettings) {
-            return {
-                site_name: "American Autoparts Ltd",
-                tagline: "Professional Auto Care",
-                logo_path: null,
-                logo_dark_path: null,
-                login_background: null,
-                primary_color: "#ff8040",
-            };
-        }
-
-        const getSetting = (key: string): string | null => {
-            const setting = brandingSettings.find((s) => s.key === key);
-            return setting?.value && setting.value.trim() !== "" ? setting.value : null;
-        };
-
-        return {
-            site_name: getSetting("site_name") || "American Autoparts Ltd",
-            tagline: getSetting("company_tagline") || "Professional Auto Care",
-            logo_path: getSetting("logo_path"),
-            logo_dark_path: getSetting("logo_dark_path"),
-            login_background: getSetting("login_background"),
-            primary_color: getSetting("primary_color") || "#ff8040",
-        };
-    }, [brandingSettings]);
-
-    const getImageUrl = (path: string | undefined, defaultPath: string) => {
-        if (!path) return defaultPath;
-        if (path.startsWith('http')) return path;
-
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
-        const cleanPath = path.startsWith('/') ? path : `/${path}`;
-
-        if (cleanPath.startsWith('/media/')) {
-            return `${baseUrl}${cleanPath}`;
-        }
-
-        return `${baseUrl}/media${cleanPath}`;
-    };
-
-    const heroImage = branding.login_background
-        ? getImageUrl(branding.login_background, DEFAULT_HERO_IMAGE)
+    const heroImage = loginBackground
+        ? getMediaUrl(loginBackground)
         : DEFAULT_HERO_IMAGE;
-
-    const heroLogo = branding.logo_dark_path || branding.logo_path;
 
     const {
         register,
@@ -254,10 +205,10 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen flex flex-col">
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
-                {/* Left side: Hero Image & Branding (Matching Login) */}
+                {/* Left side: Hero Image & Branding */}
                 <div
                     className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-gray-900 group"
-                    style={{ backgroundColor: branding.primary_color }}
+                    style={{ backgroundColor: primaryColor }}
                 >
                     {isMounted && (
                         <img
@@ -269,22 +220,22 @@ export default function RegisterPage() {
                     <div
                         className="absolute inset-0"
                         style={{
-                            background: `linear-gradient(to top, ${branding.primary_color} 0%, ${branding.primary_color}40 40%, transparent 100%)`
+                            background: `linear-gradient(to top, ${primaryColor} 0%, ${primaryColor}40 40%, transparent 100%)`
                         }}
                     />
 
                     <div className="relative z-10 flex items-center gap-3">
-                        {heroLogo ? (
+                        {logoSrc ? (
                             <div className="p-3 bg-card rounded-xl shadow-lg">
                                 <img
-                                    src={getImageUrl(heroLogo, "")}
-                                    alt={branding.site_name}
+                                    src={logoSrc}
+                                    alt={siteName}
                                     className="h-10 w-auto object-contain"
                                 />
                             </div>
                         ) : (
                             <div className="p-3 bg-card rounded-xl shadow-lg">
-                                <Car className="w-8 h-8" style={{ color: branding.primary_color }} />
+                                <Car className="w-8 h-8" style={{ color: primaryColor }} />
                             </div>
                         )}
                     </div>
@@ -295,13 +246,13 @@ export default function RegisterPage() {
                             <span style={{ color: '#bfdbfe' }}>Revolution</span>
                         </h1>
                         <p className="text-xl text-white/90 max-w-md">
-                            {branding.tagline}
+                            {tagline}
                         </p>
                     </div>
                 </div>
 
                 {/* Right side: Registration Form */}
-                <div className="flex items-start justify-center bg-muted/50 p-4 pt-10 lg:items-center lg:p-8">
+                <div className="flex items-start justify-center bg-background p-4 pt-10 lg:items-center lg:p-8">
                     <div className="w-full max-w-md space-y-4 lg:space-y-6 animate-in fade-in zoom-in-95 duration-500">
                         {regData ? (
                             <CompleteRegistrationForm
@@ -323,7 +274,7 @@ export default function RegisterPage() {
                                 </button>
 
                                 <div className="text-center lg:text-left">
-                                    <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{branding.site_name}</h2>
+                                    <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{siteName}</h2>
                                     <p className="mt-1 lg:mt-2 text-sm text-muted-foreground">
                                         {currentStep === 'otp'
                                             ? `We sent a code to ${pendingData?.email}`
@@ -331,10 +282,10 @@ export default function RegisterPage() {
                                     </p>
                                 </div>
 
-                                <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden">
+                                <Card className="border border-border shadow-sm bg-card rounded-lg overflow-hidden">
                                     <CardContent className="p-5 lg:p-8">
                                         {error && (
-                                            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium mb-4 animate-in shake duration-300">
+                                            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm font-medium mb-4 animate-in shake duration-300">
                                                 {error}
                                             </div>
                                         )}
@@ -347,7 +298,7 @@ export default function RegisterPage() {
                                                         <Input
                                                             {...register("first_name")}
                                                             placeholder="John"
-                                                            className="h-9 lg:h-10 rounded-xl border-border"
+                                                            className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
                                                         {errors.first_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.first_name.message}</p>}
                                                     </div>
@@ -356,7 +307,7 @@ export default function RegisterPage() {
                                                         <Input
                                                             {...register("last_name")}
                                                             placeholder="Doe"
-                                                            className="h-9 lg:h-10 rounded-xl border-border"
+                                                            className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
                                                         {errors.last_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.last_name.message}</p>}
                                                     </div>
@@ -368,7 +319,7 @@ export default function RegisterPage() {
                                                         type="email"
                                                         {...register("email")}
                                                         placeholder="john@example.com"
-                                                        className="h-9 lg:h-10 rounded-xl border-border"
+                                                        className="h-9 lg:h-10 rounded-lg border-border"
                                                     />
                                                     {errors.email && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.email.message}</p>}
                                                 </div>
@@ -381,7 +332,7 @@ export default function RegisterPage() {
                                                             <Input
                                                                 {...register("phone")}
                                                                 placeholder="(555) 000-0000"
-                                                                className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
+                                                                className="h-9 lg:h-10 rounded-lg border-border pl-9 lg:pl-10"
                                                             />
                                                         </div>
                                                         {errors.phone && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.phone.message}</p>}
@@ -393,7 +344,7 @@ export default function RegisterPage() {
                                                             onValueChange={(val) => setValue("customer_type", val as RegisterFormData["customer_type"])}
                                                             defaultValue="individual"
                                                         >
-                                                            <SelectTrigger className="h-9 lg:h-10 rounded-xl border-border">
+                                                            <SelectTrigger className="h-9 lg:h-10 rounded-lg border-border">
                                                                 <SelectValue placeholder="Select type" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -413,7 +364,7 @@ export default function RegisterPage() {
                                                             <Input
                                                                 {...register("company_name")}
                                                                 placeholder="Acme Inc."
-                                                                className="h-9 lg:h-10 rounded-xl border-border pl-9 lg:pl-10"
+                                                                className="h-9 lg:h-10 rounded-lg border-border pl-9 lg:pl-10"
                                                             />
                                                         </div>
                                                         {errors.company_name && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.company_name.message}</p>}
@@ -428,7 +379,7 @@ export default function RegisterPage() {
                                                                 type={showPassword ? "text" : "password"}
                                                                 {...register("password")}
                                                                 placeholder="••••••••"
-                                                                className="h-9 lg:h-10 rounded-xl border-border pr-10 lg:pr-12"
+                                                                className="h-9 lg:h-10 rounded-lg border-border pr-10 lg:pr-12"
                                                             />
                                                             <button
                                                                 type="button"
@@ -446,7 +397,7 @@ export default function RegisterPage() {
                                                             type="password"
                                                             {...register("confirm_password")}
                                                             placeholder="••••••••"
-                                                            className="h-9 lg:h-10 rounded-xl border-border"
+                                                            className="h-9 lg:h-10 rounded-lg border-border"
                                                         />
                                                         {errors.confirm_password && <p className="text-[10px] lg:text-xs text-red-500 ml-1">{errors.confirm_password.message}</p>}
                                                     </div>
@@ -466,15 +417,15 @@ export default function RegisterPage() {
 
                                                 <Button
                                                     type="submit"
-                                                    className="w-full h-10 lg:h-11 rounded-xl text-white font-bold shadow-lg mt-1 transition-all hover:opacity-90 active:scale-95"
-                                                    style={{ backgroundColor: branding.primary_color }}
+                                                    className="w-full h-10 lg:h-11 rounded-lg text-white font-bold shadow-sm mt-1 transition-all hover:opacity-90 active:scale-95"
+                                                    style={{ backgroundColor: primaryColor }}
                                                     disabled={isLoading || (recaptchaRequired && !recaptchaToken)}
                                                 >
                                                     {isLoading ? "Checking..." : "Continue"}
                                                 </Button>
 
-                                                <div className="relative my-4 lg:my-6 text-center text-xs lg:text-sm font-medium text-muted-foreground line-through">
-                                                    <span className="bg-card px-4 relative z-10 no-underline">OR</span>
+                                                <div className="relative my-4 lg:my-6 text-center text-xs lg:text-sm font-medium text-muted-foreground">
+                                                    <span className="bg-card px-4 relative z-10">OR</span>
                                                     <hr className="absolute top-1/2 left-0 w-full border-border" />
                                                 </div>
 
@@ -490,12 +441,12 @@ export default function RegisterPage() {
                                         ) : (
                                             <form onSubmit={onVerify} className="space-y-6">
                                                 <div className="space-y-4">
-                                                    <div className="bg-primary/10 p-4 rounded-xl text-center">
+                                                    <div className="bg-primary/10 p-4 rounded-lg text-center">
                                                         <p className="text-sm text-primary mb-2">Enter the 6-digit code sent to your email</p>
                                                         <Input
                                                             value={otpCode}
                                                             onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                                            className="text-center text-2xl tracking-[0.5em] font-mono h-14 rounded-xl border-orange-200 focus:border-primary"
+                                                            className="text-center text-2xl tracking-[0.5em] font-mono h-14 rounded-lg border-border focus:border-primary"
                                                             placeholder="000000"
                                                             autoFocus
                                                         />
@@ -504,8 +455,8 @@ export default function RegisterPage() {
 
                                                 <Button
                                                     type="submit"
-                                                    className="w-full h-11 rounded-xl text-white font-bold shadow-lg transition-all hover:opacity-90"
-                                                    style={{ backgroundColor: branding.primary_color }}
+                                                    className="w-full h-11 rounded-lg text-white font-bold shadow-sm transition-all hover:opacity-90"
+                                                    style={{ backgroundColor: primaryColor }}
                                                     disabled={isLoading || otpCode.length !== 6}
                                                 >
                                                     {isLoading ? "Verifying..." : "Create Account"}
@@ -524,7 +475,7 @@ export default function RegisterPage() {
                                     <button
                                         onClick={() => router.push("/login")}
                                         className="font-bold underline-offset-4 hover:underline"
-                                        style={{ color: branding.primary_color }}
+                                        style={{ color: primaryColor }}
                                     >
                                         Sign in instead
                                     </button>
@@ -539,10 +490,10 @@ export default function RegisterPage() {
             <footer className="overflow-hidden bg-card border-t border-border px-4 py-4 sm:px-8">
                 <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-sm text-muted-foreground sm:flex-row sm:text-left">
                     <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
-                        © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.
+                        © <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{siteName}</span>. All rights reserved.
                     </p>
                     <p className="w-full max-w-full px-2 text-balance break-words sm:w-auto sm:px-0">
-                        Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a>
+                        Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: primaryColor }}>SafeTrack Systems</a>
                     </p>
                 </div>
             </footer>

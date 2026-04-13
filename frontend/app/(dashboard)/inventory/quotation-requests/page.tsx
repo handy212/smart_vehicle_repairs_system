@@ -5,21 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, ClipboardList, ExternalLink, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 
-import { diagnosisApi, RepairRecommendation } from "@/lib/api/diagnosis";
+import { diagnosisApi, QuotationQueueRecommendation } from "@/lib/api/diagnosis";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useAuthStore } from "@/store/authStore";
 
-type QueueRecommendation = RepairRecommendation & {
-  diagnosis_id: number;
-  work_order_id: number;
-  work_order_number: string;
-  vehicle_display?: string | null;
-  customer_name?: string | null;
-  branch_name?: string | null;
-};
 
 const getErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error && "response" in error) {
@@ -38,10 +32,22 @@ export default function QuotationRequestsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const { hasAnyPermission } = usePermissions();
+  const { user } = useAuthStore();
 
-  const { data, isLoading, refetch } = useQuery({
+  const isAdminUser =
+    user?.role === "admin" ||
+    user?.role === "super-admin" ||
+    Boolean((user as { is_superuser?: boolean } | null)?.is_superuser);
+  const canViewQuotationQueue =
+    isAdminUser || hasAnyPermission(["view_inventory", "edit_estimates", "manage_inventory", "view_billing"]);
+  const canCompleteQuotes =
+    isAdminUser || hasAnyPermission(["edit_estimates", "manage_inventory", "approve_estimates"]);
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["diagnosis", "quotation-queue", search],
     queryFn: () => diagnosisApi.quotationQueue(search ? { search } : undefined),
+    enabled: canViewQuotationQueue,
   });
 
   const markQuotedMutation = useMutation({
@@ -64,7 +70,23 @@ export default function QuotationRequestsPage() {
     },
   });
 
-  const recommendations: QueueRecommendation[] = data?.results || [];
+  const recommendations: QuotationQueueRecommendation[] = data?.results || [];
+  const totalParts = recommendations.reduce((sum, recommendation) => {
+    return sum + (recommendation.parts_needed?.reduce((partSum, part) => partSum + Number(part.quantity || 0), 0) || 0);
+  }, 0);
+
+  if (!canViewQuotationQueue) {
+    return (
+      <Card className="border-destructive/20">
+        <CardContent className="py-12 text-center">
+          <h2 className="text-sm font-medium text-foreground">Stores quotation access required</h2>
+          <p className="mt-2 text-xs text-muted-foreground">
+            This workspace is for stores, inventory, or billing staff handling quotation handoff.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -88,11 +110,35 @@ export default function QuotationRequestsPage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="border shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pending Quotes</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{recommendations.length}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Approved recommendations waiting on stores pricing.</p>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Parts Requested</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{totalParts}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Total part quantity referenced across the current queue.</p>
+          </CardContent>
+        </Card>
+        <Card className="border shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Workflow</p>
+            <p className="mt-2 text-sm font-semibold text-foreground">Diagnosis approval to stores quote</p>
+            <p className="mt-1 text-xs text-muted-foreground">Open the linked quote, complete pricing, then mark the recommendation quoted.</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="border-none shadow-sm bg-muted/50">
         <CardHeader className="border-b bg-muted/50 pb-3">
           <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Queue</CardTitle>
           <CardDescription className="text-xs">
-            Search by work order, vehicle, recommendation, or finding title.
+            Search by work order, vehicle, recommendation, finding title, or quote number.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
@@ -101,7 +147,7 @@ export default function QuotationRequestsPage() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search queue..."
+              placeholder="Search queue or quote number..."
               className="pl-9"
             />
           </div>
@@ -112,6 +158,17 @@ export default function QuotationRequestsPage() {
         <div className="flex items-center justify-center py-20">
           <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
         </div>
+      ) : isError ? (
+        <Card className="border-destructive/20">
+          <CardContent className="py-12 text-center">
+            <h2 className="text-sm font-medium text-destructive">Unable to load quotation queue</h2>
+            <p className="mt-2 text-xs text-muted-foreground">{getErrorMessage(error)}</p>
+            <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : recommendations.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {recommendations.map((recommendation) => (
@@ -135,6 +192,11 @@ export default function QuotationRequestsPage() {
                       {recommendation.customer_name || "Unknown customer"}
                       {recommendation.branch_name ? ` • ${recommendation.branch_name}` : ""}
                     </p>
+                    {recommendation.quotation_estimate_number && (
+                      <p className="text-xs text-muted-foreground">
+                        Quote: <span className="font-medium text-foreground">{recommendation.quotation_estimate_number}</span>
+                      </p>
+                    )}
                   </div>
                   <Badge variant="outline" className="capitalize">
                     {recommendation.quotation_status_display || "Requested"}
@@ -175,16 +237,40 @@ export default function QuotationRequestsPage() {
                   </div>
                 )}
 
+                <div className="grid grid-cols-1 gap-2 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+                  <div>
+                    <p className="font-medium uppercase tracking-wide">Requested</p>
+                    <p className="mt-1">
+                      {recommendation.quotation_requested_at
+                        ? new Date(recommendation.quotation_requested_at).toLocaleString()
+                        : "Not captured"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium uppercase tracking-wide">Requested By</p>
+                    <p className="mt-1">{recommendation.quotation_requested_by_name || "Not captured"}</p>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2 border-t pt-4">
                   <Button
                     className="h-8"
                     size="sm"
                     onClick={() => markQuotedMutation.mutate(recommendation.id)}
-                    disabled={markQuotedMutation.isPending}
+                    disabled={!canCompleteQuotes || markQuotedMutation.isPending}
+                    title={!canCompleteQuotes ? "You do not have permission to complete stores quotations." : undefined}
                   >
                     <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                     Mark Quoted
                   </Button>
+                  {recommendation.quotation_estimate_id && (
+                    <Link href={`/billing/estimates/${recommendation.quotation_estimate_id}`} className="inline-flex">
+                      <Button variant="outline" size="sm" className="h-8">
+                        <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                        Open Quote
+                      </Button>
+                    </Link>
+                  )}
                   <Link href={`/workorders/${recommendation.work_order_id}`} className="inline-flex">
                     <Button variant="outline" size="sm" className="h-8">
                       <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
@@ -208,7 +294,7 @@ export default function QuotationRequestsPage() {
             <ClipboardList className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
             <h2 className="text-sm font-medium text-foreground">No quotation requests</h2>
             <p className="mt-2 text-xs text-muted-foreground">
-              Approved recommendations sent to stores will appear here.
+              Approved recommendations sent to stores will appear here. Once priced, the linked quote stays available from the work order and billing screens.
             </p>
           </CardContent>
         </Card>

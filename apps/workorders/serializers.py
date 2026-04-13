@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
+from decimal import Decimal
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from drf_spectacular.types import OpenApiTypes
 from .models import (
@@ -22,6 +23,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     vehicle_info = serializers.SerializerMethodField()
     vehicle_display = serializers.SerializerMethodField()
     primary_technician_name = serializers.SerializerMethodField()
+    service_coordinator_name = serializers.SerializerMethodField()
     is_overdue = serializers.BooleanField(read_only=True)
     days_in_shop = serializers.IntegerField(read_only=True)
     task_count = serializers.SerializerMethodField()
@@ -34,6 +36,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'id', 'work_order_number', 'status', 'priority',
             'customer', 'customer_name', 'vehicle', 'vehicle_info', 'vehicle_display',
             'primary_technician', 'primary_technician_name',
+            'service_coordinator', 'service_coordinator_name',
             'created_at', 'started_at', 'completed_at', 'estimated_completion',
             'estimated_total', 'actual_total', 'total_cost', 'is_overdue', 'days_in_shop',
             'is_customer_waiting', 'requires_approval', 'approved_by_customer',
@@ -68,6 +71,12 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         if obj.primary_technician:
             return f"{obj.primary_technician.first_name} {obj.primary_technician.last_name}"
         return None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_service_coordinator_name(self, obj):
+        if obj.service_coordinator:
+            return f"{obj.service_coordinator.first_name} {obj.service_coordinator.last_name}".strip()
+        return None
     
     @extend_schema_field(OpenApiTypes.INT)
     def get_task_count(self, obj):
@@ -83,8 +92,9 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     customer = CustomerListSerializer(read_only=True)
     vehicle = VehicleListSerializer(read_only=True)
     appointment = AppointmentListSerializer(read_only=True)
-    
+
     primary_technician_name = serializers.SerializerMethodField()
+    service_coordinator_name = serializers.SerializerMethodField()
     vehicle_display = serializers.SerializerMethodField()
     technician_names = serializers.CharField(read_only=True)
     assigned_technicians_detail = serializers.SerializerMethodField()
@@ -104,6 +114,8 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     related_work_order_detail = serializers.SerializerMethodField()
     rework_work_orders = serializers.SerializerMethodField()
     customer_name = serializers.SerializerMethodField()
+    estimate_summary = serializers.SerializerMethodField()
+    invoice_summary = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -111,7 +123,8 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'id', 'work_order_number', 'access_token', 'branch', 'appointment',
             'customer', 'customer_name', 'vehicle', 'status', 'priority',
             'service_coordinator', 'primary_technician', 'assigned_technicians',
-            'primary_technician_name', 'vehicle_display', 'technician_names',
+            'primary_technician_name', 'service_coordinator_name',
+            'vehicle_display', 'technician_names',
             'assigned_technicians_detail', 'created_at', 'updated_at',
             'started_at', 'completed_at', 'estimated_completion',
             'customer_concerns', 'special_instructions',
@@ -128,12 +141,16 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'related_work_order_detail', 'rework_work_orders', 'warranty_reason',
             'maintenance_type', 'service_type', 'service_bundle',
             'is_overdue', 'days_in_shop', 'is_approved',
-            'cost_variance', 'cost_variance_percentage', 'has_completed_inspection'
+            'cost_variance', 'cost_variance_percentage', 'has_completed_inspection',
+            'estimate_summary', 'invoice_summary',
         ]
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_completed_inspection(self, obj):
-        return obj.inspections.filter(status__in=['completed', 'approved']).exists()
+        inspections = getattr(obj, 'inspections', None)
+        if inspections is None:
+            return False
+        return inspections.filter(status__in=['completed', 'approved']).exists()
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
@@ -141,17 +158,91 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         if obj.customer and obj.customer.user:
             return obj.customer.user.get_full_name() or obj.customer.user.username or "N/A"
         return "N/A"
+
+    def _get_estimate(self, obj):
+        estimate = getattr(obj, 'estimate', None)
+        if estimate:
+            return estimate
+
+        try:
+            from apps.billing.models import Estimate
+        except Exception:
+            return None
+
+        return (
+            Estimate.objects.filter(
+                reference_number=f"WO:{obj.id}",
+                customer=obj.customer,
+                vehicle=obj.vehicle,
+            )
+            .exclude(status='converted')
+            .order_by('-created_at')
+            .first()
+        )
+
+    def _get_invoice(self, obj):
+        invoice = getattr(obj, 'invoice', None)
+        if invoice:
+            return invoice
+
+        try:
+            from apps.billing.models import Invoice
+        except Exception:
+            return None
+
+        return Invoice.objects.filter(work_order=obj).exclude(status='proforma').order_by('-created_at').first()
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
         if obj.vehicle:
             return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} - {obj.vehicle.license_plate}"
         return "N/A"
+
+    @extend_schema_field(serializers.DictField())
+    def get_estimate_summary(self, obj):
+        estimate = self._get_estimate(obj)
+        if not estimate:
+            return None
+
+        return {
+            'id': estimate.id,
+            'estimate_number': estimate.estimate_number,
+            'status': estimate.status,
+            'total': str(estimate.total),
+            'reference_number': estimate.reference_number,
+            'estimate_date': estimate.estimate_date.isoformat() if estimate.estimate_date else None,
+            'approved_date': estimate.approved_date.isoformat() if estimate.approved_date else None,
+            'created_at': estimate.created_at.isoformat() if estimate.created_at else None,
+        }
+
+    @extend_schema_field(serializers.DictField())
+    def get_invoice_summary(self, obj):
+        invoice = self._get_invoice(obj)
+        if not invoice:
+            return None
+
+        return {
+            'id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'status': invoice.status,
+            'total': str(invoice.total),
+            'amount_paid': str(invoice.amount_paid),
+            'amount_due': str(invoice.amount_due),
+            'invoice_date': invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+            'paid_at': invoice.paid_at.isoformat() if invoice.paid_at else None,
+            'created_at': invoice.created_at.isoformat() if invoice.created_at else None,
+        }
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_primary_technician_name(self, obj):
         if obj.primary_technician:
             return f"{obj.primary_technician.first_name} {obj.primary_technician.last_name}"
+        return None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_service_coordinator_name(self, obj):
+        if obj.service_coordinator:
+            return f"{obj.service_coordinator.first_name} {obj.service_coordinator.last_name}".strip()
         return None
     
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
@@ -707,9 +798,11 @@ class WorkOrderPartCreateSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'work_order', 'task',
+            'inventory_part',
             'part_number', 'part_name', 'description',
             'quantity', 'unit_cost', 'markup_percentage',
             'status', 'warranty_months', 'warranty_notes',
+            'resolution_notes',
             'requisition_number', 'requested_by'
         ]
     
@@ -718,7 +811,18 @@ class WorkOrderPartCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.user:
             validated_data['requested_by'] = request.user
-            
+
+        inventory_part = validated_data.get('inventory_part')
+        if inventory_part:
+            if not validated_data.get('part_number'):
+                validated_data['part_number'] = inventory_part.part_number
+            if not validated_data.get('part_name'):
+                validated_data['part_name'] = inventory_part.name
+            if not validated_data.get('description'):
+                validated_data['description'] = inventory_part.description or ''
+            if not validated_data.get('unit_cost'):
+                validated_data['unit_cost'] = inventory_part.cost_price or Decimal('0')
+
         return super().create(validated_data)
 
     def validate_quantity(self, value):

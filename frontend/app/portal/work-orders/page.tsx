@@ -126,14 +126,7 @@ export default function MyWorkOrdersPage() {
                         <Card key={wo.id} className="overflow-hidden transition-all hover:shadow-md">
                             <CardContent className="p-0">
                                 <div className="flex flex-col md:flex-row">
-                                // Left Highlight Bar based on status
-                                    <div className={`w-full md:w-2 h-2 md:h-auto ${wo.status === 'completed' || wo.status === 'closed' ? 'bg-green-500' :
-                                        wo.status === 'in_progress' ? 'bg-blue-500' :
-                                            wo.status === 'pending_approval' ? 'bg-yellow-500' :
-                                                'bg-gray-300'
-                                        }`} />
-
-                                    <div className="flex-1 p-6">
+                                    <div className="flex-1 p-4">
                                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                             <div className="space-y-3">
                                                 <div className="flex items-center space-x-3">

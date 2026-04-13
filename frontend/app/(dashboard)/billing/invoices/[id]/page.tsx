@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { billingApi } from "@/lib/api/billing";
+import { billingApi, Invoice, InvoiceLineItem, Payment } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ import { useBranchStore } from "@/store/branchStore";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 import { useAuthStore } from "@/store/authStore";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 import { Undo2, Database } from "lucide-react";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 
@@ -40,6 +41,7 @@ export default function InvoiceDetailPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuthStore();
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const invoiceId = parseInt(params.id as string);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -49,10 +51,8 @@ export default function InvoiceDetailPage() {
     }
   }, [searchParams]);
 
-  const [selectedPaymentForRefund, setSelectedPaymentForRefund] = useState<any | null>(null);
-  // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const [selectedPaymentForAllocation, setSelectedPaymentForAllocation] = useState<any | null>(null);
-  const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [selectedPaymentForRefund, setSelectedPaymentForRefund] = useState<Payment | null>(null);
+  const [selectedPaymentForAllocation, setSelectedPaymentForAllocation] = useState<Payment | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
@@ -75,7 +75,7 @@ export default function InvoiceDetailPage() {
       });
       // Invalidate query to refresh UI
       queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
-    } catch (err) {
+    } catch {
       toast({
         title: "Sync Failed",
         description: "Failed to trigger QuickBooks synchronization.",
@@ -95,24 +95,28 @@ export default function InvoiceDetailPage() {
     enabled: isValidId,
   });
 
-  // Update local status when invoice data changes
-  useEffect(() => {
-    if (invoice?.status) {
-      setLocalStatus(invoice.status);
+  const isAdminUser =
+    user?.role === "admin" ||
+    user?.role === "super-admin" ||
+    Boolean((user as { is_superuser?: boolean } | null)?.is_superuser);
+  const canEditInvoice = isAdminUser || hasPermission("edit_invoices");
+  const canSendInvoice = isAdminUser || hasAnyPermission(["edit_invoices", "send_notifications"]);
+  const canConvertProforma = isAdminUser || hasPermission("create_invoices");
+  const canRecordPayment = isAdminUser || hasAnyPermission(["create_payments", "process_payments", "manage_billing"]);
+  const canManagePaymentAdjustments =
+    isAdminUser || hasAnyPermission(["process_payments", "refund_payments", "manage_billing"]);
+  const currentStatus = invoice?.status ?? null;
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (typeof error === "object" && error && "response" in error) {
+      const response = (error as { response?: { data?: { error?: string; detail?: string } } }).response;
+      return response?.data?.error || response?.data?.detail || fallback;
     }
-  }, [invoice?.status]);
+    return fallback;
+  };
 
   const { data: payments } = useQuery({
     queryKey: ["payments", invoiceId],
     queryFn: () => billingApi.payments.list({ invoice: invoiceId }),
-    enabled: !!invoice,
-  });
-
-  // Get all payment allocations for this invoice to show allocation history
-
-  const { data: invoiceAllocations } = useQuery({
-    queryKey: ["payment-allocations", "invoice", invoiceId],
-    queryFn: () => billingApi.paymentAllocations.list({ invoice: invoiceId }),
     enabled: !!invoice,
   });
 
@@ -129,11 +133,9 @@ export default function InvoiceDetailPage() {
 
       // Optimistically update
 
-      queryClient.setQueryData(["invoice", invoiceId], (old: any) => ({
-        ...old,
-        status: newStatus,
-      }));
-      setLocalStatus(newStatus);
+      queryClient.setQueryData<Invoice | undefined>(["invoice", invoiceId], (old) =>
+        old ? { ...old, status: newStatus } : old
+      );
 
       return { previousInvoice };
     },
@@ -141,8 +143,6 @@ export default function InvoiceDetailPage() {
       // Rollback on error
       if (context?.previousInvoice) {
         queryClient.setQueryData(["invoice", invoiceId], context.previousInvoice);
-
-        setLocalStatus((context.previousInvoice as any)?.status || invoice?.status || null);
       }
     },
     onSuccess: () => {
@@ -177,10 +177,10 @@ export default function InvoiceDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to convert proforma. Please try again.",
+        description: getApiErrorMessage(error, "Failed to convert proforma. Please try again."),
         variant: "destructive",
       });
     },
@@ -203,16 +203,16 @@ export default function InvoiceDetailPage() {
       setMessageSubject("");
     },
 
-    onError: (error: any, variables) => {
+    onError: (error: unknown, variables) => {
       toast({
         title: variables.method === "email" ? "Email Failed" : "SMS Failed",
-        description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
+        description: getApiErrorMessage(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
         variant: "destructive"
       });
     }
   });
 
-  const fetchSuggestion = async (method: "sms" | "email") => {
+  const fetchSuggestion = useCallback(async (method: "sms" | "email") => {
     setIsFetchingSuggestion(true);
     try {
       const suggestion = await billingApi.invoices.getSuggestedMessage(invoiceId, method);
@@ -230,18 +230,18 @@ export default function InvoiceDetailPage() {
     } finally {
       setIsFetchingSuggestion(false);
     }
-  };
+  }, [invoiceId, toast]);
 
   useEffect(() => {
     if (isMessageDialogOpen && !messageBody.trim() && !isFetchingSuggestion) {
       fetchSuggestion(communicationMethod);
     }
-  }, [isMessageDialogOpen, communicationMethod]);
+  }, [communicationMethod, fetchSuggestion, isFetchingSuggestion, isMessageDialogOpen, messageBody]);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
-    if (newStatus && newStatus !== localStatus) {
+    if (newStatus && newStatus !== currentStatus) {
       statusChangeMutation.mutate(newStatus);
     }
   };
@@ -329,6 +329,10 @@ export default function InvoiceDetailPage() {
     taxBreakdown.getfundAmount > 0 ||
     taxBreakdown.hrlAmount > 0 ||
     taxBreakdown.vatAmount > 0;
+  const hasEstimateLink = Boolean(invoice.estimate && invoice.estimate_number);
+  const hasWorkOrderLink = Boolean(invoice.work_order && invoice.work_order_number);
+  const balanceDue = parseFloat(invoice.balance_due || "0");
+  const amountPaid = parseFloat(invoice.amount_paid || "0");
 
   return (
     <>
@@ -352,9 +356,25 @@ export default function InvoiceDetailPage() {
                 <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground bg-muted/50 border-border text-foreground">
                   Invoice #{invoice.invoice_number}
                 </span>
-                <Badge className={cn("capitalize px-3 py-1", getStatusVariant(localStatus || invoice.status))}>
-                  {localStatus || invoice.status}
+                <Badge className={cn("capitalize px-3 py-1", getStatusVariant(currentStatus || invoice.status))}>
+                  {currentStatus || invoice.status}
                 </Badge>
+                {hasEstimateLink && (
+                  <Link href={`/billing/estimates/${typeof invoice.estimate === 'object' ? invoice.estimate.id : invoice.estimate}`}>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted transition-colors">
+                      <FileCheck className="h-3 w-3" />
+                      Quote #{invoice.estimate_number}
+                    </span>
+                  </Link>
+                )}
+                {hasWorkOrderLink && (
+                  <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`}>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors">
+                      <Wrench className="h-3 w-3" />
+                      Work Order #{invoice.work_order_number}
+                    </span>
+                  </Link>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 {invoice.customer_name || "Customer"}
@@ -374,7 +394,7 @@ export default function InvoiceDetailPage() {
               <Download className="w-4 h-4 mr-2" />
               {isDownloading ? "Downloading..." : "PDF"}
             </Button>
-            {invoice.status !== 'paid' && parseFloat(invoice.balance_due || "0") > 0 && (
+            {canRecordPayment && invoice.status !== 'paid' && parseFloat(invoice.balance_due || "0") > 0 && (
               <Button size="sm" onClick={() => setShowPaymentDialog(true)}>
                 <DollarSign className="w-4 h-4 mr-2" />
                 Record Payment
@@ -397,21 +417,23 @@ export default function InvoiceDetailPage() {
                   />
                   <div className="absolute right-0 mt-2 w-56 bg-card rounded-md shadow-lg border border-border z-20">
                     <div className="py-1">
-                      <button
-                        onClick={() => {
-                          if (confirm("Send this invoice to the customer via email?")) {
-                            sendEmailMutation.mutate();
-                          }
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={sendEmailMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Mail className="w-4 h-4" />
-                        {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
-                      </button>
+                      {canSendInvoice && (
+                        <button
+                          onClick={() => {
+                            if (confirm("Send this invoice to the customer via email?")) {
+                              sendEmailMutation.mutate();
+                            }
+                            setShowActionsMenu(false);
+                          }}
+                          disabled={sendEmailMutation.isPending}
+                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Mail className="w-4 h-4" />
+                          {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                        </button>
+                      )}
                       {/* // Only show Convert to Invoice for proforma invoices */}
-                      {invoice.status === 'proforma' && (
+                      {canConvertProforma && invoice.status === 'proforma' && (
                         <>
                           <div className="border-t border-border my-1" />
                           <button
@@ -429,27 +451,35 @@ export default function InvoiceDetailPage() {
                           </button>
                         </>
                       )}
-                      <div className="border-t border-border my-1" />
-                      <Link href={`/billing/invoices/${invoiceId}/edit`}>
-                        <button
-                          onClick={() => setShowActionsMenu(false)}
-                          className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
-                      </Link>
-                      <div className="border-t border-border my-1" />
-                      <button
-                        onClick={() => {
-                          setIsMessageDialogOpen(true);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        Message Customer
-                      </button>
+                      {canEditInvoice && (
+                        <>
+                          <div className="border-t border-border my-1" />
+                          <Link href={`/billing/invoices/${invoiceId}/edit`}>
+                            <button
+                              onClick={() => setShowActionsMenu(false)}
+                              className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </button>
+                          </Link>
+                        </>
+                      )}
+                      {canSendInvoice && (
+                        <>
+                          <div className="border-t border-border my-1" />
+                          <button
+                            onClick={() => {
+                              setIsMessageDialogOpen(true);
+                              setShowActionsMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted flex items-center gap-2"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Message Customer
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </>
@@ -481,6 +511,37 @@ export default function InvoiceDetailPage() {
           </TabsList>
 
           <TabsContent value="invoice" className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Card className="border shadow-sm">
+                <CardContent className="p-5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Commercial Trail</p>
+                  <p className="mt-2 text-sm font-semibold text-foreground">
+                    {hasEstimateLink ? `Quote ${invoice.estimate_number}` : "Direct invoice"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {hasWorkOrderLink ? `Linked to ${invoice.work_order_number}` : "No work order linked"}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Collected</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">{formatCurrency(amountPaid)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {balanceDue > 0 ? `${formatCurrency(balanceDue)} still due` : "Fully settled"}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm">
+                <CardContent className="p-5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Accounting</p>
+                  <p className="mt-2 text-sm font-semibold text-foreground capitalize">{currentStatus || invoice.status}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {invoice.qbo_sync_status ? `QuickBooks ${invoice.qbo_sync_status}` : "No external sync status"}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* 1. Header Information (Bill To, Dates, etc.) - Full Width */}
             <Card>
@@ -534,12 +595,20 @@ export default function InvoiceDetailPage() {
                           </Link>
                         </div>
                       )}
+                      {invoice.estimate_number && invoice.estimate && (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-muted-foreground">Source Quote</span>
+                          <Link href={`/billing/estimates/${typeof invoice.estimate === 'object' ? invoice.estimate.id : invoice.estimate}`} className="text-sm font-medium text-primary hover:underline">
+                            #{invoice.estimate_number}
+                          </Link>
+                        </div>
+                      )}
 
                       {invoice.status && (
                         <div className="flex flex-col mt-2">
                           <span className="text-sm text-muted-foreground mb-1">Status</span>
-                          <Badge className={cn("w-fit capitalize", getStatusVariant(localStatus || invoice.status))}>
-                            {localStatus || invoice.status}
+                          <Badge className={cn("w-fit capitalize", getStatusVariant(currentStatus || invoice.status))}>
+                            {currentStatus || invoice.status}
                           </Badge>
                         </div>
                       )}
@@ -614,7 +683,7 @@ export default function InvoiceDetailPage() {
                     <TableBody>
                       {invoice.line_items && invoice.line_items.length > 0 ? (
 
-                        invoice.line_items.map((item: any) => (
+                        invoice.line_items.map((item: InvoiceLineItem) => (
                           <TableRow key={item.id}>
                             <TableCell className="align-top py-3">
                               <div className="font-medium text-foreground">{item.description}</div>
@@ -741,7 +810,7 @@ export default function InvoiceDetailPage() {
                 <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
                 <p className="text-sm text-muted-foreground">Manage payments and allocations</p>
               </div>
-              {(localStatus || invoice.status) !== 'paid' && parseFloat(String(invoice.balance_due || 0)) > 0 && invoice.status !== 'void' && (
+              {canRecordPayment && (currentStatus || invoice.status) !== 'paid' && parseFloat(String(invoice.balance_due || 0)) > 0 && invoice.status !== 'void' && (
                 <Button onClick={() => setShowPaymentDialog(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Record New Payment
@@ -754,7 +823,7 @@ export default function InvoiceDetailPage() {
                 {payments && payments.length > 0 ? (
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
 
-                    {payments.map((payment: any) => (
+                    {payments.map((payment: Payment) => (
                       <div key={payment.id} className="p-6 hover:bg-muted/50 transition-colors">
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
                           <div className="flex items-center gap-4">
@@ -799,15 +868,17 @@ export default function InvoiceDetailPage() {
                                 >
                                   <Printer className="w-4 h-4 mr-2" /> Receipt
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10 rounded-none border-r"
-                                  onClick={() => setSelectedPaymentForAllocation(payment)}
-                                >
-                                  <DollarSign className="w-4 h-4 mr-2" /> Allocate
-                                </Button>
-                                {(parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")) > 0 && (
+                                {canManagePaymentAdjustments && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10 rounded-none border-r"
+                                    onClick={() => setSelectedPaymentForAllocation(payment)}
+                                  >
+                                    <DollarSign className="w-4 h-4 mr-2" /> Allocate
+                                  </Button>
+                                )}
+                                {canManagePaymentAdjustments && (parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")) > 0 && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -822,8 +893,7 @@ export default function InvoiceDetailPage() {
                           </div>
                         </div>
 
-                      // Allocation History Component
-                        < div className="pl-0 md:pl-16 mt-4" >
+                        <div className="pl-0 md:pl-16 mt-4">
                           <AllocationHistory paymentId={payment.id} />
                         </div>
                       </div>
@@ -836,9 +906,11 @@ export default function InvoiceDetailPage() {
                     </div>
                     <h3 className="text-xl font-semibold text-foreground mb-2">No payments recorded</h3>
                     <p className="text-muted-foreground mb-8 max-w-sm mx-auto">This invoice has not received any payments yet. Record a payment to settle the balance.</p>
-                    <Button size="lg" onClick={() => setShowPaymentDialog(true)}>
-                      <DollarSign className="w-5 h-5 mr-2" /> Record First Payment
-                    </Button>
+                    {canRecordPayment && (
+                      <Button size="lg" onClick={() => setShowPaymentDialog(true)}>
+                        <DollarSign className="w-5 h-5 mr-2" /> Record First Payment
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -1085,4 +1157,3 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     />
   );
 }
-

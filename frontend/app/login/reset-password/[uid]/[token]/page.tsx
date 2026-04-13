@@ -126,7 +126,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 {/* Right side: Reset Password Form */}
-                <div className="flex items-center justify-center p-4 lg:p-8 bg-muted/50">
+                <div className="flex items-center justify-center p-4 lg:p-8 bg-background">
                     <div className="w-full max-w-sm space-y-6 animate-in fade-in duration-500">
                         <button
                             onClick={() => router.push("/login")}
@@ -143,7 +143,7 @@ export default function ResetPasswordPage() {
                             </p>
                         </div>
 
-                        <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-lg rounded-2xl overflow-hidden p-5 lg:p-8">
+                        <Card className="border border-border shadow-sm bg-card rounded-lg p-5 lg:p-8">
                             {!isSubmitted ? (
                                 <div className="space-y-4 lg:space-y-6">
                                     <div>

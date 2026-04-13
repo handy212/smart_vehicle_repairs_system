@@ -176,8 +176,7 @@ export default function CustomersPage() {
 
   const customers = customerData?.results || [];
   const totalCount = customerData?.count || 0;
-  // Use a safer page size (check if the API provides it, otherwise default to 10)
-  const pageSize = 10;
+  const pageSize = 20;
   const totalPages = Math.ceil(totalCount / pageSize);
 
   useEffect(() => {
@@ -405,7 +404,7 @@ export default function CustomersPage() {
             variant="outline"
             size="icon"
             className="h-8 w-8 disabled:opacity-30"
-            disabled={page >= totalPages}
+            disabled={!customerData?.next}
             onClick={() => setPage(p => p + 1)}
           >
             &gt;

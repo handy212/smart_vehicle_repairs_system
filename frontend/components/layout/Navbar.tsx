@@ -18,7 +18,6 @@ import Link from "next/link";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { branchesApi, adminApi, type Branch, type SystemSetting } from "@/lib/api/admin";
 import { useBranchStore } from "@/store/branchStore";
 import { setSystemThemeMode } from "@/lib/hooks/useTheme";
@@ -220,9 +219,6 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 flex-shrink-0">
-            {/* Theme Toggle */}
-            <ThemeToggle />
-
             {/* Notifications */}
             <NotificationDropdown />
 

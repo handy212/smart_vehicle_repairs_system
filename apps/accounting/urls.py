@@ -20,6 +20,7 @@ urlpatterns = [
     path('reports/cash-flow/', views.CashFlowView.as_view(), name='cash-flow'),
     path('reports/tax/', views.TaxReportView.as_view(), name='tax-report'),
     path('reports/job-profitability/', views.JobProfitabilityView.as_view(), name='job-profitability'),
+    path('reports/expense-breakdown/', views.ExpenseBreakdownView.as_view(), name='expense-breakdown'),
     path('reports/budget-vs-actual/', views.BudgetVsActualView.as_view(), name='budget-vs-actual'),
     path('reports/management-dashboard/', views.ManagementDashboardView.as_view(), name='management-dashboard'),
     path('analytics/dashboard/', views.AnalyticsDashboardView.as_view(), name='analytics-dashboard'),

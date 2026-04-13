@@ -20,6 +20,7 @@ import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 import Script from "next/script";
+import { useTheme } from "@/lib/hooks/useTheme";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -38,6 +39,7 @@ const DEFAULT_HERO_IMAGE = "/images/login-hero.png";
 
 export default function LoginPage() {
   const router = useRouter();
+  useTheme(); // Ensure stored theme (perfex/classic) is applied to document
   const { setUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -307,7 +309,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right side: Login Form */}
-        <div className="flex items-start justify-center bg-muted/50 p-4 pt-10 lg:items-center lg:p-8">
+        <div className="flex items-start justify-center bg-background p-4 pt-10 lg:items-center lg:p-8">
           <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-center lg:text-left">
               <h2 className="text-2xl lg:text-3xl font-bold leading-tight text-foreground text-balance">{branding.site_name}</h2>
@@ -316,7 +318,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <Card className="border-0 shadow-xl bg-card rounded-2xl overflow-hidden">
+            <Card className="border border-border shadow-sm bg-card rounded-lg overflow-hidden">
               <CardContent className="p-6 lg:p-8">
                 {regData ? (
                   <CompleteRegistrationForm

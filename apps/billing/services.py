@@ -130,15 +130,40 @@ class BillingService:
 class PDFService:
     @staticmethod
     def generate_invoice_pdf(invoice):
-        """Generate PDF for an invoice."""
-        return b"PDF Content Placeholder"
+        """Generate PDF bytes for an invoice using WeasyPrint (ReportLab fallback)."""
+        from apps.core.services.print_service import DocumentPrinter, _get_watermark
+        printer = DocumentPrinter('invoice')
+        context = {
+            'document': invoice,
+            'branch': invoice.branch,
+            'watermark': _get_watermark(invoice.status),
+        }
+        response = printer.generate_pdf(context, filename=f"invoice_{invoice.invoice_number}.pdf")
+        return response.content
 
     @staticmethod
     def generate_estimate_pdf(estimate):
-        """Generate PDF for an estimate."""
-        return b"PDF Content Placeholder"
+        """Generate PDF bytes for an estimate using WeasyPrint (ReportLab fallback)."""
+        from apps.core.services.print_service import DocumentPrinter, _get_watermark
+        printer = DocumentPrinter('estimate')
+        context = {
+            'document': estimate,
+            'branch': estimate.branch,
+            'watermark': _get_watermark(estimate.status),
+        }
+        response = printer.generate_pdf(context, filename=f"estimate_{estimate.estimate_number}.pdf")
+        return response.content
 
     @staticmethod
     def generate_credit_note_pdf(credit_note):
-        """Generate PDF for a credit note."""
-        return b"PDF Content Placeholder"
+        """Generate PDF bytes for a credit note using WeasyPrint (ReportLab fallback)."""
+        from apps.core.services.print_service import DocumentPrinter, _get_watermark
+        printer = DocumentPrinter('credit_note')
+        context = {
+            'document': credit_note,
+            'branch': credit_note.branch,
+            'items': credit_note.line_items.all(),
+            'watermark': _get_watermark(credit_note.status),
+        }
+        response = printer.generate_pdf(context, filename=f"credit_note_{credit_note.credit_note_number}.pdf")
+        return response.content

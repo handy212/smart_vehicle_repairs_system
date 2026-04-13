@@ -207,6 +207,7 @@ export default function NewWorkOrderPage() {
   // Unapproved recommendations state
   const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
   const [acknowledgedUnapproved, setAcknowledgedUnapproved] = useState(false);
+  const [hasPromptedUnapproved, setHasPromptedUnapproved] = useState(false);
 
   // Service progression state
   const [suggestedService, setSuggestedService] = useState<{
@@ -357,6 +358,8 @@ export default function NewWorkOrderPage() {
     }
     // Reset acknowledgment when vehicle changes
     setAcknowledgedUnapproved(false);
+    setHasPromptedUnapproved(false);
+    setShowUnapprovedRecommendationsDialog(false);
     setProgressionWarning(null);
   }, [vehicle]);
 
@@ -366,6 +369,22 @@ export default function NewWorkOrderPage() {
     queryFn: () => workordersApi.checkUnapprovedRecommendations(vehicle!),
     enabled: !!vehicle && !isSubmitting,
   });
+
+  useEffect(() => {
+    if (!vehicle || acknowledgedUnapproved || hasPromptedUnapproved) {
+      return;
+    }
+
+    if ((unapprovedRecommendationsData?.count ?? 0) > 0) {
+      setShowUnapprovedRecommendationsDialog(true);
+      setHasPromptedUnapproved(true);
+    }
+  }, [
+    vehicle,
+    acknowledgedUnapproved,
+    hasPromptedUnapproved,
+    unapprovedRecommendationsData?.count,
+  ]);
 
   useEffect(() => {
     if (recentWorkOrdersData?.results) {

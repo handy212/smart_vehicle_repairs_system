@@ -8,6 +8,36 @@ logger = logging.getLogger(__name__)
 
 class InventoryService:
     """Service for complex inventory calculations and business logic"""
+
+    @staticmethod
+    def reserve_parts_for_work_order(work_order, user=None):
+        """
+        Legacy work-order hook.
+
+        Part allocation is handled explicitly through the work-order parts
+        workflow, so this transition hook is intentionally non-destructive.
+        It exists to keep status transitions from erroring while preserving the
+        explicit stores/workshop handoff.
+        """
+        logger.info(
+            "Skipping automatic part reservation for WO %s; explicit allocation flow owns reservation.",
+            getattr(work_order, 'work_order_number', work_order),
+        )
+        return 0
+
+    @staticmethod
+    def consume_parts_for_work_order(work_order, user=None):
+        """
+        Legacy work-order hook.
+
+        Installed parts are already deducted through explicit allocation and
+        installation workflow actions, so completion does not auto-consume stock.
+        """
+        logger.info(
+            "Skipping automatic part consumption for WO %s; explicit installation flow owns consumption.",
+            getattr(work_order, 'work_order_number', work_order),
+        )
+        return 0
     
     @staticmethod
     def get_stock_queryset(queryset, branch=None):
