@@ -179,6 +179,7 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     # You can override these via env vars if needed.
     'anon': os.getenv('DRF_THROTTLE_ANON', '1000/hour'),
     'user': os.getenv('DRF_THROTTLE_USER', '50000/hour'),
+    'login': os.getenv('DRF_THROTTLE_LOGIN', '10/minute'),
 }
 
 # Disable debug toolbar and extensions in production
