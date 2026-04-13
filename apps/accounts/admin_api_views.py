@@ -71,6 +71,8 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             # Also ensure tax settings if tax category
             if category == 'tax':
                 SystemSettings.ensure_tax_settings()
+            if category == 'integration':
+                SystemSettings.ensure_integration_settings()
         return super().list(request, *args, **kwargs)
     
     def perform_create(self, serializer):
@@ -116,7 +118,9 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             # Also ensure tax settings if tax category
             if category == 'tax':
                 SystemSettings.ensure_tax_settings()
-        
+            if category == 'integration':
+                SystemSettings.ensure_integration_settings()
+
         queryset = self.get_queryset()
         
         if category:
