@@ -24,6 +24,7 @@ export interface WorkOrder {
   requires_approval?: boolean;
   approved_by_customer?: boolean;
   approved_at?: string;
+  approval_method?: string;
   approval_requested_at?: string;
   diagnosis_completed_at?: string;
   diagnosis_by?: number;
@@ -59,6 +60,7 @@ export interface WorkOrder {
   quality_check_required?: boolean;
   quality_check_completed?: boolean;
   quality_check_passed?: boolean;
+  quality_check_at?: string;
   odometer_in?: number;
   odometer_out?: number;
   is_overdue?: boolean;

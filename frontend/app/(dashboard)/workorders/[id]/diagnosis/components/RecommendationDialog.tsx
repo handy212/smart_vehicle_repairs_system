@@ -94,7 +94,7 @@ function RecommendationDialogForm({
           return { ...part, [field]: value, part_id: undefined };
         }
 
-        return { ...part, [field]: value };
+        return { ...part, [field]: value } as unknown as PartLine;
       }),
     }));
   };

@@ -396,7 +396,7 @@ function HRDashboardContent() {
                             <div className="flex items-center gap-2">
                                 <CardTitle className="text-sm font-semibold">Expiring Compliance Docs</CardTitle>
                                 {expiringCount > 0 && (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    <Badge variant="danger" className="text-[10px] px-1.5 py-0">
                                         {expiringCount}
                                     </Badge>
                                 )}

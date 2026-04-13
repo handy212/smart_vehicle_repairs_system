@@ -111,6 +111,7 @@ export interface Payment {
   reference_number?: string;
   check_number?: string;
   notes?: string;
+  refund_amount?: string;
   created_at: string;
 }
 

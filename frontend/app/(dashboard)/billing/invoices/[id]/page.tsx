@@ -863,7 +863,7 @@ export default function InvoiceDetailPage() {
                                   onClick={() => downloadPDF({
                                     documentType: 'receipt',
                                     documentId: payment.id,
-                                    documentNumber: payment.payment_number
+                                    documentNumber: payment.payment_number ?? ""
                                   })}
                                 >
                                   <Printer className="w-4 h-4 mr-2" /> Receipt
@@ -994,7 +994,7 @@ export default function InvoiceDetailPage() {
           <PaymentAllocationModal
             paymentId={selectedPaymentForAllocation.id}
             paymentAmount={selectedPaymentForAllocation.amount}
-            customerId={invoice?.customer || selectedPaymentForAllocation.customer}
+            customerId={typeof invoice?.customer === 'object' ? invoice.customer.id : (invoice?.customer || selectedPaymentForAllocation.customer || 0)}
             open={!!selectedPaymentForAllocation}
             onClose={() => setSelectedPaymentForAllocation(null)}
           />
