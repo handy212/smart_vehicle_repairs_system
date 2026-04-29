@@ -57,9 +57,6 @@ const CustomerRow = memo(function CustomerRow({
             <span className="text-sm font-bold text-foreground leading-none mb-1 group-hover:text-primary transition-colors">
               {displayName}
             </span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-              {customer.customer_number || `CID-${customer.id.toString().padStart(5, '0')}`}
-            </span>
           </div>
         </div>
       </TableCell>

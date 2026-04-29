@@ -107,6 +107,7 @@ urlpatterns = [
     path('api/portal/', include(('apps.portal.urls', 'api_portal'))),  # Customer API Portal
     path('api/feedback/', include(('apps.feedback.urls', 'api_feedback'))),  # Feedback API
     path('api/chat/', include('apps.chat.urls')),  # Chat API
+    path('api/workflows/', include(('apps.workflows.urls', 'api_workflows'))),  # Workflow Builder API
     
     # Frontend app routes (namespaced)
     path('branches/', include('apps.branches.frontend_urls', namespace='branches')),
@@ -148,9 +149,6 @@ urlpatterns = [
     
     # Phase 14: Admin & Settings - NEW
     path('admin-panel/', include('apps.accounts.admin_urls', namespace='admin_panel')),
-    
-    # Notifications API (backend)
-    path('inbox/notifications/', include('notifications.urls', namespace='inbox_notifications')),
     
     # Django Ledger - Accounting System
     # path('ledger/', include('django_ledger.urls', namespace='django_ledger')),  # Removed for accounting module archival

@@ -147,9 +147,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
                 <span className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-success animate-pulse" : "bg-destructive")} />
                 {isConnected ? "Active Now" : "Reconnecting..."}
-                <span className="text-slate-300 dark:text-slate-700 mx-1 font-normal opacity-50">/</span>
-                <Zap className="w-3 h-3 text-warning fill-warning" />
-                SVR Optimized
+                {/* <span className="text-slate-300 dark:text-slate-700 mx-1 font-normal opacity-50">/</span>
+                <Zap className="w-3 h-3 text-warning fill-warning" /> */}
               </p>
             </div>
           </div>

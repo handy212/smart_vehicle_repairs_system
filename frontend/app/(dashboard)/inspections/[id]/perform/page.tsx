@@ -629,8 +629,8 @@ export default function PerformInspectionPage() {
 
       {/* Completion Dialog with Signature */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="max-w-lg p-0 sm:max-w-lg">
-          <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[calc(100dvh-1rem)] p-0 sm:w-full sm:max-h-[calc(100dvh-2rem)]">
+          <DialogHeader className="flex-shrink-0 px-4 pt-4 pb-3 sm:px-5 sm:pt-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-primary" />
@@ -651,7 +651,7 @@ export default function PerformInspectionPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-5 space-y-3">
             {/* Inspection Summary - Compact */}
             <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-md">
               <div>
@@ -686,6 +686,8 @@ export default function PerformInspectionPage() {
                     onChange={setTechnicianSignature}
                     label=""
                     required
+                    height={140}
+                    showPreview={false}
                   />
                 </div>
                 {!technicianSignature && (
@@ -710,42 +712,42 @@ export default function PerformInspectionPage() {
                 </div>
               </div>
             )}
-
-            {/* Action Buttons */}
-            <DialogFooter className="gap-2 sm:gap-3 pt-4 border-t">
-              <Button
-                variant="outline"
-                className="flex-1 sm:flex-none"
-                onClick={() => {
-                  setShowCompleteDialog(false);
-                  setTechnicianSignature(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 sm:flex-none"
-                onClick={handleCompleteWithSignature}
-                disabled={
-                  (templateData?.requires_technician_signature && !technicianSignature) ||
-                  hasUncheckedCritical ||
-                  completeMutation.isPending
-                }
-              >
-                {completeMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                    Finalizing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    {templateData?.requires_technician_signature ? "Sign & Complete" : "Complete"}
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
           </div>
+
+          {/* Action Buttons */}
+          <DialogFooter className="flex-row flex-shrink-0 gap-2 border-t bg-card px-4 py-3 sm:px-5 sm:py-4 sm:gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              onClick={() => {
+                setShowCompleteDialog(false);
+                setTechnicianSignature(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 sm:flex-none"
+              onClick={handleCompleteWithSignature}
+              disabled={
+                (templateData?.requires_technician_signature && !technicianSignature) ||
+                hasUncheckedCritical ||
+                completeMutation.isPending
+              }
+            >
+              {completeMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  Finalizing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {templateData?.requires_technician_signature ? "Sign & Complete" : "Complete"}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

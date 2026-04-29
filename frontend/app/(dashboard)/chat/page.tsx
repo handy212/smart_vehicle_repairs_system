@@ -43,10 +43,6 @@ function ChatContent() {
       {/* Page Header — hidden on mobile when chat is open */}
       <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 md:px-0 mb-6 ${showChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="space-y-0.5">
-          <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-[10px]">
-            <Zap className="h-3 w-3 fill-primary" />
-            <span>Smart Communication Service</span>
-          </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
             Service Chat
           </h1>

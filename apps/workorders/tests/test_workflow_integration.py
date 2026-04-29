@@ -159,6 +159,23 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         wo_id = response.data['id']
         self.assertEqual(response.data['status'], 'draft')
+        work_order = WorkOrder.objects.get(pk=wo_id)
+        inspection_template = InspectionTemplate.objects.create(
+            name='Happy Path Intake Template',
+            description='Template used for full workflow transition tests',
+            created_by=self.manager,
+        )
+        from apps.inspections.models import VehicleInspection
+
+        VehicleInspection.objects.create(
+            work_order=work_order,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            template=inspection_template,
+            performed_by=self.technician,
+            status='approved',
+            approved_by=self.manager,
+        )
         
         # 2. START INTAKE (Draft -> Intake -> Assigned)
         # Verify transition to Intake
@@ -176,9 +193,8 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.data['status'], 'diagnosis')
 
         # 4. PERFORM DIAGNOSIS (Add recommendations)
-        # Create a Diagnosis record manually (simulating Diagnosis app)
-        diagnosis = Diagnosis.objects.create(work_order_id=wo_id, technician=self.technician, customer_complaint="Found issues")
-        RepairRecommendation.objects.create(
+        diagnosis = Diagnosis.objects.get(work_order_id=wo_id)
+        recommendation = RepairRecommendation.objects.create(
             diagnosis=diagnosis,
             description="Replace Oil Filter",
             priority='high',
@@ -213,6 +229,11 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.data['status'], 'approved')
         self.assertTrue(response.data['approved_by_customer'])
 
+        # Stores must quote approved recommendations before they become repair tasks.
+        recommendation.refresh_from_db()
+        recommendation.request_quotation(requested_by=self.coordinator)
+        recommendation.mark_quoted(quoted_by=self.manager)
+
         # 7. START WORK (Approved -> In Progress)
         # Must assign technician first? 
         # The 'start_work' endpoint can auto-assign the requester if they are a tech.
@@ -244,7 +265,7 @@ class WorkOrderWorkflowTests(TestCase):
         tasks = ServiceTask.objects.filter(work_order_id=wo_id)
         for task in tasks:
             url_task = reverse('api_workorders:servicetask-detail', args=[task.id])
-            self.client.patch(url_task, {'status': 'completed'})
+            self.client.patch(url_task, {'status': 'completed', 'actual_hours': '0.50'})
 
         # 9. REQUEST QC (In Progress -> Quality Check)
         url_qc = reverse('api_workorders:workorder-request-quality-check', args=[wo_id])

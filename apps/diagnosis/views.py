@@ -329,6 +329,99 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
 
         return estimate, None
 
+    def _sync_recommendation_parts_to_work_order_requests(self, diagnosis, recommendations, user):
+        """
+        Create real WorkOrderPart requests as soon as stores receives a quote request.
+
+        The quotation queue is for pricing. The parts request queue is for the
+        physical stores workflow: source/order/receive/allocate before repairs start.
+        """
+        work_order = diagnosis.work_order
+        if not work_order:
+            return 0
+
+        WorkOrderPart = django_apps.get_model('workorders', 'WorkOrderPart')
+        InventoryPart = django_apps.get_model('inventory', 'Part')
+
+        synced_count = 0
+        for recommendation in recommendations:
+            marker = f"[DIAG-REC:{recommendation.id}]"
+            for part_data in recommendation.parts_needed or []:
+                if not isinstance(part_data, dict):
+                    continue
+
+                part_name = (part_data.get('part_name') or '').strip()
+                part_number = (part_data.get('part_number') or '').strip()
+                part_id = part_data.get('part_id') or part_data.get('inventory_part')
+                inventory_part = None
+
+                if part_id:
+                    inventory_part = InventoryPart.objects.filter(pk=part_id).first()
+                if inventory_part is None and part_number:
+                    inventory_part = InventoryPart.objects.filter(part_number__iexact=part_number).first()
+
+                if inventory_part:
+                    part_name = part_name or inventory_part.name
+                    part_number = part_number or inventory_part.part_number
+
+                if not part_name and not part_number:
+                    continue
+
+                try:
+                    quantity = Decimal(str(part_data.get('quantity') or '1'))
+                except Exception:
+                    quantity = Decimal('1')
+                if quantity <= 0:
+                    quantity = Decimal('1')
+
+                try:
+                    unit_cost = Decimal(str(part_data.get('unit_cost') or '0'))
+                except Exception:
+                    unit_cost = Decimal('0')
+                if inventory_part and unit_cost <= 0:
+                    unit_cost = inventory_part.cost_price or Decimal('0')
+
+                existing = WorkOrderPart.objects.filter(
+                    work_order=work_order,
+                    task__isnull=True,
+                    description__contains=marker,
+                )
+                if inventory_part:
+                    existing = existing.filter(inventory_part=inventory_part)
+                elif part_number:
+                    existing = existing.filter(part_number__iexact=part_number)
+                else:
+                    existing = existing.filter(part_name__iexact=part_name)
+
+                part_request = existing.first()
+                defaults = {
+                    'inventory_part': inventory_part,
+                    'part_name': part_name or part_number,
+                    'part_number': part_number,
+                    'quantity': quantity,
+                    'unit_cost': unit_cost,
+                    'requested_by': user,
+                    'description': f"Stores request from diagnosis recommendation {recommendation.id}. {marker}",
+                }
+
+                if part_request:
+                    for field, value in defaults.items():
+                        if value not in (None, '') or field in {'inventory_part', 'requested_by'}:
+                            setattr(part_request, field, value)
+                    if part_request.status == 'draft':
+                        part_request.status = 'pending'
+                    part_request.save()
+                else:
+                    WorkOrderPart.objects.create(
+                        work_order=work_order,
+                        task=None,
+                        status='pending',
+                        **defaults,
+                    )
+                synced_count += 1
+
+        return synced_count
+
     def get_object(self):
         """
         Return a clearer branch-context error for diagnosis detail routes.
@@ -498,6 +591,37 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 'status': work_order.status,
                 'requires_approval': work_order.requires_approval,
                 'diagnosis_completed_at': work_order.diagnosis_completed_at.isoformat() if work_order.diagnosis_completed_at else None,
+            }
+        })
+
+    @action(detail=True, methods=['post'])
+    def reopen(self, request, pk=None):
+        """Reopen a completed diagnosis for revision before customer approval."""
+        diagnosis = self.get_object()
+        reason = request.data.get('reason', '')
+
+        try:
+            diagnosis.reopen_for_revision(user=request.user, reason=reason)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        diagnosis.refresh_from_db()
+        work_order = diagnosis.work_order
+        work_order.refresh_from_db()
+
+        serializer = self.get_serializer(diagnosis)
+        return Response({
+            'message': 'Diagnosis reopened for revision',
+            'diagnosis': serializer.data,
+            'work_order': {
+                'id': work_order.id,
+                'status': work_order.status,
+                'requires_approval': work_order.requires_approval,
+                'diagnosis_completed_at': (
+                    work_order.diagnosis_completed_at.isoformat()
+                    if work_order.diagnosis_completed_at
+                    else None
+                ),
             }
         })
     
@@ -716,6 +840,12 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         if estimate_error:
             return Response({"error": estimate_error}, status=status.HTTP_400_BAD_REQUEST)
 
+        parts_synced = self._sync_recommendation_parts_to_work_order_requests(
+            diagnosis,
+            recommendations,
+            request.user,
+        )
+
         for recommendation in recommendations:
             recommendation.request_quotation(requested_by=request.user)
             if estimate is not None:
@@ -732,6 +862,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             'message': f'Submitted {recommendations.count()} recommendation(s) to stores for quotation',
             'quotation_estimate_id': getattr(estimate, 'id', None),
             'quotation_estimate_number': getattr(estimate, 'estimate_number', None),
+            'parts_synced': parts_synced,
             'recommendations': serializer.data,
         })
 
@@ -807,10 +938,6 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             "assign_to_technician": true  # Auto-assign to diagnosis technician
         }
         """
-        from apps.workorders.models import ServiceTask
-        from django.db import transaction
-        from django.db.models import Max
-        
         diagnosis = self.get_object()
         work_order = diagnosis.work_order
         
@@ -859,114 +986,43 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Mapping from recommendation_type to task_type
-        TYPE_MAPPING = {
-            'repair': 'repair',
-            'replace': 'replacement',
-            'service': 'maintenance',
-            'adjust': 'adjustment',
-            'clean': 'cleaning',
-            'inspect': 'inspection',
-        }
-        
-        created_tasks = []
-        errors = []
-        
         try:
-            with transaction.atomic():
-                # Get max sequence order for this work order
-                max_sequence = work_order.tasks.aggregate(
-                    max_seq=Max('sequence_order')
-                )['max_seq'] or 0
-                
-                # Sort recommendations by priority and order
-                recommendations_list = list(recommendations.order_by('priority', 'order', 'id'))
-                
-                # Group by priority to ensure proper ordering
-                current_sequence = max_sequence
-                
-                for rec in recommendations_list:
-                    try:
-                        # Skip if already converted
-                        if rec.converted_to_task_id:
-                            continue
-                        
-                        # Map recommendation type to task type
-                        task_type = TYPE_MAPPING.get(rec.recommendation_type, 'other')
-                        
-                        # Incremented sequence order for each task
-                        current_sequence += 1
-                        sequence_order = current_sequence
-                        
-                        # Defend against None or invalid values sent from UI with complete fallback
-                        est_labor_hours = rec.estimated_labor_hours or Decimal('0.00')
-                        est_labor_cost = rec.estimated_labor_cost or Decimal('0.00')
-                        
-                        # Calculate labor cost and rate with safe defaults (especially when hours = 0)
-                        labor_cost = Decimal('0.00')
-                        labor_rate = Decimal('75.00')  # Default rate
+            recommendation_ids_to_convert = list(recommendations.values_list('id', flat=True))
+            tasks_created, parts_linked = work_order.convert_recommendations_to_tasks(
+                user=request.user,
+                recommendation_ids=recommendation_ids_to_convert,
+                assign_to_technician=assign_to_technician,
+            )
 
-                        if est_labor_hours > Decimal('0.00'):
-                            if est_labor_cost > Decimal('0.00'):
-                                labor_cost = est_labor_cost
-                                labor_rate = est_labor_cost / est_labor_hours
-                            else:
-                                labor_cost = est_labor_hours * labor_rate
-                        elif est_labor_cost > Decimal('0.00'):
-                            # Edge case: Cost provided but no hours
-                            labor_cost = est_labor_cost
-                            # We can't determine a valid rate, leave as default but cost is fixed.
-                        
-                        # Create ServiceTask
-                        task = ServiceTask.objects.create(
-                            work_order=work_order,
-                            task_type=task_type,
-                            description=rec.description[:255],  # Ensure fits max_length
-                            detailed_notes=f"Converted from diagnosis recommendation. Priority: {rec.get_priority_display()}. Recommendation Type: {rec.get_recommendation_type_display()}.",
-                            status='pending',
-                            sequence_order=sequence_order,
-                            estimated_hours=est_labor_hours,
-                            labor_rate=labor_rate,
-                            labor_cost=labor_cost,
-                            assigned_to=diagnosis.technician if (assign_to_technician and diagnosis.technician) else None,
-                            is_workflow_task=True,
-                        )
-                        
-                        # Link back to recommendation
-                        rec.converted_to_task = task
-                        rec.save(update_fields=['converted_to_task'])
-                        
-                        created_tasks.append({
-                            'id': task.id,
-                            'description': task.description,
-                            'task_type': task.task_type,
-                            'recommendation_id': rec.id,
-                            'sequence_order': sequence_order,
-                        })
-                        
-                    except Exception as e:
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.error(f"Error converting recommendation {rec.id} to task: {e}", exc_info=True)
-                        errors.append({
-                            'recommendation_id': rec.id,
-                            'error': str(e)
-                        })
-                
-                if not created_tasks and errors:
-                    return Response(
-                        {
-                            "error": "Failed to convert recommendations",
-                            "errors": errors
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
-                return Response({
-                    'message': f'Successfully converted {len(created_tasks)} recommendation(s) to tasks.',
-                    'tasks_created': created_tasks,
-                    'errors': errors if errors else None,
-                }, status=status.HTTP_201_CREATED)
+            if not tasks_created:
+                return Response(
+                    {
+                        "error": "No recommendations were converted.",
+                        "message": "The selected recommendations may already have been converted or may no longer be eligible.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            converted_recommendations = diagnosis.repair_recommendations.filter(
+                id__in=recommendation_ids_to_convert,
+                converted_to_task__isnull=False,
+            ).select_related('converted_to_task')
+            created_tasks = [
+                {
+                    'id': rec.converted_to_task_id,
+                    'description': rec.converted_to_task.description,
+                    'task_type': rec.converted_to_task.task_type,
+                    'recommendation_id': rec.id,
+                    'sequence_order': rec.converted_to_task.sequence_order,
+                }
+                for rec in converted_recommendations
+            ]
+
+            return Response({
+                'message': f'Successfully converted {tasks_created} recommendation(s) to tasks and linked {parts_linked} part(s).',
+                'tasks_created': created_tasks,
+                'parts_linked': parts_linked,
+            }, status=status.HTTP_201_CREATED)
                 
         except Exception as e:
             import logging

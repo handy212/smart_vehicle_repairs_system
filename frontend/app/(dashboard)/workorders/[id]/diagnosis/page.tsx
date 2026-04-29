@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState } from "react";
 import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,14 +41,12 @@ import {
   TestTube,
   Camera,
   Trash2,
-  X,
-  ArrowRight,
-  Printer,
   Package,
   Play,
   Pause,
   PlayCircle,
   CheckCircle2,
+  RotateCcw,
   User,
   Search,
 } from "lucide-react";
@@ -59,7 +59,6 @@ import { RecommendationDialog } from "./components/RecommendationDialog";
 
 
 export default function DiagnosisPage() {
-  const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
   const workOrderId = parseInt(params.id as string);
@@ -246,6 +245,29 @@ export default function DiagnosisPage() {
     },
   });
 
+  const reopenDiagnosisMutation = useMutation({
+    mutationFn: () => {
+      if (!diagnosis) throw new Error("Diagnosis not found");
+      return diagnosisApi.reopen(diagnosis.id, "Diagnosis reopened for revision before customer approval.");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Diagnosis reopened",
+        description: "You can now update the diagnosis, findings, recommendations, and parts before resubmitting.",
+        variant: "default"
+      });
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to reopen diagnosis",
+        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -284,7 +306,6 @@ export default function DiagnosisPage() {
               <p className="text-sm text-muted-foreground">
 
                 {(diagnosisError as any)?.response?.data?.detail ||
-                  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
                   (diagnosisError as any)?.message ||
                   "Please try again or contact support."}
               </p>
@@ -348,6 +369,9 @@ export default function DiagnosisPage() {
   // Block actions if diagnosis hasn't been started yet (timesheet integrity)
   // Check if diagnosis is active for editing (only while in progress)
   const diagnosisActive = diagnosis.status === "in_progress";
+  const canReopenDiagnosis = diagnosis.status === "completed"
+    && !workOrder.approved_by_customer
+    && ["awaiting_approval", "diagnosis"].includes(workOrder.status);
 
   // Get status color and icon
   const getStatusConfig = (status: string) => {
@@ -456,10 +480,24 @@ export default function DiagnosisPage() {
             </>
           )}
           {diagnosis.status === "completed" && (
-            <Button variant="outline" size="sm" className="h-9 cursor-default bg-success/10 text-green-700 border-green-200 hover:bg-success/10">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-2" />
-              Completed
-            </Button>
+            <>
+              {canReopenDiagnosis && (
+                <Button
+                  onClick={() => reopenDiagnosisMutation.mutate()}
+                  disabled={reopenDiagnosisMutation.isPending}
+                  size="sm"
+                  variant="outline"
+                  className="h-9"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                  {reopenDiagnosisMutation.isPending ? "Reopening..." : "Revise"}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" className="h-9 cursor-default bg-success/10 text-green-700 border-green-200 hover:bg-success/10">
+                <CheckCircle2 className="w-3.5 h-3.5 mr-2" />
+                Completed
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -702,7 +740,7 @@ export default function DiagnosisPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              { }
               {diagnosis.time_logs.map((log: any) => (
                 <div
                   key={log.id}
@@ -898,9 +936,6 @@ function FindingsTab({
         <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/50 pb-3">
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Diagnosis Findings</CardTitle>
-            <CardDescription className="text-xs">
-              Turn codes and tests into clear technician findings before creating recommendations.
-            </CardDescription>
           </div>
           <Button
             size="sm"
@@ -995,9 +1030,6 @@ function FindingsTab({
             <div className="rounded-lg border border-dashed bg-card/60 py-14 text-center">
               <Search className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
               <h3 className="text-sm font-medium text-foreground">No findings yet</h3>
-              <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
-                Summarize what the codes and tests mean, then connect those findings to recommendations.
-              </p>
             </div>
           )}
         </CardContent>
@@ -1013,8 +1045,8 @@ function FindingsTab({
           }
         }}
       >
-        <DialogContent className="max-w-3xl gap-0 p-0">
-          <DialogHeader className="border-b px-5 py-4">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-3xl max-h-[calc(100dvh-1rem)] gap-0 p-0 sm:w-full sm:max-h-[calc(100dvh-2rem)]">
+          <DialogHeader className="flex-shrink-0 border-b px-4 py-3 sm:px-5 sm:py-4">
             <DialogTitle className="text-base font-semibold">
               {editingFinding ? "Edit Finding" : "Add Finding"}
             </DialogTitle>
@@ -1023,8 +1055,8 @@ function FindingsTab({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="flex flex-col">
-            <div className="space-y-4 px-5 py-4">
+          <form onSubmit={handleSubmit} className="min-h-0 flex flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="space-y-1.5 md:col-span-2">
                   <Label htmlFor="finding_title" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -1109,7 +1141,7 @@ function FindingsTab({
                   value={formData.description}
                   onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
                   placeholder="What did the diagnosis confirm?"
-                  className="min-h-[110px] resize-none"
+                  className="min-h-[90px] resize-y"
                   required
                 />
               </div>
@@ -1123,7 +1155,7 @@ function FindingsTab({
                   value={formData.root_cause}
                   onChange={(event) => setFormData((prev) => ({ ...prev, root_cause: event.target.value }))}
                   placeholder="Optional explanation of why this problem happened."
-                  className="min-h-[90px] resize-none"
+                  className="min-h-[72px] resize-y"
                 />
               </div>
 
@@ -1131,9 +1163,8 @@ function FindingsTab({
                 <div className="rounded-lg border bg-muted/30">
                   <div className="border-b px-4 py-3">
                     <p className="text-sm font-medium">Supporting Codes</p>
-                    <p className="text-xs text-muted-foreground">Link any DTCs that support this finding.</p>
                   </div>
-                  <div className="space-y-2 p-4">
+                  <div className="max-h-56 space-y-2 overflow-y-auto p-3 sm:p-4">
                     {codes.length > 0 ? (
                       codes.map((code: any) => (
                         <label key={code.id} className="flex cursor-pointer items-start gap-3 rounded-md border bg-background p-3">
@@ -1157,9 +1188,8 @@ function FindingsTab({
                 <div className="rounded-lg border bg-muted/30">
                   <div className="border-b px-4 py-3">
                     <p className="text-sm font-medium">Supporting Tests</p>
-                    <p className="text-xs text-muted-foreground">Link the tests that confirmed this finding.</p>
                   </div>
-                  <div className="space-y-2 p-4">
+                  <div className="max-h-56 space-y-2 overflow-y-auto p-3 sm:p-4">
                     {tests.length > 0 ? (
                       tests.map((test: any) => (
                         <label key={test.id} className="flex cursor-pointer items-start gap-3 rounded-md border bg-background p-3">
@@ -1185,11 +1215,11 @@ function FindingsTab({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">
-              <Button type="button" variant="ghost" onClick={() => setShowDialog(false)}>
+            <div className="flex flex-shrink-0 flex-row items-center justify-end gap-2 border-t bg-card px-4 py-3 sm:px-5">
+              <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => setShowDialog(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              <Button type="submit" className="flex-1 sm:flex-none" disabled={createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending
                   ? "Saving..."
                   : editingFinding
@@ -1209,7 +1239,6 @@ function FindingsTab({
 function RecommendationsTab({
   diagnosis,
   workOrderId,
-  workOrder,
   onRefresh,
   isDisabled = false,
 }: {
@@ -1359,6 +1388,8 @@ function RecommendationsTab({
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
       queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["workorder-tasks", workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["workorder-parts", workOrderId] });
       onRefresh();
       toast({
         title: "Task created",
@@ -1626,6 +1657,7 @@ function RecommendationsTab({
 }
 
 // Photos Tab Component
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PhotosTab({
   diagnosisId,
   onRefresh,
@@ -1882,7 +1914,7 @@ function PhotoUploadDialog({
     createMutation.mutate(formDataToSend);
   };
 
-  const handleClose = () => {
+  const handleClose = React.useCallback(() => {
     setSelectedFile(null);
     setPreview(null);
     setFormData({
@@ -1890,13 +1922,13 @@ function PhotoUploadDialog({
       photo_type: "evidence",
     });
     onOpenChange(false);
-  };
+  }, [onOpenChange]);
 
   React.useEffect(() => {
     if (!open) {
       handleClose();
     }
-  }, [open]);
+  }, [open, handleClose]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1926,8 +1958,9 @@ function PhotoUploadDialog({
               >
                 {preview ? (
                   <div className="space-y-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <div className="relative inline-block rounded-lg overflow-hidden shadow-sm">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={preview}
                         alt="Preview"
@@ -2030,7 +2063,6 @@ function PhotoUploadDialog({
 // Summary Tab Component
 function SummaryTab({
   diagnosis,
-  workOrder: _workOrder,
   onUpdate,
   isUpdating,
   isDisabled = false,

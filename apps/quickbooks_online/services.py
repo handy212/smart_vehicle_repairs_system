@@ -2,23 +2,58 @@ import logging
 from django.utils import timezone
 from datetime import timedelta
 from django.conf import settings
-from quickbooks import QuickBooks
-from intuitlib.client import AuthClient
-from intuitlib.enums import Scopes
-
-from quickbooks.objects.customer import Customer as QBCustomer
-from quickbooks.objects.invoice import Invoice as QBInvoice
-from quickbooks.objects.payment import Payment as QBPayment, PaymentLine
-from quickbooks.objects.base import Ref, LinkedTxn
-from quickbooks.objects.detailline import DetailLine, SalesItemLineDetail
-from quickbooks.objects.department import Department as QBDepartment
-from quickbooks.objects.vendor import Vendor as QBVendor
-from quickbooks.objects.bill import Bill as QBBill
-from quickbooks.objects.detailline import ItemBasedExpenseLineDetail
 from django.contrib.contenttypes.models import ContentType
 from .models import QBOConfig, QBOToken, QBOMapping, QBOSyncLog
 
 logger = logging.getLogger(__name__)
+
+try:
+    from quickbooks import QuickBooks
+    from quickbooks.objects.customer import Customer as QBCustomer
+    from quickbooks.objects.invoice import Invoice as QBInvoice
+    from quickbooks.objects.payment import Payment as QBPayment, PaymentLine
+    from quickbooks.objects.base import Ref, LinkedTxn
+    from quickbooks.objects.detailline import DetailLine, SalesItemLineDetail
+    from quickbooks.objects.department import Department as QBDepartment
+    from quickbooks.objects.vendor import Vendor as QBVendor
+    from quickbooks.objects.bill import Bill as QBBill
+    from quickbooks.objects.detailline import ItemBasedExpenseLineDetail
+except ModuleNotFoundError as exc:
+    if exc.name != "quickbooks":
+        raise
+    QuickBooks = None
+    QBCustomer = None
+    QBInvoice = None
+    QBPayment = None
+    PaymentLine = None
+    Ref = None
+    LinkedTxn = None
+    DetailLine = None
+    SalesItemLineDetail = None
+    QBDepartment = None
+    QBVendor = None
+    QBBill = None
+    ItemBasedExpenseLineDetail = None
+
+try:
+    from intuitlib.client import AuthClient
+except ModuleNotFoundError as exc:
+    if exc.name != "intuitlib":
+        raise
+    AuthClient = None
+
+
+def _quickbooks_sdk_available():
+    return QuickBooks is not None and AuthClient is not None
+
+
+def _quickbooks_sdk_message():
+    missing = []
+    if QuickBooks is None:
+        missing.append("python-quickbooks")
+    if AuthClient is None:
+        missing.append("intuit-oauth")
+    return f"QuickBooks SDK dependency missing: {', '.join(missing)}."
 
 
 def _is_stale_error(exc) -> bool:
@@ -31,6 +66,14 @@ class QuickBooksService:
     """
     Service for interacting with QuickBooks Online API.
     """
+
+    @staticmethod
+    def sdk_available():
+        return _quickbooks_sdk_available()
+
+    @staticmethod
+    def sdk_unavailable_message():
+        return _quickbooks_sdk_message()
     
     @staticmethod
     def get_config(active_only=True):
@@ -64,6 +107,10 @@ class QuickBooksService:
     @staticmethod
     def get_auth_client(config=None):
         """Get the Intuit AuthClient."""
+        if AuthClient is None:
+            logger.warning(_quickbooks_sdk_message())
+            return None
+
         if not config:
             config = QuickBooksService.get_config()
         
@@ -101,6 +148,9 @@ class QuickBooksService:
                 token.refresh_from_db()
                 
             auth_client = cls.get_auth_client(config)
+            if not auth_client or QuickBooks is None:
+                logger.warning(_quickbooks_sdk_message())
+                return None
             
             client = QuickBooks(
                 auth_client=auth_client,

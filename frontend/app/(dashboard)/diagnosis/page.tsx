@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { diagnosisApi } from "@/lib/api/diagnosis";
+import { Diagnosis, diagnosisApi } from "@/lib/api/diagnosis";
+import { WorkOrder, workordersApi } from "@/lib/api/workorders";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,60 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+
+type VehicleInfoObject = {
+  make?: string;
+  model?: string;
+  year?: number | string;
+  license_plate?: string;
+};
+
+const getWorkOrder = (diagnosis: Diagnosis, fallbackWorkOrder?: WorkOrder | null): WorkOrder | null =>
+  typeof diagnosis.work_order === "object" ? diagnosis.work_order : fallbackWorkOrder || null;
+
+const getVehicleDisplay = (diagnosis: Diagnosis, fallbackWorkOrder?: WorkOrder | null) => {
+  const workOrder = getWorkOrder(diagnosis, fallbackWorkOrder);
+  const vehicleInfo = diagnosis.vehicle_info;
+
+  if (typeof vehicleInfo === "string") {
+    return { primary: vehicleInfo, secondary: "" };
+  }
+
+  if (vehicleInfo) {
+    const primary = [vehicleInfo.make, vehicleInfo.model].filter(Boolean).join(" ");
+    const secondary = [vehicleInfo.year, vehicleInfo.license_plate].filter(Boolean).join(" • ");
+
+    return {
+      primary: primary || workOrder?.vehicle_display || workOrder?.vehicle_info || "Unknown Vehicle",
+      secondary,
+    };
+  }
+
+  if (workOrder?.vehicle_display || workOrder?.vehicle_info) {
+    return {
+      primary: workOrder.vehicle_display || workOrder.vehicle_info || "Unknown Vehicle",
+      secondary: "",
+    };
+  }
+
+  if (workOrder && typeof workOrder.vehicle === "object") {
+    const vehicle = workOrder.vehicle as VehicleInfoObject;
+    const primary = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
+
+    return {
+      primary: primary || "Unknown Vehicle",
+      secondary: vehicle.license_plate || "",
+    };
+  }
+
+  return { primary: "Unknown Vehicle", secondary: "" };
+};
+
+const getComplaint = (diagnosis: Diagnosis, fallbackWorkOrder?: WorkOrder | null) => {
+  const workOrder = getWorkOrder(diagnosis, fallbackWorkOrder);
+  return diagnosis.customer_complaint || workOrder?.customer_concerns || "-";
+};
+
 export default function DiagnosisListPage() {
   const { formatCurrency } = useCurrency();
   const router = useRouter();
@@ -66,7 +121,30 @@ export default function DiagnosisListPage() {
     },
   });
 
-  const diagnoses = data?.results || [];
+  const diagnoses = useMemo(() => data?.results || [], [data?.results]);
+  const workOrderIds = useMemo(
+    () => Array.from(new Set(
+      diagnoses
+        .map((diagnosis) => typeof diagnosis.work_order === "number" ? diagnosis.work_order : diagnosis.work_order?.id)
+        .filter((id): id is number => Boolean(id))
+    )),
+    [diagnoses]
+  );
+  const workOrderQueries = useQueries({
+    queries: workOrderIds.map((id) => ({
+      queryKey: ["workorder", id],
+      queryFn: () => workordersApi.get(id),
+      enabled: !!id,
+    })),
+  });
+  const workOrdersById = useMemo(() => {
+    const entries = workOrderQueries
+      .map((query) => query.data)
+      .filter((workOrder): workOrder is WorkOrder => Boolean(workOrder))
+      .map((workOrder) => [workOrder.id, workOrder] as const);
+
+    return new Map(entries);
+  }, [workOrderQueries]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -243,12 +321,14 @@ export default function DiagnosisListPage() {
               </TableHeader>
               <TableBody>
                 {diagnoses.map((diagnosis) => {
-                  const workOrder =
-                    typeof diagnosis.work_order === "object" ? diagnosis.work_order : null;
                   const workOrderId =
                     typeof diagnosis.work_order === "number"
                       ? diagnosis.work_order
-                      : workOrder?.id || null;
+                      : diagnosis.work_order?.id || null;
+                  const fetchedWorkOrder = workOrderId ? workOrdersById.get(workOrderId) : null;
+                  const workOrder = getWorkOrder(diagnosis, fetchedWorkOrder);
+                  const vehicleDisplay = getVehicleDisplay(diagnosis, fetchedWorkOrder);
+                  const complaint = getComplaint(diagnosis, fetchedWorkOrder);
 
                   const handleRowClick = () => {
                     if (workOrderId) {
@@ -278,22 +358,20 @@ export default function DiagnosisListPage() {
                           : "-"}
                       </TableCell>
                       <TableCell className="py-2.5">
-                        {diagnosis.vehicle_info ? (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-foreground">
-                              {diagnosis.vehicle_info.make} {diagnosis.vehicle_info.model}
-                            </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-foreground">
+                            {vehicleDisplay.primary}
+                          </span>
+                          {vehicleDisplay.secondary && (
                             <span className="text-xs text-muted-foreground">
-                              {diagnosis.vehicle_info.year} • {diagnosis.vehicle_info.license_plate}
+                              {vehicleDisplay.secondary}
                             </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Unknown Vehicle</span>
-                        )}
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="py-2.5 hidden md:table-cell">
-                        <div className="max-w-[250px] truncate text-xs text-muted-foreground" title={diagnosis.customer_complaint}>
-                          {diagnosis.customer_complaint || "-"}
+                        <div className="max-w-[250px] truncate text-xs text-muted-foreground" title={complaint}>
+                          {complaint}
                         </div>
                       </TableCell>
                       <TableCell className="py-2.5">

@@ -500,6 +500,11 @@ class WorkOrderStateTransitionMixin:
         
         try:
             work_order.transition_to('approved', user=request.user)
+            recommendations_approved = work_order.approve_pending_recommendations(
+                user=request.user,
+                method=approval_method,
+                notes=approval_notes,
+            )
             
             # Send approval notification to technician
             try:
@@ -511,7 +516,9 @@ class WorkOrderStateTransitionMixin:
                 )
             
             serializer = self.get_serializer(work_order)
-            return Response(serializer.data)
+            response_data = serializer.data
+            response_data['recommendations_approved'] = recommendations_approved
+            return Response(response_data)
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -681,16 +688,22 @@ class WorkOrderStateTransitionMixin:
                 work_order.approved_by_customer = True
                 work_order.approved_at = timezone.now()
                 work_order.save()
-                # Try to transition to in_progress if technician is assigned
-                # If no technician, keep in diagnosis status (approved but waiting for technician)
-                if work_order.primary_technician or work_order.assigned_technicians.exists():
+                work_order.approve_pending_recommendations(
+                    user=request.user,
+                    method='supervisor_instruction',
+                    notes='Approval not required for this work order.',
+                )
+
+                can_start, start_errors = work_order.can_start_work()
+                if can_start:
                     work_order.transition_to('in_progress', user=request.user)
                 else:
-                    # Create a note so the user knows the WO is waiting for assignment
+                    # Keep the work order in diagnosis until recommendations are quoted or tasks are added.
                     WorkOrderNote.objects.create(
                         work_order=work_order,
                         note_type='internal',
-                        note='Diagnosis completed and auto-approved. Awaiting technician assignment before work can begin.',
+                        note='Diagnosis completed and auto-approved. Repairs cannot start yet: '
+                             + '; '.join(start_errors),
                         created_by=request.user,
                         is_important=True
                     )

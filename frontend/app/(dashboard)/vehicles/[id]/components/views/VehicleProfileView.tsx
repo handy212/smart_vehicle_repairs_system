@@ -361,9 +361,6 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                 <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                     <CardHeader className="px-0 pt-0">
                         <CardTitle className="text-lg">Ownership History</CardTitle>
-                        <CardDescription>
-                            Complete history of ownership transfers for this vehicle
-                        </CardDescription>
                     </CardHeader>
                     {ownershipHistory && ownershipHistory.results.length > 0 ? (
                         <div className="space-y-4">

@@ -4,6 +4,7 @@ Tests for diagnosis app.
 import pytest
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from decimal import Decimal
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -11,7 +12,7 @@ from model_bakery import baker
 
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
-from apps.workorders.models import WorkOrder
+from apps.workorders.models import WorkOrder, WorkOrderPart
 from apps.branches.models import Branch
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
@@ -94,6 +95,43 @@ class DiagnosisModelTest(TestCase):
         self.assertTrue(diagnosis.is_completed)
         self.assertEqual(diagnosis.status, 'completed')
         self.assertIsNotNone(diagnosis.completed_at)
+
+    def test_reopen_completed_diagnosis_for_revision_before_approval(self):
+        """Completed diagnoses can be revised while customer approval is still pending."""
+        diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            technician=self.technician_user,
+            customer_complaint='Car won\'t start'
+        )
+        diagnosis.complete(requires_approval=True)
+
+        diagnosis.reopen_for_revision(
+            user=self.technician_user,
+            reason='Customer asked for revised recommendation.',
+        )
+
+        diagnosis.refresh_from_db()
+        self.work_order.refresh_from_db()
+        self.assertFalse(diagnosis.is_completed)
+        self.assertEqual(diagnosis.status, 'in_progress')
+        self.assertIsNone(diagnosis.completed_at)
+        self.assertEqual(self.work_order.status, 'diagnosis')
+        self.assertIsNone(self.work_order.diagnosis_completed_at)
+
+    def test_reopen_completed_diagnosis_blocks_after_customer_approval(self):
+        """Approved work cannot silently rewrite the diagnosis the customer accepted."""
+        diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            technician=self.technician_user,
+            customer_complaint='Car won\'t start'
+        )
+        diagnosis.complete(requires_approval=True)
+        self.work_order.approved_by_customer = True
+        self.work_order.status = 'approved'
+        self.work_order.save(update_fields=['approved_by_customer', 'status'])
+
+        with self.assertRaises(ValueError):
+            diagnosis.reopen_for_revision(user=self.technician_user)
 
     def test_diagnostic_time_formatted(self):
         """Test diagnostic time formatting."""
@@ -450,6 +488,55 @@ class TestDiagnosisAPI:
         diagnosis.refresh_from_db()
         assert diagnosis.status == 'not_started'
         assert diagnosis.is_completed is False
+
+    def test_reopen_completed_diagnosis_for_revision(self, api_client, admin_user):
+        """Staff can reopen a completed diagnosis before customer approval is granted."""
+        diagnosis = baker.make(
+            Diagnosis,
+            status='completed',
+            is_completed=True,
+            completed_at=timezone.now(),
+            work_order__status='awaiting_approval',
+            work_order__approved_by_customer=False,
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/reopen/',
+            {'reason': 'Customer requested changes'},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        diagnosis.refresh_from_db()
+        diagnosis.work_order.refresh_from_db()
+        assert diagnosis.status == 'in_progress'
+        assert diagnosis.is_completed is False
+        assert diagnosis.completed_at is None
+        assert diagnosis.work_order.status == 'diagnosis'
+
+    def test_reopen_completed_diagnosis_rejects_approved_work(self, api_client, admin_user):
+        """The revision endpoint must not unlock a customer-approved diagnosis."""
+        diagnosis = baker.make(
+            Diagnosis,
+            status='completed',
+            is_completed=True,
+            completed_at=timezone.now(),
+            work_order__status='approved',
+            work_order__approved_by_customer=True,
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/reopen/',
+            {'reason': 'Change after approval'},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        diagnosis.refresh_from_db()
+        assert diagnosis.status == 'completed'
+        assert diagnosis.is_completed is True
 
     def test_sync_obd_codes_normalizes_code_type(self, api_client, admin_user):
         """OBD sync should store normalized code values."""
@@ -854,6 +941,89 @@ class TestDiagnosisAPI:
         recommendation.refresh_from_db()
         assert recommendation.quotation_status == 'quoted'
         assert recommendation.quoted_by == admin_user
+
+    def test_convert_recommendations_to_tasks_creates_work_order_parts(self, api_client, admin_user):
+        """Recommendation parts should become work-order part requisitions when converted."""
+        diagnosis = baker.make(Diagnosis)
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='approved',
+            quotation_status='quoted',
+            converted_to_task=None,
+            description='Replace front brake pads',
+            parts_needed=[
+                {
+                    'part_name': 'Front Brake Pad Set',
+                    'part_number': 'BP-FRONT',
+                    'quantity': 1,
+                }
+            ],
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/convert_recommendations_to_tasks/',
+            {
+                'recommendation_ids': [recommendation.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['parts_linked'] == 1
+
+        recommendation.refresh_from_db()
+        assert recommendation.converted_to_task_id is not None
+        assert recommendation.converted_to_task.is_workflow_task is False
+
+        work_order_part = WorkOrderPart.objects.get(
+            work_order=diagnosis.work_order,
+            part_number='BP-FRONT',
+        )
+        assert work_order_part.task_id == recommendation.converted_to_task_id
+        assert work_order_part.part_name == 'Front Brake Pad Set'
+        assert work_order_part.status == 'pending'
+
+    def test_submit_recommendations_for_quote_creates_store_part_requests(self, api_client, admin_user):
+        """Sending recommendations to stores should create visible parts requests immediately."""
+        diagnosis = baker.make(Diagnosis)
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='approved',
+            quotation_status='not_requested',
+            converted_to_task=None,
+            description='Replace front brake pads',
+            parts_needed=[
+                {
+                    'part_name': 'Front Brake Pad Set',
+                    'part_number': 'BP-STORE',
+                    'quantity': 2,
+                    'unit_cost': '75.00',
+                }
+            ],
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/submit_recommendations_for_quote/',
+            {
+                'recommendation_ids': [recommendation.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['parts_synced'] == 1
+
+        part_request = WorkOrderPart.objects.get(
+            work_order=diagnosis.work_order,
+            part_number='BP-STORE',
+        )
+        assert part_request.task_id is None
+        assert part_request.status == 'pending'
+        assert part_request.quantity == Decimal('2')
 
     def test_quotation_queue_lists_requested_recommendations(self, api_client, admin_user):
         """Stores queue should list approved recommendations awaiting quotation."""

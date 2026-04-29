@@ -1,5 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APIClient
 
 from apps.branches.models import Branch
 from apps.customers.models import Customer
@@ -27,6 +31,9 @@ class PartsIntegrationTests(TestCase):
         )
 
         self.branch = Branch.objects.create(name='Test Branch', created_by=self.manager)
+        self.manager.managed_branches.add(self.branch)
+        self.technician.branch = self.branch
+        self.technician.save(update_fields=['branch'])
         self.customer = Customer.objects.create(
             user=User.objects.create_user(
                 username='customer',
@@ -63,10 +70,13 @@ class PartsIntegrationTests(TestCase):
             name='Catalog Oil Filter',
             category=self.category,
             branch=self.branch,
+            quantity_in_stock=5,
             cost_price='22.00',
             selling_price='32.00',
             created_by=self.manager,
         )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.manager)
 
     def create_recommendation(self, description, parts_data, recommendation_type='replace'):
         return RepairRecommendation.objects.create(
@@ -77,6 +87,58 @@ class PartsIntegrationTests(TestCase):
             approval_status='approved',
             quotation_status='quoted',
         )
+
+    def test_work_order_approval_approves_pending_diagnosis_recommendations(self):
+        WorkOrder.objects.filter(pk=self.work_order.pk).update(
+            status='awaiting_approval',
+            requires_approval=True,
+            approval_requested_at=timezone.now(),
+        )
+
+        recommendation = RepairRecommendation.objects.create(
+            diagnosis=self.diagnosis,
+            description='Replace front brake pads',
+            priority='necessary',
+            approval_status='pending_approval',
+        )
+
+        url = reverse('api_workorders:workorder-approve', args=[self.work_order.id])
+        response = self.client.post(url, {
+            'approval_method': 'phone',
+            'approval_notes': 'Customer approved all recommended work.',
+        }, format='json', HTTP_X_BRANCH_ID=str(self.branch.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['recommendations_approved'], 1)
+
+        recommendation.refresh_from_db()
+        self.assertEqual(recommendation.approval_status, 'approved')
+        self.assertTrue(recommendation.customer_approved)
+        self.assertEqual(recommendation.quotation_status, 'not_requested')
+        self.assertEqual(recommendation.decision_by, self.manager)
+
+    def test_start_work_explains_recommendations_waiting_for_stores_quote(self):
+        WorkOrder.objects.filter(pk=self.work_order.pk).update(
+            status='approved',
+            requires_approval=True,
+            approved_by_customer=True,
+            approved_at=timezone.now(),
+        )
+
+        RepairRecommendation.objects.create(
+            diagnosis=self.diagnosis,
+            description='Replace front brake pads',
+            priority='necessary',
+            approval_status='approved',
+            quotation_status='not_requested',
+        )
+
+        self.client.force_authenticate(user=self.technician)
+        url = reverse('api_workorders:workorder-start-work', args=[self.work_order.id])
+        response = self.client.post(url, {}, format='json', HTTP_X_BRANCH_ID=str(self.branch.id))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('sent to stores for quotation', response.data['error'])
 
     def test_convert_recommendation_creates_catalog_and_work_order_parts_for_manual_entries(self):
         recommendation = self.create_recommendation(
@@ -102,7 +164,7 @@ class PartsIntegrationTests(TestCase):
         self.assertEqual(brake_pad.task, task)
         self.assertEqual(rotor.task, task)
         self.assertEqual(brake_pad.requested_by, self.manager)
-        self.assertEqual(brake_pad.status, 'draft')
+        self.assertEqual(brake_pad.status, 'pending')
         self.assertIsNotNone(brake_pad.inventory_part)
         self.assertEqual(brake_pad.inventory_part.part_number, 'BP-001')
         self.assertTrue(Part.objects.filter(part_number='RT-001', name='New Rotor').exists())
@@ -136,6 +198,121 @@ class PartsIntegrationTests(TestCase):
 
         recommendation.refresh_from_db()
         self.assertEqual(recommendation.converted_to_task, task)
+
+    def test_pending_store_parts_block_work_start_until_allocated(self):
+        recommendation = self.create_recommendation(
+            'Replace front brakes',
+            [
+                {'part_name': 'New Brake Pad', 'part_number': 'BP-READY', 'quantity': 1, 'unit_cost': 50.0},
+            ],
+        )
+        self.work_order.status = 'approved'
+        self.work_order.requires_approval = True
+        self.work_order.approved_by_customer = True
+        self.work_order.approved_at = timezone.now()
+        self.work_order.save()
+
+        self.work_order.convert_recommendations_to_tasks(user=self.manager)
+
+        can_start, errors = self.work_order.can_start_work()
+        self.assertFalse(can_start)
+        self.assertIn('required part(s) are not ready', '; '.join(errors))
+
+        WorkOrderPart.objects.filter(work_order=self.work_order, part_number='BP-READY').update(status='ready')
+
+        can_start, errors = self.work_order.can_start_work()
+        self.assertTrue(can_start, errors)
+
+    def test_full_recommendation_to_stores_parts_ready_start_work_flow(self):
+        WorkOrder.objects.filter(pk=self.work_order.pk).update(
+            status='approved',
+            requires_approval=True,
+            approved_by_customer=True,
+            approved_at=timezone.now(),
+        )
+        recommendation = RepairRecommendation.objects.create(
+            diagnosis=self.diagnosis,
+            recommendation_type='service',
+            description='Replace oil filter',
+            parts_needed=[
+                {
+                    'part_id': self.catalog_part.id,
+                    'part_name': self.catalog_part.name,
+                    'part_number': self.catalog_part.part_number,
+                    'quantity': 1,
+                }
+            ],
+            approval_status='approved',
+            quotation_status='not_requested',
+        )
+
+        quote_response = self.client.post(
+            f'/api/diagnosis/diagnoses/{self.diagnosis.id}/submit_recommendations_for_quote/',
+            {'recommendation_ids': [recommendation.id]},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(quote_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(quote_response.data['parts_synced'], 1)
+
+        part_request = WorkOrderPart.objects.get(
+            work_order=self.work_order,
+            part_number=self.catalog_part.part_number,
+        )
+        self.assertIsNone(part_request.task_id)
+        self.assertEqual(part_request.status, 'pending')
+
+        recommendation.refresh_from_db()
+        self.assertEqual(recommendation.quotation_status, 'requested')
+
+        mark_quoted_response = self.client.post(
+            f'/api/diagnosis/diagnoses/{self.diagnosis.id}/mark_recommendations_quoted/',
+            {'recommendation_ids': [recommendation.id]},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(mark_quoted_response.status_code, status.HTTP_200_OK)
+
+        convert_response = self.client.post(
+            f'/api/diagnosis/diagnoses/{self.diagnosis.id}/convert_recommendations_to_tasks/',
+            {'recommendation_ids': [recommendation.id]},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(convert_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(convert_response.data['parts_linked'], 1)
+
+        part_request.refresh_from_db()
+        recommendation.refresh_from_db()
+        self.assertEqual(part_request.task_id, recommendation.converted_to_task_id)
+        self.assertEqual(part_request.status, 'pending')
+
+        blocked_response = self.client.post(
+            reverse('api_workorders:workorder-start-work', args=[self.work_order.id]),
+            {},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(blocked_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('required part(s) are not ready', blocked_response.data['error'])
+
+        allocate_response = self.client.post(
+            reverse('api_workorders:workorderpart-allocate', args=[part_request.id]),
+            {},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(allocate_response.status_code, status.HTTP_200_OK)
+
+        start_response = self.client.post(
+            reverse('api_workorders:workorder-start-work', args=[self.work_order.id]),
+            {},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+        self.assertEqual(start_response.status_code, status.HTTP_200_OK)
+        self.work_order.refresh_from_db()
+        self.assertEqual(self.work_order.status, 'in_progress')
 
     def test_convert_recommendation_links_existing_unlinked_work_order_part_by_inventory_part(self):
         existing_part = WorkOrderPart.objects.create(

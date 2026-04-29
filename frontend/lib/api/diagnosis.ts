@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import apiClient from "./client";
 import { WorkOrder } from "./workorders";
 
@@ -284,6 +286,13 @@ export const diagnosisApi = {
     return response.data;
   },
 
+  reopen: async (id: number, reason?: string): Promise<{ diagnosis: Diagnosis; work_order?: { id: number; status: string; requires_approval: boolean; diagnosis_completed_at: string | null }; message: string }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/reopen/`, {
+      reason,
+    });
+    return response.data;
+  },
+
   convertRecommendationsToTasks: async (
     id: number,
     data?: {
@@ -292,8 +301,8 @@ export const diagnosisApi = {
     }
   ): Promise<{
     message: string;
-    tasks_created: Array<{ id: number; description: string; task_type: string; recommendation_id: number }>;
-    errors?: Array<{ recommendation_id: number; error: string }>;
+    tasks_created: Array<{ id: number; description: string; task_type: string; recommendation_id: number; sequence_order?: number }>;
+    parts_linked?: number;
   }> => {
     const response = await apiClient.post(`/diagnosis/diagnoses/${id}/convert_recommendations_to_tasks/`, data);
     return response.data;
@@ -329,6 +338,9 @@ export const diagnosisApi = {
     data?: { recommendation_ids?: number[] }
   ): Promise<{
     message: string;
+    quotation_estimate_id?: number | null;
+    quotation_estimate_number?: string | null;
+    parts_synced?: number;
     recommendations: RepairRecommendation[];
   }> => {
     const response = await apiClient.post(`/diagnosis/diagnoses/${id}/submit_recommendations_for_quote/`, data || {});

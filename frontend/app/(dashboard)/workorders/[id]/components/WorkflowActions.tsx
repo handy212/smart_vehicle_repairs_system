@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState } from "react";
 import React from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -7,21 +9,15 @@ import { useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
 import { inspectionsApi } from "@/lib/api/inspections";
 import { diagnosisApi } from "@/lib/api/diagnosis";
-import { VehicleDamageMarker } from "@/components/inspections/VehicleDamageMarker";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
-import { adminApi } from "@/lib/api/admin";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
   Play,
   Pause,
   CheckCircle,
-  AlertCircle,
   FileCheck,
   Send,
   RotateCcw,
@@ -31,19 +27,7 @@ import {
   Eye,
   AlertTriangle,
   User,
-  Sparkles,
-  Info,
-  CheckCircle2,
-  ListChecks,
-  Gauge,
-  LogIn,
-  LogOut,
 } from "lucide-react";
-import { SignaturePad } from "@/components/inspections/SignaturePad";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 
 // Refactored Forms
 import { CompleteDiagnosisForm } from "./forms/CompleteDiagnosisForm";
@@ -404,7 +388,7 @@ export default function WorkflowActions({
 
       return diagnosis;
     },
-    onSuccess: (_diagnosis) => {
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Diagnosis started. Redirecting to diagnosis page..."
@@ -515,8 +499,13 @@ export default function WorkflowActions({
   const approveMutation = useMutation({
 
     mutationFn: (data: any) => workordersApi.approve(workOrderId, data),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Work order approved." });
+    onSuccess: (data: any) => {
+      const recommendationsApproved = data?.recommendations_approved || 0;
+      const description = recommendationsApproved > 0
+        ? `Work order approved. ${recommendationsApproved} diagnosis recommendation(s) were also approved and can now be sent to stores for quotation.`
+        : "Work order approved.";
+
+      toast({ title: "Success", description });
       setShowApproveDialog(false);
       refreshWorkOrder();
     },
@@ -858,14 +847,6 @@ export default function WorkflowActions({
         break;
 
       case "assigned":
-        // Only Service Coordinator or managers/admins can trigger diagnosis
-        const _isServiceCoordinator = currentWorkOrder?.service_coordinator && (
-          typeof currentWorkOrder.service_coordinator === 'object'
-
-            ? currentWorkOrder.service_coordinator.id === (currentWorkOrder as any).current_user_id
-
-            : currentWorkOrder.service_coordinator === (currentWorkOrder as any).current_user_id
-        );
         actions.push({
           label: "Start Diagnosis",
           icon: ClipboardCheck,
@@ -1103,38 +1084,6 @@ export default function WorkflowActions({
     );
   }
 
-  // Determine if current workflow step is completed
-  // "Other Actions" should only show when we're in a waiting/stable state,
-  // not when actively working through a primary workflow step
-  const _isCurrentStepCompleted = (() => {
-    // These statuses indicate we're at a stable/waiting state where primary workflow step is done
-    // and secondary actions are safe to show
-    const completedStates = [
-      'awaiting_approval',  // Waiting for customer approval - diagnosis step is done
-      'approved',           // Approved and ready - can show other actions
-      'paused',             // Work paused - can show other actions
-      'completed',          // Work completed - can show other actions
-      'invoiced',           // Invoiced - can show other actions
-      'closed',             // Closed - can show other actions
-    ];
-
-    // For "in_progress", "diagnosis", and "inspection" - these are active workflow steps
-    // Only show other actions if there are truly secondary actions (like in_progress has pause, etc.)
-    // For now, we'll hide for active workflow steps: draft, inspection, intake, diagnosis
-    const activeWorkflowSteps = ['draft', 'inspection', 'intake', 'diagnosis'];
-
-    if (activeWorkflowSteps.includes(status)) {
-      return false; // Don't show other actions during active workflow steps
-    }
-
-    // For "in_progress" and "additional_work_found", we allow secondary actions since they're part of active work management
-    if (status === 'in_progress' || status === 'additional_work_found') {
-      return true; // Allow secondary actions for work management
-    }
-
-    return completedStates.includes(status);
-  })();
-
   // Primary action is the first one
   const primaryAction = availableActions[0];
   const secondaryActions = availableActions.slice(1);
@@ -1354,9 +1303,6 @@ export default function WorkflowActions({
         <DialogContent className="bg-muted border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground">Start Diagnosis</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Begin diagnostic testing for this vehicle. You can assign a technician for the diagnosis process.
-            </DialogDescription>
           </DialogHeader>
           <StartDiagnosisForm
             workOrder={currentWorkOrder}

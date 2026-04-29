@@ -57,9 +57,7 @@ INSTALLED_APPS = [
     'imagekit',
     'storages',
     'django_extensions',
-    'notifications',
     'channels',
-    'schedule',
     'import_export',
     'drf_spectacular',
     'django_celery_beat',
@@ -92,6 +90,7 @@ INSTALLED_APPS = [
     'apps.quickbooks_online',
     'apps.feedback',
     'apps.chat',
+    'apps.workflows',
 ]
 
 MIDDLEWARE = [

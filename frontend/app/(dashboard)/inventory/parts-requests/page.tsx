@@ -24,10 +24,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
 
-// Stats Grid Component
-// Stats Grid Component
+interface PartsRequestStats {
+    draft_requests?: number;
+    pending_requests?: number;
+    po_created_requests?: number;
+    awaiting_stock_requests?: number;
+    received_requests?: number;
+    ready_requests?: number;
+}
 
-const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
+interface PaginatedPartsResponse {
+    results?: WorkOrderPart[];
+}
+
+const StatsGrid = ({ stats, loading }: { stats?: PartsRequestStats, loading: boolean }) => {
     if (loading) {
         return (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -47,7 +57,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
 
     const items = [
         { label: "Pending Requests", value: stats.pending_requests, color: "text-warning" },
-        { label: "PO Created", value: stats.ordered_requests || stats.po_created_requests, color: "text-primary" },
+        { label: "PO Created", value: stats.po_created_requests, color: "text-primary" },
         { label: "Received", value: stats.received_requests, color: "text-success" },
         { label: "Awaiting Stock", value: stats.awaiting_stock_requests, color: "text-primary" },
     ];
@@ -73,17 +83,6 @@ export default function PartsRequestsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const { toast } = useToast();
 
-    // We are currently filtering client-side for search, but backend for status.
-    // The original page only fetched "pending" status. 
-    // We should probably allow filtering by other statuses if we want a full view, 
-    // but the page title is "Parts Requests" (often implying pending).
-    // Let's default to "pending" but allow changing via filters if desired, 
-    // OR just keep it focused on pending if that's the business logic.
-    // The user requirement says "Parts Requests", usually implies managing the queue.
-    // Let's assume we want to see all requests but filterable. 
-    // BUT the original code hardcoded { status: "pending" }.
-    // I will expose a filter for status default to "pending".
-
     const [activeStatus, setActiveStatus] = useState<string>("all");
 
     // Fetch stats
@@ -100,7 +99,7 @@ export default function PartsRequestsPage() {
                 status: activeStatus === "all" ? undefined : activeStatus
             });
 
-            return Array.isArray(response) ? response : (response as any).results || [];
+            return Array.isArray(response) ? response : (response as PaginatedPartsResponse).results || [];
         },
     });
 
@@ -139,20 +138,6 @@ export default function PartsRequestsPage() {
         toast({ title: "Export", description: "Export functionality coming soon" });
     };
 
-
-    const filterOptions: FilterOption[] = [
-        {
-            key: "status",
-            label: "Status",
-            type: "select",
-            options: [
-                { value: "pending", label: "Pending" },
-                { value: "ordered", label: "Ordered" },
-                { value: "received", label: "Received" },
-                { value: "all", label: "All Statuses" },
-            ],
-        },
-    ];
 
     return (
         <PermissionGuard permissions={['view_workorder']}>

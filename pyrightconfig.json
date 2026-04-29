@@ -1,0 +1,22 @@
+{
+  "include": [
+    "apps/diagnosis/views.py"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/migrations",
+    ".venv",
+    "frontend",
+    "media",
+    "staticfiles"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "typeCheckingMode": "standard",
+  "reportArgumentType": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportIncompatibleMethodOverride": "none",
+  "reportOperatorIssue": "none"
+}

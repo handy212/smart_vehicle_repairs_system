@@ -8,7 +8,6 @@ import { Part } from "@/lib/api/inventory";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -174,18 +173,15 @@ function RecommendationDialogForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl gap-0 p-0">
-        <DialogHeader className="border-b px-5 py-4">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-2xl max-h-[calc(100dvh-1rem)] gap-0 p-0 sm:w-full sm:max-h-[calc(100dvh-2rem)]">
+        <DialogHeader className="flex-shrink-0 border-b px-4 py-3 sm:px-5 sm:py-4">
           <DialogTitle className="text-base font-semibold">
             {recommendation ? "Edit Recommendation" : "Add Recommendation"}
           </DialogTitle>
-          <DialogDescription className="text-xs">
-            Capture the work needed now. Pricing happens later when stores prepares the quotation.
-          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col">
-          <div className="space-y-4 px-5 py-4">
+        <form onSubmit={handleSubmit} className="min-h-0 flex flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="recommendation_type" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -239,7 +235,7 @@ function RecommendationDialogForm({
                 value={formData.description}
                 onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
                 placeholder="Describe the repair or service the customer should approve."
-                className="min-h-[100px] resize-none"
+                className="min-h-[90px] resize-y"
                 required
               />
             </div>
@@ -247,11 +243,8 @@ function RecommendationDialogForm({
             <div className="rounded-lg border bg-muted/30">
               <div className="border-b px-4 py-3">
                 <p className="text-sm font-medium">Supporting Findings</p>
-                <p className="text-xs text-muted-foreground">
-                  Link this recommendation to the diagnostic finding that explains why the work is needed.
-                </p>
               </div>
-              <div className="space-y-2 p-4">
+              <div className="max-h-56 space-y-2 overflow-y-auto p-3 sm:p-4">
                 {findings.length > 0 ? (
                   findings.map((finding) => {
                     const codeSummary = Array.isArray(finding.diagnostic_codes) && finding.diagnostic_codes.length > 0
@@ -292,8 +285,7 @@ function RecommendationDialogForm({
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">Parts Needed</p>
-                    <p className="text-xs text-muted-foreground">Attach the parts stores should quote for this recommendation.</p>
+                    <p className="text-sm font-medium">Required Parts</p>
                   </div>
                 </div>
                 <Button type="button" variant="outline" size="sm" className="h-8" onClick={addPartLine}>
@@ -302,7 +294,7 @@ function RecommendationDialogForm({
                 </Button>
               </div>
 
-              <div className="space-y-2 p-4">
+              <div className="max-h-[22rem] space-y-2 overflow-y-auto p-3 sm:p-4">
                 {formData.parts_needed.map((part, index) => (
                   <div key={`${index}-${part.part_id || part.part_name || "part"}`} className="space-y-2 rounded-md border bg-background p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -351,9 +343,6 @@ function RecommendationDialogForm({
                               {part.part_number}
                             </Badge>
                           )}
-                          <span className="text-xs text-muted-foreground">
-                            Linked to inventory and will stay connected through quotation and task conversion.
-                          </span>
                         </>
                       ) : (
                         <span className="text-xs text-muted-foreground">
@@ -406,11 +395,11 @@ function RecommendationDialogForm({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t bg-muted/30 px-5 py-3">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-shrink-0 flex-row items-center justify-end gap-2 border-t bg-card px-4 py-3 sm:px-5">
+            <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" className="flex-1 sm:flex-none" disabled={isLoading}>
               {isLoading ? "Saving..." : recommendation ? "Update Recommendation" : "Save Recommendation"}
             </Button>
           </div>

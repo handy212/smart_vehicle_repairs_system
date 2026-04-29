@@ -196,9 +196,6 @@ export default function InspectionDetailPage() {
                 <p className="text-sm font-medium text-foreground mb-1">
                   Inspection Ready for Review
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Please review the inspection results and approve or reject this inspection.
-                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -221,20 +218,6 @@ export default function InspectionDetailPage() {
                   Approve
                 </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Critical Issues Alert */}
-      {criticalIssues.length > 0 && (
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
-              <p className="text-sm font-medium text-destructive">
-                {criticalIssues.length} critical issue{criticalIssues.length !== 1 ? 's' : ''} require immediate attention
-              </p>
             </div>
           </CardContent>
         </Card>

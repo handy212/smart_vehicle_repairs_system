@@ -266,9 +266,6 @@ export default function WorkOrderDetailPage() {
                                         </Badge>
                                     )}
                                 </CardTitle>
-                                <CardDescription>
-                                    Review and approve recommended services from our diagnosis.
-                                </CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
                                 {pendingRecommendations.length > 0 && (

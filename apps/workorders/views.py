@@ -1053,15 +1053,21 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         """
         queryset = self.get_queryset()
         total_requests = queryset.count()
+        draft_requests = queryset.filter(status='draft').count()
         pending_requests = queryset.filter(status='pending').count()
-        ordered_requests = queryset.filter(status='ordered').count()
+        po_created_requests = queryset.filter(status='po_created').count()
+        awaiting_stock_requests = queryset.filter(status='awaiting_stock').count()
         received_requests = queryset.filter(status='received').count()
+        ready_requests = queryset.filter(status='ready').count()
         
         return Response({
             'total_requests': total_requests,
+            'draft_requests': draft_requests,
             'pending_requests': pending_requests,
-            'ordered_requests': ordered_requests,
-            'received_requests': received_requests
+            'po_created_requests': po_created_requests,
+            'awaiting_stock_requests': awaiting_stock_requests,
+            'received_requests': received_requests,
+            'ready_requests': ready_requests,
         })
 
     @action(detail=True, methods=['post'])
@@ -1740,6 +1746,11 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
             # Transition status
             if work_order.status == 'awaiting_approval':
                 work_order.transition_to('approved', user=None) # No user for public action
+                work_order.approve_pending_recommendations(
+                    user=None,
+                    method='portal',
+                    notes=approval_notes,
+                )
                 
                 # Notify
                 try:
@@ -1760,11 +1771,25 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
         reason = request.data.get('reason', 'Declined via Digital Portal')
         
         try:
-            # We don't have a specific 'declined' status in the main workflow map often,
-            # usually it stays in awaiting_approval or goes to a specialized status.
-            # For now, we'll just log it and maybe keep status or set to specific if exists.
-            
-            # Create a note
+            work_order.approved_by_customer = False
+            work_order.approved_at = None
+            work_order.approval_notes = reason
+            work_order.save(update_fields=[
+                'approved_by_customer',
+                'approved_at',
+                'approval_notes',
+            ])
+
+            if hasattr(work_order, 'diagnosis') and work_order.diagnosis.is_completed:
+                work_order.diagnosis.reopen_for_revision(
+                    user=None,
+                    reason=f"Customer declined work via portal. Reason: {reason}",
+                )
+            elif work_order.status == 'awaiting_approval':
+                work_order.status = 'diagnosis'
+                work_order.diagnosis_completed_at = None
+                work_order.save(update_fields=['status', 'diagnosis_completed_at'])
+
             WorkOrderNote.objects.create(
                 work_order=work_order,
                 note_type='customer',
@@ -1772,7 +1797,7 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
                 is_important=True
             )
             
-            return Response({'status': 'declined'})
+            return Response({'status': 'declined', 'work_order_status': work_order.status})
             
         except Exception as e:
              return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

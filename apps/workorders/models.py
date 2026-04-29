@@ -437,7 +437,16 @@ class WorkOrder(models.Model):
         Returns (can_transition: bool, error_message: str or None)
         """
         # Check if transition is in valid transitions list
-        valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
+        valid_next_statuses = None
+        try:
+            from apps.workflows.services import get_allowed_transition_keys
+            valid_next_statuses = get_allowed_transition_keys('workorders.WorkOrder', self.status)
+        except Exception:
+            valid_next_statuses = None
+
+        if valid_next_statuses is None:
+            valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
+
         if new_status not in valid_next_statuses:
             return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
         
@@ -800,13 +809,51 @@ class WorkOrder(models.Model):
         """
         unavailable = []
         
-        for part in self.parts.filter(status__in=['pending', 'ordered']):
+        for part in self.parts.filter(status__in=['draft', 'pending', 'po_created', 'awaiting_stock', 'received']):
             unavailable.append({
                 'part': part,
                 'reason': f'Part {part.part_name} is {part.get_status_display()}'
             })
         
         return unavailable
+
+    def approve_pending_recommendations(self, user=None, method='', notes=''):
+        """
+        Mirror a customer work-order approval onto pending diagnosis recommendations.
+        Returns the number of recommendations approved.
+        """
+        try:
+            from apps.diagnosis.models import Diagnosis, RepairRecommendation
+        except ImportError:
+            return 0
+
+        diagnosis = Diagnosis.objects.filter(work_order=self).first()
+        if not diagnosis:
+            return 0
+
+        valid_methods = {choice[0] for choice in RepairRecommendation.DECISION_METHOD_CHOICES}
+        decision_method = method if method in valid_methods else ''
+        if method == 'digital':
+            decision_method = 'portal'
+        if not decision_method:
+            decision_method = 'phone'
+
+        decision_notes = notes or 'Approved with work order customer approval.'
+        pending_recommendations = diagnosis.repair_recommendations.filter(
+            approval_status='pending_approval'
+        )
+
+        approved_count = 0
+        for recommendation in pending_recommendations:
+            recommendation.set_decision(
+                'approved',
+                acted_by=user,
+                method=decision_method,
+                notes=decision_notes,
+            )
+            approved_count += 1
+
+        return approved_count
     
     def can_start_work(self):
         """
@@ -821,39 +868,69 @@ class WorkOrder(models.Model):
         if not self.primary_technician and not self.assigned_technicians.exists():
             errors.append("No technician assigned")
         
-        # Check if there are any tasks (either existing or recommendations to convert)
+        # Check if there are any executable tasks or recommendations ready to convert.
         has_tasks = self.tasks.filter(is_workflow_task=False).exists()
-        has_recommendations = False
+        has_ready_recommendations = False
+        recommendation_blockers = []
         try:
             from apps.diagnosis.models import Diagnosis
             diagnosis = Diagnosis.objects.filter(work_order=self).first()
             if diagnosis:
-                has_recommendations = diagnosis.repair_recommendations.filter(
-                    approval_status='approved',
-                    quotation_status='quoted',
+                recommendations = diagnosis.repair_recommendations.filter(
                     converted_to_task__isnull=True
+                )
+                has_ready_recommendations = recommendations.filter(
+                    approval_status='approved',
+                    quotation_status='quoted'
                 ).exists()
+
+                pending_approval_count = recommendations.filter(
+                    approval_status='pending_approval'
+                ).count()
+                awaiting_quote_submission_count = recommendations.filter(
+                    approval_status='approved',
+                    quotation_status='not_requested'
+                ).count()
+                awaiting_quote_count = recommendations.filter(
+                    approval_status='approved',
+                    quotation_status='requested'
+                ).count()
+
+                if pending_approval_count:
+                    recommendation_blockers.append(
+                        f"{pending_approval_count} recommendation(s) still need customer approval"
+                    )
+                if awaiting_quote_submission_count:
+                    recommendation_blockers.append(
+                        f"{awaiting_quote_submission_count} approved recommendation(s) must be sent to stores for quotation"
+                    )
+                if awaiting_quote_count:
+                    recommendation_blockers.append(
+                        f"{awaiting_quote_count} quotation request(s) are still waiting for stores to mark quoted"
+                    )
         except Exception:
             pass  # If diagnosis app not available, skip this check
         
-        if not has_tasks and not has_recommendations:
-            errors.append("No tasks or repair recommendations found. Please create tasks or add recommendations before starting work.")
+        if not has_tasks and not has_ready_recommendations:
+            if recommendation_blockers:
+                errors.append(
+                    "No repair work is ready to start. " + "; ".join(recommendation_blockers) + "."
+                )
+            else:
+                errors.append(
+                    "No tasks or approved, quoted repair recommendations found. Create a task or approve and quote a recommendation before starting work."
+                )
         
         unavailable_parts = self.check_parts_availability()
-        critical_parts = [p for p in unavailable_parts if p['part'].task is not None]
-        
-        if critical_parts:
-            # Only block if ALL tasks are blocked by missing parts
-            # This enables parallel workflows for tasks that DO have parts
-            all_task_ids = set(self.tasks.filter(is_workflow_task=False).values_list('id', flat=True))
-            blocked_task_ids = set(p['part'].task_id for p in critical_parts if p['part'].task_id)
-            
-            if all_task_ids and blocked_task_ids.issuperset(all_task_ids):
-                errors.append(f"Cannot start work: All {len(all_task_ids)} tasks are blocked by {len(critical_parts)} missing parts")
+        if unavailable_parts:
+            errors.append(
+                f"{len(unavailable_parts)} required part(s) are not ready for repair. "
+                "Stores must allocate parts before repairs can start."
+            )
         
         return len(errors) == 0, errors
     
-    def convert_recommendations_to_tasks(self, user=None):
+    def convert_recommendations_to_tasks(self, user=None, recommendation_ids=None, assign_to_technician=True):
         """
         Convert approved RepairRecommendations to ServiceTasks.
         Also links parts from recommendations to the created tasks.
@@ -874,6 +951,9 @@ class WorkOrder(models.Model):
                 quotation_status='quoted',
                 converted_to_task__isnull=True
             )
+
+            if recommendation_ids:
+                recommendations = recommendations.filter(id__in=recommendation_ids)
             
             if not recommendations.exists():
                 return 0, 0
@@ -887,9 +967,13 @@ class WorkOrder(models.Model):
             )['max_seq'] or 0
             
             # Get primary technician or first assigned technician
-            assigned_user = self.primary_technician
-            if not assigned_user:
-                assigned_user = self.assigned_technicians.first()
+            assigned_user = None
+            if assign_to_technician:
+                assigned_user = self.primary_technician
+                if not assigned_user:
+                    assigned_user = self.assigned_technicians.first()
+                if not assigned_user and diagnosis.technician:
+                    assigned_user = diagnosis.technician
             
             InventoryPart = self._meta.apps.get_model('inventory', 'Part')
             PartCategory = self._meta.apps.get_model('inventory', 'PartCategory')
@@ -1135,7 +1219,7 @@ class WorkOrder(models.Model):
                                         part_number=part_number,
                                         quantity=quantity,
                                         unit_cost=unit_cost,
-                                        status='draft', # Start as draft for review
+                                        status='pending',
                                         requested_by=user, # Set requester to user converting task
                                         description=f"Auto-created from recommendation: {rec.description}"
                                     )
@@ -1157,7 +1241,7 @@ class WorkOrder(models.Model):
                                     part_number=part_number,
                                     quantity=quantity,
                                     unit_cost=unit_cost,
-                                    status='draft', # Start as draft for review
+                                    status='pending',
                                     requested_by=user, # Set requester to user converting task
                                     description=f"Auto-created from recommendation: {rec.description}"
                                 )

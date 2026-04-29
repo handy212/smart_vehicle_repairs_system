@@ -15,6 +15,7 @@ interface SignaturePadProps {
   disabled?: boolean;
   width?: number;
   height?: number;
+  showPreview?: boolean;
 }
 
 export function SignaturePad({
@@ -25,11 +26,12 @@ export function SignaturePad({
   disabled = false,
   width = 500,
   height = 200,
+  showPreview = true,
 }: SignaturePadProps) {
   const sigPadRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
-    if (value && sigPadRef.current && !sigPadRef.current.isEmpty()) {
+    if (value && sigPadRef.current) {
       sigPadRef.current.fromDataURL(value);
     }
   }, [value]);
@@ -61,10 +63,10 @@ export function SignaturePad({
           {!disabled && (
             <Button
               type="button"
-             variant="secondary"
+              variant="secondary"
               size="sm"
               onClick={handleClear}
-              disabled={!sigPadRef.current || sigPadRef.current.isEmpty()}
+              disabled={!value}
             >
               <Trash2 className="w-4 h-4 mr-1" />
               Clear
@@ -93,7 +95,7 @@ export function SignaturePad({
             backgroundColor="#ffffff"
           />
         </div>
-        {value && (
+        {showPreview && value && (
           <div className="mt-2">
             <img
               src={value}
@@ -106,4 +108,3 @@ export function SignaturePad({
     </Card>
   );
 }
-

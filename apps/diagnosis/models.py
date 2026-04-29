@@ -369,6 +369,80 @@ class Diagnosis(models.Model):
                         'estimated_total',
                         'status'
                     ])
+
+    def reopen_for_revision(self, user=None, reason=''):
+        """
+        Reopen a completed diagnosis when the customer rejects/defer requests
+        or staff need to revise it before approval is granted.
+        """
+        from django.db import transaction
+
+        DiagnosisTimeLog = self._meta.apps.get_model('diagnosis', 'DiagnosisTimeLog')
+        WorkOrderNote = self._meta.apps.get_model('workorders', 'WorkOrderNote')
+
+        work_order = self.work_order
+        locked_statuses = {
+            'approved',
+            'in_progress',
+            'paused',
+            'quality_check',
+            'completed',
+            'invoiced',
+            'closed',
+        }
+
+        if not self.is_completed:
+            raise ValueError('Diagnosis is already open for editing.')
+
+        if work_order.approved_by_customer or work_order.status in locked_statuses:
+            raise ValueError(
+                'This diagnosis cannot be revised after customer approval or after repair work has started.'
+            )
+
+        with transaction.atomic():
+            reopened_at = timezone.now()
+            self.is_completed = False
+            self.status = 'in_progress'
+            self.completed_at = None
+            self.resumed_at = reopened_at
+            self.paused_at = None
+            if user and not self.technician:
+                self.technician = user
+            self.save(update_fields=[
+                'is_completed',
+                'status',
+                'completed_at',
+                'resumed_at',
+                'paused_at',
+                'technician',
+            ])
+
+            work_order.status = 'diagnosis'
+            work_order.diagnosis_completed_at = None
+            work_order.approved_by_customer = False
+            work_order.approved_at = None
+            work_order.save(update_fields=[
+                'status',
+                'diagnosis_completed_at',
+                'approved_by_customer',
+                'approved_at',
+            ])
+
+            DiagnosisTimeLog.objects.create(
+                diagnosis=self,
+                stage='resumed',
+                started_at=reopened_at,
+                technician=user or self.technician,
+                notes=reason or 'Diagnosis reopened for revision.',
+            )
+
+            WorkOrderNote.objects.create(
+                work_order=work_order,
+                note_type='internal',
+                note=reason or 'Diagnosis reopened for revision before customer approval.',
+                created_by=user if getattr(user, 'is_authenticated', False) else None,
+                is_important=True,
+            )
     
     @property
     def diagnostic_time_formatted(self):

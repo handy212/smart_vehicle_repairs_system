@@ -95,6 +95,13 @@ class QBOConnectView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUserR
                 )
             messages.error(request, "QuickBooks configuration is incomplete.")
             return redirect(build_qbo_integrations_url(qbo_status="missing_config"))
+
+        if not QuickBooksService.sdk_available():
+            message = QuickBooksService.sdk_unavailable_message()
+            if request_wants_json(request):
+                return JsonResponse({"detail": message}, status=503)
+            messages.error(request, message)
+            return redirect(build_qbo_integrations_url(qbo_status="sdk_missing"))
             
         auth_client = QuickBooksService.get_auth_client(config)
         
@@ -140,6 +147,10 @@ class QBOCallbackView(FrontendAccessRedirectMixin, LoginRequiredMixin, SuperUser
              pass
             
         config = QuickBooksService.get_config(active_only=False)
+        if not QuickBooksService.sdk_available():
+            messages.error(request, QuickBooksService.sdk_unavailable_message())
+            return redirect(build_qbo_integrations_url(qbo_status="sdk_missing"))
+
         auth_client = QuickBooksService.get_auth_client(config)
         
         try:

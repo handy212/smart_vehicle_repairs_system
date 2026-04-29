@@ -322,7 +322,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
 // Define sub-navigation items for each module
 export const subNavConfig: Record<string, SubNavItem[]> = {
   inventory: [
-    { name: "Work Order Requests", href: "/inventory/parts-requests", permission: "view_parts_requests", icon: ListChecks },
+    { name: "Stores Workbench", href: "/inventory/quotation-requests", permission: "view_parts_requests", icon: ListChecks },
     { name: "Parts", href: "/inventory", permission: "view_inventory", icon: Package },
     { name: "Categories", href: "/inventory/categories", permission: "view_categories", icon: Tags },
     { name: "Suppliers", href: "/inventory/suppliers", permission: "view_suppliers", icon: Truck },
