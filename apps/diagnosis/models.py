@@ -17,6 +17,7 @@ class Diagnosis(models.Model):
         ('not_started', 'Not Started'),
         ('in_progress', 'In Progress'),
         ('paused', 'Paused'),
+        ('awaiting_approval', 'Awaiting Customer Approval'),
         ('completed', 'Completed'),
         ('on_hold', 'On Hold'),  # Keep for backward compatibility
     ]
@@ -212,6 +213,76 @@ class Diagnosis(models.Model):
                 )
                 return True
         return False
+
+    def submit_for_approval(self, user=None):
+        """
+        Send the diagnosis to the customer approval stage without finalizing it.
+        The diagnostic record remains editable through reopen/resume until approval.
+        """
+        from django.db import transaction
+
+        DiagnosisTimeLog = self._meta.apps.get_model('diagnosis', 'DiagnosisTimeLog')
+
+        if self.status not in ['in_progress', 'paused']:
+            raise ValueError(f'Cannot send diagnosis for approval from {self.get_status_display()}.')
+
+        if not (
+            (self.diagnostic_notes and self.diagnostic_notes.strip())
+            or (self.root_cause and self.root_cause.strip())
+            or self.repair_recommendations.exists()
+        ):
+            raise ValueError('Add diagnosis notes, a root cause, or at least one recommendation before requesting approval.')
+
+        with transaction.atomic():
+            now = timezone.now()
+
+            if self.status == 'in_progress':
+                last_resume = self.resumed_at or self.started_at
+                if last_resume:
+                    time_spent = now - last_resume
+                    hours_spent = Decimal(str(time_spent.total_seconds() / 3600))
+                    self.diagnostic_time_hours += hours_spent
+
+                last_log = DiagnosisTimeLog.objects.filter(
+                    diagnosis=self,
+                    stage__in=['started', 'resumed']
+                ).order_by('-started_at').first()
+
+                if last_log and not last_log.ended_at:
+                    last_log.ended_at = now
+                    last_log.save(update_fields=['ended_at'])
+
+            self.status = 'awaiting_approval'
+            self.paused_at = now
+            self.requires_approval = True
+            self.save(update_fields=[
+                'status',
+                'paused_at',
+                'requires_approval',
+                'diagnostic_time_hours',
+            ])
+
+            work_order = self.work_order
+            work_order.refresh_from_db()
+            work_order.requires_approval = True
+            work_order.approval_requested_at = now
+            if self.technician:
+                work_order.diagnosis_by = self.technician
+            if self.root_cause:
+                work_order.diagnosis_notes = self.root_cause
+            elif self.diagnostic_notes:
+                work_order.diagnosis_notes = self.diagnostic_notes
+            elif self.customer_complaint and not work_order.diagnosis_notes:
+                work_order.diagnosis_notes = self.customer_complaint
+            work_order.save(update_fields=[
+                'requires_approval',
+                'approval_requested_at',
+                'diagnosis_by',
+                'diagnosis_notes',
+            ])
+
+            if work_order.status == 'diagnosis':
+                work_order.transition_to('awaiting_approval', user=user)
     
     def complete(self, requires_approval=None):
         """
@@ -225,6 +296,10 @@ class Diagnosis(models.Model):
         # Import here to avoid circular import
         DiagnosisTimeLog = self._meta.apps.get_model('diagnosis', 'DiagnosisTimeLog')
         
+        effective_requires_approval = self.requires_approval if requires_approval is None else requires_approval
+        if effective_requires_approval and self.work_order and not self.work_order.approved_by_customer:
+            raise ValueError('Send the diagnosis for approval and wait for customer approval before final completion.')
+
         if not self.is_completed:
             with transaction.atomic():
                 # Calculate final time spent if currently in progress
@@ -391,7 +466,7 @@ class Diagnosis(models.Model):
             'closed',
         }
 
-        if not self.is_completed:
+        if not self.is_completed and self.status != 'awaiting_approval':
             raise ValueError('Diagnosis is already open for editing.')
 
         if work_order.approved_by_customer or work_order.status in locked_statuses:

@@ -1780,7 +1780,10 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
                 'approval_notes',
             ])
 
-            if hasattr(work_order, 'diagnosis') and work_order.diagnosis.is_completed:
+            if hasattr(work_order, 'diagnosis') and (
+                work_order.diagnosis.is_completed
+                or work_order.diagnosis.status == 'awaiting_approval'
+            ):
                 work_order.diagnosis.reopen_for_revision(
                     user=None,
                     reason=f"Customer declined work via portal. Reason: {reason}",

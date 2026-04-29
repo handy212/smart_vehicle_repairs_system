@@ -89,9 +89,12 @@ class DiagnosisModelTest(TestCase):
         diagnosis = Diagnosis.objects.create(
             work_order=self.work_order,
             technician=self.technician_user,
-            customer_complaint='Car won\'t start'
+            customer_complaint='Car won\'t start',
+            diagnostic_notes='Starter motor fails load test.',
+            status='in_progress',
+            started_at=timezone.now(),
         )
-        diagnosis.complete()
+        diagnosis.complete(requires_approval=False)
         self.assertTrue(diagnosis.is_completed)
         self.assertEqual(diagnosis.status, 'completed')
         self.assertIsNotNone(diagnosis.completed_at)
@@ -101,9 +104,12 @@ class DiagnosisModelTest(TestCase):
         diagnosis = Diagnosis.objects.create(
             work_order=self.work_order,
             technician=self.technician_user,
-            customer_complaint='Car won\'t start'
+            customer_complaint='Car won\'t start',
+            diagnostic_notes='Starter motor fails load test.',
+            status='in_progress',
+            started_at=timezone.now(),
         )
-        diagnosis.complete(requires_approval=True)
+        diagnosis.submit_for_approval(user=self.technician_user)
 
         diagnosis.reopen_for_revision(
             user=self.technician_user,
@@ -123,15 +129,63 @@ class DiagnosisModelTest(TestCase):
         diagnosis = Diagnosis.objects.create(
             work_order=self.work_order,
             technician=self.technician_user,
-            customer_complaint='Car won\'t start'
+            customer_complaint='Car won\'t start',
+            diagnostic_notes='Starter motor fails load test.',
+            status='in_progress',
+            started_at=timezone.now(),
         )
-        diagnosis.complete(requires_approval=True)
+        diagnosis.submit_for_approval(user=self.technician_user)
         self.work_order.approved_by_customer = True
         self.work_order.status = 'approved'
         self.work_order.save(update_fields=['approved_by_customer', 'status'])
 
         with self.assertRaises(ValueError):
             diagnosis.reopen_for_revision(user=self.technician_user)
+
+    def test_submit_for_approval_keeps_diagnosis_open_until_customer_decision(self):
+        """Sending for approval should notify workflow without final completion."""
+        diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            technician=self.technician_user,
+            customer_complaint='Car won\'t start',
+            diagnostic_notes='Starter motor fails load test.',
+            status='in_progress',
+            started_at=timezone.now(),
+        )
+
+        diagnosis.submit_for_approval(user=self.technician_user)
+
+        diagnosis.refresh_from_db()
+        self.work_order.refresh_from_db()
+        self.assertFalse(diagnosis.is_completed)
+        self.assertEqual(diagnosis.status, 'awaiting_approval')
+        self.assertIsNone(diagnosis.completed_at)
+        self.assertEqual(self.work_order.status, 'awaiting_approval')
+        self.assertIsNotNone(self.work_order.approval_requested_at)
+
+    def test_complete_approval_diagnosis_requires_customer_approval_first(self):
+        diagnosis = Diagnosis.objects.create(
+            work_order=self.work_order,
+            technician=self.technician_user,
+            customer_complaint='Car won\'t start',
+            diagnostic_notes='Starter motor fails load test.',
+            status='in_progress',
+            started_at=timezone.now(),
+        )
+
+        diagnosis.submit_for_approval(user=self.technician_user)
+
+        with self.assertRaises(ValueError):
+            diagnosis.complete(requires_approval=True)
+
+        self.work_order.approved_by_customer = True
+        self.work_order.status = 'approved'
+        self.work_order.save(update_fields=['approved_by_customer', 'status'])
+
+        diagnosis.complete(requires_approval=True)
+        diagnosis.refresh_from_db()
+        self.assertTrue(diagnosis.is_completed)
+        self.assertEqual(diagnosis.status, 'completed')
 
     def test_diagnostic_time_formatted(self):
         """Test diagnostic time formatting."""
@@ -537,6 +591,56 @@ class TestDiagnosisAPI:
         diagnosis.refresh_from_db()
         assert diagnosis.status == 'completed'
         assert diagnosis.is_completed is True
+
+    def test_submit_for_approval_keeps_diagnosis_uncompleted(self, api_client, admin_user):
+        """Send-for-approval should move customer approval workflow without completing diagnosis."""
+        diagnosis = baker.make(
+            Diagnosis,
+            status='in_progress',
+            is_completed=False,
+            started_at=timezone.now(),
+            diagnostic_notes='Alternator charging output is below spec.',
+            work_order__status='diagnosis',
+            work_order__approved_by_customer=False,
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/submit_for_approval/',
+            {},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        diagnosis.refresh_from_db()
+        diagnosis.work_order.refresh_from_db()
+        assert diagnosis.status == 'awaiting_approval'
+        assert diagnosis.is_completed is False
+        assert diagnosis.completed_at is None
+        assert diagnosis.work_order.status == 'awaiting_approval'
+        assert diagnosis.work_order.approval_requested_at is not None
+
+    def test_complete_requires_customer_approval_after_submit(self, api_client, admin_user):
+        """A diagnosis awaiting approval should not be finally completed before approval."""
+        diagnosis = baker.make(
+            Diagnosis,
+            status='awaiting_approval',
+            is_completed=False,
+            requires_approval=True,
+            diagnostic_notes='Requires customer approval.',
+            work_order__status='awaiting_approval',
+            work_order__approved_by_customer=False,
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/complete/',
+            {'requires_approval': True},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'wait for customer approval' in response.data['error']
 
     def test_sync_obd_codes_normalizes_code_type(self, api_client, admin_user):
         """OBD sync should store normalized code values."""

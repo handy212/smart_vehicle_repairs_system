@@ -162,7 +162,7 @@ export interface Diagnosis {
   paused_at?: string | null;
   resumed_at?: string | null;
   completed_at?: string | null;
-  status: "not_started" | "in_progress" | "paused" | "completed" | "on_hold";
+  status: "not_started" | "in_progress" | "paused" | "awaiting_approval" | "completed" | "on_hold";
   status_display?: string;
   customer_complaint: string;
   initial_observations?: string;
@@ -276,6 +276,11 @@ export const diagnosisApi = {
 
   resume: async (id: number): Promise<{ diagnosis: Diagnosis; message: string }> => {
     const response = await apiClient.post(`/diagnosis/diagnoses/${id}/resume/`);
+    return response.data;
+  },
+
+  submitForApproval: async (id: number): Promise<{ diagnosis: Diagnosis; work_order?: { id: number; status: string; requires_approval: boolean; approval_requested_at: string | null }; message: string }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/submit_for_approval/`);
     return response.data;
   },
 

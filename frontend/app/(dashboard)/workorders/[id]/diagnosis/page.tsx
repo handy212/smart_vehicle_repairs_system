@@ -47,6 +47,7 @@ import {
   PlayCircle,
   CheckCircle2,
   RotateCcw,
+  Send,
   User,
   Search,
 } from "lucide-react";
@@ -203,6 +204,29 @@ export default function DiagnosisPage() {
     },
   });
 
+  const submitForApprovalMutation = useMutation({
+    mutationFn: () => {
+      if (!diagnosis) throw new Error("Diagnosis not found");
+      return diagnosisApi.submitForApproval(diagnosis.id);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Sent for approval",
+        description: "The customer has been notified. You can revise the diagnosis if they request changes.",
+        variant: "default"
+      });
+      queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send for approval",
+        description: error.response?.data?.error || error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const completeDiagnosisMutation = useMutation({
     mutationFn: () => {
       if (!diagnosis) throw new Error("Diagnosis not found");
@@ -214,9 +238,7 @@ export default function DiagnosisPage() {
       let message = "Diagnosis completed successfully.";
 
       if (workOrderUpdate) {
-        if (workOrderUpdate.requires_approval) {
-          message += ` Work order is now awaiting customer approval.`;
-        } else {
+        if (!workOrderUpdate.requires_approval) {
           message += ` Work order has been approved and ready to proceed.`;
         }
       }
@@ -369,9 +391,11 @@ export default function DiagnosisPage() {
   // Block actions if diagnosis hasn't been started yet (timesheet integrity)
   // Check if diagnosis is active for editing (only while in progress)
   const diagnosisActive = diagnosis.status === "in_progress";
-  const canReopenDiagnosis = diagnosis.status === "completed"
+  const canReopenDiagnosis = ["awaiting_approval", "completed"].includes(diagnosis.status)
     && !workOrder.approved_by_customer
     && ["awaiting_approval", "diagnosis"].includes(workOrder.status);
+  const canCompleteDiagnosis = diagnosis.status === "awaiting_approval" && !!workOrder.approved_by_customer;
+  const shouldSendForApproval = diagnosis.requires_approval && !workOrder.approved_by_customer;
 
   // Get status color and icon
   const getStatusConfig = (status: string) => {
@@ -382,6 +406,8 @@ export default function DiagnosisPage() {
         return { color: "info", icon: PlayCircle, label: "In Progress" };
       case "paused":
         return { color: "warning", icon: Pause, label: "Paused" };
+      case "awaiting_approval":
+        return { color: "warning", icon: Send, label: "Awaiting Approval" };
       case "completed":
         return { color: "default", icon: CheckCircle2, label: "Completed" };
       case "on_hold":
@@ -445,15 +471,27 @@ export default function DiagnosisPage() {
                 <Pause className="w-3.5 h-3.5 mr-2" />
                 Pause
               </Button>
-              <Button
-                onClick={() => completeDiagnosisMutation.mutate()}
-                disabled={completeDiagnosisMutation.isPending}
-                size="sm"
-                className="h-9 bg-success hover:bg-green-700 text-white"
-              >
-                <CheckCircle className="w-3.5 h-3.5 mr-2" />
-                {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
-              </Button>
+              {shouldSendForApproval ? (
+                <Button
+                  onClick={() => submitForApprovalMutation.mutate()}
+                  disabled={submitForApprovalMutation.isPending}
+                  size="sm"
+                  className="h-9"
+                >
+                  <Send className="w-3.5 h-3.5 mr-2" />
+                  {submitForApprovalMutation.isPending ? "Sending..." : "Send for Approval"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => completeDiagnosisMutation.mutate()}
+                  disabled={completeDiagnosisMutation.isPending}
+                  size="sm"
+                  className="h-9 bg-success hover:bg-green-700 text-white"
+                >
+                  <CheckCircle className="w-3.5 h-3.5 mr-2" />
+                  {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
+                </Button>
+              )}
             </>
           )}
           {diagnosis.status === "paused" && (
@@ -468,15 +506,59 @@ export default function DiagnosisPage() {
                 <PlayCircle className="w-3.5 h-3.5 mr-2" />
                 {resumeDiagnosisMutation.isPending ? "Resuming..." : "Resume"}
               </Button>
-              <Button
-                onClick={() => completeDiagnosisMutation.mutate()}
-                disabled={completeDiagnosisMutation.isPending}
-                size="sm"
-                className="h-9 bg-success hover:bg-green-700 text-white"
-              >
-                <CheckCircle className="w-3.5 h-3.5 mr-2" />
-                {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
-              </Button>
+              {shouldSendForApproval ? (
+                <Button
+                  onClick={() => submitForApprovalMutation.mutate()}
+                  disabled={submitForApprovalMutation.isPending}
+                  size="sm"
+                  className="h-9"
+                >
+                  <Send className="w-3.5 h-3.5 mr-2" />
+                  {submitForApprovalMutation.isPending ? "Sending..." : "Send for Approval"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => completeDiagnosisMutation.mutate()}
+                  disabled={completeDiagnosisMutation.isPending}
+                  size="sm"
+                  className="h-9 bg-success hover:bg-green-700 text-white"
+                >
+                  <CheckCircle className="w-3.5 h-3.5 mr-2" />
+                  {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
+                </Button>
+              )}
+            </>
+          )}
+          {diagnosis.status === "awaiting_approval" && (
+            <>
+              {canReopenDiagnosis && (
+                <Button
+                  onClick={() => reopenDiagnosisMutation.mutate()}
+                  disabled={reopenDiagnosisMutation.isPending}
+                  size="sm"
+                  variant="outline"
+                  className="h-9"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                  {reopenDiagnosisMutation.isPending ? "Reopening..." : "Revise"}
+                </Button>
+              )}
+              {canCompleteDiagnosis ? (
+                <Button
+                  onClick={() => completeDiagnosisMutation.mutate()}
+                  disabled={completeDiagnosisMutation.isPending}
+                  size="sm"
+                  className="h-9 bg-success hover:bg-green-700 text-white"
+                >
+                  <CheckCircle className="w-3.5 h-3.5 mr-2" />
+                  {completeDiagnosisMutation.isPending ? "Completing..." : "Complete Diagnosis"}
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" className="h-9 cursor-default">
+                  <Send className="w-3.5 h-3.5 mr-2" />
+                  Waiting for Customer
+                </Button>
+              )}
             </>
           )}
           {diagnosis.status === "completed" && (
@@ -511,6 +593,7 @@ export default function DiagnosisPage() {
                 variant="outline"
                 className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-primary border-primary/20' :
                   diagnosis.status === 'paused' ? 'bg-warning/15 text-warning-foreground border-warning/20' :
+                    diagnosis.status === 'awaiting_approval' ? 'bg-warning/15 text-warning-foreground border-warning/20' :
                     diagnosis.status === 'completed' ? 'bg-success/10 text-green-700 border-green-200' :
                       'bg-muted text-foreground border-border'
                   }`}
@@ -539,7 +622,9 @@ export default function DiagnosisPage() {
             <div className="flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">
               <span className={diagnosis.status !== 'not_started' ? "text-primary" : ""}>Start</span>
               <span className="mx-1">→</span>
-              <span className={['in_progress', 'paused', 'completed'].includes(diagnosis.status) ? "text-primary" : ""}>In Progress</span>
+              <span className={['in_progress', 'paused', 'awaiting_approval', 'completed'].includes(diagnosis.status) ? "text-primary" : ""}>In Progress</span>
+              <span className="mx-1">→</span>
+              <span className={['awaiting_approval', 'completed'].includes(diagnosis.status) ? "text-warning" : ""}>Approval</span>
               <span className="mx-1">→</span>
               <span className={diagnosis.status === 'completed' ? "text-success" : ""}>Done</span>
             </div>
@@ -2143,7 +2228,7 @@ function SummaryTab({
 
     // Handle case where diagnosis is still active (started/resumed but not paused/completed)
     // Only count ongoing time if diagnosis is NOT completed
-    if (activeStartTime && diagnosis.status !== "completed") {
+    if (activeStartTime && !["awaiting_approval", "completed"].includes(diagnosis.status)) {
       const now = new Date();
       const duration = now.getTime() - activeStartTime.getTime();
       if (duration > 0) {

@@ -8,7 +8,7 @@ import { useState } from "react";
 import { diagnosisApi, QuotationQueueRecommendation } from "@/lib/api/diagnosis";
 import { workordersApi, WorkOrderPart } from "@/lib/api/workorders";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -158,94 +158,93 @@ export default function QuotationRequestsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
             <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
             <span>/</span>
             <span className="text-foreground font-medium">Quotation Requests</span>
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Stores Quotation Queue</h1>
-          <p className="text-sm text-muted-foreground">
-            Approved diagnosis recommendations waiting for stores quotation.
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Stores Workbench</h1>
+          <p className="text-xs text-muted-foreground">
+            Quote, order, receive, and allocate diagnosis parts from one queue.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={refreshStoresWorkbench} className="h-9">
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={refreshStoresWorkbench} className="h-8">
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
             Refresh
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="border shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pending Quotes</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{recommendations.length}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Approved recommendations waiting on stores pricing.</p>
+      <div className="grid grid-cols-3 gap-2">
+        <Card className="rounded-md border shadow-none">
+          <CardContent className="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-medium uppercase text-muted-foreground">Pending Quotes</p>
+              <p className="text-[11px] text-muted-foreground">Need pricing</p>
+            </div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">{recommendations.length}</p>
           </CardContent>
         </Card>
-        <Card className="border shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Parts Requested</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{totalParts}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Total part quantity referenced across the current queue.</p>
+        <Card className="rounded-md border shadow-none">
+          <CardContent className="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-medium uppercase text-muted-foreground">Parts Requested</p>
+              <p className="text-[11px] text-muted-foreground">In quote queue</p>
+            </div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">{totalParts}</p>
           </CardContent>
         </Card>
-        <Card className="border shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Open Fulfillment</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {partsStatsLoading ? "..." : pendingFulfillmentCount}
+        <Card className="rounded-md border shadow-none">
+          <CardContent className="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-medium uppercase text-muted-foreground">Open Fulfillment</p>
+              <p className="text-[11px] text-muted-foreground">Not allocated</p>
+            </div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">
+              {partsStatsLoading ? "-" : pendingFulfillmentCount}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">Parts still pending, on PO, awaiting stock, or received for allocation.</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-none shadow-sm bg-muted/50">
-        <CardHeader className="border-b bg-muted/50 pb-3">
-          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Queue</CardTitle>
-          <CardDescription className="text-xs">
-            Search by work order, vehicle, recommendation, finding title, or quote number.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search queue or quote number..."
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-2 rounded-md border bg-card p-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search work order, vehicle, part, quote..."
+            className="h-8 pl-8 text-xs"
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground">Stores quote and fulfillment queue</p>
+      </div>
 
-      <Tabs defaultValue="quotes" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-          <TabsTrigger value="quotes">
+      <Tabs defaultValue="quotes" className="space-y-3">
+        <TabsList className="h-8 w-full justify-start rounded-md border bg-muted/30 p-0.5 sm:w-auto">
+          <TabsTrigger value="quotes" className="h-7 px-3 text-xs">
             Quotes
             {recommendations.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1.5 text-[10px]">
+              <Badge variant="secondary" className="ml-1.5 h-4 min-w-4 px-1 text-[10px]">
                 {recommendations.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="fulfillment">
+          <TabsTrigger value="fulfillment" className="h-7 px-3 text-xs">
             Fulfillment
             {pendingFulfillmentCount > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1.5 text-[10px]">
+              <Badge variant="secondary" className="ml-1.5 h-4 min-w-4 px-1 text-[10px]">
                 {pendingFulfillmentCount}
               </Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="quotes" className="space-y-4">
+        <TabsContent value="quotes" className="space-y-3">
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
@@ -262,21 +261,21 @@ export default function QuotationRequestsPage() {
               </CardContent>
             </Card>
           ) : recommendations.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               {recommendations.map((recommendation) => (
-                <Card key={recommendation.id} className="border shadow-sm">
-                  <CardContent className="space-y-4 p-5">
+                <Card key={recommendation.id} className="rounded-md border shadow-none">
+                  <CardContent className="space-y-3 p-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={recommendation.priority === "critical" ? "danger" : recommendation.priority === "necessary" ? "default" : "secondary"} className="capitalize">
+                          <Badge variant={recommendation.priority === "critical" ? "danger" : recommendation.priority === "necessary" ? "default" : "secondary"} className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
                             {recommendation.priority_display || recommendation.priority}
                           </Badge>
-                          <Badge variant="outline" className="capitalize">
+                          <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
                             {recommendation.recommendation_type_display || recommendation.recommendation_type}
                           </Badge>
                         </div>
-                        <p className="text-sm font-semibold text-foreground">
+                        <p className="text-sm font-semibold leading-5 text-foreground">
                           {recommendation.work_order_number}
                           {recommendation.vehicle_display ? ` • ${recommendation.vehicle_display}` : ""}
                         </p>
@@ -290,21 +289,21 @@ export default function QuotationRequestsPage() {
                           </p>
                         )}
                       </div>
-                      <Badge variant="outline" className="capitalize">
+                      <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
                         {recommendation.quotation_status_display || "Requested"}
                       </Badge>
                     </div>
 
-                    <div className="rounded-md border bg-muted/30 p-3">
-                      <p className="text-sm leading-6 text-foreground">{recommendation.description}</p>
+                    <div className="rounded-md border bg-muted/20 px-2.5 py-2">
+                      <p className="text-xs leading-5 text-foreground">{recommendation.description}</p>
                     </div>
 
                     {Array.isArray(recommendation.parts_needed) && recommendation.parts_needed.length > 0 && (
-                      <div className="rounded-md border bg-muted/30 p-3">
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Parts Needed</p>
-                        <div className="mt-2 space-y-1 text-sm text-foreground">
+                      <div className="rounded-md border bg-muted/20 px-2.5 py-2">
+                        <p className="text-[11px] font-medium uppercase text-muted-foreground">Parts Needed</p>
+                        <div className="mt-1.5 grid gap-1 text-xs text-foreground sm:grid-cols-2">
                           {recommendation.parts_needed.map((part, index) => (
-                            <p key={`${recommendation.id}-part-${index}`}>
+                            <p key={`${recommendation.id}-part-${index}`} className="truncate">
                               {part.part_name} x{part.quantity}
                               {part.part_number ? ` (${part.part_number})` : ""}
                             </p>
@@ -314,9 +313,9 @@ export default function QuotationRequestsPage() {
                     )}
 
                     {Array.isArray(recommendation.linked_findings) && recommendation.linked_findings.length > 0 && (
-                      <div className="rounded-md border bg-muted/30 p-3">
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Supporting Findings</p>
-                        <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+                      <div className="rounded-md border bg-muted/20 px-2.5 py-2">
+                        <p className="text-[11px] font-medium uppercase text-muted-foreground">Supporting Findings</p>
+                        <div className="mt-1.5 space-y-1.5 text-xs text-muted-foreground">
                           {recommendation.linked_findings.map((finding) => (
                             <div key={finding.id}>
                               <p className="font-medium text-foreground">{finding.finding_title}</p>
@@ -329,9 +328,9 @@ export default function QuotationRequestsPage() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-2 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 rounded-md border bg-muted/10 px-2.5 py-2 text-[11px] text-muted-foreground sm:grid-cols-2">
                       <div>
-                        <p className="font-medium uppercase tracking-wide">Requested</p>
+                        <p className="font-medium uppercase">Requested</p>
                         <p className="mt-1">
                           {recommendation.quotation_requested_at
                             ? new Date(recommendation.quotation_requested_at).toLocaleString()
@@ -339,14 +338,14 @@ export default function QuotationRequestsPage() {
                         </p>
                       </div>
                       <div>
-                        <p className="font-medium uppercase tracking-wide">Requested By</p>
+                        <p className="font-medium uppercase">Requested By</p>
                         <p className="mt-1">{recommendation.quotation_requested_by_name || "Not captured"}</p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 border-t pt-4">
+                    <div className="flex flex-wrap gap-2 border-t pt-3">
                       <Button
-                        className="h-8"
+                        className="h-7 px-2 text-xs"
                         size="sm"
                         onClick={() => markQuotedMutation.mutate(recommendation.id)}
                         disabled={!canCompleteQuotes || markQuotedMutation.isPending}
@@ -357,20 +356,20 @@ export default function QuotationRequestsPage() {
                       </Button>
                       {recommendation.quotation_estimate_id && (
                         <Link href={`/billing/estimates/${recommendation.quotation_estimate_id}`} className="inline-flex">
-                          <Button variant="outline" size="sm" className="h-8">
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                             <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                             Open Quote
                           </Button>
                         </Link>
                       )}
                       <Link href={`/workorders/${recommendation.work_order_id}`} className="inline-flex">
-                        <Button variant="outline" size="sm" className="h-8">
+                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                           <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                           Open Work Order
                         </Button>
                       </Link>
                       <Link href={`/workorders/${recommendation.work_order_id}/diagnosis`} className="inline-flex">
-                        <Button variant="ghost" size="sm" className="h-8">
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                           <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
                           View Diagnosis
                         </Button>
@@ -393,14 +392,14 @@ export default function QuotationRequestsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="fulfillment" className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+        <TabsContent value="fulfillment" className="space-y-3">
+          <div className="flex flex-wrap gap-1.5">
             {["all", "pending", "po_created", "awaiting_stock", "received", "ready"].map((statusOption) => (
               <Button
                 key={statusOption}
                 variant={activeStatus === statusOption ? "default" : "outline"}
                 size="sm"
-                className="h-8 capitalize"
+                className="h-7 px-2 text-xs capitalize"
                 onClick={() => setActiveStatus(statusOption)}
               >
                 {statusOption.replace("_", " ")}
@@ -413,7 +412,7 @@ export default function QuotationRequestsPage() {
               <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
             </div>
           ) : filteredWorkOrderIds.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               {filteredWorkOrderIds.map((workOrderId) => {
                 const workOrderParts = groupedParts[workOrderId] || [];
                 const firstPart = workOrderParts[0];
@@ -423,11 +422,11 @@ export default function QuotationRequestsPage() {
                 }, {});
 
                 return (
-                  <Card key={workOrderId} className="border shadow-sm">
-                    <CardContent className="space-y-4 p-5">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
+                  <Card key={workOrderId} className="rounded-md border shadow-none">
+                    <CardContent className="space-y-3 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-semibold text-foreground">
+                          <p className="text-sm font-semibold leading-5 text-foreground">
                             {firstPart?.work_order_number || `WO #${workOrderId}`}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -435,43 +434,43 @@ export default function QuotationRequestsPage() {
                             {firstPart?.vehicle_info ? ` • ${firstPart.vehicle_info}` : ""}
                           </p>
                         </div>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px]">
                           {workOrderParts.length} part{workOrderParts.length === 1 ? "" : "s"}
                         </Badge>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {Object.entries(statusCounts).map(([partStatus, count]) => (
-                          <Badge key={partStatus} variant={partStatus === "ready" ? "success" : "secondary"} className="capitalize">
+                          <Badge key={partStatus} variant={partStatus === "ready" ? "success" : "secondary"} className="h-5 rounded-sm px-1.5 text-[10px] capitalize">
                             {partStatus.replace("_", " ")}: {count}
                           </Badge>
                         ))}
                       </div>
 
-                      <div className="rounded-md border bg-muted/30">
+                      <div className="rounded-md border bg-muted/20">
                         {workOrderParts.slice(0, 4).map((part) => (
-                          <div key={part.id} className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0">
+                          <div key={part.id} className="flex items-center justify-between gap-3 border-b px-2.5 py-1.5 last:border-b-0">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-foreground">{part.part_name}</p>
+                              <p className="truncate text-xs font-medium text-foreground">{part.part_name}</p>
                               <p className="text-xs text-muted-foreground">
                                 Qty {part.quantity}
                                 {part.part_number ? ` • ${part.part_number}` : ""}
                               </p>
                             </div>
-                            <Badge variant="outline" className="shrink-0 capitalize">
+                            <Badge variant="outline" className="h-5 shrink-0 rounded-sm px-1.5 text-[10px] capitalize">
                               {part.status.replace("_", " ")}
                             </Badge>
                           </div>
                         ))}
                       </div>
 
-                      <div className="flex flex-wrap gap-2 border-t pt-4">
-                        <Button size="sm" className="h-8" onClick={() => setSelectedWoId(workOrderId)}>
+                      <div className="flex flex-wrap gap-2 border-t pt-3">
+                        <Button size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedWoId(workOrderId)}>
                           <Package className="mr-1.5 h-3.5 w-3.5" />
                           Manage Parts
                         </Button>
                         <Link href={`/workorders/${workOrderId}`} className="inline-flex">
-                          <Button variant="outline" size="sm" className="h-8">
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                             <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                             Open Work Order
                           </Button>

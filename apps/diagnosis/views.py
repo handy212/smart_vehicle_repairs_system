@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
 from django.utils import timezone
 from django.apps import apps as django_apps
@@ -22,6 +23,7 @@ from apps.core.services.ai_service import AIService
 from apps.branches.utils import resolve_branch, get_user_accessible_branches
 from django.db.models import Q
 from apps.diagnosis.services.baseline_test_procedures import seed_baseline_test_procedures
+from apps.notifications_app.triggers import notification_triggers
 from apps.diagnosis.serializers import (
     DiagnosisListSerializer, DiagnosisDetailSerializer,
     DiagnosisCreateSerializer, DiagnosisUpdateSerializer,
@@ -523,6 +525,22 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         """Resume the diagnosis"""
         diagnosis = self.get_object()
         
+        if diagnosis.status == 'awaiting_approval':
+            try:
+                diagnosis.reopen_for_revision(
+                    user=request.user,
+                    reason='Diagnosis resumed from approval review for revision.',
+                )
+            except ValueError as exc:
+                return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+            diagnosis.refresh_from_db()
+            serializer = self.get_serializer(diagnosis)
+            return Response({
+                'message': 'Diagnosis reopened for revision',
+                'diagnosis': serializer.data
+            })
+
         if diagnosis.resume(user=request.user):
             diagnosis.refresh_from_db()
             serializer = self.get_serializer(diagnosis)
@@ -535,6 +553,48 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 {'error': f'Cannot resume diagnosis. Current status: {diagnosis.get_status_display()}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=True, methods=['post'])
+    def submit_for_approval(self, request, pk=None):
+        """Send diagnosis findings/recommendations to the customer for approval."""
+        diagnosis = self.get_object()
+
+        try:
+            diagnosis.submit_for_approval(user=request.user)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except (DjangoValidationError, DRFValidationError) as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        diagnosis.refresh_from_db()
+        work_order = diagnosis.work_order
+        work_order.refresh_from_db()
+
+        try:
+            notification_triggers.work_order_requires_approval(work_order)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to send diagnosis approval notification: %s",
+                exc,
+                exc_info=True,
+            )
+
+        serializer = self.get_serializer(diagnosis)
+        return Response({
+            'message': 'Diagnosis sent for customer approval',
+            'diagnosis': serializer.data,
+            'work_order': {
+                'id': work_order.id,
+                'status': work_order.status,
+                'requires_approval': work_order.requires_approval,
+                'approval_requested_at': (
+                    work_order.approval_requested_at.isoformat()
+                    if work_order.approval_requested_at
+                    else None
+                ),
+            }
+        })
     
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
@@ -549,7 +609,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         diagnosis = self.get_object()
         
         # Check if diagnosis can be completed
-        if diagnosis.status not in ['in_progress', 'paused']:
+        if diagnosis.status not in ['in_progress', 'paused', 'awaiting_approval']:
             return Response(
                 {'error': f'Cannot complete diagnosis. Current status: {diagnosis.get_status_display()}'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -565,8 +625,10 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 else:
                     requires_approval = bool(requires_approval_raw)
         
-        # Complete diagnosis (this will auto-sync with WorkOrder)
-        diagnosis.complete(requires_approval=requires_approval)
+        try:
+            diagnosis.complete(requires_approval=requires_approval)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         
         # Refresh diagnosis and work_order from DB to get updated status
         diagnosis.refresh_from_db()
