@@ -174,8 +174,8 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = EmployeeProfile.objects.select_related(
-            'user', 'department', 'position', 'reporting_to',
-        ).prefetch_related('user__technician_profile')
+            'user', 'department', 'position', 'reporting_to', 'user__technician_profile',
+        )
         return filter_queryset_for_user_branches(
             qs, self.request.user, branch_field='user__branch',
         )
