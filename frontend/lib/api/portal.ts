@@ -63,7 +63,10 @@ export interface Estimate {
   created_at: string;
   expires_at?: string;
   notes?: string;
-  items: any[];
+  work_order?: number | { id: number };
+  work_order_number?: string;
+  work_order_status?: string;
+  items: unknown[];
 }
 
 export interface PortalDashboardStats {
@@ -125,7 +128,7 @@ export const portalApi = {
   },
 
 
-  createBooking: async (data: PortalBookingRequest): Promise<any> => {
+  createBooking: async (data: PortalBookingRequest): Promise<unknown> => {
     const response = await apiClient.post("/portal/bookings/", data);
     return response.data;
   },
@@ -135,18 +138,18 @@ export const portalApi = {
     return response.data;
   },
 
-  listEstimates: async (params?: Record<string, any>): Promise<any> => {
-    const response = await apiClient.get("/portal/estimates/", { params });
+  listEstimates: async (params?: Record<string, string | number | boolean>): Promise<Estimate[] | { results: Estimate[] }> => {
+    const response = await apiClient.get("/billing/estimates/", { params });
     return response.data;
   },
 
-  approveEstimate: async (id: number, data: { notes?: string }): Promise<any> => {
-    const response = await apiClient.post(`/portal/estimates/${id}/approve/`, data);
+  approveEstimate: async (id: number, data: { notes?: string }): Promise<unknown> => {
+    const response = await apiClient.post(`/billing/estimates/${id}/approve/`, data);
     return response.data;
   },
 
-  declineEstimate: async (id: number, data: { reason?: string }): Promise<any> => {
-    const response = await apiClient.post(`/portal/estimates/${id}/decline/`, data);
+  declineEstimate: async (id: number, data: { reason?: string }): Promise<unknown> => {
+    const response = await apiClient.post(`/billing/estimates/${id}/decline/`, data);
     return response.data;
   }
 };

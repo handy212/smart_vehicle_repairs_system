@@ -29,6 +29,8 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     task_count = serializers.SerializerMethodField()
     parts_count = serializers.SerializerMethodField()
     total_cost = serializers.SerializerMethodField()
+    estimate_summary = serializers.SerializerMethodField()
+    invoice_summary = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -41,7 +43,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'estimated_total', 'actual_total', 'total_cost', 'is_overdue', 'days_in_shop',
             'is_customer_waiting', 'requires_approval', 'approved_by_customer',
             'quality_check_required', 'quality_check_completed',
-            'task_count', 'parts_count'
+            'task_count', 'parts_count', 'estimate_summary', 'invoice_summary',
         ]
     
     @extend_schema_field(OpenApiTypes.STR)
@@ -85,6 +87,74 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.INT)
     def get_parts_count(self, obj):
         return obj.parts.count()
+
+    def _get_estimate(self, obj):
+        estimate = getattr(obj, 'estimate', None)
+        if estimate and estimate.status != 'draft':
+            return estimate
+
+        try:
+            from apps.billing.models import Estimate
+        except Exception:
+            return None
+
+        return (
+            Estimate.objects.filter(
+                reference_number=f"WO:{obj.id}",
+                customer=obj.customer,
+                vehicle=obj.vehicle,
+            )
+            .exclude(status__in=['draft', 'converted'])
+            .order_by('-created_at')
+            .first()
+        )
+
+    def _get_invoice(self, obj):
+        invoice = getattr(obj, 'invoice', None)
+        if invoice and invoice.status not in ['draft', 'void']:
+            return invoice
+
+        try:
+            from apps.billing.models import Invoice
+        except Exception:
+            return None
+
+        return Invoice.objects.filter(work_order=obj).exclude(status__in=['draft', 'void']).order_by('-created_at').first()
+
+    @extend_schema_field(serializers.DictField())
+    def get_estimate_summary(self, obj):
+        estimate = self._get_estimate(obj)
+        if not estimate:
+            return None
+
+        return {
+            'id': estimate.id,
+            'estimate_number': estimate.estimate_number,
+            'status': estimate.status,
+            'total': str(estimate.total),
+            'reference_number': estimate.reference_number,
+            'estimate_date': estimate.estimate_date.isoformat() if estimate.estimate_date else None,
+            'approved_date': estimate.approved_date.isoformat() if estimate.approved_date else None,
+            'created_at': estimate.created_at.isoformat() if estimate.created_at else None,
+        }
+
+    @extend_schema_field(serializers.DictField())
+    def get_invoice_summary(self, obj):
+        invoice = self._get_invoice(obj)
+        if not invoice:
+            return None
+
+        return {
+            'id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'status': invoice.status,
+            'total': str(invoice.total),
+            'amount_paid': str(invoice.amount_paid),
+            'amount_due': str(invoice.amount_due),
+            'invoice_date': invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+            'paid_at': invoice.paid_at.isoformat() if invoice.paid_at else None,
+            'created_at': invoice.created_at.isoformat() if invoice.created_at else None,
+        }
 
 
 class WorkOrderDetailSerializer(serializers.ModelSerializer):
@@ -161,7 +231,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
 
     def _get_estimate(self, obj):
         estimate = getattr(obj, 'estimate', None)
-        if estimate:
+        if estimate and estimate.status != 'draft':
             return estimate
 
         try:
@@ -175,14 +245,14 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
                 customer=obj.customer,
                 vehicle=obj.vehicle,
             )
-            .exclude(status='converted')
+            .exclude(status__in=['draft', 'converted'])
             .order_by('-created_at')
             .first()
         )
 
     def _get_invoice(self, obj):
         invoice = getattr(obj, 'invoice', None)
-        if invoice:
+        if invoice and invoice.status not in ['draft', 'void']:
             return invoice
 
         try:
@@ -190,7 +260,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
-        return Invoice.objects.filter(work_order=obj).exclude(status='proforma').order_by('-created_at').first()
+        return Invoice.objects.filter(work_order=obj).exclude(status__in=['draft', 'void']).order_by('-created_at').first()
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_vehicle_display(self, obj):
@@ -733,35 +803,12 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
             'available': serializers.BooleanField(),
             'quantity': serializers.DecimalField(max_digits=10, decimal_places=2),
             'part_id': serializers.IntegerField(allow_null=True),
+            'stock_item_id': serializers.IntegerField(allow_null=True, required=False),
             'message': serializers.CharField(),
         }
     ))
     def get_inventory_status(self, obj):
-        from apps.inventory.models import Part
-        if not obj.part_number:
-            return None
-            
-        # Find part by number
-        part = Part.objects.filter(part_number=obj.part_number).first()
-        if not part:
-            return {'available': False, 'quantity': 0, 'part_id': None, 'message': 'Part not found in inventory'}
-            
-        # Optional: Check branch compatibility
-        if part.branch and obj.work_order.branch and part.branch != obj.work_order.branch:
-             return {
-                 'available': False, 
-                 'quantity': 0, 
-                 'part_id': part.id, 
-                 'message': f'Part at {part.branch.name}'
-             }
-             
-        is_available = part.quantity_in_stock >= obj.quantity
-        return {
-            'available': is_available,
-            'quantity': part.quantity_in_stock,
-            'part_id': part.id,
-            'message': 'In Stock' if is_available else 'Insufficient Stock'
-        }
+        return obj.get_inventory_status_payload()
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_purchase_order_number(self, obj):
@@ -989,6 +1036,8 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
     approved_jobs = serializers.SerializerMethodField()
     timeline_status = serializers.SerializerMethodField()
     total_cost = serializers.SerializerMethodField()
+    estimate_summary = serializers.SerializerMethodField()
+    invoice_summary = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -998,7 +1047,8 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
             'customer_name', 'vehicle_info', 'vehicle_details',
             'estimated_total', 'total_cost',
             'customer_concerns',
-            'recommendations', 'approved_jobs', 'timeline_status'
+            'recommendations', 'approved_jobs', 'timeline_status',
+            'estimate_summary', 'invoice_summary',
         ]
         read_only_fields = fields
 
@@ -1034,6 +1084,48 @@ class PublicWorkOrderSerializer(serializers.ModelSerializer):
     def get_total_cost(self, obj):
         """Get total cost (use actual_total if available, otherwise estimated_total)"""
         return obj.actual_total if obj.actual_total else obj.estimated_total
+
+    def _get_estimate(self, obj):
+        estimate = getattr(obj, 'estimate', None)
+        if estimate and estimate.status != 'draft':
+            return estimate
+        return None
+
+    def _get_invoice(self, obj):
+        invoice = getattr(obj, 'invoice', None)
+        if invoice and invoice.status not in ['draft', 'void']:
+            return invoice
+        return None
+
+    @extend_schema_field(serializers.DictField())
+    def get_estimate_summary(self, obj):
+        estimate = self._get_estimate(obj)
+        if not estimate:
+            return None
+        return {
+            'id': estimate.id,
+            'estimate_number': estimate.estimate_number,
+            'status': estimate.status,
+            'total': str(estimate.total),
+            'estimate_date': estimate.estimate_date.isoformat() if estimate.estimate_date else None,
+            'approved_date': estimate.approved_date.isoformat() if estimate.approved_date else None,
+        }
+
+    @extend_schema_field(serializers.DictField())
+    def get_invoice_summary(self, obj):
+        invoice = self._get_invoice(obj)
+        if not invoice:
+            return None
+        return {
+            'id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'status': invoice.status,
+            'total': str(invoice.total),
+            'amount_paid': str(invoice.amount_paid),
+            'amount_due': str(invoice.amount_due),
+            'invoice_date': invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+            'paid_at': invoice.paid_at.isoformat() if invoice.paid_at else None,
+        }
 
     def get_recommendations(self, obj):
 

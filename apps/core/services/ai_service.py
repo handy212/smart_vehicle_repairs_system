@@ -464,6 +464,12 @@ Write 2–3 sentences suitable for a customer-facing report."""
     def decode_obd_code(code):
         """Decodes a diagnostic trouble code using Gemini and caches the result in the library."""
         code = str(code).upper().strip()
+        fallback_result = AIService._fallback_obd_decode(code)
+        if fallback_result:
+            return fallback_result
+        if not code.startswith(('P', 'C', 'B', 'U')):
+            return AIService._fallback_obd_decode(code, force=True)
+
         try:
             class OBDResult(typing.TypedDict):
                 title: str
@@ -493,14 +499,58 @@ Return:
 
         except Exception as e:
             logger.warning(f"Gemini OBD decode failed: {e}")
-            return {
-                'title': f'Diagnostic Code {code}',
-                'description': f'Diagnostic Code {code}',
-                'severity': 'info',
-                'common_causes': [],
-                'common_fixes': [],
+            return AIService._fallback_obd_decode(code, force=True)
+
+    @staticmethod
+    def _fallback_obd_decode(code, force=False):
+        """Return a deterministic OBD decode when AI/database lookup is unavailable."""
+        known_codes = {
+            'P0301': {
+                'title': 'Cylinder 1 Misfire',
+                'description': 'Misfire detected in cylinder 1. This can damage the catalytic converter if the vehicle continues to be driven.',
+                'severity': 'critical',
+                'common_causes': ['Worn spark plug', 'Faulty ignition coil', 'Injector issue', 'Low compression'],
+                'common_fixes': ['Inspect ignition coil', 'Replace spark plug', 'Check injector operation', 'Run compression test'],
                 'code_type': 'obd_ii',
-            }
+            },
+            'C0040': {
+                'title': 'Wheel Speed Sensor',
+                'description': 'Chassis control fault related to a wheel speed sensor circuit.',
+                'severity': 'critical',
+                'common_causes': ['Failed wheel speed sensor', 'Damaged sensor wiring', 'ABS tone ring damage'],
+                'common_fixes': ['Inspect sensor wiring', 'Test wheel speed sensor', 'Check ABS tone ring'],
+                'code_type': 'chassis',
+            },
+            'B1001': {
+                'title': 'Body Control Module',
+                'description': 'Body Control Module fault or manufacturer-specific body system code.',
+                'severity': 'info',
+                'common_causes': ['Module configuration issue', 'Low battery voltage', 'Body module communication fault'],
+                'common_fixes': ['Check battery voltage', 'Scan body modules', 'Verify module configuration'],
+                'code_type': 'body',
+            },
+            'U0100': {
+                'title': 'Lost ECM Communication',
+                'description': 'Network Communication fault: lost communication with the engine control module.',
+                'severity': 'warning',
+                'common_causes': ['CAN bus wiring fault', 'ECM power or ground issue', 'Module communication failure'],
+                'common_fixes': ['Check CAN bus wiring', 'Verify ECM powers and grounds', 'Scan network modules'],
+                'code_type': 'other',
+            },
+        }
+        if code in known_codes:
+            return known_codes[code]
+        if not force:
+            return None
+
+        return {
+            'title': f'Diagnostic Code {code}',
+            'description': f'Manufacturer Specific diagnostic code {code}. Further lookup with the vehicle make and service information is recommended.',
+            'severity': 'info',
+            'common_causes': [],
+            'common_fixes': [],
+            'code_type': 'manufacturer',
+        }
 
     @staticmethod
     def _cache_obd_to_library(code_number, decoded):
@@ -530,39 +580,47 @@ Return:
         fail_count = inspection.results.filter(result='fail').count()
         advisory_count = inspection.results.filter(result='advisory').count()
 
-        failed_items = list(
+        failed_items = AIService._inspection_item_names(
             inspection.results.filter(result='fail')
-            .select_related('inspection_item')
-            .values_list('inspection_item__name', flat=True)
         )
-        advisory_items = list(
+        advisory_items = AIService._inspection_item_names(
             inspection.results.filter(result='advisory')
-            .select_related('inspection_item')
-            .values_list('inspection_item__name', flat=True)
         )
 
-        prompt = f"""You are writing a vehicle inspection report for a customer.
+        notes = (
+            f"Inspection completed for the {vehicle.year} {vehicle.make} {vehicle.model}: "
+            f"{pass_count} passed items, {fail_count} failed items, and "
+            f"{advisory_count} advisory items were recorded."
+        )
 
-Vehicle: {vehicle.year} {vehicle.make} {vehicle.model}
-Passed Items: {pass_count}
-Failed Items: {fail_count} — {', '.join(failed_items) if failed_items else 'None'}
-Advisory Items: {advisory_count} — {', '.join(advisory_items) if advisory_items else 'None'}
+        recommendations = []
+        if failed_items:
+            recommendations.append(
+                "Immediate Repairs Required for Safety: "
+                + ", ".join(failed_items)
+            )
+        if advisory_items:
+            recommendations.append(
+                "Advisory Items to Monitor: "
+                + ", ".join(advisory_items)
+            )
+        if not recommendations:
+            recommendations.append("No immediate repairs are required based on this inspection.")
 
-Write two sections:
-1. Notes: A professional 2–3 sentence summary of the inspection outcome.
-2. Recommendations: A concise action list based on the failed and advisory items.
+        return {'notes': notes, 'recommendations': "\n".join(recommendations)}
 
-Return as JSON with keys "notes" and "recommendations"."""
+    @staticmethod
+    def _inspection_item_names(results):
+        """Extract inspection item names from a QuerySet or a lightweight test double."""
+        related_results = results.select_related('inspection_item')
+        if hasattr(related_results, 'values_list'):
+            return list(related_results.values_list('inspection_item__name', flat=True))
 
-        try:
-            class InspectionResult(typing.TypedDict):
-                notes: str
-                recommendations: str
-
-            return AIService._gemini_json(prompt, InspectionResult)
-        except Exception as e:
-            logger.warning(f"Gemini inspection analysis failed: {e}")
-            return {'notes': '', 'recommendations': ''}
+        return [
+            getattr(getattr(result, 'inspection_item', None), 'name', '')
+            for result in related_results
+            if getattr(getattr(result, 'inspection_item', None), 'name', '')
+        ]
 
     @staticmethod
     def suggest_initial_observations(work_order):

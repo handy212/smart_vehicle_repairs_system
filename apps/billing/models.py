@@ -221,65 +221,36 @@ class Estimate(models.Model):
         super().save(*args, **kwargs)
     
     def sync_parts_to_work_order(self):
-        """Sync parts from estimate line items to work order parts and update work order totals"""
+        """
+        Sync estimate financial fields to the linked work order.
+
+        Work-order parts are owned by the diagnosis/recommendation flow. Billing
+        estimates may quote those parts, but they must not create or mutate
+        WorkOrderPart rows or overwrite the work order's parts cost from
+        estimate line items.
+        """
         if not self.work_order:
             return
         
-        from apps.workorders.models import WorkOrderPart
         from django.db import transaction
-        
-        # Ensure totals are calculated before syncing
-        self.calculate_totals()
-        self.refresh_from_db()
-        
-        # Get all part-type line items
-        part_line_items = self.line_items.filter(item_type='part')
+        from django.db.models import Sum
         
         with transaction.atomic():
-            # Sync parts if any exist
-            if part_line_items.exists():
-                # Get existing work order parts from this estimate (tracked by notes or other marker)
-                # For now, we'll sync all parts - in the future, we could track which ones came from estimate
-                
-                # Check which parts already exist to avoid duplicates
-                existing_part_numbers = set(
-                    self.work_order.parts.values_list('part_number', flat=True).distinct()
-                )
-                
-                # Create WorkOrderPart for each EstimateLineItem that's a part
-                for line_item in part_line_items:
-                    # Generate a unique part number for this line item if it doesn't have one
-                    part_number = line_item.part_number or f"EST-{self.id}-{line_item.id}"
-                    
-                    # Skip if this part already exists (by part_number)
-                    if part_number in existing_part_numbers:
-                        continue
-                    
-                    # Create WorkOrderPart
-                    WorkOrderPart.objects.create(
-                        work_order=self.work_order,
-                        part_number=part_number,
-                        part_name=line_item.description[:255] if line_item.description else f"Part from Estimate {self.estimate_number}",
-                        description=line_item.notes or f"From estimate {self.estimate_number}",
-                        quantity=line_item.quantity,
-                        unit_cost=line_item.unit_price,
-                        total_cost=line_item.total,
-                        selling_price=line_item.total,  # Use total as selling price initially
-                        markup_percentage=0,  # Can be adjusted later
-                        status='pending',  # Default to pending, technician will update as parts are ordered/received
-                    )
-                    # Add to existing set to prevent duplicates in same sync
-                    existing_part_numbers.add(part_number)
-            
+            self._remove_non_diagnosis_part_lines()
+
+            # Ensure totals are calculated before syncing
+            self.calculate_totals()
+            self.refresh_from_db()
+
             # Always update work order estimated totals from estimate (even if no parts)
             # Refresh line items queryset to ensure we have latest data
             from apps.billing.models import EstimateLineItem
             line_items = EstimateLineItem.objects.filter(estimate=self)
             
-            # Calculate parts cost from estimate line items
-            parts_subtotal = sum(
-                Decimal(str(item.total or '0')) for item in line_items if item.item_type == 'part'
-            ) or Decimal('0')
+            # Parts cost comes only from diagnosis-created work-order part rows.
+            parts_subtotal = self.work_order.parts.aggregate(
+                total=Sum('selling_price')
+            )['total'] or Decimal('0')
             
             # Calculate labor cost from estimate line items
             labor_subtotal = sum(
@@ -296,25 +267,10 @@ class Estimate(models.Model):
             self.work_order.estimated_labor_cost = labor_subtotal
             self.work_order.estimated_labor_hours = labor_hours
             
-            # Total estimate amount (includes tax, fees, etc.)
-            # Use the estimate's calculated total which includes all taxes and fees
-            # Ensure we have a valid total
-            estimated_total = self.total
-            if not estimated_total or estimated_total == Decimal('0'):
-                # Recalculate total as fallback
-                estimated_total = (
-                    (self.subtotal or Decimal('0')) - (self.discount_amount or Decimal('0')) +
-                    (self.tax_amount or Decimal('0')) +
-                    (self.shop_supplies_fee or Decimal('0')) +
-                    (self.environmental_fee or Decimal('0'))
-                )
-                # If still 0, use subtotal at minimum
-                if estimated_total == Decimal('0') and self.subtotal:
-                    estimated_total = self.subtotal
-            
-            # Ensure we always set a non-zero value if we have costs
-            if estimated_total == Decimal('0') and (parts_subtotal > 0 or labor_subtotal > 0):
-                estimated_total = parts_subtotal + labor_subtotal
+            # Work-order financial summary total follows its diagnosis-owned
+            # parts plus quoted labor, not the billing estimate's customer quote
+            # total with taxes/fees.
+            estimated_total = parts_subtotal + labor_subtotal
             
             self.work_order.estimated_total = estimated_total
             
@@ -332,6 +288,19 @@ class Estimate(models.Model):
             logger.info(f"Synced estimate {self.id} to work order {self.work_order.id}: "
                        f"total=${estimated_total}, parts=${parts_subtotal}, labor=${labor_subtotal}, "
                        f"estimate.total={self.total}, estimate.subtotal={self.subtotal}")
+
+    def _remove_non_diagnosis_part_lines(self):
+        """
+        Diagnosis quotation estimates may price parts, but the part list itself
+        must originate from diagnosis recommendations.
+        """
+        diagnosis_marker = '[DIAG-REC:'
+        if not self.line_items.filter(item_type='part', notes__contains=diagnosis_marker).exists():
+            return
+
+        self.line_items.filter(item_type='part').exclude(
+            notes__contains=diagnosis_marker
+        ).delete()
     
     def calculate_totals(self):
         """Calculate all totals from line items"""
@@ -451,20 +420,31 @@ class Estimate(models.Model):
     def convert_to_work_order(self):
         """Convert estimate to a Work Order"""
         from apps.workorders.models import WorkOrder
+
+        if self.work_order:
+            return self.work_order
+
+        if not self.vehicle:
+            raise ValueError("A vehicle is required before converting an estimate to a work order.")
         
         # Create work order
         work_order = WorkOrder.objects.create(
             customer=self.customer,
             vehicle=self.vehicle,
             branch=self.branch,
-            description=f"Work Order from Estimate {self.estimate_number}\n\n{self.description}",
-            status='intake_pending',
+            customer_concerns=self.description or self.title or f"Work order from estimate {self.estimate_number}",
+            special_instructions=f"Converted from Estimate {self.estimate_number}",
+            status='draft',
             priority='medium',
             created_by=self.created_by,
-            estimated_total=self.total,
             estimated_labor_cost=self.labor_subtotal,
             estimated_parts_cost=self.parts_subtotal,
-            estimated_labor_hours=sum(item.labor_hours or 0 for item in self.line_items.all() if item.item_type == 'labor')
+            estimated_labor_hours=sum(
+                item.labor_hours or Decimal('0')
+                for item in self.line_items.all()
+                if item.item_type == 'labor'
+            ),
+            odometer_in=self.vehicle.current_mileage or 0,
         )
         
         # Link estimate to work order

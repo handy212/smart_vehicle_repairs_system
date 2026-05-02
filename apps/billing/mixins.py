@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Sum, Q, F
 from django.contrib.contenttypes.models import ContentType
 from auditlog.models import LogEntry
@@ -71,12 +72,30 @@ class BillingStatusMixin:
 class BillingCommunicationMixin:
     """Mixin for sending notifications and AI suggestions"""
 
+    def _linked_work_order_send_error(self, obj):
+        work_order = getattr(obj, 'work_order', None)
+        if not work_order:
+            return None
+
+        if obj.__class__.__name__ == 'Estimate' and work_order.status != 'awaiting_approval':
+            return (
+                f"Cannot send estimate {obj.estimate_number} because linked work order "
+                f"{work_order.work_order_number} is {work_order.get_status_display()}, "
+                "not awaiting customer approval."
+            )
+
+        return None
+
     @action(detail=True, methods=['post'])
     def send(self, request, pk=None):
         """Send document to customer"""
         obj = self.get_object()
         if hasattr(obj, 'status') and obj.status == 'void':
             return Response({"error": "Cannot send voided document"}, status=status.HTTP_400_BAD_REQUEST)
+
+        linked_error = self._linked_work_order_send_error(obj)
+        if linked_error:
+            return Response({"error": linked_error}, status=status.HTTP_400_BAD_REQUEST)
         
         if obj.status == 'draft':
             obj.status = 'sent'
@@ -311,6 +330,21 @@ class BillingDocumentMixin:
 class EstimateActionMixin:
     """Specialized actions for the Estimate lifecycle"""
 
+    def _estimate_work_order_action_error(self, estimate):
+        work_order = getattr(estimate, 'work_order', None)
+        if not work_order:
+            return None
+
+        if work_order.status != 'awaiting_approval':
+            status_display = work_order.get_status_display() if hasattr(work_order, 'get_status_display') else work_order.status
+            return (
+                f"This estimate is no longer actionable because work order "
+                f"{work_order.work_order_number} is {status_display}. "
+                "Ask the service advisor to issue a current estimate if more approval is needed."
+            )
+
+        return None
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         """Approve estimate"""
@@ -320,11 +354,30 @@ class EstimateActionMixin:
                 {"error": "Estimate cannot be approved in current status or has expired"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
-        estimate.status = 'approved'
-        estimate.approved_date = timezone.now()
-        estimate.approved_by = request.user
-        estimate.save()
+
+        work_order_error = self._estimate_work_order_action_error(estimate)
+        if work_order_error:
+            return Response({"error": work_order_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            work_order = getattr(estimate, 'work_order', None)
+            if work_order:
+                can_transition, error_message = work_order.can_transition_to('approved')
+                if not can_transition:
+                    transaction.set_rollback(True)
+                    return Response({"error": error_message}, status=status.HTTP_400_BAD_REQUEST)
+
+                work_order.approve_customer_work(
+                    user=request.user,
+                    method='digital' if getattr(request.user, 'role', None) == 'customer' else 'staff',
+                    notes=f"Estimate {estimate.estimate_number} approved.",
+                    linked_estimate=estimate,
+                )
+            else:
+                estimate.status = 'approved'
+                estimate.approved_date = timezone.now()
+                estimate.approved_by = request.user
+                estimate.save(update_fields=['status', 'approved_date', 'approved_by', 'updated_at'])
         
         # Trigger notification
         try:
@@ -339,10 +392,34 @@ class EstimateActionMixin:
     def decline(self, request, pk=None):
         """Decline estimate"""
         estimate = self.get_object()
-        estimate.status = 'declined'
-        estimate.declined_date = timezone.now()
-        estimate.declined_by = request.user
-        estimate.save()
+        work_order_error = self._estimate_work_order_action_error(estimate)
+        if work_order_error:
+            return Response({"error": work_order_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            estimate.status = 'declined'
+            estimate.declined_date = timezone.now()
+            estimate.declined_by = request.user
+            estimate.save()
+
+            work_order = getattr(estimate, 'work_order', None)
+            if work_order:
+                reason = request.data.get('reason') or request.data.get('notes') or 'Estimate declined.'
+                work_order.approved_by_customer = False
+                work_order.approved_at = None
+                work_order.approval_notes = reason
+                work_order.save(update_fields=['approved_by_customer', 'approved_at', 'approval_notes'])
+
+                if hasattr(work_order, 'diagnosis'):
+                    work_order.diagnosis.reopen_for_revision(
+                        user=request.user,
+                        reason=f"Customer declined estimate {estimate.estimate_number}. Reason: {reason}",
+                    )
+                elif work_order.status == 'awaiting_approval':
+                    work_order.diagnosis_completed_at = None
+                    work_order.save(update_fields=['diagnosis_completed_at'])
+                    work_order.transition_to('diagnosis', user=request.user)
+
         return Response({"message": "Estimate declined", "data": self.get_serializer(estimate).data})
 
     @action(detail=True, methods=['post'])
@@ -362,7 +439,10 @@ class EstimateActionMixin:
         if estimate.status != 'approved':
             return Response({"error": "Only approved estimates can be converted"}, status=status.HTTP_400_BAD_REQUEST)
         
-        work_order = estimate.convert_to_work_order()
+        try:
+            work_order = estimate.convert_to_work_order()
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "Work Order created", "work_order_id": work_order.id})
 
     @action(detail=True, methods=['post'])

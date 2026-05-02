@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useQuery } from "@tanstack/react-query";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
@@ -120,6 +122,7 @@ export default function PurchaseOrdersPage() {
       case "confirmed": return "success";
       case "received": return "success";
       case "partially_received": return "warning";
+      case "rejected": return "danger";
       case "cancelled": return "danger";
       default: return "default";
     }
@@ -133,6 +136,7 @@ export default function PurchaseOrdersPage() {
       confirmed: "Confirmed",
       received: "Received",
       partially_received: "Partially Received",
+      rejected: "Rejected",
       cancelled: "Cancelled",
     };
     return labels[status] || status.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
@@ -150,6 +154,7 @@ export default function PurchaseOrdersPage() {
         { value: "confirmed", label: "Confirmed" },
         { value: "partially_received", label: "Partially Received" },
         { value: "received", label: "Received" },
+        { value: "rejected", label: "Rejected" },
         { value: "cancelled", label: "Cancelled" },
       ],
     },

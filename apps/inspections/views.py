@@ -284,7 +284,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         
         # Customers can view and approve/reject their own inspections without special permissions
         if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
-            if self.action in ['list', 'retrieve', 'approve', 'reject']:
+            if self.action in ['list', 'retrieve', 'approve', 'reject', 'pdf', 'print']:
                 return base_permissions
         
         # Staff permissions
@@ -924,4 +924,3 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)
-

@@ -406,7 +406,7 @@ class Diagnosis(models.Model):
                             # Transition to awaiting_approval
                             can_transition, error_msg = work_order.can_transition_to('awaiting_approval')
                             if can_transition:
-                                work_order.status = 'awaiting_approval'
+                                work_order.transition_to('awaiting_approval', user=self.technician)
                             else:
                                 # If can't transition (e.g., missing estimate), keep in diagnosis but mark completed
                                 import logging
@@ -851,7 +851,7 @@ class RepairRecommendation(models.Model):
         """Auto-calculate total cost"""
         self.customer_approved = self.approval_status == 'approved'
 
-        if self.approval_status != 'approved':
+        if self.approval_status in {'deferred', 'declined'}:
             self.quotation_status = 'not_requested'
             self.quotation_requested_at = None
             self.quotation_requested_by = None
@@ -889,9 +889,9 @@ class RepairRecommendation(models.Model):
         ])
 
     def request_quotation(self, requested_by=None):
-        """Submit an approved recommendation to stores for quotation."""
-        if self.approval_status != 'approved':
-            raise ValueError('Only approved recommendations can be submitted for quotation.')
+        """Submit a recommendation to stores for quotation before or after customer approval."""
+        if self.approval_status not in {'pending_approval', 'approved'}:
+            raise ValueError('Only active recommendations can be submitted for quotation.')
 
         self.quotation_status = 'requested'
         self.quotation_requested_at = timezone.now()
@@ -909,8 +909,8 @@ class RepairRecommendation(models.Model):
 
     def mark_quoted(self, quoted_by=None):
         """Mark the recommendation quotation as ready."""
-        if self.approval_status != 'approved':
-            raise ValueError('Only approved recommendations can be marked as quoted.')
+        if self.approval_status not in {'pending_approval', 'approved'}:
+            raise ValueError('Only active recommendations can be marked as quoted.')
 
         self.quotation_status = 'quoted'
         self.quoted_at = timezone.now()

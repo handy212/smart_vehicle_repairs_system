@@ -35,7 +35,7 @@ export default function MyInvoicesPage() {
         customer: customerId,
         ordering: "-invoice_date",
       };
-      if (statusFilter !== "all" && statusFilter !== "unpaid" && statusFilter !== "paid" && statusFilter !== "overdue") {
+      if (statusFilter !== "all") {
         params.status = statusFilter;
       }
       return billingApi.invoices.list(params);
@@ -68,7 +68,6 @@ export default function MyInvoicesPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <PortalPageHeader
         title="Billing & Invoices"
-        description="Review your service history, download invoices, and manage pending payments."
       />
 
       {/* Summary row */}

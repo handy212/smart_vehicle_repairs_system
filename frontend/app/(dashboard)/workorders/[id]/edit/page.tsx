@@ -22,7 +22,7 @@ const workOrderSchema = z.object({
   vehicle: z.number().min(1, "Vehicle is required"),
   priority: z.enum(["low", "normal", "high", "urgent"]),
   status: z.enum([
-    "draft", "inspection", "intake", "diagnosis",
+    "draft", "inspection", "intake", "assigned", "diagnosis",
     "awaiting_approval", "approved", "in_progress",
     "additional_work_found", "paused", "quality_check",
     "completed", "invoiced", "closed"
@@ -33,22 +33,24 @@ const workOrderSchema = z.object({
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
+type ServiceTypeOption = { id: number; name: string };
 
 // Valid status transitions based on backend logic
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  'draft': ['inspection', 'intake'],
+  'draft': ['inspection'],
   'inspection': ['intake', 'draft'],
-  'intake': ['diagnosis', 'draft'],
-  'diagnosis': ['awaiting_approval', 'approved', 'in_progress'],
+  'intake': ['assigned'],
+  'assigned': ['diagnosis', 'intake'],
+  'diagnosis': ['awaiting_approval'],
   'awaiting_approval': ['approved', 'diagnosis'],
-  'approved': ['in_progress', 'awaiting_approval'],
-  'in_progress': ['paused', 'quality_check', 'completed', 'additional_work_found'],
-  'additional_work_found': ['awaiting_approval', 'in_progress'],
+  'approved': ['in_progress'],
+  'in_progress': ['paused', 'quality_check', 'additional_work_found'],
+  'additional_work_found': ['awaiting_approval'],
   'paused': ['in_progress'],
   'quality_check': ['completed', 'in_progress'],
   'completed': ['invoiced', 'closed'],
   'invoiced': ['closed'],
-  'closed': ['invoiced', 'completed', 'in_progress'],
+  'closed': [],
 };
 
 // Status display labels
@@ -56,6 +58,7 @@ const STATUS_LABELS: Record<string, string> = {
   'draft': 'Draft',
   'inspection': 'Initial Inspection',
   'intake': 'Intake',
+  'assigned': 'Assigned',
   'diagnosis': 'Diagnosis',
   'awaiting_approval': 'Awaiting Customer Approval',
   'approved': 'Approved',
@@ -243,12 +246,12 @@ export default function EditWorkOrderPage() {
         customer: customerId || 0,
         vehicle: vehicleId || 0,
 
-        priority: workOrder.priority as any || "normal",
+        priority: (workOrder.priority || "normal") as WorkOrderFormData["priority"],
 
-        status: workOrder.status as any || "draft",
+        status: (workOrder.status || "draft") as WorkOrderFormData["status"],
         customer_concerns: workOrder.customer_concerns || "",
 
-        maintenance_type: (workOrder.maintenance_type as any) || "general",
+        maintenance_type: (workOrder.maintenance_type || "general") as WorkOrderFormData["maintenance_type"],
         service_type: serviceTypeId,
       });
 
@@ -653,7 +656,7 @@ export default function EditWorkOrderPage() {
                           setValue("service_type", parseInt(val));
                           // Auto-fill concerns if empty
 
-                          const type = serviceTypesData?.results?.find((t: any) => t.id === parseInt(val));
+                          const type = serviceTypesData?.results?.find((t: ServiceTypeOption) => t.id === parseInt(val));
                           if (type && !watch("customer_concerns")) {
                             setValue("customer_concerns", `Perform ${type.name}`);
                           }
@@ -664,7 +667,7 @@ export default function EditWorkOrderPage() {
                         </SelectTrigger>
                         <SelectContent>
 
-                          {serviceTypesData?.results?.map((type: any) => (
+                          {serviceTypesData?.results?.map((type: ServiceTypeOption) => (
                             <SelectItem key={type.id} value={type.id.toString()}>
                               {type.name}
                             </SelectItem>
@@ -683,7 +686,7 @@ export default function EditWorkOrderPage() {
                     <Select
                       value={watch("priority")}
 
-                      onValueChange={(val) => setValue("priority", val as any)}
+                      onValueChange={(val) => setValue("priority", val as WorkOrderFormData["priority"])}
                     >
                       <SelectTrigger id="priority" className="w-full">
                         <SelectValue placeholder="Select priority" />
@@ -703,7 +706,7 @@ export default function EditWorkOrderPage() {
                     <Select
                       value={watch("status")}
 
-                      onValueChange={(val) => setValue("status", val as any)}
+                      onValueChange={(val) => setValue("status", val as WorkOrderFormData["status"])}
                       disabled={!workOrder}
                     >
                       <SelectTrigger id="status" className={`w-full ${errors.status ? "border-destructive" : ""}`}>
@@ -774,4 +777,3 @@ export default function EditWorkOrderPage() {
     </div>
   );
 }
-

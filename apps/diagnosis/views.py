@@ -21,7 +21,7 @@ from apps.diagnosis.models import (
 )
 from apps.core.services.ai_service import AIService
 from apps.branches.utils import resolve_branch, get_user_accessible_branches
-from django.db.models import Q
+from django.db.models import Q, Sum
 from apps.diagnosis.services.baseline_test_procedures import seed_baseline_test_procedures
 from apps.notifications_app.triggers import notification_triggers
 from apps.diagnosis.serializers import (
@@ -109,6 +109,43 @@ def filter_diagnosis_queryset_for_branches(queryset, user, request, branch_looku
             return queryset.filter(**{f"{branch_lookup}__isnull": True})
     
     return queryset.none()
+
+
+DIAGNOSIS_APPROVAL_LOCK_MESSAGE = (
+    'Diagnosis is locked while waiting for customer approval. '
+    'Customer approval or decline must move the work order before diagnosis can be changed.'
+)
+
+
+def diagnosis_is_locked_for_customer_approval(diagnosis):
+    work_order = getattr(diagnosis, 'work_order', None)
+    return (
+        diagnosis is not None
+        and diagnosis.status == 'awaiting_approval'
+        and work_order is not None
+        and not work_order.approved_by_customer
+    )
+
+
+def assert_diagnosis_editable(diagnosis):
+    if diagnosis_is_locked_for_customer_approval(diagnosis):
+        raise DRFValidationError({'error': DIAGNOSIS_APPROVAL_LOCK_MESSAGE})
+
+
+class DiagnosisMutationLockMixin:
+    """Block edits to diagnosis-owned records during customer approval review."""
+
+    def _get_instance_diagnosis(self, instance):
+        return getattr(instance, 'diagnosis', instance)
+
+    def perform_update(self, serializer):
+        assert_diagnosis_editable(self._get_instance_diagnosis(serializer.instance))
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        assert_diagnosis_editable(self._get_instance_diagnosis(instance))
+        return super().destroy(request, *args, **kwargs)
 
 
 class DiagnosisViewSet(viewsets.ModelViewSet):
@@ -313,14 +350,36 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         estimate.calculate_totals()
         estimate.refresh_from_db()
 
-        labor_hours = sum(
-            Decimal(str(item.labor_hours or '0'))
-            for item in estimate.line_items.filter(item_type='labor')
-        ) or Decimal('0')
-        work_order.estimated_parts_cost = estimate.parts_subtotal
-        work_order.estimated_labor_cost = estimate.labor_subtotal
+        self._sync_work_order_financials_from_diagnosis_parts(work_order, estimate)
+
+        return estimate, None
+
+    @staticmethod
+    def _sync_work_order_financials_from_diagnosis_parts(work_order, estimate=None):
+        """
+        Keep work-order financials aligned with diagnosis-created parts.
+
+        Estimate part lines are quote presentation only; the work order's parts
+        source of truth is WorkOrderPart rows created from diagnosis
+        recommendations.
+        """
+        parts_subtotal = work_order.parts.aggregate(
+            total=Sum('selling_price')
+        )['total'] or Decimal('0')
+        labor_subtotal = Decimal('0')
+        labor_hours = Decimal('0')
+
+        if estimate is not None:
+            labor_subtotal = estimate.labor_subtotal or Decimal('0')
+            labor_hours = sum(
+                Decimal(str(item.labor_hours or '0'))
+                for item in estimate.line_items.filter(item_type='labor')
+            ) or Decimal('0')
+
+        work_order.estimated_parts_cost = parts_subtotal
+        work_order.estimated_labor_cost = labor_subtotal
         work_order.estimated_labor_hours = labor_hours
-        work_order.estimated_total = estimate.total
+        work_order.estimated_total = parts_subtotal + labor_subtotal
         work_order.save(update_fields=[
             'estimated_parts_cost',
             'estimated_labor_cost',
@@ -329,7 +388,132 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             'updated_at',
         ])
 
-        return estimate, None
+    @staticmethod
+    def _get_recommendation_quote_estimate(recommendation):
+        if not django_apps.is_installed('apps.billing'):
+            return None
+
+        estimate_id = getattr(recommendation, 'quotation_estimate_id', None)
+        if not estimate_id:
+            return None
+
+        Estimate = django_apps.get_model('billing', 'Estimate')
+        return Estimate.objects.filter(pk=estimate_id).first()
+
+    @classmethod
+    def _validate_quote_ready_for_recommendations(cls, recommendations):
+        """
+        Validate Stores has priced the existing estimate lines for each recommendation.
+
+        Marking quoted must not rebuild the estimate, because Stores may have
+        edited the generated draft with supplier pricing, alternatives, or fees.
+        """
+        if not django_apps.is_installed('apps.billing'):
+            return None, None
+
+        first_estimate = None
+        for recommendation in recommendations:
+            estimate = cls._get_recommendation_quote_estimate(recommendation)
+            if estimate is None:
+                return None, (
+                    f'Recommendation {recommendation.id} must be linked to a quotation estimate before it can be marked as quoted.'
+                )
+
+            marker = f"[DIAG-REC:{recommendation.id}]"
+            quote_lines = estimate.line_items.filter(notes__contains=marker)
+            if not quote_lines.exists():
+                return None, (
+                    f'Recommendation {recommendation.id} has no linked estimate lines. Send it to stores again before marking it quoted.'
+                )
+
+            unpriced_lines = quote_lines.filter(unit_price__lte=Decimal('0.01')).count()
+            if unpriced_lines:
+                return None, (
+                    f'Recommendation {recommendation.id} has {unpriced_lines} unpriced estimate line(s). Stores must enter real pricing before marking it quoted.'
+                )
+
+            if first_estimate is None:
+                first_estimate = estimate
+
+        return first_estimate, None
+
+    @classmethod
+    def _sync_recommendation_costs_from_quote_estimate(cls, recommendation):
+        """Copy Stores quote part totals back onto the recommendation card."""
+        estimate = cls._get_recommendation_quote_estimate(recommendation)
+        if estimate is None:
+            return
+
+        marker = f"[DIAG-REC:{recommendation.id}]"
+        quote_lines = estimate.line_items.filter(notes__contains=marker)
+        parts_total = sum(
+            Decimal(str(line.total or '0'))
+            for line in quote_lines
+            if line.item_type == 'part'
+        ) or Decimal('0')
+
+        recommendation.estimated_parts_cost = parts_total
+        recommendation.estimated_labor_cost = Decimal('0')
+        recommendation.estimated_labor_hours = Decimal('0')
+        recommendation.estimated_total_cost = parts_total
+        recommendation.save(update_fields=[
+            'estimated_parts_cost',
+            'estimated_labor_cost',
+            'estimated_labor_hours',
+            'estimated_total_cost',
+            'updated_at',
+        ])
+
+    @staticmethod
+    def _publish_quote_estimates_for_customer(recommendations, user):
+        """
+        Make stores-prepared quotation estimates customer-visible.
+
+        Sending recommendations to stores creates internal draft estimates so
+        stores can price parts, labor, and extra charges without exposing work
+        to the customer. The estimate is sent only when the diagnosis approval
+        request is actually submitted.
+        """
+        if not django_apps.is_installed('apps.billing'):
+            return []
+
+        Estimate = django_apps.get_model('billing', 'Estimate')
+        estimate_ids = {
+            recommendation.quotation_estimate_id
+            for recommendation in recommendations
+            if recommendation.quotation_estimate_id
+        }
+
+        missing_links = [
+            recommendation.id
+            for recommendation in recommendations
+            if not recommendation.quotation_estimate_id
+        ]
+        if missing_links:
+            ids = ', '.join(str(item) for item in missing_links)
+            raise ValueError(f'Recommendation(s) {ids} must be linked to a stores estimate before customer approval.')
+
+        published = []
+        for estimate in Estimate.objects.filter(id__in=estimate_ids):
+            if estimate.status == 'draft':
+                estimate.status = 'sent'
+                estimate.sent_by = user
+                estimate.sent_at = timezone.now()
+                estimate.save(update_fields=['status', 'sent_by', 'sent_at', 'updated_at'])
+
+                try:
+                    notification_triggers.estimate_sent(estimate)
+                except Exception as exc:
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        "Failed to send estimate notification: %s",
+                        exc,
+                        exc_info=True,
+                    )
+
+            published.append(estimate)
+
+        return published
 
     def _sync_recommendation_parts_to_work_order_requests(self, diagnosis, recommendations, user):
         """
@@ -475,6 +659,15 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         detail_serializer = DiagnosisDetailSerializer(diagnosis, context=self.get_serializer_context())
         headers = self.get_success_headers(detail_serializer.data)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_update(self, serializer):
+        assert_diagnosis_editable(serializer.instance)
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        diagnosis = self.get_object()
+        assert_diagnosis_editable(diagnosis)
+        return super().destroy(request, *args, **kwargs)
     
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
@@ -526,20 +719,10 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         diagnosis = self.get_object()
         
         if diagnosis.status == 'awaiting_approval':
-            try:
-                diagnosis.reopen_for_revision(
-                    user=request.user,
-                    reason='Diagnosis resumed from approval review for revision.',
-                )
-            except ValueError as exc:
-                return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
-            diagnosis.refresh_from_db()
-            serializer = self.get_serializer(diagnosis)
-            return Response({
-                'message': 'Diagnosis reopened for revision',
-                'diagnosis': serializer.data
-            })
+            return Response(
+                {'error': DIAGNOSIS_APPROVAL_LOCK_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if diagnosis.resume(user=request.user):
             diagnosis.refresh_from_db()
@@ -558,6 +741,46 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
     def submit_for_approval(self, request, pk=None):
         """Send diagnosis findings/recommendations to the customer for approval."""
         diagnosis = self.get_object()
+        active_recommendations = diagnosis.repair_recommendations.filter(
+            approval_status__in=['pending_approval', 'approved'],
+            converted_to_task__isnull=True,
+        )
+        unsubmitted_count = active_recommendations.filter(quotation_status='not_requested').count()
+        unquoted_count = active_recommendations.filter(quotation_status='requested').count()
+
+        if active_recommendations.exists() and unsubmitted_count:
+            return Response(
+                {
+                    'error': (
+                        f'{unsubmitted_count} recommendation(s) must be sent to stores for estimate before customer approval.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if active_recommendations.exists() and unquoted_count:
+            return Response(
+                {
+                    'error': (
+                        f'{unquoted_count} recommendation(s) are still waiting for stores estimate before customer approval.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        missing_estimate_links = active_recommendations.filter(
+            quotation_status='quoted',
+            quotation_estimate_id__isnull=True,
+        ).count()
+        if missing_estimate_links:
+            return Response(
+                {
+                    'error': (
+                        f'{missing_estimate_links} quoted recommendation(s) must be linked to a stores estimate before customer approval.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             diagnosis.submit_for_approval(user=request.user)
@@ -569,6 +792,14 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         diagnosis.refresh_from_db()
         work_order = diagnosis.work_order
         work_order.refresh_from_db()
+
+        try:
+            published_estimates = self._publish_quote_estimates_for_customer(
+                active_recommendations.filter(quotation_status='quoted'),
+                request.user,
+            )
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             notification_triggers.work_order_requires_approval(work_order)
@@ -583,6 +814,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(diagnosis)
         return Response({
             'message': 'Diagnosis sent for customer approval',
+            'published_estimate_ids': [estimate.id for estimate in published_estimates],
             'diagnosis': serializer.data,
             'work_order': {
                 'id': work_order.id,
@@ -662,6 +894,12 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         diagnosis = self.get_object()
         reason = request.data.get('reason', '')
 
+        if diagnosis_is_locked_for_customer_approval(diagnosis):
+            return Response(
+                {'error': DIAGNOSIS_APPROVAL_LOCK_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             diagnosis.reopen_for_revision(user=request.user, reason=reason)
         except ValueError as exc:
@@ -701,6 +939,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         }
         """
         diagnosis = self.get_object()
+        assert_diagnosis_editable(diagnosis)
         codes_data = request.data.get('codes', [])
         allowed_statuses = {choice[0] for choice in DiagnosticCode.STATUS_CHOICES}
         
@@ -782,6 +1021,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
     def add_recommendation(self, request, pk=None):
         """Add a repair recommendation to this diagnosis"""
         diagnosis = self.get_object()
+        assert_diagnosis_editable(diagnosis)
         serializer = RepairRecommendationCreateSerializer(
             data=request.data,
             context={'request': request, 'diagnosis': diagnosis}
@@ -866,8 +1106,9 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def submit_recommendations_for_quote(self, request, pk=None):
-        """Submit approved recommendations to stores for quotation."""
+        """Submit diagnosis recommendations to stores for quotation before customer approval."""
         diagnosis = self.get_object()
+        assert_diagnosis_editable(diagnosis)
         if not self._user_has_quote_submission_role(request.user):
             return Response(
                 {"error": "Only service coordinators, parts managers, managers, or admins can submit recommendations to stores."},
@@ -876,7 +1117,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         recommendation_ids = request.data.get('recommendation_ids', [])
 
         recommendations = diagnosis.repair_recommendations.filter(
-            approval_status='approved',
+            approval_status__in=['pending_approval', 'approved'],
             quotation_status='not_requested',
             converted_to_task__isnull=True,
         )
@@ -887,14 +1128,14 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             if selected.count() != recommendations.count():
                 return Response(
                     {
-                        "error": "Only approved recommendations that have not already been submitted for quotation can be sent to stores."
+                        "error": "Only unquoted recommendations that are still pending customer approval or already approved can be sent to stores."
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
         if not recommendations.exists():
             return Response(
-                {"error": "No approved recommendations are ready to send for quotation."},
+                {"error": "No recommendations are ready to send to stores for quotation."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -907,6 +1148,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             recommendations,
             request.user,
         )
+        self._sync_work_order_financials_from_diagnosis_parts(diagnosis.work_order, estimate)
 
         for recommendation in recommendations:
             recommendation.request_quotation(requested_by=request.user)
@@ -932,6 +1174,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
     def mark_recommendations_quoted(self, request, pk=None):
         """Mark previously requested recommendations as quoted."""
         diagnosis = self.get_object()
+        assert_diagnosis_editable(diagnosis)
         if not self._user_has_quote_completion_role(request.user):
             return Response(
                 {"error": "Only parts managers, managers, or admins can mark recommendations as quoted."},
@@ -940,7 +1183,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         recommendation_ids = request.data.get('recommendation_ids', [])
 
         recommendations = diagnosis.repair_recommendations.filter(
-            approval_status='approved',
+            approval_status__in=['pending_approval', 'approved'],
             quotation_status='requested',
             converted_to_task__isnull=True,
         )
@@ -951,7 +1194,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             if selected.count() != recommendations.count():
                 return Response(
                     {
-                        "error": "Only approved recommendations already sent to stores can be marked as quoted."
+                        "error": "Only recommendations already sent to stores can be marked as quoted."
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
@@ -962,23 +1205,12 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        estimate = None
-        if django_apps.is_installed('apps.billing'):
-            estimate, estimate_error = self._build_or_refresh_quote_estimate(diagnosis, recommendations, request.user)
-            if estimate_error:
-                return Response({"error": estimate_error}, status=status.HTTP_400_BAD_REQUEST)
-            if estimate is None or estimate.total <= 0:
-                return Response(
-                    {"error": "Stores must create and price the quotation estimate before recommendations can be marked as quoted."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        estimate, estimate_error = self._validate_quote_ready_for_recommendations(recommendations)
+        if estimate_error:
+            return Response({"error": estimate_error}, status=status.HTTP_400_BAD_REQUEST)
 
         for recommendation in recommendations:
-            if django_apps.is_installed('apps.billing') and not recommendation.quotation_estimate_id:
-                return Response(
-                    {"error": "Each recommendation must be linked to a quotation estimate before it can be marked as quoted."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            self._sync_recommendation_costs_from_quote_estimate(recommendation)
             recommendation.mark_quoted(quoted_by=request.user)
 
         serializer = RepairRecommendationSerializer(recommendations, many=True)
@@ -1001,6 +1233,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         }
         """
         diagnosis = self.get_object()
+        assert_diagnosis_editable(diagnosis)
         work_order = diagnosis.work_order
         
         if not work_order:
@@ -1103,6 +1336,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         
         User = get_user_model()
         diagnosis = self.get_object()
+        assert_diagnosis_editable(diagnosis)
         work_order = diagnosis.work_order
         
         # Check if any parts are requested (WorkOrderPart)
@@ -1181,7 +1415,7 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             return HttpResponse(html_content, content_type='text/html')
 
 
-class RepairRecommendationViewSet(viewsets.ModelViewSet):
+class RepairRecommendationViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
     """
     ViewSet for Repair Recommendations.
     
@@ -1225,6 +1459,31 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return RepairRecommendationCreateSerializer
         return RepairRecommendationSerializer
+
+    def perform_create(self, serializer):
+        diagnosis = serializer.validated_data.get('diagnosis')
+        assert_diagnosis_editable(diagnosis)
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        recommendation = self.get_object()
+        assert_diagnosis_editable(recommendation.diagnosis)
+        if recommendation.converted_to_task_id:
+            return Response(
+                {'error': 'Converted recommendations cannot be deleted. Update the linked work-order task instead.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if recommendation.approval_status != 'pending_approval':
+            return Response(
+                {'error': 'Only recommendations still pending customer decision can be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if recommendation.quotation_status != 'not_requested':
+            return Response(
+                {'error': 'Recommendations already sent to stores cannot be deleted. Revise the recommendation so it returns to the stores queue instead.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
     
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -1244,9 +1503,9 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def quotation_queue(self, request):
-        """List approved recommendations waiting on stores quotation."""
+        """List active recommendations waiting on stores quotation."""
         queryset = self.get_queryset().filter(
-            approval_status='approved',
+            approval_status__in=['pending_approval', 'approved'],
             quotation_status='requested',
             converted_to_task__isnull=True,
         ).select_related(
@@ -1277,24 +1536,15 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
     def mark_quoted(self, request, pk=None):
         """Mark a queued recommendation as quotation ready."""
         recommendation = self.get_object()
+        assert_diagnosis_editable(recommendation.diagnosis)
         if not DiagnosisViewSet._user_has_quote_completion_role(request.user):
             return Response(
                 {'error': 'Only parts managers, managers, or admins can mark recommendations as quoted.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        if django_apps.is_installed('apps.billing'):
-            if not recommendation.quotation_estimate_id:
-                return Response(
-                    {'error': 'Stores must create and price the quotation estimate before marking this recommendation as quoted.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            Estimate = django_apps.get_model('billing', 'Estimate')
-            estimate = Estimate.objects.filter(pk=recommendation.quotation_estimate_id).first()
-            if estimate is None or estimate.total <= 0:
-                return Response(
-                    {'error': 'The linked quotation estimate must have a priced total before this recommendation can be marked as quoted.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        _, estimate_error = DiagnosisViewSet._validate_quote_ready_for_recommendations([recommendation])
+        if estimate_error:
+            return Response({'error': estimate_error}, status=status.HTTP_400_BAD_REQUEST)
         try:
             recommendation.mark_quoted(quoted_by=request.user)
         except ValueError as exc:
@@ -1311,7 +1561,7 @@ class RepairRecommendationViewSet(viewsets.ModelViewSet):
 # Phase 2: Structured Data ViewSets
 # ============================================================================
 
-class DiagnosticCodeViewSet(viewsets.ModelViewSet):
+class DiagnosticCodeViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
     """
     ViewSet for Diagnostic Codes (DTCs).
     """
@@ -1340,6 +1590,7 @@ class DiagnosticCodeViewSet(viewsets.ModelViewSet):
         
     def perform_create(self, serializer):
         """Auto-populate description from library cache or Gemini AI if not provided."""
+        assert_diagnosis_editable(serializer.validated_data.get('diagnosis'))
         code_number = serializer.validated_data.get('code_number', '').upper()
         description = serializer.validated_data.get('description', '')
 
@@ -1405,6 +1656,7 @@ class DiagnosticCodeViewSet(viewsets.ModelViewSet):
     def resolve(self, request, pk=None):
         """Mark code as resolved"""
         code = self.get_object()
+        assert_diagnosis_editable(code.diagnosis)
         code.status = 'resolved'
         code.save(update_fields=['status'])
         serializer = self.get_serializer(code)
@@ -1414,7 +1666,7 @@ class DiagnosticCodeViewSet(viewsets.ModelViewSet):
         })
 
 
-class DiagnosticTestViewSet(viewsets.ModelViewSet):
+class DiagnosticTestViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
     """
     ViewSet for Diagnostic Tests.
     """
@@ -1445,13 +1697,14 @@ class DiagnosticTestViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set performed_by to current user if not specified"""
+        assert_diagnosis_editable(serializer.validated_data.get('diagnosis'))
         if not serializer.validated_data.get('performed_by'):
             serializer.save(performed_by=self.request.user)
         else:
             serializer.save()
 
 
-class DiagnosisFindingViewSet(viewsets.ModelViewSet):
+class DiagnosisFindingViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
     """
     ViewSet for Diagnosis Findings.
     """
@@ -1484,13 +1737,14 @@ class DiagnosisFindingViewSet(viewsets.ModelViewSet):
         """Create a finding and return the read serializer payload with ids and links."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        assert_diagnosis_editable(serializer.validated_data.get('diagnosis'))
         finding = serializer.save()
         detail_serializer = DiagnosisFindingSerializer(finding, context=self.get_serializer_context())
         headers = self.get_success_headers(detail_serializer.data)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class DiagnosisPhotoViewSet(viewsets.ModelViewSet):
+class DiagnosisPhotoViewSet(DiagnosisMutationLockMixin, viewsets.ModelViewSet):
     """
     ViewSet for Diagnosis Photos.
     """
@@ -1527,6 +1781,7 @@ class DiagnosisPhotoViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set taken_by to current user if not specified"""
+        assert_diagnosis_editable(serializer.validated_data.get('diagnosis'))
         if not serializer.validated_data.get('taken_by'):
             serializer.save(taken_by=self.request.user)
         else:

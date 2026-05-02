@@ -25,7 +25,7 @@ export default function WorkOrderOverviewTab({
   const estimateSummary = (workOrder as any).estimate_summary;
   const invoiceSummary = (workOrder as any).invoice_summary;
   const displayedEstimatedTotal = parseFloat(
-    estimateSummary?.total || (workOrder as any).estimated_total || workOrder.total_cost || "0"
+    (workOrder as any).estimated_total || workOrder.total_cost || "0"
   );
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {

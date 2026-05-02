@@ -4,7 +4,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from apps.accounts.models import User
 from apps.branches.models import Branch
-from apps.inventory.models import Part, PurchaseOrder, Supplier, PartCategory
+from apps.inventory.models import Part, PurchaseOrder, Supplier, PartCategory, StockItem
 from apps.workorders.models import WorkOrder, WorkOrderPart, ServiceTask
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -21,6 +21,18 @@ class POIntegrationTests(TestCase):
             email='test@example.com', 
             password='testpassword',
             role='manager'
+        )
+        self.po_submitter = User.objects.create_superuser(
+            username='posubmitter',
+            email='posubmitter@example.com',
+            password='testpassword',
+            role='admin',
+        )
+        self.po_approver = User.objects.create_superuser(
+            username='poapprover',
+            email='poapprover@example.com',
+            password='testpassword',
+            role='admin',
         )
         self.client.force_authenticate(user=self.user)
         
@@ -119,6 +131,22 @@ class POIntegrationTests(TestCase):
         self.assertEqual(po_item.quantity, 2)
         self.assertEqual(po_item.purchase_order.status, 'draft')
         self.assertEqual(po_item.purchase_order.supplier, self.supplier)
+
+    def test_order_rejects_when_branch_stock_is_available(self):
+        """In-stock branch items should be allocated, not sent to PO."""
+        StockItem.objects.create(
+            part=self.part,
+            branch=self.branch,
+            quantity_in_stock=5,
+            quantity_reserved=0,
+        )
+
+        url = reverse('api_workorders:workorderpart-order', args=[self.wo_part.id])
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Allocate it instead', response.data['error'])
+        self.assertFalse(PurchaseOrder.objects.exists())
 
     def test_reorder_appends_to_po(self):
         """Test that ordering again appends/updates the existing PO item if in draft"""
@@ -246,8 +274,48 @@ class POIntegrationTests(TestCase):
         
         # Try to submit
         # Note: We need to use the inventory API submission endpoint
+        self.client.force_authenticate(user=self.po_submitter)
         url = reverse('api_inventory:purchaseorder-submit-for-approval', args=[empty_po.id])
         response = self.client.post(url)
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Cannot submit purchase order with no items', str(response.data.get('error')))
+
+    def test_po_confirm_and_receipt_updates_linked_work_order_part_status(self):
+        """Stores PO flow should move linked work-order parts from PO to waiting and received."""
+        order_url = reverse('api_workorders:workorderpart-order', args=[self.wo_part.id])
+        response = self.client.post(order_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.wo_part.refresh_from_db()
+        po = self.wo_part.purchase_order_item.purchase_order
+        self.assertEqual(self.wo_part.status, 'po_created')
+
+        self.client.force_authenticate(user=self.po_submitter)
+        response = self.client.post(
+            reverse('api_inventory:purchaseorder-submit-for-approval', args=[po.id]),
+            {'approver_id': self.po_approver.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.client.force_authenticate(user=self.po_approver)
+        response = self.client.post(reverse('api_inventory:purchaseorder-approve', args=[po.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.post(reverse('api_inventory:purchaseorder-confirm', args=[po.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.wo_part.refresh_from_db()
+        self.assertEqual(self.wo_part.status, 'awaiting_stock')
+
+        response = self.client.post(
+            reverse('api_inventory:purchaseorderitem-receive', args=[self.wo_part.purchase_order_item_id]),
+            {'quantity_received': 2},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.wo_part.refresh_from_db()
+        stock_item = StockItem.objects.get(part=self.part, branch=self.branch)
+        self.assertEqual(self.wo_part.status, 'received')
+        self.assertEqual(stock_item.quantity_on_order, 0)

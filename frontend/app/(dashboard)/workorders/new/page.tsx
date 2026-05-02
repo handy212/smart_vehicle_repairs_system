@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -89,6 +91,8 @@ export default function NewWorkOrderPage() {
   const customerId = searchParams.get("customer");
   const vehicleId = searchParams.get("vehicle");
   const appointmentId = searchParams.get("appointment");
+  const relatedWorkOrderId = searchParams.get("related_work_order");
+  const reworkFromUrl = searchParams.get("rework") === "true";
   const queryClient = useQueryClient();
 
   // ... (state vars)
@@ -203,6 +207,13 @@ export default function NewWorkOrderPage() {
     branch_name: string;
     days_ago: number | null;
   } | null>(null);
+
+  useEffect(() => {
+    if (reworkFromUrl && relatedWorkOrderId) {
+      setIsWarrantyRework(true);
+      setSelectedRelatedWorkOrder(parseInt(relatedWorkOrderId));
+    }
+  }, [reworkFromUrl, relatedWorkOrderId]);
 
   // Unapproved recommendations state
   const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
@@ -899,7 +910,7 @@ export default function NewWorkOrderPage() {
                     Smart Preventive Suggestions
                   </CardTitle>
                   <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
-                    Based on the vehicle's unique usage history, the following services are due or due very soon.
+                    Based on the vehicle&apos;s unique usage history, the following services are due or due very soon.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

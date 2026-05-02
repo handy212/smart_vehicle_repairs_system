@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 from apps.branches.models import Branch
 from apps.customers.models import Customer
 from apps.diagnosis.models import Diagnosis, RepairRecommendation
-from apps.inventory.models import Part, PartCategory
+from apps.inventory.models import Part, PartCategory, StockItem
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import ServiceTask, WorkOrder, WorkOrderPart
 
@@ -88,7 +88,7 @@ class PartsIntegrationTests(TestCase):
             quotation_status='quoted',
         )
 
-    def test_work_order_approval_approves_pending_diagnosis_recommendations(self):
+    def test_work_order_approval_requires_priced_recommendation_decisions(self):
         WorkOrder.objects.filter(pk=self.work_order.pk).update(
             status='awaiting_approval',
             requires_approval=True,
@@ -100,6 +100,7 @@ class PartsIntegrationTests(TestCase):
             description='Replace front brake pads',
             priority='necessary',
             approval_status='pending_approval',
+            quotation_status='quoted',
         )
 
         url = reverse('api_workorders:workorder-approve', args=[self.work_order.id])
@@ -108,14 +109,27 @@ class PartsIntegrationTests(TestCase):
             'approval_notes': 'Customer approved all recommended work.',
         }, format='json', HTTP_X_BRANCH_ID=str(self.branch.id))
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['recommendations_approved'], 1)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('approve, defer, or decline', response.data['error'])
 
         recommendation.refresh_from_db()
-        self.assertEqual(recommendation.approval_status, 'approved')
-        self.assertTrue(recommendation.customer_approved)
-        self.assertEqual(recommendation.quotation_status, 'not_requested')
-        self.assertEqual(recommendation.decision_by, self.manager)
+        self.assertEqual(recommendation.approval_status, 'pending_approval')
+        self.assertFalse(recommendation.customer_approved)
+
+        recommendation.set_decision(
+            'approved',
+            acted_by=self.manager,
+            method='phone',
+            notes='Customer approved this item.',
+        )
+
+        response = self.client.post(url, {
+            'approval_method': 'phone',
+            'approval_notes': 'Customer approved selected work.',
+        }, format='json', HTTP_X_BRANCH_ID=str(self.branch.id))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['recommendations_approved'], 0)
 
     def test_start_work_explains_recommendations_waiting_for_stores_quote(self):
         WorkOrder.objects.filter(pk=self.work_order.pk).update(
@@ -313,6 +327,42 @@ class PartsIntegrationTests(TestCase):
         self.assertEqual(start_response.status_code, status.HTTP_200_OK)
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'in_progress')
+
+    def test_allocate_uses_branch_stock_item_before_deprecated_part_quantity(self):
+        self.catalog_part.quantity_in_stock = 0
+        self.catalog_part.save(update_fields=['quantity_in_stock'])
+        stock_item = StockItem.objects.create(
+            part=self.catalog_part,
+            branch=self.branch,
+            quantity_in_stock=3,
+            quantity_reserved=0,
+        )
+        part_request = WorkOrderPart.objects.create(
+            work_order=self.work_order,
+            inventory_part=self.catalog_part,
+            part_name=self.catalog_part.name,
+            part_number=self.catalog_part.part_number,
+            quantity=2,
+            unit_cost=self.catalog_part.cost_price,
+            status='pending',
+        )
+
+        status_payload = part_request.get_inventory_status_payload()
+        self.assertTrue(status_payload['available'])
+        self.assertEqual(status_payload['quantity'], 3)
+
+        response = self.client.post(
+            reverse('api_workorders:workorderpart-allocate', args=[part_request.id]),
+            {},
+            format='json',
+            HTTP_X_BRANCH_ID=str(self.branch.id),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        part_request.refresh_from_db()
+        stock_item.refresh_from_db()
+        self.assertEqual(part_request.status, 'ready')
+        self.assertEqual(stock_item.quantity_in_stock, 1)
 
     def test_convert_recommendation_links_existing_unlinked_work_order_part_by_inventory_part(self):
         existing_part = WorkOrderPart.objects.create(

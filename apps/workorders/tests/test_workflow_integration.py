@@ -66,7 +66,7 @@ class WorkOrderWorkflowTests(TestCase):
             odometer_in=50000,
             priority='normal',
             service_coordinator=self.coordinator,
-            status='draft',
+            status='inspection',
         )
         inspection_template = InspectionTemplate.objects.create(
             name='Workflow Intake Template',
@@ -91,6 +91,71 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'assigned')
         self.assertEqual(int(response.data['service_coordinator']), self.coordinator.id)
+
+    def test_cannot_skip_from_draft_to_intake_even_with_completed_inspection(self):
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Intermittent no-start condition',
+            odometer_in=50000,
+            priority='normal',
+            service_coordinator=self.coordinator,
+            status='draft',
+        )
+        inspection_template = InspectionTemplate.objects.create(
+            name='Draft Skip Guard Template',
+            description='Template used for workflow transition tests',
+            created_by=self.manager,
+        )
+        from apps.inspections.models import VehicleInspection
+
+        VehicleInspection.objects.create(
+            work_order=work_order,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            template=inspection_template,
+            performed_by=self.technician,
+            status='approved',
+            approved_by=self.manager,
+        )
+
+        url_intake = reverse('api_workorders:workorder-start-intake', args=[work_order.id])
+        response = self.client.post(url_intake, {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('inspection', response.data['error'].lower())
+
+    def test_request_quality_check_returns_actionable_blocking_tasks(self):
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake vibration',
+            odometer_in=50000,
+            priority='normal',
+            service_coordinator=self.coordinator,
+            primary_technician=self.technician,
+            status='in_progress',
+            requires_approval=True,
+            approved_by_customer=True,
+        )
+        task = ServiceTask.objects.create(
+            work_order=work_order,
+            task_type='repair',
+            description='Replace front brake pads',
+            status='in_progress',
+            is_workflow_task=False,
+            assigned_to=self.technician,
+        )
+
+        url_qc = reverse('api_workorders:workorder-request-quality-check', args=[work_order.id])
+        response = self.client.post(url_qc, {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('blocking_tasks', response.data)
+        self.assertEqual(response.data['blocking_tasks'][0]['id'], task.id)
+        self.assertIn('Tasks tab', response.data['next_step'])
 
     def test_start_diagnosis_creates_diagnosis_record_when_missing(self):
         """Starting diagnosis should create the linked diagnosis record the UI expects."""
@@ -176,8 +241,9 @@ class WorkOrderWorkflowTests(TestCase):
             status='approved',
             approved_by=self.manager,
         )
-        
-        # 2. START INTAKE (Draft -> Intake -> Assigned)
+        work_order.transition_to('inspection', user=self.coordinator)
+
+        # 2. START INTAKE (Inspection -> Intake -> Assigned)
         # Verify transition to Intake
         url_intake = reverse('api_workorders:workorder-start-intake', args=[wo_id])
         # Assign self as coordinator
@@ -217,7 +283,18 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.data['status'], 'awaiting_approval')
         self.assertTrue(response.data['requires_approval'])
 
-        # 6. APPROVE (Awaiting Approval -> Approved)
+        # 6. Quote and approve the recommendation before approving the work order.
+        recommendation.refresh_from_db()
+        recommendation.request_quotation(requested_by=self.coordinator)
+        recommendation.mark_quoted(quoted_by=self.manager)
+        recommendation.set_decision(
+            'approved',
+            acted_by=self.manager,
+            method='phone',
+            notes='Customer approved via call',
+        )
+
+        # 7. APPROVE (Awaiting Approval -> Approved)
         # Simulate Customer Approval via phone
         url_approve = reverse('api_workorders:workorder-approve', args=[wo_id])
         approve_data = {
@@ -229,12 +306,7 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.data['status'], 'approved')
         self.assertTrue(response.data['approved_by_customer'])
 
-        # Stores must quote approved recommendations before they become repair tasks.
-        recommendation.refresh_from_db()
-        recommendation.request_quotation(requested_by=self.coordinator)
-        recommendation.mark_quoted(quoted_by=self.manager)
-
-        # 7. START WORK (Approved -> In Progress)
+        # 8. START WORK (Approved -> In Progress)
         # Must assign technician first? 
         # The 'start_work' endpoint can auto-assign the requester if they are a tech.
         

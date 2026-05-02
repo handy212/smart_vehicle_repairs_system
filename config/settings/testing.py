@@ -5,7 +5,7 @@ from .base import *
 
 # Testing specific settings
 DEBUG = False
-ROOT_URLCONF = 'config.testing_urls'
+ROOT_URLCONF = 'config.urls'
 
 # In-memory database for faster tests
 DATABASES = {
@@ -84,30 +84,14 @@ SKIP_MODULE_PERMISSION_CHECKS = True
 #     'django_coverage',
 # ]
 
-# A few third-party apps in this project still rely on deprecated model meta
-# options removed in Django 5. Exclude them from the test app registry so
-# module-level tests can boot cleanly without affecting non-test settings.
+# Keep third-party/test-only exclusions out of the test app registry while
+# leaving local project apps installed for model discovery.
 INSTALLED_APPS = [
     app for app in INSTALLED_APPS
     if app not in {
         'debug_toolbar',
         'notifications',
         'schedule',
-        'apps.gatepass',
-        'apps.billing',
-        'apps.inspections',
-        'apps.reporting',
-        'apps.documents',
-        'apps.subscriptions',
-        'apps.roadside',
-        'apps.fixed_assets.apps.FixedAssetsConfig',
-        'apps.technicians',
-        'apps.hr',
-        'apps.accounting',
-        'apps.portal',
-        'apps.quickbooks_online',
-        'apps.feedback',
-        'apps.chat',
     }
 ]
 

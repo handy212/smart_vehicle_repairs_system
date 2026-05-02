@@ -141,17 +141,19 @@ export default function AdminDashboardPage() {
                   </div>
                 </Button>
               </Link>
-              <Link href="/admin/workflows">
-                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-muted border-border shadow-sm transition-all hover:scale-[1.02]">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-1">
-                    <GitBranch className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="text-center">
-                    <span className="font-semibold text-sm block">Workflows</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">Manage flows</span>
-                  </div>
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                disabled
+                className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 border-border shadow-sm opacity-70"
+              >
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mb-1">
+                  <GitBranch className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="text-center">
+                  <span className="font-semibold text-sm block">Workflows</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">Parked for later</span>
+                </div>
+              </Button>
             </div>
           </CardContent>
         </Card>

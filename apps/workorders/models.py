@@ -415,37 +415,95 @@ class WorkOrder(models.Model):
         return self.assigned_technicians.first()
     
     VALID_TRANSITIONS = {
-        'draft': ['inspection', 'intake'],
+        'draft': ['inspection'],
         'inspection': ['intake', 'draft'],
-        'intake': ['assigned', 'draft'],
+        'intake': ['assigned'],
         'assigned': ['diagnosis', 'intake'],
-        'diagnosis': ['awaiting_approval', 'approved', 'in_progress'],
+        'diagnosis': ['awaiting_approval'],
         'awaiting_approval': ['approved', 'diagnosis'],
-        'approved': ['in_progress', 'awaiting_approval'],
-        'in_progress': ['paused', 'quality_check', 'completed', 'additional_work_found'],
-        'additional_work_found': ['awaiting_approval', 'in_progress'],
+        'approved': ['in_progress'],
+        'in_progress': ['paused', 'quality_check', 'additional_work_found'],
+        'additional_work_found': ['awaiting_approval'],
         'paused': ['in_progress'],
         'quality_check': ['completed', 'in_progress'],
-        'completed': ['invoiced', 'closed', 'in_progress'],
+        'completed': ['invoiced', 'closed'],
         'invoiced': ['closed'],
-        'closed': ['invoiced', 'completed', 'in_progress'],  # Allow reopen transitions
+        'closed': [],
     }
+
+    STRICTLY_BLOCKED_DIRECT_TRANSITIONS = {
+        ('draft', 'intake'): 'Initial inspection must be started and completed before intake.',
+        ('intake', 'diagnosis'): 'Assign a Service Coordinator before diagnosis.',
+        ('diagnosis', 'approved'): 'Send diagnosis and estimate for customer approval before repairs.',
+        ('diagnosis', 'in_progress'): 'Diagnosis must be approved before repair work can start.',
+        ('approved', 'awaiting_approval'): 'Use the additional-work approval flow instead of moving approved work backwards.',
+        ('in_progress', 'completed'): 'Quality check must be requested and passed before completion.',
+        ('additional_work_found', 'in_progress'): 'Additional work must be sent for customer approval before repairs resume.',
+    }
+
+    def get_incomplete_mechanical_tasks(self):
+        """Mechanical tasks that must be completed or skipped before QC/completion."""
+        return self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+
+    def get_transition_blockers(self, new_status):
+        blockers = {
+            'errors': [],
+            'blocking_tasks': [],
+            'blocking_parts': [],
+            'next_step': '',
+        }
+
+        if new_status in {'quality_check', 'completed'}:
+            incomplete_tasks = self.get_incomplete_mechanical_tasks()
+            if new_status == 'quality_check':
+                if not self.tasks.filter(is_workflow_task=False).exists():
+                    blockers['errors'].append('Create at least one mechanical repair task before requesting quality check.')
+                    blockers['next_step'] = 'Add repair tasks from the approved diagnosis recommendations.'
+                elif incomplete_tasks.exists():
+                    blockers['errors'].append('Complete or skip all mechanical tasks before requesting quality check.')
+                    blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+            elif incomplete_tasks.exists():
+                blockers['errors'].append('Complete or skip all mechanical tasks before completing the work order.')
+                blockers['next_step'] = 'Open the Tasks tab, then complete or skip each listed mechanical task.'
+
+            blockers['blocking_tasks'] = [
+                {
+                    'id': task.id,
+                    'description': task.description,
+                    'status': task.get_status_display(),
+                    'assigned_to': task.assigned_to.get_full_name() if task.assigned_to else '',
+                }
+                for task in incomplete_tasks.order_by('sequence_order', 'id')[:10]
+            ]
+
+        if new_status == 'completed':
+            unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
+            blockers['blocking_parts'] = [
+                {
+                    'id': part.id,
+                    'part_name': part.part_name,
+                    'status': part.get_status_display(),
+                }
+                for part in unresolved_parts.order_by('created_at', 'id')[:10]
+            ]
+            if unresolved_parts.exists():
+                blockers['errors'].append('Install required parts or formally return unused parts before completing.')
+                blockers['next_step'] = blockers['next_step'] or 'Open the Parts tab and resolve each required part.'
+
+        return blockers
 
     def can_transition_to(self, new_status):
         """
         Validate if status transition is allowed.
         Returns (can_transition: bool, error_message: str or None)
         """
-        # Check if transition is in valid transitions list
-        valid_next_statuses = None
-        try:
-            from apps.workflows.services import get_allowed_transition_keys
-            valid_next_statuses = get_allowed_transition_keys('workorders.WorkOrder', self.status)
-        except Exception:
-            valid_next_statuses = None
+        # The workflow builder app is intentionally parked for now. Work orders
+        # use this explicit transition map until the repair flow is fully stable.
+        valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
 
-        if valid_next_statuses is None:
-            valid_next_statuses = self.VALID_TRANSITIONS.get(self.status, [])
+        blocked_message = self.STRICTLY_BLOCKED_DIRECT_TRANSITIONS.get((self.status, new_status))
+        if blocked_message:
+            return False, blocked_message
 
         if new_status not in valid_next_statuses:
             return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
@@ -485,19 +543,23 @@ class WorkOrder(models.Model):
         
         if new_status == 'quality_check':
             if not self.tasks.filter(is_workflow_task=False).exists():
-                return False, "At least one mechanical task must exist before quality check"
-            incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+                return False, "Create at least one mechanical repair task before requesting quality check."
+            incomplete_tasks = self.get_incomplete_mechanical_tasks()
             if incomplete_tasks.exists():
-                return False, "All mechanical tasks must be completed or skipped before quality check"
+                task_names = ', '.join(incomplete_tasks.values_list('description', flat=True)[:3])
+                suffix = f": {task_names}" if task_names else ""
+                return False, f"Complete or skip all mechanical tasks before requesting quality check{suffix}"
 
         if new_status == 'completed':
             if not self.tasks.filter(is_workflow_task=False).exists():
                 return False, "At least one mechanical task must exist before completing"
             if self.quality_check_required and not self.quality_check_completed:
                 return False, "Quality check must be completed first"
-            incomplete_tasks = self.tasks.filter(is_workflow_task=False).exclude(status__in=['completed', 'skipped'])
+            incomplete_tasks = self.get_incomplete_mechanical_tasks()
             if incomplete_tasks.exists():
-                return False, "All mechanical tasks must be completed or skipped before completing"
+                task_names = ', '.join(incomplete_tasks.values_list('description', flat=True)[:3])
+                suffix = f": {task_names}" if task_names else ""
+                return False, f"Complete or skip all mechanical tasks before completing{suffix}"
 
             unresolved_parts = self.parts.exclude(status__in=['installed', 'returned'])
             if unresolved_parts.exists():
@@ -854,6 +916,78 @@ class WorkOrder(models.Model):
             approved_count += 1
 
         return approved_count
+
+    def approve_customer_work(self, user=None, method='phone', notes='', linked_estimate=None):
+        """
+        Record customer approval for the work order and keep the linked quote in sync.
+        """
+        self.approved_by_customer = True
+        self.approved_at = timezone.now()
+        self.approval_method = method
+        self.approval_notes = notes
+
+        self.transition_to('approved', user=user)
+
+        try:
+            Estimate = self._meta.apps.get_model('billing', 'Estimate')
+        except LookupError:
+            return None
+
+        estimate = linked_estimate
+        if estimate is None:
+            estimate = getattr(self, 'estimate', None)
+
+        if estimate is None:
+            estimate = (
+                Estimate.objects.filter(
+                    reference_number=f"WO:{self.id}",
+                    customer=self.customer,
+                    vehicle=self.vehicle,
+                )
+                .exclude(status='converted')
+                .order_by('-created_at')
+                .first()
+            )
+
+        if estimate and estimate.status in {'draft', 'sent', 'viewed'}:
+            estimate.status = 'approved'
+            estimate.approved_date = timezone.now()
+            estimate.approved_by = user
+            estimate.save(update_fields=[
+                'status',
+                'approved_date',
+                'approved_by',
+                'updated_at',
+            ])
+
+        return estimate
+
+    def pending_recommendation_approval_counts(self):
+        """
+        Return pending recommendation counts that must be resolved before a
+        customer can approve the work order itself.
+        """
+        try:
+            from apps.diagnosis.models import Diagnosis
+        except ImportError:
+            return {'waiting_for_estimate': 0, 'pending_decision': 0}
+
+        diagnosis = Diagnosis.objects.filter(work_order=self).first()
+        if not diagnosis:
+            return {'waiting_for_estimate': 0, 'pending_decision': 0}
+
+        active_recommendations = diagnosis.repair_recommendations.filter(
+            approval_status='pending_approval',
+            converted_to_task__isnull=True,
+        )
+        return {
+            'waiting_for_estimate': active_recommendations.exclude(
+                quotation_status='quoted',
+            ).count(),
+            'pending_decision': active_recommendations.filter(
+                quotation_status='quoted',
+            ).count(),
+        }
     
     def can_start_work(self):
         """
@@ -947,7 +1081,7 @@ class WorkOrder(models.Model):
                 return 0, 0
             
             recommendations = diagnosis.repair_recommendations.filter(
-                approval_status='approved',
+                Q(approval_status='approved') | Q(customer_approved=True),
                 quotation_status='quoted',
                 converted_to_task__isnull=True
             )
@@ -1691,6 +1825,11 @@ class WorkOrderPart(models.Model):
                 
             self.requisition_number = f"REQ-{year}-{new_seq:05d}"
 
+        # Normalize numeric inputs because API/form payloads often send decimals as strings.
+        self.quantity = Decimal(str(self.quantity or '0'))
+        self.unit_cost = Decimal(str(self.unit_cost or '0'))
+        self.markup_percentage = Decimal(str(self.markup_percentage or '0'))
+
         # Calculate total cost
         self.total_cost = self.quantity * self.unit_cost
         
@@ -1721,6 +1860,81 @@ class WorkOrderPart(models.Model):
         """Update work order's actual parts cost"""
         # Use centralized recalculation method
         self.work_order.recalculate_totals()
+
+    def resolve_inventory_part(self):
+        """Find the matching inventory part for this work-order part."""
+        if self.inventory_part_id:
+            return self.inventory_part
+        if not self.part_number:
+            return None
+
+        from apps.inventory.models import Part
+
+        queryset = Part.objects.filter(part_number__iexact=self.part_number)
+        branch = getattr(self.work_order, 'branch', None)
+        if branch:
+            return (
+                queryset.filter(branch=branch).first()
+                or queryset.filter(branch__isnull=True).first()
+                or queryset.first()
+            )
+        return queryset.first()
+
+    def get_inventory_stock_item(self, part=None):
+        """Return branch stock for the resolved part when it exists."""
+        part = part or self.resolve_inventory_part()
+        branch = getattr(self.work_order, 'branch', None)
+        if not part or not branch:
+            return None
+
+        from apps.inventory.models import StockItem
+
+        return StockItem.objects.filter(part=part, branch=branch).first()
+
+    def get_inventory_status_payload(self):
+        """Return branch-aware availability details for stores/fulfilment UI."""
+        if not self.part_number:
+            return None
+
+        part = self.resolve_inventory_part()
+        if not part:
+            return {
+                'available': False,
+                'quantity': 0,
+                'part_id': None,
+                'message': 'Part not found in inventory',
+            }
+
+        branch = getattr(self.work_order, 'branch', None)
+        stock_item = self.get_inventory_stock_item(part)
+        if stock_item:
+            available_quantity = stock_item.available_quantity
+            is_available = Decimal(str(available_quantity)) >= self.quantity
+            return {
+                'available': is_available,
+                'quantity': available_quantity,
+                'part_id': part.id,
+                'stock_item_id': stock_item.id,
+                'message': 'In Stock' if is_available else 'Insufficient Stock',
+            }
+
+        if getattr(part, 'branch_id', None) and branch and part.branch_id != branch.id:
+            return {
+                'available': False,
+                'quantity': 0,
+                'part_id': part.id,
+                'message': f'Part at {part.branch.name}',
+            }
+
+        available_quantity = getattr(part, 'available_quantity', 0) or 0
+        is_available = Decimal(str(available_quantity)) >= self.quantity
+        return {
+            'available': is_available,
+            'quantity': available_quantity,
+            'part_id': part.id,
+            'stock_item_id': None,
+            'message': 'In Stock' if is_available else 'Insufficient Stock',
+        }
 
     @property
     def supplier(self):

@@ -35,6 +35,22 @@ interface PartRequestDetailDialogProps {
     onRefresh: () => void;
 }
 
+type ApiError = {
+    response?: {
+        data?: {
+            error?: string;
+            needs_inventory_item?: boolean;
+            part_data?: InventoryFormData;
+        };
+    };
+    message?: string;
+};
+
+const getApiErrorMessage = (error: unknown) => {
+    const apiError = error as ApiError;
+    return apiError.response?.data?.error || apiError.message || "Something went wrong";
+};
+
 export function PartRequestDetailDialog({
     open,
     onOpenChange,
@@ -45,8 +61,7 @@ export function PartRequestDetailDialog({
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [showInventoryForm, setShowInventoryForm] = React.useState<number | null>(null);
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const [inventoryFormData, setInventoryFormData] = React.useState<any>(null);
+    const [inventoryFormData, setInventoryFormData] = React.useState<InventoryFormData | null>(null);
     const [editingPart, setEditingPart] = React.useState<WorkOrderPart | null>(null);
     const [editForm, setEditForm] = React.useState({ part_name: '', part_number: '', quantity: 1, description: '' });
 
@@ -71,10 +86,10 @@ export function PartRequestDetailDialog({
             onRefresh();
             toast({ title: "Part Allocated", variant: "success" });
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Allocation Failed",
-                description: error.response?.data?.error || error.message,
+                description: getApiErrorMessage(error),
                 variant: "destructive",
             });
         },
@@ -88,15 +103,15 @@ export function PartRequestDetailDialog({
             setShowInventoryForm(null);
             toast({ title: "PO Created", description: `PO #${data.po_number}`, variant: "success" });
         },
-        onError: (error: any, partId: number) => {
-            const errorData = error.response?.data;
+        onError: (error: unknown, partId: number) => {
+            const errorData = (error as ApiError).response?.data;
             if (errorData?.needs_inventory_item && errorData?.part_data) {
                 setShowInventoryForm(partId);
                 setInventoryFormData(errorData.part_data);
             } else {
                 toast({
                     title: "Order Failed",
-                    description: errorData?.error || error.message,
+                    description: getApiErrorMessage(error),
                     variant: "destructive",
                 });
             }
@@ -118,10 +133,10 @@ export function PartRequestDetailDialog({
             });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Creation Failed",
-                description: error.response?.data?.error || error.message,
+                description: getApiErrorMessage(error),
                 variant: "destructive",
             });
         },
@@ -153,10 +168,10 @@ export function PartRequestDetailDialog({
             }
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Bulk Order Failed",
-                description: error.response?.data?.error || error.message,
+                description: getApiErrorMessage(error),
                 variant: "destructive",
             });
         },
@@ -172,10 +187,10 @@ export function PartRequestDetailDialog({
             toast({ title: "Part Updated", variant: "success" });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Update Failed",
-                description: error.response?.data?.error || error.message,
+                description: getApiErrorMessage(error),
                 variant: "destructive",
             });
         },
@@ -189,10 +204,10 @@ export function PartRequestDetailDialog({
             toast({ title: "Request Removed", variant: "success" });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Remove Failed",
-                description: error.response?.data?.error || error.message,
+                description: getApiErrorMessage(error),
                 variant: "destructive",
             });
         },
@@ -202,7 +217,7 @@ export function PartRequestDetailDialog({
 
     // Identify parts eligible for bulk order
     const outOfStockParts = parts.filter(p => {
-        const isReady = p.status === 'ready' || p.status === 'received' || p.status === 'po_created';
+        const isReady = p.status === 'ready' || p.status === 'received' || p.status === 'po_created' || p.status === 'awaiting_stock';
         const inStock = p.inventory_status?.available;
         return !isReady && !inStock && p.part_number; // Only orderable parts
     });
@@ -240,6 +255,18 @@ export function PartRequestDetailDialog({
                                 </DialogDescription>
                             </div>
                             <div className="flex gap-2">
+                                {canBulkOrder && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        className="bg-primary/10 text-primary hover:bg-primary/15 border border-primary/20"
+                                        onClick={() => bulkOrderMutation.mutate(outOfStockParts.map(p => p.id))}
+                                        disabled={bulkOrderMutation.isPending}
+                                    >
+                                        <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
+                                        Bulk PO ({outOfStockParts.length})
+                                    </Button>
+                                )}
                                 <Button variant="outline" size="sm" onClick={handlePrint}>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-printer w-4 h-4 mr-2"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" /></svg>
                                     Print

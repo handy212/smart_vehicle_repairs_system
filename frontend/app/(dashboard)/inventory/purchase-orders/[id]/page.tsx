@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
@@ -11,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, Edit, CheckCircle, XCircle, Package, Printer } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
@@ -44,11 +46,10 @@ export default function PurchaseOrderDetailPage() {
   const { formatCurrency } = useCurrency();
   const params = useParams();
 
-  const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
+  const { openPrintWindow, isOpeningPrint } = usePrint();
   const id = parseInt(params.id as string);
 
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
@@ -68,7 +69,8 @@ export default function PurchaseOrderDetailPage() {
   const isSubmitter = currentUser?.id === purchaseOrder?.created_by;
   const isApprover = currentUser?.id === purchaseOrder?.assigned_approver || currentUser?.role === "admin" || currentUser?.role === "super-admin";
   const canApprove = isApprover && !isSubmitter;
-  const isBranchUser = activeBranchId === purchaseOrder?.branch;
+  const purchaseOrderBranchId = typeof purchaseOrder?.branch === "object" ? purchaseOrder.branch?.id : purchaseOrder?.branch;
+  const isBranchUser = activeBranchId === purchaseOrderBranchId;
 
   const { data: usersResponse } = useQuery({
     queryKey: ["users", "approvers"],
@@ -118,6 +120,26 @@ export default function PurchaseOrderDetailPage() {
       toast({
         title: "Error",
         description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve purchase order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (reason: string) => inventoryApi.rejectPurchaseOrder(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast({
+        title: "Success",
+        description: "Purchase order rejected",
+      });
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to reject purchase order",
         variant: "destructive",
       });
     },
@@ -179,6 +201,8 @@ export default function PurchaseOrderDetailPage() {
         return "warning";
       case "cancelled":
         return "danger";
+      case "rejected":
+        return "danger";
       default:
         return "default";
     }
@@ -192,6 +216,7 @@ export default function PurchaseOrderDetailPage() {
       confirmed: "Confirmed",
       received: "Received",
       partially_received: "Partially Received",
+      rejected: "Rejected",
       cancelled: "Cancelled",
     };
     return labels[status] || status
@@ -261,7 +286,7 @@ export default function PurchaseOrderDetailPage() {
             <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitForApproval} disabled={submitForApprovalMutation.isPending}>
+            <Button onClick={handleSubmitForApproval} disabled={submitForApprovalMutation.isPending || !selectedApprover}>
               {submitForApprovalMutation.isPending ? "Submitting..." : "Submit"}
             </Button>
           </DialogFooter>
@@ -336,15 +361,30 @@ export default function PurchaseOrderDetailPage() {
           )}
 
           {purchaseOrder.status === "pending_approval" && canApprove && (
-            <Button
-              size="sm"
-              className="h-8 text-xs font-bold bg-primary"
-              onClick={() => { if (confirm("Approve this PO?")) approveMutation.mutate(); }}
-              disabled={approveMutation.isPending}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Approve
-            </Button>
+            <>
+              <Button
+                size="sm"
+                className="h-8 text-xs font-bold bg-primary"
+                onClick={() => { if (confirm("Approve this PO?")) approveMutation.mutate(); }}
+                disabled={approveMutation.isPending || rejectMutation.isPending}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8 text-xs font-bold"
+                onClick={() => {
+                  const reason = prompt("Reason for rejecting this purchase order:");
+                  if (reason?.trim()) rejectMutation.mutate(reason.trim());
+                }}
+                disabled={approveMutation.isPending || rejectMutation.isPending}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Reject
+              </Button>
+            </>
           )}
 
           {purchaseOrder.status === "approved" && isBranchUser && (
@@ -363,6 +403,19 @@ export default function PurchaseOrderDetailPage() {
               purchaseOrder={purchaseOrder}
               triggerLabel={purchaseOrder.status === 'partially_received' ? "Receive Remaining" : "Receive Items"}
             />
+          )}
+
+          {!["partially_received", "received", "cancelled", "rejected"].includes(purchaseOrder.status) && isBranchUser && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs font-bold border-destructive/30 text-destructive hover:bg-destructive/5"
+              onClick={() => { if (confirm("Cancel this purchase order?")) cancelMutation.mutate(); }}
+              disabled={cancelMutation.isPending}
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
           )}
         </div>
       </div>
@@ -591,4 +644,3 @@ export default function PurchaseOrderDetailPage() {
     </div>
   );
 }
-

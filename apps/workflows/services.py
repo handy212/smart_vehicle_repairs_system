@@ -71,42 +71,28 @@ WORK_ORDER_STATES = [
 
 WORK_ORDER_TRANSITIONS = [
     ('draft', 'inspection', 'Start Inspection', 'Start Inspection'),
-    ('draft', 'intake', 'Start Intake', 'Start Intake'),
     ('inspection', 'intake', 'Move to Intake', 'Move to Intake'),
     ('inspection', 'draft', 'Return to Draft', 'Return to Draft'),
     ('intake', 'assigned', 'Assign Service Coordinator', 'Assign'),
-    ('intake', 'draft', 'Return to Draft', 'Return to Draft'),
     ('assigned', 'diagnosis', 'Start Diagnosis', 'Start Diagnosis'),
     ('assigned', 'intake', 'Return to Intake', 'Return to Intake'),
     ('diagnosis', 'awaiting_approval', 'Request Approval', 'Request Approval'),
-    ('diagnosis', 'approved', 'Approve Without Customer Approval', 'Approve'),
-    ('diagnosis', 'in_progress', 'Start Work', 'Start Repairs'),
     ('awaiting_approval', 'approved', 'Approve Work Order', 'Approve'),
     ('awaiting_approval', 'diagnosis', 'Return to Diagnosis', 'Return to Diagnosis'),
     ('approved', 'in_progress', 'Start Repairs', 'Start Repairs'),
-    ('approved', 'awaiting_approval', 'Return to Approval', 'Return to Approval'),
     ('in_progress', 'paused', 'Pause Work', 'Pause'),
     ('in_progress', 'quality_check', 'Request Quality Check', 'Request QC'),
-    ('in_progress', 'completed', 'Complete Work', 'Complete'),
     ('in_progress', 'additional_work_found', 'Additional Work Found', 'Additional Work'),
     ('additional_work_found', 'awaiting_approval', 'Request Additional Approval', 'Request Approval'),
-    ('additional_work_found', 'in_progress', 'Resume Work', 'Resume'),
     ('paused', 'in_progress', 'Resume Work', 'Resume'),
     ('quality_check', 'completed', 'Complete Work Order', 'Complete'),
     ('quality_check', 'in_progress', 'Return to Repairs', 'Return to Repairs'),
     ('completed', 'invoiced', 'Mark Invoiced', 'Mark Invoiced'),
     ('completed', 'closed', 'Close Work Order', 'Close'),
-    ('completed', 'in_progress', 'Reopen Repairs', 'Reopen'),
     ('invoiced', 'closed', 'Close Work Order', 'Close'),
-    ('closed', 'invoiced', 'Reopen to Invoiced', 'Reopen'),
-    ('closed', 'completed', 'Reopen to Completed', 'Reopen'),
-    ('closed', 'in_progress', 'Reopen Repairs', 'Reopen'),
 ]
 
 WORK_ORDER_GUARDS = {
-    ('draft', 'intake'): [
-        ('required_relation', 'inspections', 'Initial inspection must be completed and approved before starting intake.'),
-    ],
     ('assigned', 'diagnosis'): [
         ('required_field', 'service_coordinator', 'A Service Coordinator must be assigned before diagnosis.'),
     ],

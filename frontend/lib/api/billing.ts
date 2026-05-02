@@ -50,6 +50,7 @@ export interface Invoice {
   estimate_number?: string;
   work_order?: number | { id: number };
   work_order_number?: string;
+  work_order_status?: string;
   invoice_date: string;
   due_date: string;
   status: string;
@@ -175,6 +176,7 @@ export interface Estimate {
   vehicle_vin?: string;
   work_order?: number | { id: number };
   work_order_number?: string;
+  work_order_status?: string;
   status: string;
   title?: string;
   description?: string;
@@ -445,13 +447,13 @@ export const billingApi = {
     },
 
 
-    sendSms: async (id: number, message: string): Promise<any> => {
+    sendSms: async (id: number, message: string): Promise<unknown> => {
       const response = await apiClient.post(`/billing/invoices/${id}/send_customer_sms/`, { message });
       return response.data;
     },
 
 
-    sendEmail: async (id: number, subject: string, message: string): Promise<any> => {
+    sendEmail: async (id: number, subject: string, message: string): Promise<unknown> => {
       const response = await apiClient.post(`/billing/invoices/${id}/send_customer_email/`, { subject, message });
       return response.data;
     },

@@ -90,8 +90,14 @@ INSTALLED_APPS = [
     'apps.quickbooks_online',
     'apps.feedback',
     'apps.chat',
-    'apps.workflows',
 ]
+
+# Keep the workflow builder code in the repo, but do not activate it yet.
+# Current production repair flow uses the hardcoded WorkOrder transition rules.
+ENABLE_WORKFLOW_APP = False
+
+if ENABLE_WORKFLOW_APP:
+    INSTALLED_APPS.append('apps.workflows')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

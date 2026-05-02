@@ -1019,6 +1019,12 @@ def request_approval(request, pk):
                 'success': False, 
                 'error': 'Please complete the diagnosis notes before requesting approval'
             })
+
+        if workorder.status != 'diagnosis':
+            return JsonResponse({
+                'success': False,
+                'error': f'Work order must be in diagnosis before requesting approval. Current status: {workorder.get_status_display()}'
+            })
         
         # Check if estimate already exists
         if hasattr(workorder, 'estimate') and workorder.estimate:
@@ -1038,7 +1044,7 @@ def request_approval(request, pk):
                 estimate_date=timezone.now().date(),
                 valid_until=(timezone.now() + timedelta(days=30)).date(),
                 title=f"Estimate for {workorder.vehicle.year} {workorder.vehicle.make} {workorder.vehicle.model}",
-                description=workorder.diagnosis_notes or workorder.problem_description,
+                description=workorder.diagnosis_notes or workorder.customer_concerns,
                 labor_subtotal=workorder.estimated_labor_cost or Decimal('0'),
                 parts_subtotal=workorder.estimated_parts_cost or Decimal('0'),
                 subtotal=workorder.estimated_total or Decimal('0'),
@@ -1069,10 +1075,10 @@ def request_approval(request, pk):
                     total=part.selling_price,
                 )
         
-        # Update work order status
-        workorder.status = 'awaiting_approval'
         workorder.requires_approval = True
-        workorder.save()
+        workorder.approval_requested_at = timezone.now()
+        workorder.save(update_fields=['requires_approval', 'approval_requested_at'])
+        workorder.transition_to('awaiting_approval', user=request.user)
         
         # Create activity note
         WorkOrderNote.objects.create(

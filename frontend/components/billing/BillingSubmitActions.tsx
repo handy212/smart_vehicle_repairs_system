@@ -44,7 +44,12 @@ export function BillingSubmitActions({
     };
 
     const handleClick = () => {
-        switch (lastAction) {
+        runAction(lastAction);
+    };
+
+    const runAction = (action: "send" | "save" | "payment") => {
+        setLastAction(action);
+        switch (action) {
             case "send":
                 onSend();
                 break;
@@ -87,16 +92,16 @@ export function BillingSubmitActions({
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
-                    <DropdownMenuItem onClick={() => setLastAction("send")}>
+                    <DropdownMenuItem onClick={() => runAction("send")}>
                         <Send className="mr-2 h-4 w-4 text-primary" />
                         <span>{getLabel("send")}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLastAction("save")}>
+                    <DropdownMenuItem onClick={() => runAction("save")}>
                         <Save className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span>{getLabel("save")}</span>
                     </DropdownMenuItem>
                     {onRecordPayment && resourceType === "invoice" && (
-                        <DropdownMenuItem onClick={() => setLastAction("payment")}>
+                        <DropdownMenuItem onClick={() => runAction("payment")}>
                             <CreditCard className="mr-2 h-4 w-4 text-success" />
                             <span>{getLabel("payment")}</span>
                         </DropdownMenuItem>

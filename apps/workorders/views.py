@@ -48,7 +48,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
     queryset = WorkOrder.objects.all().select_related(
         'customer', 'customer__user', 'vehicle', 'appointment', 'primary_technician', 'created_by',
         'branch', 'service_coordinator', 'diagnosis_by', 'quality_check_by', 'related_work_order',
-        'service_type', 'service_bundle'
+        'service_type', 'service_bundle', 'estimate', 'invoice'
     ).prefetch_related(
         'assigned_technicians',
         Prefetch('tasks', queryset=ServiceTask.objects.select_related('assigned_to')),
@@ -154,6 +154,10 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         if obj is not None:
             self.check_object_permissions(self.request, obj)
             return obj
+
+        user = self.request.user
+        if getattr(user, 'role', None) == 'customer':
+            raise Http404
 
         unscoped_obj = super().get_queryset().filter(**filter_kwargs).first()
         if unscoped_obj is not None:
@@ -1018,7 +1022,14 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
             return Response(
                 {
                     'error': 'Actual labor hours are required before completing this task. '
-                             'Enter hours directly or use technician clock-in/out logs.'
+                             'Enter hours directly or use technician clock-in/out logs.',
+                    'field': 'actual_hours',
+                    'next_step': 'Enter the labor hours spent on this task, then complete it again.',
+                    'task': {
+                        'id': task.id,
+                        'description': task.description,
+                        'status': task.get_status_display(),
+                    },
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -1106,6 +1117,9 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
+
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            return queryset.filter(work_order__customer=user.customer_profile)
         
         # Admin can view all if requested
         if getattr(user, 'role', None) == 'admin' and \
@@ -1145,7 +1159,8 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def allocate(self, request, pk=None):
         """Allocate part from inventory"""
-        from apps.inventory.models import Part
+        from apps.inventory.models import StockItem
+        from apps.inventory.services import InventoryService
         
         wo_part = self.get_object()
         if wo_part.status not in ['pending', 'draft', 'po_created', 'awaiting_stock', 'received', 'ordered']: # 'ordered' kept for backward compatibility
@@ -1160,56 +1175,66 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Find part
-        part = Part.objects.filter(part_number=wo_part.part_number).first()
+        if wo_part.quantity != wo_part.quantity.to_integral_value():
+            return Response(
+                {'error': 'Inventory allocation quantity must be a whole number'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        part = wo_part.resolve_inventory_part()
         if not part:
             return Response(
                 {'error': 'Part not found in inventory'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
-            
-        # Check Branch
-        if part.branch and wo_part.work_order.branch and part.branch != wo_part.work_order.branch:
-             return Response(
-                 {'error': f'Inventory part is at {part.branch.name}, cannot allocate to {wo_part.work_order.branch.name}'},
-                 status=status.HTTP_400_BAD_REQUEST
-             )
-             
-        # Check Stock
-        if part.quantity_in_stock < wo_part.quantity:
-             return Response(
-                 {'error': f'Insufficient stock. Required: {wo_part.quantity}, Available: {part.quantity_in_stock}'},
-                 status=status.HTTP_400_BAD_REQUEST
-             )
+
+        branch = wo_part.work_order.branch
+        if not branch:
+            return Response(
+                {'error': 'Work Order has no branch assigned'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        inventory_status = wo_part.get_inventory_status_payload()
+        if not inventory_status or not inventory_status.get('available'):
+            available = inventory_status.get('quantity', 0) if inventory_status else 0
+            return Response(
+                {'error': f'Insufficient stock. Required: {wo_part.quantity}, Available: {available}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
              
         # Execute Allocation
         from django.db import transaction
         try:
             with transaction.atomic():
-                # Re-fetch part with lock to prevent race conditions
-                part = Part.objects.select_for_update().get(id=part.id)
-                
-                # Check Stock again under lock
-                if part.quantity_in_stock < wo_part.quantity:
-                     return Response(
-                         {'error': f'Insufficient stock. Required: {wo_part.quantity}, Available: {part.quantity_in_stock}'},
-                         status=status.HTTP_400_BAD_REQUEST
-                     )
-
-                from apps.inventory.models import InventoryTransaction
-                
-                # Create transaction (negative quantity for usage)
-                # Note: The model's save() method will automatically:
-                # 1. Update part.quantity_in_stock (old_stock + quantity)
-                # 2. Set balance_after to the new stock level
-                InventoryTransaction.objects.create(
+                part = wo_part.resolve_inventory_part()
+                stock_item, _ = StockItem.objects.select_for_update().get_or_create(
                     part=part,
+                    branch=branch,
+                    defaults={
+                        'quantity_in_stock': int(getattr(part, 'quantity_in_stock', 0) or 0),
+                        'quantity_reserved': int(getattr(part, 'quantity_reserved', 0) or 0),
+                        'reorder_point': part.reorder_point,
+                        'reorder_quantity': part.reorder_quantity,
+                        'minimum_stock': part.minimum_stock,
+                    }
+                )
+
+                if Decimal(str(stock_item.available_quantity)) < wo_part.quantity:
+                    return Response(
+                        {'error': f'Insufficient stock. Required: {wo_part.quantity}, Available: {stock_item.available_quantity}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                allocation_quantity = int(wo_part.quantity)
+                InventoryService.record_transaction(
+                    part=part,
+                    quantity=allocation_quantity,
                     transaction_type='sale',
-                    quantity=-wo_part.quantity,
-                    balance_after=part.quantity_in_stock - wo_part.quantity, # Model recalculates this, but providing expected value
+                    user=request.user,
+                    branch=branch,
                     work_order=wo_part.work_order,
                     reason=f"Allocated to WO #{wo_part.work_order.id}",
-                    created_by=request.user
                 )
                 
                 wo_part.status = 'ready'
@@ -1234,7 +1259,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def order(self, request, pk=None):
         """Create/Add to Purchase Order"""
-        from apps.inventory.models import Part, PurchaseOrder, PurchaseOrderItem
+        from apps.inventory.models import PurchaseOrder, PurchaseOrderItem
         
         wo_part = self.get_object()
         
@@ -1258,7 +1283,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
              )
 
         # Identify Part & Supplier
-        part = Part.objects.filter(part_number=wo_part.part_number).first()
+        part = wo_part.resolve_inventory_part()
         if not part:
              # Instead of error, return flag for frontend to handle
              return Response(
@@ -1273,6 +1298,13 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
                  },
                  status=status.HTTP_404_NOT_FOUND
              )
+
+        inventory_status = wo_part.get_inventory_status_payload()
+        if inventory_status and inventory_status.get('available'):
+            return Response(
+                {'error': f"Part '{wo_part.part_number}' is in stock. Allocate it instead of creating a PO."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
              
         supplier = part.preferred_supplier
         if not supplier:
@@ -1319,11 +1351,14 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
             po_item.quantity += wo_part.quantity
             po_item.save()
         else:
+            unit_cost = Decimal(str(part.cost_price or getattr(part, 'last_cost', None) or '0.01'))
+            if unit_cost <= 0:
+                unit_cost = Decimal('0.01')
             po_item = PurchaseOrderItem.objects.create(
                 purchase_order=po,
                 part=part,
-                quantity=wo_part.quantity,
-                unit_cost=part.cost_price or part.last_cost or 0
+                quantity=int(wo_part.quantity),
+                unit_cost=unit_cost,
             )
 
         # Link WO Part to PO Item and set status to 'po_created'
@@ -1433,11 +1468,14 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
             created_new_po = True
         
         # Create PO Item
+        unit_cost = Decimal(str(part.cost_price or '0.01'))
+        if unit_cost <= 0:
+            unit_cost = Decimal('0.01')
         po_item = PurchaseOrderItem.objects.create(
             purchase_order=po,
             part=part,
-            quantity=wo_part.quantity,
-            unit_cost=part.cost_price
+            quantity=int(wo_part.quantity),
+            unit_cost=unit_cost,
         )
         
         # Link WO Part to PO Item and update inventory reference
@@ -1461,7 +1499,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def bulk_order(self, request):
         """Bulk create/add to Purchase Orders for multiple parts"""
-        from apps.inventory.models import Part, PurchaseOrder, PurchaseOrderItem
+        from apps.inventory.models import PurchaseOrder, PurchaseOrderItem
         
         ids = request.data.get('ids', [])
         if not ids:
@@ -1484,10 +1522,19 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
                 results['errors'].append(f"Part {wo_part.id}: Missing part number")
                 continue
                 
+            if wo_part.purchase_order_item_id:
+                results['errors'].append(f"Part {wo_part.part_number}: Already linked to a purchase order")
+                continue
+
             # Identify Part & Supplier
-            part = Part.objects.filter(part_number=wo_part.part_number).first()
+            part = wo_part.resolve_inventory_part()
             if not part:
                  results['errors'].append(f"Part {wo_part.part_number}: Not found in inventory")
+                 continue
+
+            inventory_status = wo_part.get_inventory_status_payload()
+            if inventory_status and inventory_status.get('available'):
+                 results['errors'].append(f"Part {wo_part.part_number}: In stock; allocate instead")
                  continue
                  
             supplier = part.preferred_supplier or part.suppliers.first()
@@ -1525,11 +1572,14 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
                 po_item.save()
 
             else:
+                unit_cost = Decimal(str(part.cost_price or getattr(part, 'last_cost', None) or '0.01'))
+                if unit_cost <= 0:
+                    unit_cost = Decimal('0.01')
                 po_item = PurchaseOrderItem.objects.create(
                     purchase_order=po,
                     part=part,
-                    quantity=wo_part.quantity,
-                    unit_cost=part.cost_price or part.last_cost or 0
+                    quantity=int(wo_part.quantity),
+                    unit_cost=unit_cost,
                 )
                 
             wo_part.purchase_order_item = po_item
@@ -1727,38 +1777,63 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Allow access to any work order with a defined access token"""
-        return WorkOrder.objects.filter(access_token__isnull=False)
+        return WorkOrder.objects.filter(access_token__isnull=False).select_related(
+            'customer', 'customer__user', 'vehicle', 'estimate', 'invoice'
+        ).prefetch_related('tasks')
 
     @action(detail=True, methods=['post'])
     def approve(self, request, access_token=None):
         """Customer approves the estimate"""
         work_order = self.get_object()
+
+        if work_order.status != 'awaiting_approval':
+            return Response(
+                {
+                    'error': (
+                        f"Work order {work_order.work_order_number} is {work_order.get_status_display()} "
+                        "and is no longer waiting for customer approval."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         # Log the approval
         approval_notes = request.data.get('notes', 'Approved via Digital Portal')
         
         try:
-            work_order.approved_by_customer = True
-            work_order.approved_at = timezone.now()
-            work_order.approval_method = 'digital'
-            work_order.approval_notes = approval_notes
-            
-            # Transition status
-            if work_order.status == 'awaiting_approval':
-                work_order.transition_to('approved', user=None) # No user for public action
-                work_order.approve_pending_recommendations(
-                    user=None,
-                    method='portal',
-                    notes=approval_notes,
+            recommendation_counts = work_order.pending_recommendation_approval_counts()
+            if recommendation_counts['waiting_for_estimate']:
+                return Response(
+                    {
+                        'error': (
+                            f"{recommendation_counts['waiting_for_estimate']} recommendation(s) are still waiting for stores estimate."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-                
-                # Notify
-                try:
-                    notification_triggers.work_order_approved(work_order)
-                except Exception as e:
-                     pass # Log error
-            
-            work_order.save()
+
+            if recommendation_counts['pending_decision']:
+                return Response(
+                    {
+                        'error': (
+                            'Please approve, defer, or decline all priced recommendations before approving the work order.'
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            work_order.approve_customer_work(
+                user=None,
+                method='digital',
+                notes=approval_notes,
+            )
+
+            # Notify
+            try:
+                notification_triggers.work_order_approved(work_order)
+            except Exception:
+                 pass # Log error
+
             return Response({'status': 'approved'})
             
         except ValidationError as e:
@@ -1769,6 +1844,17 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
         """Customer declines the work"""
         work_order = self.get_object()
         reason = request.data.get('reason', 'Declined via Digital Portal')
+
+        if work_order.status != 'awaiting_approval':
+            return Response(
+                {
+                    'error': (
+                        f"Work order {work_order.work_order_number} is {work_order.get_status_display()} "
+                        "and is no longer waiting for customer approval."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         try:
             work_order.approved_by_customer = False
@@ -1789,9 +1875,9 @@ class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
                     reason=f"Customer declined work via portal. Reason: {reason}",
                 )
             elif work_order.status == 'awaiting_approval':
-                work_order.status = 'diagnosis'
                 work_order.diagnosis_completed_at = None
-                work_order.save(update_fields=['status', 'diagnosis_completed_at'])
+                work_order.save(update_fields=['diagnosis_completed_at'])
+                work_order.transition_to('diagnosis', user=None)
 
             WorkOrderNote.objects.create(
                 work_order=work_order,

@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { workordersApi } from "@/lib/api/workorders";
+import { WorkOrder, workordersApi } from "@/lib/api/workorders";
 import { authApi } from "@/lib/api/auth";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, Filter, Calendar, Car, DollarSign } from "lucide-react";
+import { ClipboardList, Filter, Calendar, Car, DollarSign, FileText, Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,11 +25,10 @@ export default function MyWorkOrdersPage() {
         queryKey: ["portal", "workorders", statusFilter],
         queryFn: () => {
 
-            const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
+            const customerId = user?.customer_profile?.id || user?.customer?.id;
             if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
 
-            const params: any = {
-                customer: customerId,
+            const params: Parameters<typeof workordersApi.list>[0] = {
                 ordering: "-created_at",
             };
             if (statusFilter !== "all") {
@@ -38,11 +37,11 @@ export default function MyWorkOrdersPage() {
             return workordersApi.list(params);
         },
 
-        enabled: !!user && !!(user?.customer_profile?.id || (user as any)?.customer?.id),
+        enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
     });
 
 
-    const workOrders = (workOrdersData?.results || workOrdersData || []) as any[];
+    const workOrders = (workOrdersData?.results || []) as WorkOrder[];
 
     if (isLoading) {
         return (
@@ -109,6 +108,8 @@ export default function MyWorkOrdersPage() {
                             className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <option value="all">All Status</option>
+                            <option value="awaiting_approval">Awaiting Approval</option>
+                            <option value="approved">Approved</option>
                             <option value="in_progress">In Progress</option>
                             <option value="pending_approval">Pending Approval</option>
                             <option value="completed">Completed</option>
@@ -122,7 +123,7 @@ export default function MyWorkOrdersPage() {
             {workOrders.length > 0 ? (
                 <div className="space-y-4">
 
-                    {workOrders.map((wo: any) => (
+                    {workOrders.map((wo) => (
                         <Card key={wo.id} className="overflow-hidden transition-all hover:shadow-md">
                             <CardContent className="p-0">
                                 <div className="flex flex-col md:flex-row">
@@ -155,6 +156,34 @@ export default function MyWorkOrdersPage() {
                                                                 {formatCurrency(wo.total_cost || wo.estimated_total)}
                                                             </span>
                                                         </div>
+                                                    )}
+                                                    {wo.estimate_summary && (
+                                                        <Link
+                                                            href={`/portal/estimates/${wo.estimate_summary.id}`}
+                                                            className="flex items-center text-foreground hover:text-primary"
+                                                        >
+                                                            <FileText className="w-4 h-4 mr-2 opacity-70" />
+                                                            <span className="font-medium">
+                                                                Estimate {wo.estimate_summary.estimate_number}
+                                                            </span>
+                                                            <Badge variant="outline" className="ml-2 h-5 text-[10px] capitalize">
+                                                                {wo.estimate_summary.status}
+                                                            </Badge>
+                                                        </Link>
+                                                    )}
+                                                    {wo.invoice_summary && (
+                                                        <Link
+                                                            href={`/portal/invoices/${wo.invoice_summary.id}`}
+                                                            className="flex items-center text-foreground hover:text-primary"
+                                                        >
+                                                            <Receipt className="w-4 h-4 mr-2 opacity-70" />
+                                                            <span className="font-medium">
+                                                                Invoice {wo.invoice_summary.invoice_number}
+                                                            </span>
+                                                            <Badge variant="outline" className="ml-2 h-5 text-[10px] capitalize">
+                                                                {wo.invoice_summary.status}
+                                                            </Badge>
+                                                        </Link>
                                                     )}
                                                 </div>
                                             </div>

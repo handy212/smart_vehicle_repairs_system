@@ -2,6 +2,7 @@
 Tests for diagnosis app.
 """
 import pytest
+from django.apps import apps as django_apps
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -620,6 +621,94 @@ class TestDiagnosisAPI:
         assert diagnosis.work_order.status == 'awaiting_approval'
         assert diagnosis.work_order.approval_requested_at is not None
 
+    def test_submit_for_approval_blocks_approved_recommendation_without_estimate(self, api_client, admin_user):
+        """Approval requests must include estimates even when a recommendation was staff-approved."""
+        diagnosis = baker.make(
+            Diagnosis,
+            status='in_progress',
+            is_completed=False,
+            started_at=timezone.now(),
+            work_order__status='diagnosis',
+            work_order__approved_by_customer=False,
+        )
+        baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='approved',
+            quotation_status='not_requested',
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/submit_for_approval/',
+            {},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'sent to stores for estimate' in response.data['error']
+
+    def test_submit_for_approval_publishes_stores_draft_estimate(self, api_client, admin_user):
+        """Stores draft estimates become customer-visible only when approval is submitted."""
+        if not django_apps.is_installed('apps.billing'):
+            pytest.skip('Billing app is not installed in this test settings module.')
+
+        Estimate = django_apps.get_model('billing', 'Estimate')
+        EstimateLineItem = django_apps.get_model('billing', 'EstimateLineItem')
+        diagnosis = baker.make(
+            Diagnosis,
+            status='in_progress',
+            is_completed=False,
+            started_at=timezone.now(),
+            diagnostic_notes='Brake pads below spec.',
+            work_order__status='diagnosis',
+            work_order__approved_by_customer=False,
+        )
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='pending_approval',
+            quotation_status='quoted',
+            converted_to_task=None,
+        )
+        estimate = baker.make(
+            Estimate,
+            branch=diagnosis.work_order.branch,
+            customer=diagnosis.work_order.customer,
+            vehicle=diagnosis.work_order.vehicle,
+            work_order=diagnosis.work_order,
+            status='draft',
+            valid_until=timezone.now().date(),
+            created_by=admin_user,
+        )
+        EstimateLineItem.objects.create(
+            estimate=estimate,
+            item_type='part',
+            description='Brake pads',
+            notes=f'[DIAG-REC:{recommendation.id}] Quoted part',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('125.00'),
+        )
+        recommendation.quotation_estimate_id = estimate.id
+        recommendation.quotation_estimate_number = estimate.estimate_number
+        recommendation.save(update_fields=['quotation_estimate_id', 'quotation_estimate_number', 'updated_at'])
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/submit_for_approval/',
+            {},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['published_estimate_ids'] == [estimate.id]
+        estimate.refresh_from_db()
+        diagnosis.work_order.refresh_from_db()
+        assert estimate.status == 'sent'
+        assert estimate.sent_by == admin_user
+        assert estimate.sent_at is not None
+        assert diagnosis.work_order.status == 'awaiting_approval'
+
     def test_complete_requires_customer_approval_after_submit(self, api_client, admin_user):
         """A diagnosis awaiting approval should not be finally completed before approval."""
         diagnosis = baker.make(
@@ -957,8 +1046,44 @@ class TestDiagnosisAPI:
         assert recommendation.decision_notes == 'Approved after call with customer.'
         assert recommendation.decision_by == admin_user
 
-    def test_submit_recommendations_for_quote_requires_approved_status(self, api_client, admin_user):
-        """Only approved recommendations can move to stores quotation."""
+    def test_approve_recommendations_allowed_while_diagnosis_waits_for_customer(self, api_client, admin_user):
+        """Customer approval decisions must be allowed while diagnosis content edits stay locked."""
+        diagnosis = baker.make(Diagnosis, status='awaiting_approval')
+        diagnosis.work_order.status = 'awaiting_approval'
+        diagnosis.work_order.requires_approval = True
+        diagnosis.work_order.approved_by_customer = False
+        WorkOrder.objects.filter(pk=diagnosis.work_order_id).update(
+            status='awaiting_approval',
+            requires_approval=True,
+            approved_by_customer=False,
+        )
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='pending_approval',
+            quotation_status='quoted',
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/approve_recommendations/',
+            {
+                'recommendation_ids': [recommendation.id],
+                'decision': 'approved',
+                'decision_method': 'portal',
+                'decision_notes': 'Customer approved selected recommendation.',
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        recommendation.refresh_from_db()
+        assert recommendation.approval_status == 'approved'
+        assert recommendation.customer_approved is True
+        assert recommendation.decision_method == 'portal'
+
+    def test_submit_recommendations_for_quote_accepts_pending_customer_approval(self, api_client, admin_user):
+        """Pending customer recommendations can move to stores quotation before approval."""
         diagnosis = baker.make(Diagnosis)
         approved = baker.make(
             RepairRecommendation,
@@ -974,7 +1099,7 @@ class TestDiagnosisAPI:
         )
         api_client.force_authenticate(user=admin_user)
 
-        error_response = api_client.post(
+        response = api_client.post(
             f'/api/diagnosis/diagnoses/{diagnosis.id}/submit_recommendations_for_quote/',
             {
                 'recommendation_ids': [approved.id, pending.id],
@@ -982,20 +1107,13 @@ class TestDiagnosisAPI:
             format='json',
         )
 
-        assert error_response.status_code == status.HTTP_400_BAD_REQUEST
-
-        response = api_client.post(
-            f'/api/diagnosis/diagnoses/{diagnosis.id}/submit_recommendations_for_quote/',
-            {
-                'recommendation_ids': [approved.id],
-            },
-            format='json',
-        )
-
         assert response.status_code == status.HTTP_200_OK
         approved.refresh_from_db()
+        pending.refresh_from_db()
         assert approved.quotation_status == 'requested'
+        assert pending.quotation_status == 'requested'
         assert approved.quotation_requested_by == admin_user
+        assert pending.quotation_requested_by == admin_user
 
     def test_convert_selected_recommendations_requires_quotation_ready(self, api_client, admin_user):
         """Selected recommendations must be quoted before conversion to tasks."""
@@ -1023,6 +1141,10 @@ class TestDiagnosisAPI:
 
     def test_mark_recommendations_quoted_enables_task_conversion(self, api_client, admin_user):
         """Quotation-ready recommendations should be eligible for task creation."""
+        if not django_apps.is_installed('apps.billing'):
+            pytest.skip('Billing app is not installed in this test settings module.')
+        Estimate = django_apps.get_model('billing', 'Estimate')
+        EstimateLineItem = django_apps.get_model('billing', 'EstimateLineItem')
         diagnosis = baker.make(Diagnosis)
         recommendation = baker.make(
             RepairRecommendation,
@@ -1030,6 +1152,36 @@ class TestDiagnosisAPI:
             approval_status='approved',
             quotation_status='requested',
             converted_to_task=None,
+        )
+        estimate = baker.make(
+            Estimate,
+            branch=diagnosis.work_order.branch,
+            customer=diagnosis.work_order.customer,
+            vehicle=diagnosis.work_order.vehicle,
+            work_order=diagnosis.work_order,
+            valid_until=timezone.now().date(),
+            created_by=admin_user,
+        )
+        recommendation.quotation_estimate_id = estimate.id
+        recommendation.quotation_estimate_number = estimate.estimate_number
+        recommendation.save(update_fields=['quotation_estimate_id', 'quotation_estimate_number', 'updated_at'])
+        EstimateLineItem.objects.create(
+            estimate=estimate,
+            item_type='part',
+            description='Quoted part',
+            notes=f'[DIAG-REC:{recommendation.id}] Quoted part',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('125.00'),
+        )
+        EstimateLineItem.objects.create(
+            estimate=estimate,
+            item_type='labor',
+            description='Quoted labor',
+            notes='Quoted labor',
+            quantity=Decimal('2.00'),
+            unit_price=Decimal('80.00'),
+            labor_hours=Decimal('2.00'),
+            labor_rate=Decimal('80.00'),
         )
         api_client.force_authenticate(user=admin_user)
 
@@ -1045,6 +1197,59 @@ class TestDiagnosisAPI:
         recommendation.refresh_from_db()
         assert recommendation.quotation_status == 'quoted'
         assert recommendation.quoted_by == admin_user
+        assert recommendation.estimated_parts_cost == Decimal('125.00')
+        assert recommendation.estimated_labor_cost == Decimal('0.00')
+        assert recommendation.estimated_labor_hours == Decimal('0.00')
+        assert recommendation.estimated_total_cost == Decimal('125.00')
+
+    def test_mark_recommendations_quoted_requires_priced_estimate_lines(self, api_client, admin_user):
+        """Stores cannot mark a recommendation quoted while generated estimate lines still have placeholder pricing."""
+        if not django_apps.is_installed('apps.billing'):
+            pytest.skip('Billing app is not installed in this test settings module.')
+        Estimate = django_apps.get_model('billing', 'Estimate')
+        EstimateLineItem = django_apps.get_model('billing', 'EstimateLineItem')
+        diagnosis = baker.make(Diagnosis)
+        recommendation = baker.make(
+            RepairRecommendation,
+            diagnosis=diagnosis,
+            approval_status='pending_approval',
+            quotation_status='requested',
+            converted_to_task=None,
+        )
+        estimate = baker.make(
+            Estimate,
+            branch=diagnosis.work_order.branch,
+            customer=diagnosis.work_order.customer,
+            vehicle=diagnosis.work_order.vehicle,
+            work_order=diagnosis.work_order,
+            valid_until=timezone.now().date(),
+            created_by=admin_user,
+        )
+        recommendation.quotation_estimate_id = estimate.id
+        recommendation.quotation_estimate_number = estimate.estimate_number
+        recommendation.save(update_fields=['quotation_estimate_id', 'quotation_estimate_number', 'updated_at'])
+        EstimateLineItem.objects.create(
+            estimate=estimate,
+            item_type='part',
+            description='Placeholder part',
+            notes=f'[DIAG-REC:{recommendation.id}] Placeholder part',
+            quantity=Decimal('1.00'),
+            unit_price=Decimal('0.01'),
+        )
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(
+            f'/api/diagnosis/diagnoses/{diagnosis.id}/mark_recommendations_quoted/',
+            {
+                'recommendation_ids': [recommendation.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'unpriced estimate line' in response.data['error']
+        recommendation.refresh_from_db()
+        assert recommendation.quotation_status == 'requested'
 
     def test_convert_recommendations_to_tasks_creates_work_order_parts(self, api_client, admin_user):
         """Recommendation parts should become work-order part requisitions when converted."""
@@ -1130,12 +1335,12 @@ class TestDiagnosisAPI:
         assert part_request.quantity == Decimal('2')
 
     def test_quotation_queue_lists_requested_recommendations(self, api_client, admin_user):
-        """Stores queue should list approved recommendations awaiting quotation."""
+        """Stores queue should list active recommendations awaiting quotation."""
         diagnosis = baker.make(Diagnosis)
         queued = baker.make(
             RepairRecommendation,
             diagnosis=diagnosis,
-            approval_status='approved',
+            approval_status='pending_approval',
             quotation_status='requested',
         )
         baker.make(

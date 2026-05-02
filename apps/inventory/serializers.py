@@ -254,7 +254,7 @@ class PartUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Part
         fields = [
-            'name', 'description', 'category', 'branch', 'manufacturer',
+            'part_number', 'name', 'description', 'category', 'branch', 'manufacturer',
             'manufacturer_part_number', 'barcode', 'suppliers', 'preferred_supplier',
             'reorder_point', 'reorder_quantity', 'minimum_stock', 'maximum_stock',
             'unit', 'cost_price', 'selling_price', 'markup_percentage', 'list_price',
@@ -317,7 +317,8 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
             'id', 'po_number', 'supplier', 'supplier_name', 'status',
             'order_date', 'expected_delivery_date', 'due_date', 'total_items',
             'total_quantity', 'received_quantity', 'subtotal', 'total',
-            'is_fully_received', 'created_by_name', 'created_at'
+            'is_fully_received', 'created_by_name', 'assigned_approver',
+            'rejected_at', 'rejection_reason', 'created_at'
         ]
 
     def get_supplier_name(self, obj):
@@ -333,6 +334,7 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     submitted_by_name = serializers.SerializerMethodField()
     approved_by_name = serializers.SerializerMethodField()
+    rejected_by_name = serializers.SerializerMethodField()
     received_by_name = serializers.SerializerMethodField()
     total_items = serializers.ReadOnlyField()
     total_quantity = serializers.ReadOnlyField()
@@ -355,6 +357,9 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
 
     def get_approved_by_name(self, obj):
         return obj.approved_by.get_full_name() if obj.approved_by else None
+
+    def get_rejected_by_name(self, obj):
+        return obj.rejected_by.get_full_name() if obj.rejected_by else None
 
     def get_received_by_name(self, obj):
         return obj.received_by.get_full_name() if obj.received_by else None

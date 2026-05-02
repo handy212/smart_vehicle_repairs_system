@@ -53,6 +53,28 @@ interface WorkflowActionsProps {
   inline?: boolean; // If true, render just the primary button inline (for progress indicator)
 }
 
+const getWorkflowErrorMessage = (error: any) => {
+  const data = error.response?.data;
+  const taskNames = Array.isArray(data?.blocking_tasks)
+    ? data.blocking_tasks.map((task: any) => task.description).filter(Boolean)
+    : [];
+  const partNames = Array.isArray(data?.blocking_parts)
+    ? data.blocking_parts.map((part: any) => part.part_name).filter(Boolean)
+    : [];
+
+  if (taskNames.length) {
+    const list = taskNames.slice(0, 4).join(", ");
+    const more = taskNames.length > 4 ? `, +${taskNames.length - 4} more` : "";
+    return `${data?.next_step || "Open the Tasks tab and resolve the blocking tasks."} Blocking tasks: ${list}${more}.`;
+  }
+  if (partNames.length) {
+    const list = partNames.slice(0, 4).join(", ");
+    const more = partNames.length > 4 ? `, +${partNames.length - 4} more` : "";
+    return `${data?.next_step || "Open the Parts tab and resolve the blocking parts."} Blocking parts: ${list}${more}.`;
+  }
+  return data?.error || data?.errors?.join("; ") || error.message;
+};
+
 export default function WorkflowActions({
   workOrderId, status, workOrder, onStatusChange, onStartRepairs, inline = false }: WorkflowActionsProps) {
   const { formatCurrency } = useCurrency();
@@ -655,8 +677,8 @@ export default function WorkflowActions({
 
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to request quality check",
+        title: "Quality check blocked",
+        description: getWorkflowErrorMessage(error) || "Failed to request quality check",
         variant: "destructive",
       });
     },
@@ -707,8 +729,8 @@ export default function WorkflowActions({
 
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to complete work order",
+        title: "Completion blocked",
+        description: getWorkflowErrorMessage(error) || "Failed to complete work order",
         variant: "destructive",
       });
     },
@@ -767,23 +789,6 @@ export default function WorkflowActions({
       toast({
         title: "Error",
         description: error.response?.data?.error || "Failed to close work order",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Reopen (Phase 5: Reopen Closed Work Order)
-  const reopenMutation = useMutation({
-    mutationFn: () => workordersApi.reopen(workOrderId),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Work order reopened." });
-      refreshWorkOrder();
-    },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to reopen work order",
         variant: "destructive",
       });
     },
@@ -1059,12 +1064,12 @@ export default function WorkflowActions({
 
       case "closed":
         actions.push({
-          label: "Reopen",
+          label: "Create Rework",
           icon: RotateCcw,
-          onClick: () => reopenMutation.mutate(),
-          disabled: reopenMutation.isPending,
+          onClick: () => router.push(`/workorders/new?related_work_order=${workOrderId}&rework=true`),
+          disabled: false,
           variant: "outline",
-          description: "Reopen closed work order",
+          description: "Create a linked warranty/rework order",
         });
         break;
     }

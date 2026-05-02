@@ -156,7 +156,8 @@ class WorkOrderModuleIntegrationTests(TestCase):
             estimated_labor_hours=Decimal('1.5'),
             estimated_labor_cost=Decimal('150.00'),
             estimated_parts_cost=Decimal('80.00'),
-            customer_approved=True
+            approval_status='approved',
+            quotation_status='quoted',
         )
         
         rec2 = RepairRecommendation.objects.create(
@@ -166,7 +167,8 @@ class WorkOrderModuleIntegrationTests(TestCase):
             estimated_labor_hours=Decimal('0.5'),
             estimated_labor_cost=Decimal('50.00'),
             estimated_parts_cost=Decimal('18.00'),
-            customer_approved=True
+            approval_status='approved',
+            quotation_status='quoted',
         )
         
         # Mark diagnosis as completed
@@ -384,7 +386,8 @@ class WorkOrderModuleIntegrationTests(TestCase):
             estimated_labor_hours=Decimal('1.0'),
             estimated_labor_cost=Decimal('100.00'),
             estimated_parts_cost=Decimal('25.00'),
-            customer_approved=True,
+            approval_status='approved',
+            quotation_status='quoted',
             parts_needed=[
                 {'part_name': 'Oil Filter', 'part_number': 'OF-001', 'quantity': 1},
                 {'part_name': 'Air Filter', 'part_number': 'AF-001', 'quantity': 1}

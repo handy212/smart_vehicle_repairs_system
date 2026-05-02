@@ -11,6 +11,24 @@ from apps.workorders.models import WorkOrder, WorkOrderNote
 class WorkOrderStateTransitionMixin:
     """Mixin for work order state transitions"""
 
+    def _transition_error_response(self, work_order, new_status, error, http_status=status.HTTP_400_BAD_REQUEST):
+        if hasattr(error, 'messages'):
+            message = '; '.join(error.messages)
+        else:
+            message = str(error)
+            if message.startswith("['") and message.endswith("']"):
+                message = message[2:-2]
+
+        blockers = work_order.get_transition_blockers(new_status)
+        payload = {
+            'error': message,
+            'errors': blockers['errors'] or [message],
+            'next_step': blockers['next_step'],
+            'blocking_tasks': blockers['blocking_tasks'],
+            'blocking_parts': blockers['blocking_parts'],
+        }
+        return Response(payload, status=http_status)
+
     @action(detail=False, methods=['post'])
     def bulk_update_status(self, request):
         """Bulk update status for multiple work orders"""
@@ -70,46 +88,18 @@ class WorkOrderStateTransitionMixin:
 
     @action(detail=True, methods=['post'])
     def reopen(self, request, pk=None):
-        """Reopen a closed work order"""
+        """Closed work orders are immutable; create a rework order instead."""
         work_order = self.get_object()
-        
-        if work_order.status != 'closed':
-            return Response(
-                {'error': 'Only closed work orders can be reopened'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Determine appropriate status based on context
-        # Check if there's an invoice
-        from apps.billing.models import Invoice
-        has_invoice = Invoice.objects.filter(work_order=work_order).exists()
-        
-        if has_invoice:
-            new_status = 'invoiced'
-        elif work_order.completed_at:
-            new_status = 'completed'
-        else:
-            new_status = 'in_progress'
-        
-        try:
-            # Use notify=False to avoid sending notifications on reopen
-            work_order.transition_to(new_status, user=request.user, notify=False)
-            
-            # Create note
-            WorkOrderNote.objects.create(
-                work_order=work_order,
-                note_type='internal',
-                note='Work order reopened',
-                created_by=request.user
-            )
-            
-            serializer = self.get_serializer(work_order)
-            return Response(serializer.data)
-        except ValidationError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+
+        return Response(
+            {
+                'error': (
+                    f"Work order {work_order.work_order_number} is {work_order.get_status_display()} "
+                    "and cannot be reopened directly. Create a warranty/rework work order linked to this record."
+                )
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(detail=True, methods=['post'])
     def close(self, request, pk=None):
@@ -214,10 +204,7 @@ class WorkOrderStateTransitionMixin:
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
         except ValidationError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self._transition_error_response(work_order, 'completed', e)
 
     @action(detail=True, methods=['post'])
     def quality_check(self, request, pk=None):
@@ -350,10 +337,7 @@ class WorkOrderStateTransitionMixin:
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
         except ValidationError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self._transition_error_response(work_order, 'quality_check', e)
 
     @action(detail=True, methods=['post'])
     def resume(self, request, pk=None):
@@ -492,19 +476,35 @@ class WorkOrderStateTransitionMixin:
         work_order = self.get_object()
         approval_method = request.data.get('approval_method', 'phone')
         approval_notes = request.data.get('approval_notes', '')
-        
-        work_order.approved_by_customer = True
-        work_order.approved_at = timezone.now()
-        work_order.approval_method = approval_method
-        work_order.approval_notes = approval_notes
+        recommendation_counts = work_order.pending_recommendation_approval_counts()
+
+        if recommendation_counts['waiting_for_estimate']:
+            return Response(
+                {
+                    'error': (
+                        f"{recommendation_counts['waiting_for_estimate']} recommendation(s) are still waiting for stores estimate."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if recommendation_counts['pending_decision']:
+            return Response(
+                {
+                    'error': (
+                        'Please approve, defer, or decline all priced recommendations before approving the work order.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         try:
-            work_order.transition_to('approved', user=request.user)
-            recommendations_approved = work_order.approve_pending_recommendations(
+            work_order.approve_customer_work(
                 user=request.user,
                 method=approval_method,
                 notes=approval_notes,
             )
+            recommendations_approved = 0
             
             # Send approval notification to technician
             try:

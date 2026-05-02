@@ -186,7 +186,6 @@ export default function BookAppointmentPage() {
         <Card>
           <CardHeader>
             <CardTitle>Service Details</CardTitle>
-            <CardDescription>Fill in the details below to schedule your appointment.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -238,7 +237,6 @@ export default function BookAppointmentPage() {
                       </Select>
                     )}
                   />
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Select a package for best value.</p>
                 </div>
 
                 <div className="space-y-2">

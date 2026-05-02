@@ -424,9 +424,10 @@ def my_estimates(request):
     """View all pending estimates for approval"""
     customer = request.user.customer_profile
     
-    # Get all estimates for this customer
+    # Customers only see estimates that staff explicitly released.
     estimates = Estimate.objects.filter(
-        customer=customer
+        customer=customer,
+        status__in=['sent', 'viewed', 'approved', 'declined', 'expired'],
     ).select_related('vehicle', 'work_order').order_by('-created_at')
     
     # Filter by status if provided
@@ -461,21 +462,39 @@ def estimate_detail(request, estimate_id):
     # Handle approval/decline
     if request.method == 'POST':
         action = request.POST.get('action')
+        work_order = estimate.work_order
+
+        if work_order and work_order.status != 'awaiting_approval':
+            messages.error(
+                request,
+                (
+                    f"Estimate #{estimate.estimate_number} is no longer actionable because "
+                    f"work order {work_order.work_order_number} is {work_order.get_status_display()}."
+                )
+            )
+            return redirect('portal:estimate-detail', estimate_id=estimate.id)
         
         if action == 'approve':
+            if not estimate.can_be_approved:
+                messages.error(request, 'This estimate cannot be approved in its current status or has expired.')
+                return redirect('portal:estimate-detail', estimate_id=estimate.id)
+
             estimate.status = 'approved'
             estimate.approved_date = timezone.now()
             estimate.approved_by = request.user
             estimate.save()
             
             # Update work order status if linked
-            if estimate.work_order:
-                estimate.work_order.status = 'approved'
-                estimate.work_order.save()
+            if work_order:
+                work_order.approved_by_customer = True
+                work_order.approved_at = timezone.now()
+                work_order.approval_method = 'digital'
+                work_order.approval_notes = f'Estimate #{estimate.estimate_number} approved by customer'
+                work_order.transition_to('approved', user=request.user)
                 
                 # Create activity note
                 WorkOrderNote.objects.create(
-                    work_order=estimate.work_order,
+                    work_order=work_order,
                     note_type='status',
                     note=f'Estimate #{estimate.estimate_number} approved by customer',
                     created_by=request.user
@@ -491,13 +510,15 @@ def estimate_detail(request, estimate_id):
             estimate.save()
             
             # Update work order status if linked
-            if estimate.work_order:
-                estimate.work_order.status = 'cancelled'
-                estimate.work_order.save()
+            if work_order:
+                work_order.approved_by_customer = False
+                work_order.approved_at = None
+                work_order.save(update_fields=['approved_by_customer', 'approved_at'])
+                work_order.transition_to('diagnosis', user=request.user)
                 
                 # Create activity note
                 WorkOrderNote.objects.create(
-                    work_order=estimate.work_order,
+                    work_order=work_order,
                     note_type='status',
                     note=f'Estimate #{estimate.estimate_number} declined by customer. Reason: {decline_reason}',
                     created_by=request.user

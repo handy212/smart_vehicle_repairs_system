@@ -179,7 +179,7 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         # Allow customers to view their own estimates without billing permission
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'pdf', 'print']:
             if getattr(self.request.user, 'role', None) == 'customer':
                 return [IsAuthenticated(), IsModuleEnabled('billing')]
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
@@ -192,8 +192,12 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
         elif self.action in ['bulk_update_status', 'send', 'send_customer_sms', 'send_customer_email', 'suggested_message']:
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('edit_estimates')]
         elif self.action == 'approve':
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated(), IsModuleEnabled('billing')]
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('approve_estimates')]
         elif self.action == 'decline':
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated(), IsModuleEnabled('billing')]
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('reject_estimates')]
         elif self.action == 'duplicate':
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('create_estimates')]
@@ -218,9 +222,12 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
         queryset = super().get_queryset()
         user = self.request.user
 
-        # Customers only see their own estimates and non-drafts
+        # Customers only see estimates that have intentionally been released.
         if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
-            return queryset.filter(customer=user.customer_profile).exclude(status='draft')
+            return queryset.filter(
+                customer=user.customer_profile,
+                status__in=['sent', 'viewed', 'approved', 'declined', 'expired'],
+            )
         
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
@@ -453,8 +460,29 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
                 {"error": f"Invalid status. Choices: {', '.join(valid_statuses)}"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        if new_status in {'approved', 'declined', 'sent', 'viewed'}:
+            stale_link = (
+                self.get_queryset()
+                .filter(id__in=ids, work_order__isnull=False)
+                .exclude(work_order__status='awaiting_approval')
+                .select_related('work_order')
+                .first()
+            )
+            if stale_link:
+                return Response(
+                    {
+                        "error": (
+                            f"Estimate {stale_link.estimate_number} is linked to work order "
+                            f"{stale_link.work_order.work_order_number}, which is "
+                            f"{stale_link.work_order.get_status_display()}. Use the current workflow action "
+                            "or issue a new estimate."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         
-        updated_count = Estimate.objects.filter(id__in=ids).update(status=new_status)
+        updated_count = self.get_queryset().filter(id__in=ids).update(status=new_status)
         
         return Response({
             "message": f"Successfully updated {updated_count} estimates",
@@ -526,7 +554,7 @@ class EstimateLineItemViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'pdf', 'print']:
             if getattr(self.request.user, 'role', None) == 'customer':
                 return [IsAuthenticated(), IsModuleEnabled('billing')]
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
@@ -567,7 +595,7 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         # Allow customers to view their own invoices without billing permission
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'pdf', 'print']:
             if getattr(self.request.user, 'role', None) == 'customer':
                 return [IsAuthenticated(), IsModuleEnabled('billing')]
             return [IsAuthenticated(), IsModuleEnabled('billing'), HasPermission('view_billing')]
@@ -604,7 +632,16 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
 
         # Customers only see their own invoices and non-drafts
         if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
-            return queryset.filter(customer=user.customer_profile).exclude(status='draft')
+            queryset = queryset.filter(customer=user.customer_profile).exclude(status__in=['draft', 'void'])
+
+            status = self.request.query_params.get('status')
+            if status:
+                if status == 'unpaid':
+                    queryset = queryset.filter(status__in=['sent', 'viewed', 'proforma', 'partial', 'overdue'])
+                else:
+                    queryset = queryset.filter(status=status)
+
+            return queryset
 
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'

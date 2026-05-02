@@ -1,7 +1,6 @@
 import { useState } from 'react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import apiClient from '@/lib/api/client';
 import { useBranchStore } from '@/store/branchStore';
+import { getAccessToken } from '@/lib/utils/token';
 
 interface PrintOptions {
     documentType: 'invoice' | 'estimate' | 'work_order' | 'inspection' | 'purchase_order' | 'receipt' | 'gate_pass' | 'credit_note';
@@ -16,6 +15,17 @@ export function usePrint() {
 
     const printWindow = () => {
         window.print();
+    };
+
+    const readErrorMessage = async (response: Response) => {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const errData = await response.json().catch(() => null);
+            return errData?.error || errData?.detail || `Failed to load print view (${response.status})`;
+        }
+
+        const text = await response.text().catch(() => '');
+        return text.trim() || `Failed to load print view (${response.status})`;
     };
 
     /**
@@ -47,7 +57,7 @@ export function usePrint() {
             const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
             const url = `${baseUrl}${endpoint}`;
 
-            const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+            const token = getAccessToken();
             const branchId = useBranchStore.getState().activeBranchId;
 
             const response = await fetch(url, {
@@ -58,8 +68,7 @@ export function usePrint() {
             });
 
             if (!response.ok) {
-                const errData = await response.json().catch(() => ({ error: 'Failed to load print view' }));
-                throw new Error(errData.error || 'Failed to load print view');
+                throw new Error(await readErrorMessage(response));
             }
 
             const html = await response.text();

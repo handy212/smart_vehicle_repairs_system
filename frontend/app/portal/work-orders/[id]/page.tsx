@@ -1,13 +1,14 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
 
 import { diagnosisApi } from "@/lib/api/diagnosis";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, Download, CheckCircle, XCircle, AlertTriangle, AlertCircle, Package, CheckSquare, Square } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Download, CheckCircle, XCircle, AlertTriangle, AlertCircle, Package, CheckSquare, FileText, Receipt, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -16,10 +17,11 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/lib/hooks/useToast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
 
 export default function WorkOrderDetailPage() {
     const params = useParams();
@@ -63,32 +65,6 @@ export default function WorkOrderDetailPage() {
         queryFn: () => diagnosisApi.getRecommendations(diagnosis!.id),
         enabled: !!diagnosis?.id,
     });
-
-    // Pre-select approved items or critical ones?
-    // Actually, we should probably start with none selected or all unapproved ones selected?
-    // Let's select all pending ones by default for convenience, but only once when data loads.
-    useEffect(() => {
-        if (recommendations) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const pendingIds = recommendations
-
-                .filter((r: any) => !r.customer_approved)
-
-                .map((r: any) => r.id);
-            // Only if we haven't manipulated selection yet? 
-            // For now, let's just default to selecting none to require explicit action,
-            // OR select all pending to encourage approval.
-            // Let's select all pending to make it easy to "Approve All".
-            setSelectedRecommendations(prev => {
-                // If we already have a selection state (even empty array), don't overwrite it
-                // BUT, empty array is initial state. 
-                // Let's strictly only set if we haven't touched it.
-                // A better way is to check if this is the first load.
-                // For simplicity in this iteration: default to empty (user must tap).
-                return prev; // Keep as is (empty initially)
-            });
-        }
-    }, [recommendations]);
 
     const approveWorkOrderMutation = useMutation({
         mutationFn: (data?: { approval_notes?: string }) => {
@@ -156,12 +132,12 @@ export default function WorkOrderDetailPage() {
         });
     };
 
-    const handleApproveSelectedRecommendations = () => {
+    const handleDecisionSelectedRecommendations = (decision: "approved" | "deferred" | "declined") => {
         if (selectedRecommendations.length === 0) return;
 
         approveRecommendationsMutation.mutate({
             recommendation_ids: selectedRecommendations,
-            decision: "approved",
+            decision,
             decision_method: "portal",
         });
     };
@@ -201,9 +177,16 @@ export default function WorkOrderDetailPage() {
 
     // Group recommendations
 
-    const pendingRecommendations = recommendations?.filter((r: any) => !r.customer_approved) || [];
+    const pendingRecommendations = recommendations?.filter((r: any) =>
+        !r.customer_approved && (r.approval_status || "pending_approval") === "pending_approval" && r.quotation_status === "quoted"
+    ) || [];
+    const waitingForEstimateRecommendations = recommendations?.filter((r: any) =>
+        !r.customer_approved && (r.approval_status || "pending_approval") === "pending_approval" && r.quotation_status !== "quoted"
+    ) || [];
 
     const approvedRecommendations = recommendations?.filter((r: any) => r.customer_approved) || [];
+
+    const getRecommendationPartsTotal = (rec: any) => Number(rec.estimated_parts_cost ?? rec.estimated_total_cost ?? 0);
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-8">
@@ -250,21 +233,70 @@ export default function WorkOrderDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                        <CardHeader className="pb-3 border-b">
+                            <CardTitle className="text-base font-semibold">Service Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Opened</p>
+                                    <p className="mt-1 font-medium text-foreground">
+                                        {format(new Date(workOrder.created_at), "MMM d, yyyy")}
+                                    </p>
+                                </div>
+                                {workOrder.estimated_completion && (
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Estimated Completion</p>
+                                        <p className="mt-1 font-medium text-foreground">
+                                            {format(new Date(workOrder.estimated_completion), "MMM d, yyyy")}
+                                        </p>
+                                    </div>
+                                )}
+                                {workOrder.odometer_in && (
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Odometer In</p>
+                                        <p className="mt-1 font-medium text-foreground">{workOrder.odometer_in.toLocaleString()}</p>
+                                    </div>
+                                )}
+                                {workOrder.odometer_out && (
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Odometer Out</p>
+                                        <p className="mt-1 font-medium text-foreground">{workOrder.odometer_out.toLocaleString()}</p>
+                                    </div>
+                                )}
+                            </div>
 
-                    {/* Repair Recommendations - NEW SECTION */}
+                            {workOrder.customer_concerns && (
+                                <div className="rounded-md border bg-muted/20 p-3">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Complaint / Concern</p>
+                                    <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{workOrder.customer_concerns}</p>
+                                </div>
+                            )}
+
+                            {workOrder.diagnosis_notes && (
+                                <div className="rounded-md border bg-muted/20 p-3">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Diagnosis Notes</p>
+                                    <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">{workOrder.diagnosis_notes}</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Technical Recommendations - NEW SECTION */}
                     {recommendations && recommendations.length > 0 && (
                         <Card className="border-primary/20 shadow-sm overflow-hidden">
                             <CardHeader className="bg-primary/5 pb-3">
                                 <CardTitle className="text-base font-semibold flex items-center justify-between">
                                     <span className="flex items-center gap-2">
                                         <CheckSquare className="w-4 h-4 text-primary" />
-                                        Repair Recommendations
+                                        Technical Recommendation
                                     </span>
                                     {selectedRecommendations.length > 0 && (
                                         <Badge variant="default" className="ml-2">
                                             {selectedRecommendations.length} Selected
                                         </Badge>
-                                    )}
+                                    )} 
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0">
@@ -292,9 +324,24 @@ export default function WorkOrderDetailPage() {
                                                                 {rec.description}
                                                             </Label>
                                                             <span className="font-semibold text-primary/80">
-                                                                {formatCurrency(rec.estimated_total_cost)}
+                                                                {formatCurrency(getRecommendationPartsTotal(rec))}
                                                             </span>
                                                         </div>
+                                                        {rec.quotation_estimate_number && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Estimate: <span className="font-medium text-foreground">{rec.quotation_estimate_number}</span>
+                                                            </p>
+                                                        )}
+                                                        {Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
+                                                            <div className="mt-2 rounded-md border bg-muted/30 p-2 text-xs text-muted-foreground">
+                                                                {rec.parts_needed.map((part: any, index: number) => (
+                                                                    <p key={`${rec.id}-part-${index}`}>
+                                                                        {part.part_name} x{part.quantity}
+                                                                        {part.part_number ? ` (${part.part_number})` : ""}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                         <div className="flex items-center gap-2 text-xs">
                                                             <Badge variant={
                                                                 rec.priority === 'critical' ? 'danger' :
@@ -311,17 +358,57 @@ export default function WorkOrderDetailPage() {
                                                 </div>
                                             </div>
                                         ))}
-                                        <div className="p-4 bg-muted/10 flex justify-end">
+                                        <div className="p-4 bg-muted/10 flex flex-col gap-2 sm:flex-row sm:justify-end">
                                             <Button
-                                                onClick={handleApproveSelectedRecommendations}
+                                                variant="outline"
+                                                onClick={() => handleDecisionSelectedRecommendations("declined")}
                                                 disabled={selectedRecommendations.length === 0 || approveRecommendationsMutation.isPending}
                                                 size="sm"
+                                                className="w-full sm:w-auto"
                                             >
+                                                <XCircle className="mr-1.5 h-3.5 w-3.5" />
+                                                Decline Selected
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => handleDecisionSelectedRecommendations("deferred")}
+                                                disabled={selectedRecommendations.length === 0 || approveRecommendationsMutation.isPending}
+                                                size="sm"
+                                                className="w-full sm:w-auto"
+                                            >
+                                                <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
+                                                Defer Selected
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleDecisionSelectedRecommendations("approved")}
+                                                disabled={selectedRecommendations.length === 0 || approveRecommendationsMutation.isPending}
+                                                size="sm"
+                                                className="w-full sm:w-auto"
+                                            >
+                                                <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
                                                 {approveRecommendationsMutation.isPending
                                                     ? "Processing..."
                                                     : `Approve Selected (${selectedRecommendations.length})`}
                                             </Button>
                                         </div>
+                                    </div>
+                                )}
+
+                                {waitingForEstimateRecommendations.length > 0 && (
+                                    <div className="divide-y border-b">
+                                        <div className="p-3 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                            Waiting for Estimate
+                                        </div>
+                                        {waitingForEstimateRecommendations.map((rec: any) => (
+                                            <div key={rec.id} className="p-4">
+                                                <div className="flex items-start gap-3">
+                                                    <AlertTriangle className="mt-0.5 h-4 w-4 text-warning" />
+                                                    <div>
+                                                        <p className="font-medium text-foreground">{rec.description}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 
@@ -344,7 +431,7 @@ export default function WorkOrderDetailPage() {
                                                                 {rec.description}
                                                             </span>
                                                             <span className="font-semibold text-muted-foreground">
-                                                                {formatCurrency(rec.estimated_total_cost)}
+                                                                {formatCurrency(getRecommendationPartsTotal(rec))}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs">
@@ -364,7 +451,7 @@ export default function WorkOrderDetailPage() {
                     )}
 
                     {/* Parts */}
-                    <Card>
+                    {/* <Card>
                         <CardHeader className="pb-3 border-b">
                             <CardTitle className="text-base font-semibold flex items-center gap-2">
                                 <Package className="w-4 h-4" />
@@ -401,7 +488,7 @@ export default function WorkOrderDetailPage() {
                                 </div>
                             )}
                         </CardContent>
-                    </Card>
+                    </Card> */}
 
                 </div>
 
@@ -427,7 +514,7 @@ export default function WorkOrderDetailPage() {
                                     <span>Pending Approval</span>
                                     <span>{formatCurrency(
 
-                                        pendingRecommendations.reduce((sum: number, r: any) => sum + parseFloat(r.estimated_total_cost || "0"), 0)
+                                        pendingRecommendations.reduce((sum: number, r: any) => sum + getRecommendationPartsTotal(r), 0)
                                     )}</span>
                                 </div>
                             )}
@@ -437,6 +524,96 @@ export default function WorkOrderDetailPage() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {workOrder.estimate_summary && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                                    <FileText className="h-4 w-4" />
+                                    Estimate
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="font-semibold text-foreground">
+                                            {workOrder.estimate_summary.estimate_number}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {workOrder.estimate_summary.estimate_date
+                                                ? format(new Date(workOrder.estimate_summary.estimate_date), "MMM d, yyyy")
+                                                : "Estimate"}
+                                        </p>
+                                    </div>
+                                    <Badge variant="outline" className="capitalize">
+                                        {workOrder.estimate_summary.status}
+                                    </Badge>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Estimate Total</span>
+                                    <span className="font-semibold">{formatCurrency(workOrder.estimate_summary.total || "0")}</span>
+                                </div>
+                                <Link href={`/portal/estimates/${workOrder.estimate_summary.id}`}>
+                                    <Button variant="outline" size="sm" className="w-full">
+                                        View Estimate
+                                    </Button>
+                                </Link>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {workOrder.invoice_summary && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                                    <Receipt className="h-4 w-4" />
+                                    Invoice
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0 space-y-3">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="font-semibold text-foreground">
+                                            {workOrder.invoice_summary.invoice_number}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {workOrder.invoice_summary.invoice_date
+                                                ? format(new Date(workOrder.invoice_summary.invoice_date), "MMM d, yyyy")
+                                                : "Invoice"}
+                                        </p>
+                                    </div>
+                                    <Badge variant="outline" className="capitalize">
+                                        {workOrder.invoice_summary.status}
+                                    </Badge>
+                                </div>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Invoice Total</span>
+                                        <span className="font-semibold">{formatCurrency(workOrder.invoice_summary.total || "0")}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Amount Due</span>
+                                        <span className="font-semibold">{formatCurrency(workOrder.invoice_summary.amount_due || "0")}</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <Link href={`/portal/invoices/${workOrder.invoice_summary.id}`}>
+                                        <Button variant="outline" size="sm" className="w-full">
+                                            View Invoice
+                                        </Button>
+                                    </Link>
+                                    {Number(workOrder.invoice_summary.amount_due || 0) > 0 && (
+                                        <Link href={`/portal/payment/${workOrder.invoice_summary.id}`}>
+                                            <Button size="sm" className="w-full">
+                                                <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+                                                Pay Now
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Vehicle Info */}
                     <Card>

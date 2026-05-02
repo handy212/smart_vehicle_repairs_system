@@ -141,6 +141,8 @@ class EstimateListSerializer(serializers.ModelSerializer):
     
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     vehicle_display = serializers.SerializerMethodField()
+    work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
+    work_order_status = serializers.CharField(source='work_order.status', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     is_expired = serializers.BooleanField(read_only=True)
     days_until_expiration = serializers.IntegerField(read_only=True)
@@ -150,7 +152,8 @@ class EstimateListSerializer(serializers.ModelSerializer):
         model = Estimate
         fields = [
             'id', 'estimate_number', 'customer', 'customer_name',
-            'vehicle', 'vehicle_display', 'status', 'title', 'reference_number',
+            'vehicle', 'vehicle_display', 'work_order', 'work_order_number',
+            'work_order_status', 'status', 'title', 'reference_number',
             'estimate_date', 'valid_until', 'is_expired', 'days_until_expiration',
             'subtotal', 'discount_amount', 'tax_amount', 'total',
             'can_be_approved', 'created_by', 'created_by_name',
@@ -182,6 +185,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     sent_by_name = serializers.CharField(source='sent_by.get_full_name', read_only=True)
     tax_breakdown = serializers.SerializerMethodField()
     work_order_number = serializers.SerializerMethodField()
+    work_order_status = serializers.CharField(source='work_order.status', read_only=True)
     latest_invoice_summary = serializers.SerializerMethodField()
     
     is_expired = serializers.BooleanField(read_only=True)
@@ -195,7 +199,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'id', 'estimate_number', 'customer', 'customer_name', 
             'customer_email', 'customer_phone',
             'vehicle', 'vehicle_display', 'vehicle_vin',
-            'work_order', 'work_order_number', 'status', 'estimate_date', 'valid_until',
+            'work_order', 'work_order_number', 'work_order_status', 'status', 'estimate_date', 'valid_until',
             'title', 'description', 'reference_number', 'sales_agent', 'sales_agent_name',
             'notes', 'customer_notes',
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
@@ -369,7 +373,21 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def update(self, instance, validated_data):
         line_items_data = validated_data.pop('line_items', None)
-        discount_percentage_updated = 'discount_percentage' in validated_data
+        original_status = instance.status
+        if (
+            original_status in {'sent', 'viewed', 'approved', 'declined', 'expired'}
+            and validated_data.get('status') == 'draft'
+        ):
+            validated_data['status'] = original_status
+
+        total_affecting_fields = {
+            'discount_percentage',
+            'discount_type',
+            'discount_reason',
+            'shop_supplies_fee',
+            'environmental_fee',
+        }
+        should_recalculate_totals = bool(total_affecting_fields.intersection(validated_data))
         
         # Track if work_order was updated
         work_order_updated = 'work_order' in validated_data
@@ -391,34 +409,19 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
             
             # Refresh instance to get calculated totals
             instance.refresh_from_db()
-            
-            # Sync parts to work order if linked
-            if instance.work_order_id:
-                try:
-                    instance.sync_parts_to_work_order()
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Failed to sync parts to work order for estimate {instance.id}: {e}")
-        elif discount_percentage_updated:
-            # If only discount_percentage was updated, recalculate discount_amount
-            discount_percentage = instance.discount_percentage or Decimal('0')
-            if discount_percentage > 0:
-                instance.discount_amount = (instance.subtotal * discount_percentage / 100).quantize(Decimal('0.01'))
-            else:
-                # Explicitly reset discount_amount to 0 when discount_percentage is 0
-                instance.discount_amount = Decimal('0')
-            instance.save()
+        elif should_recalculate_totals:
+            instance.calculate_totals()
+            instance.refresh_from_db()
         
-        # Sync parts to work order if work_order was just linked (even if line items weren't updated)
-        if work_order_updated and instance.work_order_id:
-            # from apps.billing.accounting_service import AccountingService
-            # try:
-            #     # This logic would be replaced by the new accounting system
-            #     pass
-            # except Exception as e:
-            #     logger.error(f"Failed to sync with accounting: {e}")
-            pass # Original sync_parts_to_work_order call removed as per instruction.
+        # Keep the linked work order estimate fields current after any estimate change
+        # that can affect totals, or when a work order is newly linked.
+        if instance.work_order_id and (line_items_data is not None or should_recalculate_totals or work_order_updated):
+            try:
+                instance.sync_parts_to_work_order()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync estimate {instance.id} to work order: {e}")
         
         return instance
 

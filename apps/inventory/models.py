@@ -550,6 +550,7 @@ class PurchaseOrder(models.Model):
         ('confirmed', 'Confirmed'),
         ('partially_received', 'Partially Received'),
         ('received', 'Received'),
+        ('rejected', 'Rejected'),
         ('cancelled', 'Cancelled'),
     ]
 
@@ -606,6 +607,9 @@ class PurchaseOrder(models.Model):
     submitted_at = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_approved')
     approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_rejected')
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
     received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_received')
     assigned_approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_assigned', help_text='User selected to approve this PO')
 

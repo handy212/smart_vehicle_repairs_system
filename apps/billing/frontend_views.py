@@ -656,11 +656,9 @@ def convert_estimate_to_invoice(request, estimate_id):
         estimate.converted_date = timezone.now()
         estimate.save()
         
-        # Update work order status if linked
+        # Keep the linked work order in its current workflow state. Creating
+        # an invoice must not move repair work back into progress.
         if estimate.work_order:
-            estimate.work_order.status = 'in_progress'
-            estimate.work_order.save()
-            
             # Create activity note
             from apps.workorders.models import WorkOrderNote
             WorkOrderNote.objects.create(

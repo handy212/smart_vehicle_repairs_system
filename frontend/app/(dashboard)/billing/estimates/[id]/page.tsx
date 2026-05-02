@@ -7,7 +7,7 @@ import { billingApi, Estimate, EstimateLineItem } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge, BadgeProps } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, Edit, Mail, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -835,7 +835,7 @@ export default function EstimateDetailPage() {
                 </div>
                 <DialogTitle className="text-xl">Approve Estimate {estimate?.estimate_number}</DialogTitle>
               </div>
-              <DialogDescription className="pt-2">
+              <div className="pt-2 text-sm text-muted-foreground">
                 <div className="space-y-4">
                   <p className="text-base text-card-foreground">
                     This will mark the estimate as <strong>approved by the customer</strong>.
@@ -852,7 +852,7 @@ export default function EstimateDetailPage() {
                     </div>
                   )}
                 </div>
-              </DialogDescription>
+              </div>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button

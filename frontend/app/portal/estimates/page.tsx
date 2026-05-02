@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
 import { Estimate } from "@/lib/api/portal";
 import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 
 export default function MyEstimatesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -43,7 +44,7 @@ export default function MyEstimatesPage() {
     enabled: !!user && !!(user?.customer_profile?.id || user?.customer?.id),
   });
 
-  const estimates = (estimatesData?.results || estimatesData || []) as Estimate[];
+  const estimates = (Array.isArray(estimatesData) ? estimatesData : estimatesData?.results || []) as Estimate[];
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => portalApi.approveEstimate(id, { notes: "Approved via portal" }),
@@ -53,9 +54,9 @@ export default function MyEstimatesPage() {
         description: "The estimate has been approved. Work will begin shortly.",
       });
     },
-    onError: (error: { response?: { data?: { detail?: string } } }) => {
+    onError: (error: { response?: { data?: { error?: string; detail?: string } } }) => {
       toast.error("Error", {
-        description: error.response?.data?.detail || "Failed to approve estimate",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve estimate",
       });
     },
   });
@@ -69,9 +70,9 @@ export default function MyEstimatesPage() {
         description: "The estimate has been declined successfully.",
       });
     },
-    onError: (error: { response?: { data?: { detail?: string } } }) => {
+    onError: (error: { response?: { data?: { error?: string; detail?: string } } }) => {
       toast.error("Error", {
-        description: error.response?.data?.detail || "Failed to decline estimate",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to decline estimate",
       });
     },
   });
@@ -86,11 +87,16 @@ export default function MyEstimatesPage() {
     }
   };
 
+  const canActOnEstimate = (estimate: Estimate) => {
+    return ["sent", "viewed"].includes(estimate.status) && (
+      !estimate.work_order_status || estimate.work_order_status === "awaiting_approval"
+    );
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <PortalPageHeader
         title="Repairs Estimates"
-        description="Review and manage your vehicle repair quotes. Get your car back on the road."
       />
 
       <div className="space-y-10">
@@ -161,7 +167,7 @@ export default function MyEstimatesPage() {
               className: "text-right",
               cell: (est) => (
                 <div className="flex justify-end gap-2">
-                  {est.status === "sent" && (
+                  {canActOnEstimate(est) && (
                     <>
                       <Button
                         size="sm"
@@ -185,10 +191,17 @@ export default function MyEstimatesPage() {
                       </Button>
                     </>
                   )}
-                  <Button variant="ghost" size="sm" className="gap-2 hover:bg-primary/5 hover:text-primary rounded-lg font-bold group/btn">
-                    View
-                    <ExternalLink className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
-                  </Button>
+                  {["sent", "viewed"].includes(est.status) && !canActOnEstimate(est) && (
+                    <Badge variant="outline" className="h-8 capitalize">
+                      WO {est.work_order_status?.replace(/_/g, " ")}
+                    </Badge>
+                  )}
+                  <Link href={`/portal/estimates/${est.id}`}>
+                    <Button variant="ghost" size="sm" className="gap-2 hover:bg-primary/5 hover:text-primary rounded-lg font-bold group/btn">
+                      View
+                      <ExternalLink className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                    </Button>
+                  </Link>
                 </div>
               ),
             },
@@ -198,6 +211,7 @@ export default function MyEstimatesPage() {
             return (
               <PortalCard
                 key={est.id}
+                href={`/portal/estimates/${est.id}`}
                 icon={<PremiumIcons.FileText className="w-6 h-6" />}
                 title={`Estimate EST-${est.id.toString().padStart(4, '0')}`}
                 subtitle={
@@ -213,7 +227,7 @@ export default function MyEstimatesPage() {
                       >
                         {est.status}
                       </Badge>
-                      {est.status === "sent" && (
+                      {canActOnEstimate(est) && (
                         <div className="flex gap-2">
                             <Button
                                 size="sm"
@@ -234,6 +248,11 @@ export default function MyEstimatesPage() {
                                 Decline
                             </Button>
                         </div>
+                      )}
+                      {["sent", "viewed"].includes(est.status) && !canActOnEstimate(est) && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          WO {est.work_order_status?.replace(/_/g, " ")}
+                        </span>
                       )}
                     </div>
                   </div>

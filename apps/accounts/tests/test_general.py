@@ -45,7 +45,7 @@ class UserModelTest(TestCase):
         )
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
-        self.assertEqual(user.role, 'admin')
+        self.assertEqual(user.role, 'super-admin')
 
     def test_user_string_representation(self):
         """Test user string representation."""

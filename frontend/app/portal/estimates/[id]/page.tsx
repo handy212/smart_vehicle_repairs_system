@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { billingApi } from "@/lib/api/billing";
+import { EstimateLineItem, billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { FileText, DollarSign, Calendar, ArrowLeft, Download, CheckCircle, XCircle, AlertCircle } from "lucide-react";
@@ -13,6 +13,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { usePrint } from "@/lib/hooks/usePrint";
+
+type ApiError = {
+  response?: {
+    data?: {
+      error?: string;
+      detail?: string;
+    };
+  };
+};
 
 export default function EstimateDetailPage() {
   const params = useParams();
@@ -40,10 +49,10 @@ export default function EstimateDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       toast({
         title: "Approval Failed",
-        description: error.response?.data?.detail || "Failed to approve estimate. Please try again.",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve estimate. Please try again.",
         variant: "destructive",
       });
     },
@@ -60,10 +69,10 @@ export default function EstimateDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       toast({
         title: "Decline Failed",
-        description: error.response?.data?.detail || "Failed to decline estimate. Please try again.",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to decline estimate. Please try again.",
         variant: "destructive",
       });
     },
@@ -99,8 +108,10 @@ export default function EstimateDetailPage() {
     );
   }
 
-  const canApprove = estimate.status === "sent";
-  const canDecline = estimate.status === "sent";
+  const isActionableWorkOrder = !estimate.work_order_status || estimate.work_order_status === "awaiting_approval";
+  const canApprove = ["sent", "viewed"].includes(estimate.status) && isActionableWorkOrder;
+  const canDecline = ["sent", "viewed"].includes(estimate.status) && isActionableWorkOrder;
+  const isStaleWorkOrderEstimate = ["sent", "viewed"].includes(estimate.status) && !isActionableWorkOrder;
 
   return (
     <div className="space-y-6">
@@ -145,7 +156,7 @@ export default function EstimateDetailPage() {
       </div>
 
       {/* Status Alert */}
-      {estimate.status === "sent" && (
+      {["sent", "viewed"].includes(estimate.status) && isActionableWorkOrder && (
         <Card className="bg-warning/10 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
           <CardContent className="p-4 flex items-center space-x-3">
             <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
@@ -158,6 +169,21 @@ export default function EstimateDetailPage() {
                 {estimate.days_until_expiration !== null && (
                   <> It expires in {estimate.days_until_expiration} days.</>
                 )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isStaleWorkOrderEstimate && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="p-4 flex items-start space-x-3">
+            <AlertCircle className="mt-0.5 w-5 h-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Estimate No Longer Actionable</p>
+              <p className="text-xs text-muted-foreground">
+                The linked work order is already {estimate.work_order_status?.replace(/_/g, " ")}.
+                Contact the service advisor for a current estimate if more work needs approval.
               </p>
             </div>
           </CardContent>
@@ -272,7 +298,7 @@ export default function EstimateDetailPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 
-                      {estimate.line_items.map((item: any, index: number) => (
+                      {estimate.line_items.map((item: EstimateLineItem, index: number) => (
                         <tr key={index} className="hover:bg-muted hover:bg-muted">
                           <td className="px-4 py-3 text-sm text-foreground">
                             {item.description}
@@ -343,4 +369,3 @@ export default function EstimateDetailPage() {
     </div>
   );
 }
-

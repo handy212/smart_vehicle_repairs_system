@@ -7,9 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, CheckCircle2, Clock, Play, Workflow, User, AlertCircle, Info, Wrench } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, CheckCircle2, Clock, Play, Workflow, User, AlertCircle, Info, Wrench, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import AddTaskDialog from "./AddTaskDialog";
+import { useToast } from "@/lib/hooks/useToast";
 
 interface TasksTabProps {
   workOrderId: number;
@@ -22,8 +26,22 @@ interface TasksTabProps {
   };
 }
 
+type TaskCompletionError = {
+  response?: {
+    data?: {
+      error?: string;
+      next_step?: string;
+    };
+  };
+};
+type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "secondary" | "outline";
+
 export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workOrder }: TasksTabProps) {
+  const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [completeTask, setCompleteTask] = useState<ServiceTask | null>(null);
+  const [completeHours, setCompleteHours] = useState("");
+  const [completeNotes, setCompleteNotes] = useState("");
 
   // Separate workflow tasks from manual tasks and sort them
   const { workflowTasks, manualTasks } = useMemo(() => {
@@ -40,7 +58,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
     return { workflowTasks: workflow, manualTasks: manual };
   }, [tasks]);
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): BadgeVariant => {
     switch (status) {
       case "completed":
         return "success";
@@ -64,7 +82,18 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
     mutationFn: ({ taskId, data }: { taskId: number; data?: { actual_hours?: number; notes?: string } }) =>
       workOrderTasksApi.complete(taskId, data),
     onSuccess: () => {
+      setCompleteTask(null);
+      setCompleteHours("");
+      setCompleteNotes("");
       onRefresh();
+    },
+    onError: (error: TaskCompletionError) => {
+      const data = error.response?.data;
+      toast({
+        title: "Task completion blocked",
+        description: data?.next_step || data?.error || "Unable to complete task.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -73,14 +102,40 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
   };
 
   const handleCompleteTask = (taskId: number) => {
-    completeTaskMutation.mutate({ taskId });
+    const task = tasks.find((item) => item.id === taskId);
+    if (task) {
+      setCompleteTask(task);
+      setCompleteHours(task.actual_hours && task.actual_hours > 0 ? String(task.actual_hours) : "");
+      setCompleteNotes(task.detailed_notes || "");
+    }
+  };
+
+  const submitCompleteTask = () => {
+    if (!completeTask) return;
+    const hours = Number(completeHours);
+    if (!Number.isFinite(hours) || hours <= 0) {
+      toast({
+        title: "Actual hours required",
+        description: "Enter the labor hours spent before completing the task.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    completeTaskMutation.mutate({
+      taskId: completeTask.id,
+      data: {
+        actual_hours: hours,
+        notes: completeNotes.trim() || undefined,
+      },
+    });
   };
 
   // Get workflow phase description and icon
   const getWorkflowTaskInfo = (task: ServiceTask) => {
     const phase = task.workflow_phase;
 
-    const descriptions: Record<string, { description: string; icon: any; actionHint?: string }> = {
+    const descriptions: Record<string, { description: string; icon: LucideIcon; actionHint?: string }> = {
       'inspection': {
         description: 'Initial vehicle inspection to assess condition and identify issues',
         icon: Workflow,
@@ -196,7 +251,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
         </TableCell>
         <TableCell>
 
-          <Badge variant={getStatusVariant(task.status) as any}>
+          <Badge variant={getStatusVariant(task.status)}>
             {task.status?.replace(/_/g, " ")}
           </Badge>
         </TableCell>
@@ -408,6 +463,49 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           }}
         />
       )}
+      <Dialog open={!!completeTask} onOpenChange={(open) => !open && setCompleteTask(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 p-6 pt-0">
+            <div>
+              <p className="text-sm font-medium text-foreground">{completeTask?.description}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Actual labor hours are required before this task can move to completed.</p>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="actual_hours" className="text-sm font-medium">Actual hours</label>
+              <Input
+                id="actual_hours"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={completeHours}
+                onChange={(event) => setCompleteHours(event.target.value)}
+                placeholder="e.g. 1.50"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="completion_notes" className="text-sm font-medium">Completion notes</label>
+              <Textarea
+                id="completion_notes"
+                value={completeNotes}
+                onChange={(event) => setCompleteNotes(event.target.value)}
+                placeholder="What was completed?"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCompleteTask(null)} disabled={completeTaskMutation.isPending}>
+              Cancel
+            </Button>
+            <Button onClick={submitCompleteTask} disabled={completeTaskMutation.isPending}>
+              {completeTaskMutation.isPending ? "Completing..." : "Complete Task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

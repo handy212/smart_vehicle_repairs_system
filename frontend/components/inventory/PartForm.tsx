@@ -144,7 +144,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
     };
 
     const handleFormSubmit = (data: PartFormData) => {
-        onSubmit(data, imageFile);
+        return onSubmit(data, imageFile);
     };
 
     return (
@@ -241,7 +241,9 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                             <Label htmlFor="branch">Branch</Label>
                                             <select
                                                 id="branch"
-                                                {...register("branch", { valueAsNumber: true })}
+                                                {...register("branch", {
+                                                    setValueAs: (v) => (v === "" ? undefined : Number(v)),
+                                                })}
                                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 <option value="">Any Branch</option>
@@ -294,7 +296,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="maximum_stock">Max Stock</Label>
-                                            <Input type="number" id="maximum_stock" {...register("maximum_stock", { valueAsNumber: true })} placeholder="Optional" />
+                                            <Input type="number" id="maximum_stock" {...register("maximum_stock", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="Optional" />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-3 gap-4">
@@ -328,24 +330,24 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="cost_price">Cost Price</Label>
-                                            <Input type="number" step="0.01" id="cost_price" {...register("cost_price", { valueAsNumber: true })} placeholder="0.00" />
+                                            <Input type="number" step="0.01" id="cost_price" {...register("cost_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
                                             {errors.cost_price && <p className="text-xs text-destructive">{errors.cost_price.message}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="markup_percentage">Markup %</Label>
-                                            <Input type="number" step="0.1" id="markup_percentage" {...register("markup_percentage", { valueAsNumber: true })} placeholder="0" />
+                                            <Input type="number" step="0.1" id="markup_percentage" {...register("markup_percentage", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0" />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="selling_price">Selling Price</Label>
-                                            <Input type="number" step="0.01" id="selling_price" {...register("selling_price", { valueAsNumber: true })} placeholder="0.00" />
+                                            <Input type="number" step="0.01" id="selling_price" {...register("selling_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
                                             {calculatedSellingPrice && <p className="text-xs text-muted-foreground">Calculated: {formatCurrency(calculatedSellingPrice)}</p>}
                                             {errors.selling_price && <p className="text-xs text-destructive">{errors.selling_price.message}</p>}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="list_price">List Price (MSRP)</Label>
-                                            <Input type="number" step="0.01" id="list_price" {...register("list_price", { valueAsNumber: true })} placeholder="0.00" />
+                                            <Input type="number" step="0.01" id="list_price" {...register("list_price", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
                                         </div>
                                     </div>
                                 </TabsContent>
@@ -355,7 +357,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="weight">Weight (lbs)</Label>
-                                            <Input type="number" step="0.01" id="weight" {...register("weight", { valueAsNumber: true })} placeholder="0.00" />
+                                            <Input type="number" step="0.01" id="weight" {...register("weight", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="0.00" />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="dimensions">Dimensions</Label>
@@ -373,7 +375,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                     <div className="space-y-2">
                                         <Label>Warranty</Label>
                                         <div className="space-y-2">
-                                            <Input type="number" {...register("warranty_months", { valueAsNumber: true })} placeholder="Months" />
+                                            <Input type="number" {...register("warranty_months", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} placeholder="Months" />
                                             <Textarea {...register("warranty_notes")} placeholder="Warranty notes..." rows={2} />
                                         </div>
                                     </div>
@@ -396,7 +398,9 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                         </CardHeader>
                         <CardContent className="pt-4">
                             <select
-                                {...register("preferred_supplier", { valueAsNumber: true })}
+                                {...register("preferred_supplier", {
+                                    setValueAs: (v) => (v === "" ? undefined : Number(v)),
+                                })}
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="">None</option>
@@ -426,7 +430,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                             {watch("is_core") && (
                                 <div className="space-y-1 pl-6">
                                     <Label htmlFor="core_charge" className="text-xs">Core Charge</Label>
-                                    <Input type="number" step="0.01" id="core_charge" {...register("core_charge", { valueAsNumber: true })} className="h-8 text-sm" />
+                                    <Input type="number" step="0.01" id="core_charge" {...register("core_charge", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} className="h-8 text-sm" />
                                 </div>
                             )}
                         </CardContent>

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +27,6 @@ import {
   Plus,
   Trash2,
 
-  Package,
   Search,
   FileText,
   Calendar,
@@ -41,30 +42,33 @@ import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
 
+const requiredNumber = (message: string) => z.coerce.number({ message }).min(1, message);
+const optionalNumber = () => z.coerce.number().min(0).optional();
+
 const lineItemSchema = z.object({
   item_type: z.enum(["labor", "part", "fee", "discount", "sublet", "other"]),
   description: z.string().min(1, "Description is required"),
-  quantity: z.number().min(0).optional(),
-  unit_price: z.number().min(0).optional(),
-  labor_hours: z.number().min(0).optional(),
-  labor_rate: z.number().min(0).optional(),
+  quantity: optionalNumber(),
+  unit_price: optionalNumber(),
+  labor_hours: optionalNumber(),
+  labor_rate: optionalNumber(),
   is_taxable: z.boolean(),
-  part: z.number().optional(),
+  part: optionalNumber(),
   part_number: z.string().optional(),
   notes: z.string().optional(),
 });
 
 const estimateUpdateSchema = z.object({
-  customer: z.number().min(1, "Customer is required"),
-  vehicle: z.number().optional(),
+  customer: requiredNumber("Customer is required"),
+  vehicle: optionalNumber(),
   title: z.string().optional(),
   description: z.string().optional(),
   notes: z.string().optional(),
   customer_notes: z.string().optional(),
   estimate_date: z.string().min(1, "Estimate date is required"),
   valid_until: z.string().min(1, "Valid until date is required"),
-  sales_agent: z.number().optional(),
-  discount_percentage: z.number().min(0).max(100).optional(),
+  sales_agent: optionalNumber(),
+  discount_percentage: optionalNumber(),
   discount_type: z.enum(["none", "before_tax", "after_tax"]),
   discount_reason: z.string().optional(),
   status: z.string().optional(),
@@ -72,7 +76,51 @@ const estimateUpdateSchema = z.object({
 });
 
 type EstimateUpdateFormData = z.infer<typeof estimateUpdateSchema>;
+type EstimateUpdateFormInput = z.input<typeof estimateUpdateSchema>;
 type LineItemFormData = z.infer<typeof lineItemSchema>;
+
+const fieldLabels: Record<string, string> = {
+  customer: "Customer",
+  vehicle: "Vehicle",
+  sales_agent: "Sales agent",
+  discount_percentage: "Discount percentage",
+  line_items: "Line items",
+  quantity: "Quantity",
+  unit_price: "Rate",
+  labor_hours: "Labor hours",
+  labor_rate: "Labor rate",
+  part: "Part",
+  description: "Description",
+};
+
+const describeFieldPath = (path: string) => {
+  const parts = path.split(".").filter(Boolean);
+  const lineItemIndex = parts.findIndex((part) => part === "line_items");
+  if (lineItemIndex >= 0) {
+    const index = Number(parts[lineItemIndex + 1]);
+    const field = parts[lineItemIndex + 2];
+    return `Line item ${Number.isFinite(index) ? index + 1 : ""}${field ? ` ${fieldLabels[field] || field}` : ""}`.trim();
+  }
+  const field = parts[parts.length - 1];
+  return fieldLabels[field] || field || "Form";
+};
+
+const getFirstFormError = (errors: Record<string, any>, path = ""): string => {
+  for (const [key, value] of Object.entries(errors)) {
+    if (!value) continue;
+    const nextPath = path ? `${path}.${key}` : key;
+    if (typeof value.message === "string") return `${describeFieldPath(nextPath)}: ${value.message}`;
+    if (Array.isArray(value)) {
+      const nestedIndex = value.findIndex(Boolean);
+      if (nestedIndex >= 0) return getFirstFormError(value[nestedIndex], `${nextPath}.${nestedIndex}`);
+    }
+    if (typeof value === "object") {
+      const nested = getFirstFormError(value, nextPath);
+      if (nested) return nested;
+    }
+  }
+  return "Please complete the required fields before saving.";
+};
 
 export default function EditEstimatePage() {
   const { formatCurrency } = useCurrency();
@@ -132,17 +180,17 @@ export default function EditEstimatePage() {
     handleSubmit,
     formState: { errors, isSubmitting },
 
-    setError,
     reset,
     watch,
     setValue,
-  } = useForm<EstimateUpdateFormData>({
+  } = useForm<EstimateUpdateFormInput, any, EstimateUpdateFormData>({
     resolver: zodResolver(estimateUpdateSchema),
   });
 
-  const customer = watch("customer");
+  const watchedCustomer = watch("customer");
+  const customer = watchedCustomer ? Number(watchedCustomer) : undefined;
   const discountType = watch("discount_type");
-  const discountPercentage = watch("discount_percentage");
+  const discountPercentage = Number(watch("discount_percentage") || 0);
 
   useEffect(() => {
     if (customer && customer !== selectedCustomer) {
@@ -226,19 +274,19 @@ export default function EditEstimatePage() {
         is_taxable: true,
       };
       setLineItems([...lineItems, newLineItem]);
-      setValue("line_items", [...lineItems, newLineItem]);
+      setValue("line_items", [...lineItems, newLineItem], { shouldValidate: true });
     } else {
 
       const newItem: any = { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true };
       setLineItems([...lineItems, newItem]);
-      setValue("line_items", [...lineItems, newItem]);
+      setValue("line_items", [...lineItems, newItem], { shouldValidate: true });
     }
   };
 
   const removeLineItem = (index: number) => {
     const updated = lineItems.filter((_, i) => i !== index);
     setLineItems(updated);
-    setValue("line_items", updated);
+    setValue("line_items", updated, { shouldValidate: true });
   };
 
 
@@ -247,7 +295,7 @@ export default function EditEstimatePage() {
 
     updated[index] = { ...updated[index], [field]: value } as any;
     setLineItems(updated);
-    setValue("line_items", updated, { shouldValidate: false });
+    setValue("line_items", updated, { shouldValidate: true });
   };
 
   const calculateLineItemTotal = (item: LineItemFormData): number => {
@@ -343,18 +391,22 @@ export default function EditEstimatePage() {
     },
   });
 
-  const onSubmit = async (data: EstimateUpdateFormData, status: string = 'draft') => {
+  const onSubmit = async (data: EstimateUpdateFormData, status?: string) => {
     setServerError(null);
-    updateMutation.mutateAsync({ ...data, status })
+    const nextStatus = status || estimate?.status || data.status || "draft";
+    updateMutation.mutateAsync({ ...data, status: nextStatus })
       .then(() => {
         // Always redirect to detail page after edit, regardless of action?
         // Or if 'sent', maybe go to list? keeping same pattern as Invoice:
         router.push(`/billing/estimates/${estimateId}`);
       })
-
-      .catch((err) => {
+      .catch(() => {
         // handled in onError
       });
+  };
+
+  const onInvalidSubmit = (formErrors: typeof errors) => {
+    setServerError(getFirstFormError(formErrors as Record<string, any>));
   };
 
   // Handle invalid estimate ID
@@ -759,16 +811,34 @@ export default function EditEstimatePage() {
                       <TableCell className="py-1 px-2">
                         <Input
                           type="number"
-                          value={item.quantity || ""}
-                          onChange={(e) => updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.5"
+                          value={item.item_type === 'labor' ? item.labor_hours || "" : item.quantity || ""}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            if (item.item_type === 'labor') {
+                              updateLineItem(index, "labor_hours", val);
+                            } else {
+                              updateLineItem(index, "quantity", val);
+                            }
+                          }}
                           className="h-8 text-sm"
                         />
                       </TableCell>
                       <TableCell className="py-1 px-2">
                         <Input
                           type="number"
-                          value={item.unit_price || ""}
-                          onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          value={item.item_type === 'labor' ? item.labor_rate || "" : item.unit_price || ""}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            if (item.item_type === 'labor') {
+                              updateLineItem(index, "labor_rate", val);
+                            } else {
+                              updateLineItem(index, "unit_price", val);
+                            }
+                          }}
                           className="h-8 text-sm"
                         />
                       </TableCell>
@@ -852,11 +922,11 @@ export default function EditEstimatePage() {
         </Link>
         <div className="w-auto">
           <BillingSubmitActions
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || updateMutation.isPending}
             resourceType="estimate"
             mode="edit"
-            onSend={handleSubmit((data) => onSubmit(data, "sent"))}
-            onSave={handleSubmit((data) => onSubmit(data, "draft"))}
+            onSend={handleSubmit((data) => onSubmit(data, "sent"), onInvalidSubmit)}
+            onSave={handleSubmit((data) => onSubmit(data), onInvalidSubmit)}
           />
         </div>
       </div>

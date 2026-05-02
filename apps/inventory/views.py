@@ -1323,12 +1323,16 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action == 'list' or self.action == 'retrieve':
-            return [IsAuthenticated(), HasPermission('view_inventory')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_inventory')]
         elif self.action == 'create':
-            return [IsAuthenticated(), HasPermission('create_purchase_orders')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('create_purchase_orders')]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), HasPermission('edit_purchase_orders')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('edit_purchase_orders')]
+        elif self.action in ['submit_for_approval', 'confirm', 'cancel', 'add_item', 'update_item', 'remove_item']:
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_inventory')]
+        elif self.action in ['approve', 'reject']:
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('approve_purchase_orders')]
+        return [IsAuthenticated(), IsModuleEnabled('inventory')]
     
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'supplier', 'order_date']
@@ -1371,6 +1375,94 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
             return PurchaseOrderDetailSerializer
         return PurchaseOrderListSerializer
 
+    @staticmethod
+    def _can_approve_purchase_order(user, po):
+        if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in {'admin', 'super-admin'}:
+            return True
+        return po.assigned_approver_id == getattr(user, 'id', None)
+
+    @staticmethod
+    def _recalculate_quantity_on_order(po):
+        """Recalculate branch on-order stock for every part on this PO."""
+        branch = po.branch
+        if not branch:
+            return
+
+        active_statuses = ['pending_approval', 'approved', 'confirmed', 'partially_received']
+        for item in po.items.select_related('part'):
+            total_on_order = PurchaseOrderItem.objects.filter(
+                part=item.part,
+                purchase_order__status__in=active_statuses,
+                purchase_order__branch=branch,
+            ).aggregate(
+                total=Sum(F('quantity') - F('quantity_received'))
+            )['total'] or 0
+
+            stock_item, _ = StockItem.objects.get_or_create(
+                part=item.part,
+                branch=branch,
+                defaults={
+                    'reorder_point': item.part.reorder_point,
+                    'reorder_quantity': item.part.reorder_quantity,
+                    'minimum_stock': item.part.minimum_stock,
+                }
+            )
+            stock_item.quantity_on_order = max(0, total_on_order)
+            stock_item.save(update_fields=['quantity_on_order', 'updated_at'])
+
+    @staticmethod
+    def _set_linked_work_order_parts_waiting(po):
+        """Move work-order parts linked to this PO into the waiting-for-stock state."""
+        try:
+            from apps.workorders.models import WorkOrderPart
+        except Exception:
+            return
+
+        WorkOrderPart.objects.filter(
+            purchase_order_item__purchase_order=po,
+            status='po_created',
+        ).update(status='awaiting_stock')
+
+    @staticmethod
+    def _release_linked_work_order_parts(po):
+        """Release work-order part requests when their PO is rejected/cancelled."""
+        try:
+            from apps.workorders.models import WorkOrderPart
+        except Exception:
+            return
+
+        WorkOrderPart.objects.filter(
+            purchase_order_item__purchase_order=po,
+            status__in=['po_created', 'awaiting_stock'],
+        ).update(status='pending', purchase_order_item=None)
+
+    @staticmethod
+    def _update_linked_work_order_parts_after_receipt(item):
+        """Reflect received supplier stock on linked work-order part requests."""
+        try:
+            from apps.workorders.models import WorkOrderPart
+        except Exception:
+            return
+
+        received_available = Decimal(str(item.quantity_received or 0))
+        linked_parts = WorkOrderPart.objects.filter(
+            purchase_order_item=item,
+            status__in=['po_created', 'awaiting_stock', 'pending', 'draft'],
+        ).order_by('created_at', 'id')
+
+        for wo_part in linked_parts:
+            required = Decimal(str(wo_part.quantity or 0))
+            if required <= 0:
+                continue
+            if received_available >= required:
+                if wo_part.status != 'received':
+                    wo_part.status = 'received'
+                    wo_part.save(update_fields=['status', 'updated_at'])
+                received_available -= required
+            elif wo_part.status == 'po_created':
+                wo_part.status = 'awaiting_stock'
+                wo_part.save(update_fields=['status', 'updated_at'])
+
     @action(detail=True, methods=['post'], url_path='submit-for-approval')
     def submit_for_approval(self, request, pk=None):
         """Submit purchase order for approval"""
@@ -1396,23 +1488,41 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                  status=status.HTTP_400_BAD_REQUEST
              )
         
-        # Handle approver assignment
         approver_id = request.data.get('approver_id')
-        if approver_id:
-            from apps.accounts.models import User
-            try:
-                approver = User.objects.get(id=approver_id)
-                po.assigned_approver = approver
-            except User.DoesNotExist:
-                return Response(
-                    {'error': 'Selected approver not found'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        if not approver_id:
+            return Response(
+                {'error': 'Select an approver before submitting this purchase order.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from apps.accounts.models import User
+        try:
+            approver = User.objects.get(id=approver_id, is_active=True)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Selected approver not found'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if approver.id == request.user.id:
+            return Response(
+                {'error': 'Purchase orders must be approved by someone other than the submitter.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if getattr(approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'}:
+            return Response(
+                {'error': 'Selected approver must be a manager, admin, or parts manager.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        po.assigned_approver = approver
 
         po.status = 'pending_approval'
         po.submitted_by = request.user
         po.submitted_at = timezone.now()
         po.save()
+        self._recalculate_quantity_on_order(po)
 
         # Send notification to assigned approver
         if po.assigned_approver:
@@ -1436,13 +1546,60 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 {'error': 'Only purchase orders pending approval can be approved'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        if not self._can_approve_purchase_order(request.user, po):
+            return Response(
+                {'error': 'Only the assigned approver, admin, or super admin can approve this purchase order.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if po.submitted_by_id == request.user.id and getattr(request.user, 'role', None) not in {'admin', 'super-admin'}:
+            return Response(
+                {'error': 'Purchase orders cannot be approved by the same user who submitted them.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         po.status = 'approved'
         po.approved_by = request.user
         po.approved_at = timezone.now()
         po.save()
+        self._recalculate_quantity_on_order(po)
         
         return Response({'status': 'Purchase order approved'})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject a purchase order that is pending approval."""
+        po = self.get_object()
+
+        if po.status != 'pending_approval':
+            return Response(
+                {'error': 'Only purchase orders pending approval can be rejected'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not self._can_approve_purchase_order(request.user, po):
+            return Response(
+                {'error': 'Only the assigned approver, admin, or super admin can reject this purchase order.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return Response(
+                {'error': 'A rejection reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        po.status = 'rejected'
+        po.rejected_by = request.user
+        po.rejected_at = timezone.now()
+        po.rejection_reason = reason
+        po.save(update_fields=['status', 'rejected_by', 'rejected_at', 'rejection_reason', 'updated_at'])
+        self._release_linked_work_order_parts(po)
+        self._recalculate_quantity_on_order(po)
+
+        return Response({'status': 'Purchase order rejected'})
 
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):
@@ -1457,6 +1614,8 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         
         po.status = 'confirmed'
         po.save()
+        self._set_linked_work_order_parts_waiting(po)
+        self._recalculate_quantity_on_order(po)
         
         return Response({'status': 'Purchase order confirmed with supplier'})
 
@@ -1473,6 +1632,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         
         po.status = 'cancelled'
         po.save()
+        self._release_linked_work_order_parts(po)
         
         # Clear quantity_on_order for all items (using StockItem, not deprecated part.quantity_on_order)
         from .models import StockItem
@@ -1503,6 +1663,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 stock_item.quantity_on_order = max(0, total_on_order)
                 stock_item.save()
         
+        self._recalculate_quantity_on_order(po)
         return Response({'status': 'Purchase order cancelled'})
 
     @action(detail=True, methods=['post'])
@@ -1665,10 +1826,10 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_inventory')]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('view_inventory')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy', 'receive']:
-            return [IsAuthenticated(), HasPermission('manage_inventory')]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsModuleEnabled('inventory'), HasPermission('manage_inventory')]
+        return [IsAuthenticated(), IsModuleEnabled('inventory')]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['purchase_order', 'part']
     ordering = ['id']
@@ -1769,7 +1930,12 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
                 po.received_by = request.user
             elif po.is_partially_received:
                 po.status = 'partially_received'
+                if not po.received_by:
+                    po.received_by = request.user
             po.save()
+
+            PurchaseOrderViewSet._recalculate_quantity_on_order(po)
+            PurchaseOrderViewSet._update_linked_work_order_parts_after_receipt(item)
             
             return Response({
                 'status': 'Items received successfully',

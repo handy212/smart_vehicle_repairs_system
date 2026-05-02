@@ -385,7 +385,7 @@ export default function QuotationRequestsPage() {
                 <ClipboardList className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
                 <h2 className="text-sm font-medium text-foreground">No quotation requests</h2>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Approved recommendations sent to stores will appear here. Once priced, the linked quote stays available from the work order and billing screens.
+                  Diagnosis recommendations sent to stores will appear here. Once priced, the linked quote stays available from the work order and billing screens.
                 </p>
               </CardContent>
             </Card>

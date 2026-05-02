@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.utils.text import slugify
+from django.apps import apps as django_apps
 from decimal import Decimal
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
@@ -384,7 +385,86 @@ class RepairRecommendationCreateSerializer(serializers.ModelSerializer):
                 'forbidden_fields': forbidden_cost_fields,
             })
 
+        if self.instance:
+            if self.instance.converted_to_task_id:
+                raise serializers.ValidationError({
+                    'non_field_errors': [
+                        'Converted recommendations cannot be edited. Update the linked work-order task instead.'
+                    ]
+                })
+
+            if self.instance.approval_status != 'pending_approval':
+                raise serializers.ValidationError({
+                    'non_field_errors': [
+                        'Only recommendations still pending customer decision can be edited.'
+                    ]
+                })
+
+            if self.instance.quotation_status != 'not_requested' and self._has_progressed_stores_activity(self.instance):
+                raise serializers.ValidationError({
+                    'non_field_errors': [
+                        'Stores has already progressed this request. Create a new recommendation or resolve the stores request before changing it.'
+                    ]
+                })
+
         return super().validate(attrs)
+
+    def _quote_marker(self, recommendation):
+        return f"[DIAG-REC:{recommendation.id}]"
+
+    def _has_progressed_stores_activity(self, recommendation):
+        from apps.workorders.models import WorkOrderPart
+
+        work_order = getattr(recommendation.diagnosis, 'work_order', None)
+        if not work_order:
+            return False
+
+        return WorkOrderPart.objects.filter(
+            work_order=work_order,
+            task__isnull=True,
+            description__contains=self._quote_marker(recommendation),
+        ).exclude(status__in=['draft', 'pending']).exists()
+
+    def _reset_quote_after_edit(self, recommendation):
+        if recommendation.quotation_status == 'not_requested':
+            return
+
+        marker = self._quote_marker(recommendation)
+        work_order = getattr(recommendation.diagnosis, 'work_order', None)
+
+        if work_order:
+            from apps.workorders.models import WorkOrderPart
+            WorkOrderPart.objects.filter(
+                work_order=work_order,
+                task__isnull=True,
+                description__contains=marker,
+                status__in=['draft', 'pending'],
+            ).delete()
+
+        if django_apps.is_installed('apps.billing') and recommendation.quotation_estimate_id:
+            Estimate = django_apps.get_model('billing', 'Estimate')
+            estimate = Estimate.objects.filter(pk=recommendation.quotation_estimate_id).first()
+            if estimate:
+                estimate.line_items.filter(notes__contains=marker).delete()
+                estimate.calculate_totals()
+
+        recommendation.quotation_status = 'not_requested'
+        recommendation.quotation_requested_at = None
+        recommendation.quotation_requested_by = None
+        recommendation.quotation_estimate_id = None
+        recommendation.quotation_estimate_number = ''
+        recommendation.quoted_at = None
+        recommendation.quoted_by = None
+        recommendation.save(update_fields=[
+            'quotation_status',
+            'quotation_requested_at',
+            'quotation_requested_by',
+            'quotation_estimate_id',
+            'quotation_estimate_number',
+            'quoted_at',
+            'quoted_by',
+            'updated_at',
+        ])
 
     def validate_findings(self, findings):
         diagnosis = self.context.get('diagnosis') or getattr(self.instance, 'diagnosis', None)
@@ -539,11 +619,16 @@ class RepairRecommendationCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         findings = validated_data.pop('findings', None)
+        should_reset_quote = instance.quotation_status != 'not_requested' and (
+            bool(validated_data) or findings is not None
+        )
         if 'parts_needed' in validated_data:
             validated_data['parts_needed'] = self._sync_parts_to_inventory(instance.diagnosis, validated_data.get('parts_needed', []))
         recommendation = super().update(instance, validated_data)
         if findings is not None:
             recommendation.findings.set(findings)
+        if should_reset_quote:
+            self._reset_quote_after_edit(recommendation)
         return recommendation
 
 
@@ -650,6 +735,8 @@ class DiagnosisDetailSerializer(serializers.ModelSerializer):
     diagnostic_tests = DiagnosticTestSerializer(many=True, read_only=True)
     findings = DiagnosisFindingSerializer(many=True, read_only=True)
     photos = DiagnosisPhotoSerializer(many=True, read_only=True)
+    is_locked_for_approval = serializers.SerializerMethodField()
+    lock_reason = serializers.SerializerMethodField()
     
     class Meta:
         model = Diagnosis
@@ -665,9 +752,22 @@ class DiagnosisDetailSerializer(serializers.ModelSerializer):
             'is_completed', 'requires_approval',
             'repair_recommendations', 'total_estimated_cost',
             'diagnostic_codes', 'diagnostic_tests', 'findings', 'photos',
-            'time_logs',
+            'time_logs', 'is_locked_for_approval', 'lock_reason',
             'created_at', 'updated_at'
         ]
+
+    def get_is_locked_for_approval(self, obj):
+        work_order = getattr(obj, 'work_order', None)
+        return (
+            obj.status == 'awaiting_approval'
+            and work_order is not None
+            and not work_order.approved_by_customer
+        )
+
+    def get_lock_reason(self, obj):
+        if self.get_is_locked_for_approval(obj):
+            return 'Waiting for customer approval. Diagnosis details and required parts are locked.'
+        return ''
     
     def get_technician_name(self, obj):
         if obj.technician:

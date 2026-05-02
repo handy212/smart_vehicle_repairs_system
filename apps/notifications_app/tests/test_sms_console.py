@@ -64,13 +64,11 @@ class SMSConsoleViewSetTest(TestCase):
             self.assertEqual(response.data['status'], 'success')
             mock_send_notification.assert_called()
 
-    @patch('apps.notifications_app.views.send_bulk_sms')
+    @patch('apps.notifications_app.tasks.send_bulk_sms_async')
     @patch('apps.accounts.permissions.user_has_permission')
-    def test_send_bulk(self, mock_has_perm, mock_send_bulk):
+    def test_send_bulk(self, mock_has_perm, mock_send_bulk_async):
         mock_has_perm.return_value = True
-        mock_send_bulk.return_value = {
-            '233244000001': {'success': True, 'response': {}}
-        }
+        mock_send_bulk_async.delay.return_value = None
         
         with patch('apps.notifications_app.services.NotificationService.send_notification') as mock_send_notif:
             mock_send_notif.return_value = True
@@ -87,10 +85,13 @@ class SMSConsoleViewSetTest(TestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data['successful'], 2)
             
-            # Verify user notification created
-            mock_send_notif.assert_called()
-            # Verify raw phone sent
-            mock_send_bulk.assert_called()
+            # Bulk sends are queued for async processing.
+            mock_send_notif.assert_not_called()
+            mock_send_bulk_async.delay.assert_called_once_with(
+                data['recipients'],
+                data['message'],
+                None,
+            )
 
     def test_permissions(self):
         self.client.logout()

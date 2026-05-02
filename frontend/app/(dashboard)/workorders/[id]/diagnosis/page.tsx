@@ -390,7 +390,7 @@ export default function DiagnosisPage() {
 
   // Block actions if diagnosis hasn't been started yet (timesheet integrity)
   // Check if diagnosis is active for editing (only while in progress)
-  const diagnosisActive = diagnosis.status === "in_progress";
+  const diagnosisActive = diagnosis.status === "in_progress" || (diagnosis.status === "awaiting_approval" && !!workOrder.approved_by_customer);
   const canReopenDiagnosis = ["awaiting_approval", "completed"].includes(diagnosis.status)
     && !workOrder.approved_by_customer
     && ["awaiting_approval", "diagnosis"].includes(workOrder.status);
@@ -1496,8 +1496,9 @@ function RecommendationsTab({
   const approvedRecommendations = recommendations.filter((rec: any) => rec.approval_status === "approved" && !rec.converted_to_task_id);
   const deferredRecommendations = recommendations.filter((rec: any) => rec.approval_status === "deferred" && !rec.converted_to_task_id);
   const declinedRecommendations = recommendations.filter((rec: any) => rec.approval_status === "declined" && !rec.converted_to_task_id);
-  const approvedAwaitingQuote = approvedRecommendations.filter((rec: any) => (rec.quotation_status || "not_requested") === "not_requested");
-  const quoteRequestedRecommendations = approvedRecommendations.filter((rec: any) => rec.quotation_status === "requested");
+  const awaitingQuoteSubmission = recommendations.filter((rec: any) => ["pending_approval", "approved"].includes(rec.approval_status || "pending_approval") && (rec.quotation_status || "not_requested") === "not_requested" && !rec.converted_to_task_id);
+  const quoteRequestedRecommendations = recommendations.filter((rec: any) => ["pending_approval", "approved"].includes(rec.approval_status || "pending_approval") && rec.quotation_status === "requested" && !rec.converted_to_task_id);
+  const pendingQuotedRecommendations = pendingRecommendations.filter((rec: any) => rec.quotation_status === "quoted");
   const quotedRecommendations = approvedRecommendations.filter((rec: any) => rec.quotation_status === "quoted");
   const convertedRecommendations = recommendations.filter((rec: any) => !!rec.converted_to_task_id);
 
@@ -1541,7 +1542,7 @@ function RecommendationsTab({
           <Badge variant="outline" className="capitalize">
             {rec.approval_status_display || "Pending Approval"}
           </Badge>
-          {rec.approval_status === "approved" && (
+          {["pending_approval", "approved"].includes(rec.approval_status || "pending_approval") && (
             <Badge variant="outline" className="capitalize">
               {rec.quotation_status_display || "Not Requested"}
             </Badge>
@@ -1552,6 +1553,19 @@ function RecommendationsTab({
       <p className="mt-3 text-sm leading-6 text-foreground">{rec.description}</p>
 
       <div className="mt-3">{renderMeta(rec)}</div>
+
+      {rec.quotation_estimate_number && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <span>
+            Estimate: <span className="font-medium text-foreground">{rec.quotation_estimate_number}</span>
+          </span>
+          {rec.quotation_estimate_id && (
+            <Link href={`/billing/estimates/${rec.quotation_estimate_id}`} className="font-medium text-primary hover:underline">
+              Open estimate
+            </Link>
+          )}
+        </div>
+      )}
 
       {Array.isArray(rec.linked_findings) && rec.linked_findings.length > 0 && (
         <div className="mt-3 rounded-md border bg-muted/30 p-3">
@@ -1570,7 +1584,7 @@ function RecommendationsTab({
       )}
 
       <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
-        {rec.approval_status === "pending_approval" && (
+        {rec.approval_status === "pending_approval" && rec.quotation_status === "quoted" && (
           <>
             <Button size="sm" className="h-8" onClick={() => decisionMutation.mutate({ recommendationIds: [rec.id], decision: "approved" })} disabled={decisionMutation.isPending || isDisabled}>
               <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
@@ -1585,14 +1599,14 @@ function RecommendationsTab({
           </>
         )}
 
-        {rec.approval_status === "approved" && rec.quotation_status === "not_requested" && (
+        {["pending_approval", "approved"].includes(rec.approval_status || "pending_approval") && (rec.quotation_status || "not_requested") === "not_requested" && (
           <Button size="sm" className="h-8" onClick={() => requestQuoteMutation.mutate([rec.id])} disabled={requestQuoteMutation.isPending || isDisabled}>
             <FileText className="mr-1.5 h-3.5 w-3.5" />
-            Send to Stores
+            Send to Stores for Estimate
           </Button>
         )}
 
-        {rec.approval_status === "approved" && rec.quotation_status === "requested" && (
+        {["pending_approval", "approved"].includes(rec.approval_status || "pending_approval") && rec.quotation_status === "requested" && (
           <Button size="sm" className="h-8" onClick={() => markQuotedMutation.mutate([rec.id])} disabled={markQuotedMutation.isPending || isDisabled}>
             <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
             Mark Quoted
@@ -1618,11 +1632,11 @@ function RecommendationsTab({
             disabled={isDisabled}
           >
             <Edit className="mr-1.5 h-3.5 w-3.5" />
-            Edit
+            {rec.quotation_status === "not_requested" ? "Edit" : "Revise"}
           </Button>
         )}
 
-        {!rec.converted_to_task_id && rec.approval_status !== "approved" && (
+        {!rec.converted_to_task_id && rec.approval_status === "pending_approval" && (rec.quotation_status || "not_requested") === "not_requested" && (
           <Button
             size="sm"
             variant="ghost"
@@ -1673,7 +1687,7 @@ function RecommendationsTab({
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-foreground">Repair Recommendations</CardTitle>
             <CardDescription className="text-xs">
-              {recommendations.length} total • {pendingRecommendations.length} pending • {approvedAwaitingQuote.length} awaiting quotation • {quotedRecommendations.length} ready for work
+              {recommendations.length} total • {awaitingQuoteSubmission.length} need estimate • {quoteRequestedRecommendations.length} with stores • {pendingQuotedRecommendations.length} ready for customer approval • {quotedRecommendations.length} ready for work
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -1694,10 +1708,10 @@ function RecommendationsTab({
         <CardContent className="pt-4">
           {recommendations.length > 0 ? (
             <div className="space-y-6">
-              {renderSection("Pending Approval", pendingRecommendations, "Technician recommendations waiting for customer or supervisor decision.")}
-              {renderSection("Approved - Send to Stores", approvedAwaitingQuote, "Approved recommendations waiting to be submitted for quotation.")}
-              {renderSection("Quotation in Progress", quoteRequestedRecommendations, "Stores has been asked to prepare a quotation for these items.")}
-              {renderSection("Quoted - Ready for Work", quotedRecommendations, "Quotation is ready. Convert these items into executable work-order tasks when authorized.")}
+              {renderSection("Send to Stores for Estimate", awaitingQuoteSubmission, "Recommendations must be priced by stores before the customer approval request is sent.")}
+              {renderSection("Estimate in Progress", quoteRequestedRecommendations, "Stores is preparing the estimate and parts pricing for these recommendations.")}
+              {renderSection("Ready for Customer Approval", pendingQuotedRecommendations, "Priced recommendations can now be sent to the customer for approval.")}
+              {renderSection("Approved - Ready for Work", quotedRecommendations, "Customer approved and stores quoted these items. Convert them into executable work-order tasks.")}
               {renderSection("Deferred", deferredRecommendations, "Deferred items stay on the vehicle record and should surface on future visits.")}
               {renderSection("Declined", declinedRecommendations, "Declined items remain documented but are not active work.")}
               {renderSection("Converted to Tasks", convertedRecommendations, "These recommendations are already linked to work-order tasks.")}

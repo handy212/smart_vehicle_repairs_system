@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any, react/no-unescaped-entities */
+
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,26 +31,29 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 
+const requiredNumber = (message: string) => z.coerce.number({ message }).min(1, message);
+const optionalNumber = () => z.coerce.number().min(0).optional();
+
 const lineItemSchema = z.object({
   item_type: z.enum(["labor", "part", "fee", "discount", "sublet", "other"]),
   description: z.string().min(1, "Description is required"),
-  quantity: z.number().min(0).optional(),
-  unit_price: z.number().min(0).optional(),
-  labor_hours: z.number().min(0).optional(),
-  labor_rate: z.number().min(0).optional(),
+  quantity: optionalNumber(),
+  unit_price: optionalNumber(),
+  labor_hours: optionalNumber(),
+  labor_rate: optionalNumber(),
   is_taxable: z.boolean(),
-  part: z.number().optional(),
+  part: optionalNumber(),
   part_number: z.string().optional(),
   part_name: z.string().optional(),
   notes: z.string().optional(),
 });
 
 const estimateSchema = z.object({
-  customer: z.number().min(1, "Customer is required"),
-  vehicle: z.number().optional(),
-  work_order: z.number().optional(),
+  customer: requiredNumber("Customer is required"),
+  vehicle: optionalNumber(),
+  work_order: optionalNumber(),
   reference_number: z.string().optional(),
-  sales_agent: z.number().optional(),
+  sales_agent: optionalNumber(),
   status: z.enum(["draft", "sent", "expired", "declined", "approved"]),
   title: z.string().optional(),
   description: z.string().optional(), // Terms & Conditions
@@ -56,22 +61,67 @@ const estimateSchema = z.object({
   customer_notes: z.string().optional(), // Customer Notes
   estimate_date: z.string().min(1, "Estimate date is required"),
   valid_until: z.string().min(1, "Valid until date is required"),
-  discount_percentage: z.number().min(0).max(100).optional(),
+  discount_percentage: optionalNumber(),
   discount_type: z.enum(["none", "before_tax", "after_tax"]),
   discount_reason: z.string().optional(),
-  shop_supplies_fee: z.number().min(0).optional(),
-  environmental_fee: z.number().min(0).optional(),
+  shop_supplies_fee: optionalNumber(),
+  environmental_fee: optionalNumber(),
   line_items: z.array(lineItemSchema).min(1, "At least one line item is required"),
 });
 
 type LineItemFormData = z.infer<typeof lineItemSchema>;
 type EstimateFormData = z.infer<typeof estimateSchema>;
+type EstimateFormInput = z.input<typeof estimateSchema>;
 type ExtendedLineItem = Omit<LineItemFormData, 'is_taxable'> & {
   is_taxable: boolean;
   part?: number;
   part_number?: string;
   part_name?: string;
   part_id?: number;// legacy support if needed
+};
+
+const fieldLabels: Record<string, string> = {
+  customer: "Customer",
+  vehicle: "Vehicle",
+  work_order: "Work order",
+  sales_agent: "Sales agent",
+  discount_percentage: "Discount percentage",
+  line_items: "Line items",
+  quantity: "Quantity",
+  unit_price: "Rate",
+  labor_hours: "Labor hours",
+  labor_rate: "Labor rate",
+  part: "Part",
+  description: "Description",
+};
+
+const describeFieldPath = (path: string) => {
+  const parts = path.split(".").filter(Boolean);
+  const lineItemIndex = parts.findIndex((part) => part === "line_items");
+  if (lineItemIndex >= 0) {
+    const index = Number(parts[lineItemIndex + 1]);
+    const field = parts[lineItemIndex + 2];
+    return `Line item ${Number.isFinite(index) ? index + 1 : ""}${field ? ` ${fieldLabels[field] || field}` : ""}`.trim();
+  }
+  const field = parts[parts.length - 1];
+  return fieldLabels[field] || field || "Form";
+};
+
+const getFirstFormError = (errors: Record<string, any>, path = ""): string => {
+  for (const [key, value] of Object.entries(errors)) {
+    if (!value) continue;
+    const nextPath = path ? `${path}.${key}` : key;
+    if (typeof value.message === "string") return `${describeFieldPath(nextPath)}: ${value.message}`;
+    if (Array.isArray(value)) {
+      const nestedIndex = value.findIndex(Boolean);
+      if (nestedIndex >= 0) return getFirstFormError(value[nestedIndex], `${nextPath}.${nestedIndex}`);
+    }
+    if (typeof value === "object") {
+      const nested = getFirstFormError(value, nextPath);
+      if (nested) return nested;
+    }
+  }
+  return "Please complete the required fields before saving.";
 };
 
 export default function NewEstimatePage() {
@@ -129,13 +179,14 @@ export default function NewEstimatePage() {
     formState: { errors, isSubmitting },
     setValue,
     watch,
-  } = useForm<EstimateFormData>({
+  } = useForm<EstimateFormInput, any, EstimateFormData>({
     resolver: zodResolver(estimateSchema),
     defaultValues: {
       estimate_date: new Date().toISOString().split("T")[0],
       valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       status: "draft",
-      discount_type: "before_tax" as const,
+      discount_type: "none" as const,
+      discount_percentage: 0,
       line_items: lineItems,
     },
   });
@@ -149,7 +200,7 @@ export default function NewEstimatePage() {
 
   const handleWorkOrderChange = async (workOrderIdStr: string) => {
     const wId = parseInt(workOrderIdStr);
-    setValue("work_order", wId);
+    setValue("work_order", wId, { shouldValidate: true });
 
     // Fetch WO details to get line items
     try {
@@ -196,14 +247,14 @@ export default function NewEstimatePage() {
 
       if (newLineItems.length > 0) {
         setLineItems(newLineItems);
-        setValue("line_items", newLineItems);
+        setValue("line_items", newLineItems, { shouldValidate: true });
 
         // Auto-select vehicle if available in WO
         // use query cache or finding in list
 
         const wo = workOrdersData?.results?.find((w: any) => w.id === wId);
         if (wo && wo.vehicle) {
-          setValue("vehicle", typeof wo.vehicle === 'object' ? wo.vehicle.id : wo.vehicle);
+          setValue("vehicle", typeof wo.vehicle === 'object' ? wo.vehicle.id : wo.vehicle, { shouldValidate: true });
         }
       }
 
@@ -212,20 +263,22 @@ export default function NewEstimatePage() {
     }
   };
 
-  const customer = watch("customer");
-  const discountPercentage = watch("discount_percentage");
+  const watchedCustomer = watch("customer");
+  const customer = watchedCustomer ? Number(watchedCustomer) : undefined;
+  const discountPercentage = Number(watch("discount_percentage") || 0);
   const discountType = watch("discount_type");
 
   // Update selected customer when form value changes
   if (customer && customer !== selectedCustomer) {
     setSelectedCustomer(customer || null);
-    setValue("vehicle", undefined);
+    setValue("vehicle", undefined, { shouldValidate: true });
   }
 
 
   const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
+    let updatedLineItems: ExtendedLineItem[];
     if (type === "part" && partData) {
-      setLineItems([
+      updatedLineItems = [
         ...lineItems,
         {
           item_type: "part",
@@ -237,17 +290,21 @@ export default function NewEstimatePage() {
           part_name: partData.name,
           is_taxable: true,
         },
-      ]);
+      ];
     } else {
-      setLineItems([
+      updatedLineItems = [
         ...lineItems,
         { item_type: "labor", description: "New Labor Item", quantity: 1, unit_price: 0, labor_hours: 1, labor_rate: 0, is_taxable: true },
-      ]);
+      ];
     }
+    setLineItems(updatedLineItems);
+    setValue("line_items", updatedLineItems, { shouldValidate: true });
   };
 
   const removeLineItem = (index: number) => {
-    setLineItems(lineItems.filter((_, i) => i !== index));
+    const updatedLineItems = lineItems.filter((_, i) => i !== index);
+    setLineItems(updatedLineItems);
+    setValue("line_items", updatedLineItems, { shouldValidate: true });
   };
 
 
@@ -255,7 +312,7 @@ export default function NewEstimatePage() {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value } as ExtendedLineItem;
     setLineItems(updated);
-    setValue("line_items", updated, { shouldValidate: false });
+    setValue("line_items", updated, { shouldValidate: true });
   };
 
   const calculateLineItemTotal = (item: Partial<ExtendedLineItem>): number => {
@@ -358,6 +415,10 @@ export default function NewEstimatePage() {
     await createMutation.mutateAsync(apiData);
   };
 
+  const onInvalidSubmit = (formErrors: typeof errors) => {
+    setServerError(getFirstFormError(formErrors as Record<string, any>));
+  };
+
   return (
     <div className="space-y-6 pb-24">
       {/* Header - No Breadcrumbs */}
@@ -394,7 +455,7 @@ export default function NewEstimatePage() {
                     value={customer?.toString() || ""}
                     onValueChange={(val) => {
                       if (val) {
-                        setValue("customer", parseInt(val));
+                        setValue("customer", parseInt(val), { shouldValidate: true });
                         setSelectedCustomer(parseInt(val));
                       }
                     }}
@@ -416,7 +477,7 @@ export default function NewEstimatePage() {
                   <label className="text-sm font-medium">Vehicle</label>
                   <Select
                     value={watch("vehicle")?.toString() || ""}
-                    onValueChange={(val) => setValue("vehicle", parseInt(val))}
+                    onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
                     disabled={!selectedCustomer}
                   >
                     <SelectTrigger disabled={!selectedCustomer}>
@@ -455,7 +516,7 @@ export default function NewEstimatePage() {
                   <label className="text-sm font-medium">Sales Agent</label>
                   <Select
                     value={watch("sales_agent")?.toString() || ""}
-                    onValueChange={(val) => setValue("sales_agent", parseInt(val))}
+                    onValueChange={(val) => setValue("sales_agent", parseInt(val), { shouldValidate: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select Agent" />
@@ -537,7 +598,7 @@ export default function NewEstimatePage() {
                 <Select
                   value={watch("discount_type")}
 
-                  onValueChange={(val: any) => setValue("discount_type", val)}
+                  onValueChange={(val: any) => setValue("discount_type", val, { shouldValidate: true })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Discount Type" />
@@ -784,10 +845,10 @@ export default function NewEstimatePage() {
         </Link>
         <div className="w-auto">
           <BillingSubmitActions
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || createMutation.isPending}
             resourceType="estimate"
-            onSend={handleSubmit((data) => onSubmit(data, "sent"))}
-            onSave={handleSubmit((data) => onSubmit(data, "draft"))}
+            onSend={handleSubmit((data) => onSubmit(data, "sent"), onInvalidSubmit)}
+            onSave={handleSubmit((data) => onSubmit(data, "draft"), onInvalidSubmit)}
           />
         </div>
       </div >

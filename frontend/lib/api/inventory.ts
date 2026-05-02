@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import apiClient from "./client";
 
 export interface PartCategory {
@@ -58,7 +59,7 @@ export interface PurchaseOrder {
   order_date: string;
   expected_delivery_date?: string;
   due_date?: string;
-  status: 'draft' | 'pending_approval' | 'approved' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
+  status: 'draft' | 'pending_approval' | 'approved' | 'confirmed' | 'partially_received' | 'received' | 'rejected' | 'cancelled';
   subtotal?: string;
   tax?: string;
   tax_amount?: string;
@@ -73,6 +74,10 @@ export interface PurchaseOrder {
   approved_at?: string;
   approved_by?: number;
   approved_by_name?: string;
+  rejected_at?: string;
+  rejected_by?: number;
+  rejected_by_name?: string;
+  rejection_reason?: string;
   received_date?: string;
   received_at?: string;
   received_by?: number;
@@ -335,16 +340,12 @@ export const inventoryApi = {
   },
 
   create: async (data: Partial<Part> | FormData): Promise<Part> => {
-    const response = await apiClient.post("/inventory/parts/", data, {
-      headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
-    });
+    const response = await apiClient.post("/inventory/parts/", data);
     return response.data;
   },
 
   update: async (id: number, data: Partial<Part> | FormData): Promise<Part> => {
-    const response = await apiClient.put(`/inventory/parts/${id}/`, data, {
-      headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
-    });
+    const response = await apiClient.patch(`/inventory/parts/${id}/`, data);
     return response.data;
   },
 
@@ -515,6 +516,11 @@ export const inventoryApi = {
 
   approvePurchaseOrder: async (id: number): Promise<any> => {
     const response = await apiClient.post(`/inventory/purchase-orders/${id}/approve/`);
+    return response.data;
+  },
+
+  rejectPurchaseOrder: async (id: number, reason: string): Promise<any> => {
+    const response = await apiClient.post(`/inventory/purchase-orders/${id}/reject/`, { reason });
     return response.data;
   },
 
