@@ -113,9 +113,15 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         return None
 
     def get_technician_id(self, obj):
-        if hasattr(obj.user, 'technician_profile'):
-            return obj.user.technician_profile.id
-        return None
+        try:
+            if hasattr(obj.user, 'technician_profile') and obj.user.technician_profile:
+                return obj.user.technician_profile.id
+        except:
+            pass
+        # Fallback: Query for technician profile if relationship not loaded
+        from apps.technicians.models import Technician
+        tech = Technician.objects.filter(user=obj.user).values_list('id', flat=True).first()
+        return tech
 
     def create(self, validated_data):
         # Extract user fields
@@ -209,9 +215,15 @@ class EmployeeProfileListSerializer(serializers.ModelSerializer):
         return branch.name if branch else None
 
     def get_technician_id(self, obj):
-        if hasattr(obj.user, 'technician_profile'):
-            return obj.user.technician_profile.id
-        return None
+        try:
+            if hasattr(obj.user, 'technician_profile') and obj.user.technician_profile:
+                return obj.user.technician_profile.id
+        except:
+            pass
+        # Fallback: Query for technician profile if relationship not loaded
+        from apps.technicians.models import Technician
+        tech = Technician.objects.filter(user=obj.user).values_list('id', flat=True).first()
+        return tech
 
 
 # =============================================================================
