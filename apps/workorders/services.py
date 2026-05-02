@@ -223,14 +223,22 @@ def handle_workflow_tasks(work_order, old_status, new_status, user=None):
         ).first()
         
         auto_start_phases = ['inspection', 'intake', 'assigned', 'diagnosis', 'in_progress', 'quality_check']
-        initial_status = 'in_progress' if new_status in auto_start_phases else 'pending'
+        
+        if new_status == 'closed':
+            initial_status = 'completed'
+        else:
+            initial_status = 'in_progress' if new_status in auto_start_phases else 'pending'
         
         if current_task:
             if current_task.status != initial_status and current_task.status != 'completed':
                 current_task.status = initial_status
+                update_fields = ['status']
                 if initial_status == 'in_progress' and not current_task.started_at:
                     current_task.started_at = timezone.now()
-                update_fields = ['status', 'started_at'] if initial_status == 'in_progress' else ['status']
+                    update_fields.append('started_at')
+                elif initial_status == 'completed' and not current_task.completed_at:
+                    current_task.completed_at = timezone.now()
+                    update_fields.append('completed_at')
                 current_task.save(update_fields=update_fields)
         else:
             max_manual_seq = work_order.tasks.filter(is_workflow_task=False).aggregate(
@@ -256,6 +264,8 @@ def handle_workflow_tasks(work_order, old_status, new_status, user=None):
             
             if initial_status == 'in_progress':
                 ServiceTask.objects.filter(pk=workflow_task.pk).update(started_at=timezone.now())
+            elif initial_status == 'completed':
+                ServiceTask.objects.filter(pk=workflow_task.pk).update(completed_at=timezone.now())
 
         # Recalculate Work Order if tasks were modified
         work_order.recalculate_totals()

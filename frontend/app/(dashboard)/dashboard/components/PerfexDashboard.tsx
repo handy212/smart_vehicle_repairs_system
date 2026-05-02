@@ -32,7 +32,7 @@ interface WorkOrderSummary {
 
 interface RecentWorkOrder {
   id: number; wo_number: string; status: string; created_at: string;
-  diagnosis_notes?: string; customer?: string; vehicle?: string;
+  diagnosis_notes?: string; customer?: string; vehicle?: string; gate_pass_status?: string;
 }
 
 interface TodayAppointment {
@@ -604,7 +604,16 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
                       <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs font-medium text-primary">{wo.wo_number}</td>
                       <td className="px-4 py-2.5 text-xs text-foreground">{wo.customer || "—"}</td>
                       <td className="px-4 py-2.5 text-xs text-foreground">{wo.vehicle   || "—"}</td>
-                      <td className="px-4 py-2.5"><StatusPill status={wo.status} map={WO_STATUS_COLORS} /></td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <StatusPill status={wo.status} map={WO_STATUS_COLORS} />
+                          {wo.gate_pass_status === 'completed' && (
+                            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium border border-success/30 text-success bg-success/5" title="Vehicle Picked Up">
+                              <Truck className="w-2.5 h-2.5" /> Picked Up
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-xs text-muted-foreground">{format(new Date(wo.created_at), "MMM d")}</td>
                       <td className="px-4 py-2.5">
                         <Link href={`/workorders/${wo.id}`} className="text-muted-foreground hover:text-primary">

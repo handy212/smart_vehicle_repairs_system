@@ -732,6 +732,24 @@ class WorkOrder(models.Model):
         from .services import handle_workflow_tasks
         handle_workflow_tasks(self, old_status, new_status, user)
         
+        # Auto-create gate pass if closed
+        if new_status == 'closed' and old_status != 'closed':
+            try:
+                from apps.gatepass.models import GatePass
+                if not GatePass.objects.filter(work_order=self).exists():
+                    issuer = user or self.service_coordinator or self.created_by
+                    if issuer:
+                        GatePass.objects.create(
+                            work_order=self,
+                            branch=self.branch,
+                            vehicle=self.vehicle,
+                            customer=self.customer,
+                            issued_by=issuer,
+                            status='pending'
+                        )
+            except Exception as e:
+                logger.error(f"Failed to auto-create gate pass for WO {self.work_order_number}: {e}", exc_info=True)
+        
         # Log transition
         if user:
             WorkOrderNote.objects.create(

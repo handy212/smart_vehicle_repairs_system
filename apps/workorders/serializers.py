@@ -31,6 +31,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     total_cost = serializers.SerializerMethodField()
     estimate_summary = serializers.SerializerMethodField()
     invoice_summary = serializers.SerializerMethodField()
+    gate_pass_status = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -44,7 +45,18 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'is_customer_waiting', 'requires_approval', 'approved_by_customer',
             'quality_check_required', 'quality_check_completed',
             'task_count', 'parts_count', 'estimate_summary', 'invoice_summary',
+            'gate_pass_status',
         ]
+    
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_gate_pass_status(self, obj):
+        gate_passes = obj.gate_passes.all()
+        if gate_passes:
+            for gp in gate_passes:
+                if gp.status == 'completed':
+                    return 'completed'
+            return gate_passes[0].status
+        return None
     
     @extend_schema_field(OpenApiTypes.STR)
     def get_customer_name(self, obj):
@@ -186,6 +198,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     estimate_summary = serializers.SerializerMethodField()
     invoice_summary = serializers.SerializerMethodField()
+    gate_pass_status = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -212,8 +225,18 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
             'maintenance_type', 'service_type', 'service_bundle',
             'is_overdue', 'days_in_shop', 'is_approved',
             'cost_variance', 'cost_variance_percentage', 'has_completed_inspection',
-            'estimate_summary', 'invoice_summary',
+            'estimate_summary', 'invoice_summary', 'gate_pass_status',
         ]
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_gate_pass_status(self, obj):
+        gate_passes = obj.gate_passes.all()
+        if gate_passes:
+            for gp in gate_passes:
+                if gp.status == 'completed':
+                    return 'completed'
+            return gate_passes[0].status
+        return None
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_completed_inspection(self, obj):

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Wrench, Trash2, Download, X, ChevronDown, LayoutGrid, MoreHorizontal, Eye, Edit, FileText, Printer } from "lucide-react";
+import { Plus, Search, Wrench, Trash2, Download, X, ChevronDown, LayoutGrid, MoreHorizontal, Eye, Edit, FileText, Printer, Truck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -590,9 +590,16 @@ export default function WorkOrdersPage() {
                       <TableCell className="px-3 py-1.5 text-xs font-medium text-foreground">{workorder.customer_name || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px] truncate" title={workorder.vehicle_info || ""}>{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="px-3 py-1.5">
-                        <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold shadow-none">
-                          {getStatusLabel(workorder.status)}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant={getStatusVariant(workorder.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold shadow-none">
+                            {getStatusLabel(workorder.status)}
+                          </Badge>
+                          {workorder.gate_pass_status === 'completed' && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-success/30 text-success bg-success/5 shadow-none flex items-center gap-0.5" title="Vehicle Picked Up">
+                              <Truck className="w-2.5 h-2.5" /> Picked Up
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
                         <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold shadow-none">

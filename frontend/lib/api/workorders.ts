@@ -57,6 +57,7 @@ export interface WorkOrder {
     paid_at?: string | null;
     created_at?: string | null;
   } | null;
+  gate_pass_status?: string;
   quality_check_required?: boolean;
   quality_check_completed?: boolean;
   quality_check_passed?: boolean;
