@@ -86,16 +86,23 @@ class JournalEntry(models.Model):
         credits = sum(t.amount for t in self.transactions.all() if t.transaction_type == 'credit')
         return debits == credits
 
+    def clean(self):
+        super().clean()
+        if self.pk and not getattr(self, '_allow_posted_edit', False):
+            original = JournalEntry.objects.filter(pk=self.pk).first()
+            if original and original.posted:
+                immutable_fields = [
+                    'date', 'description', 'reference', 'posted', 'created_by_id',
+                    'branch_id', 'content_type_id', 'object_id'
+                ]
+                changed = [field for field in immutable_fields if getattr(original, field) != getattr(self, field)]
+                if changed:
+                    raise ValidationError(
+                        _("Posted journal entries cannot be edited. Create a reversal entry instead.")
+                    )
+
     def save(self, *args, **kwargs):
-        if self.posted:
-            # Prevent modification of posted entries
-            # Check if this is an update to an existing record
-            if self.pk:
-                original = JournalEntry.objects.get(pk=self.pk)
-                if original.posted:
-                    # Allow non-critical updates? Ideally no.
-                    # For MVP, just block saving if posted is already True unless we are explicitly unposting (which should be restricted)
-                    pass 
+        self.full_clean()
         super().save(*args, **kwargs)
 
 
@@ -110,7 +117,7 @@ class Transaction(models.Model):
 
     journal_entry = models.ForeignKey(JournalEntry, on_delete=models.CASCADE, related_name='transactions')
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='transactions')
-    amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[]) # ensure positive in clean()
+    amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[])
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES)
     description = models.CharField(max_length=255, blank=True)
 
@@ -126,6 +133,21 @@ class Transaction(models.Model):
     def clean(self):
         if self.amount <= 0:
             raise ValidationError(_("Transaction amount must be positive."))
+        if self.journal_entry_id and self.journal_entry.posted and not getattr(self, '_allow_posted_edit', False):
+            raise ValidationError(
+                _("Transactions on posted journal entries cannot be edited. Create a reversal entry instead.")
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.journal_entry_id and self.journal_entry.posted and not getattr(self, '_allow_posted_edit', False):
+            raise ValidationError(
+                _("Transactions on posted journal entries cannot be deleted. Create a reversal entry instead.")
+            )
+        return super().delete(*args, **kwargs)
 
 class AccountingControl(models.Model):
     """
@@ -159,9 +181,9 @@ class AuditLog(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=10, choices=ACTION_CHOICES)
-    resource_type = models.CharField(max_length=50) # e.g., 'JournalEntry', 'Account'
+    resource_type = models.CharField(max_length=50)
     resource_id = models.CharField(max_length=50)
-    details = models.TextField(blank=True) # JSON or text summary of what changed
+    details = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -195,7 +217,6 @@ class BankStatement(models.Model):
     closing_balance = models.DecimalField(max_digits=15, decimal_places=2)
     statement_file = models.FileField(upload_to='bank_statements/', null=True, blank=True)
     
-    # Reconciliation status
     reconciled = models.BooleanField(default=False)
     reconciled_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -206,7 +227,6 @@ class BankStatement(models.Model):
     )
     reconciled_at = models.DateTimeField(null=True, blank=True)
     
-    # Tracking
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='bank_statements_created')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -233,12 +253,10 @@ class BankStatementLine(models.Model):
     description = models.TextField()
     reference = models.CharField(max_length=100, blank=True)
     
-    # Amounts (only one should be non-zero)
-    debit_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))  # Money in
-    credit_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))  # Money out
+    debit_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))
+    credit_amount = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0'))
     balance = models.DecimalField(max_digits=15, decimal_places=2)
     
-    # Reconciliation
     matched = models.BooleanField(default=False)
     matched_transaction = models.ForeignKey(
         'Transaction',
@@ -301,7 +319,6 @@ class FundTransfer(models.Model):
     reference = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     
-    # GL Integration
     journal_entry = models.OneToOneField(
         JournalEntry,
         on_delete=models.SET_NULL,
@@ -310,7 +327,6 @@ class FundTransfer(models.Model):
         related_name='fund_transfer'
     )
     
-    # Tracking
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='fund_transfers_created')
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -337,7 +353,6 @@ class FundTransfer(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.transfer_number:
-            # Generate Transfer number: FT000001
             last_transfer = FundTransfer.objects.order_by('-id').first()
             if last_transfer and last_transfer.transfer_number:
                 last_number = int(last_transfer.transfer_number[2:])
@@ -379,7 +394,6 @@ class Budget(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     description = models.TextField(blank=True)
     
-    # Tracking
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='budgets_created')
     created_at = models.DateTimeField(auto_now_add=True)
     approved_by = models.ForeignKey(
@@ -469,7 +483,6 @@ class Accrual(models.Model):
     reversal_date = models.DateField(null=True, blank=True, help_text="Date to reverse the accrual (usually first day of next period)")
     description = models.TextField()
     
-    # GL Integration
     accrual_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='accrual_entries')
     reversal_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='reversal_entries')
     
