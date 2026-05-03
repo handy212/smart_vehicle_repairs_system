@@ -5,10 +5,11 @@ Covers: Employee Profiles, Departments, Positions, Leave Management,
 """
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 
 # =============================================================================
@@ -370,6 +371,8 @@ class LeaveRequest(models.Model):
         from django.core.exceptions import ValidationError
         if self.start_date and self.end_date and self.start_date > self.end_date:
             raise ValidationError({'end_date': _('End date must be after start date.')})
+        if self.days_count is not None and self.days_count <= 0:
+            raise ValidationError({'days_count': _('Leave days must be greater than zero.')})
 
 
 # =============================================================================
@@ -481,10 +484,16 @@ class Attendance(models.Model):
         """Calculate total working hours for the day"""
         if not self.clock_in or not self.clock_out:
             return None
+        if self.clock_out <= self.clock_in:
+            return None
         total = self.clock_out - self.clock_in
         # Subtract break time
         if self.break_start and self.break_end:
+            if self.break_end <= self.break_start:
+                return None
             total -= (self.break_end - self.break_start)
+        if total.total_seconds() < 0:
+            return None
         return round(total.total_seconds() / 3600, 2)
 
     def calculate_overtime(self, policy=None):
@@ -504,6 +513,16 @@ class Attendance(models.Model):
             hours = self.calculate_total_hours()
             if hours is not None:
                 self.total_hours = Decimal(str(hours))
+                policy = AttendancePolicy.objects.filter(
+                    branch=self.branch,
+                    is_default=True,
+                    is_active=True,
+                ).first()
+                if policy:
+                    self.overtime_hours = self.calculate_overtime(policy)
+            else:
+                from django.core.exceptions import ValidationError
+                raise ValidationError({'clock_out': _('Clock out must be after clock in, and breaks must be valid.')})
         super().save(*args, **kwargs)
 
 
@@ -580,6 +599,13 @@ class TaxRule(models.Model):
     def __str__(self):
         return f"{self.name} ({self.min_income} - {self.max_income or 'Infinity'})"
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.max_income is not None and self.max_income <= self.min_income:
+            raise ValidationError({'max_income': _('Max income must be greater than min income.')})
+        if self.rate < 0:
+            raise ValidationError({'rate': _('Tax rate cannot be negative.')})
+
 
 class EmployeeSalaryComponent(models.Model):
     """Employee-specific salary components (allowances/deductions)"""
@@ -619,6 +645,7 @@ class PayrollPeriod(models.Model):
         ('processing', 'Processing'),
         ('approved', 'Approved'),
         ('paid', 'Paid'),
+        ('reversed', 'Reversed'),
     ]
 
     name = models.CharField(_('period name'), max_length=100)
@@ -650,6 +677,26 @@ class PayrollPeriod(models.Model):
         verbose_name=_('approved by'),
     )
     approved_at = models.DateTimeField(_('approved at'), null=True, blank=True)
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paid_payroll_periods',
+        verbose_name=_('paid by'),
+    )
+    paid_at = models.DateTimeField(_('paid at'), null=True, blank=True)
+    payment_batch_reference = models.CharField(_('payment batch reference'), max_length=100, blank=True)
+    reversed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reversed_payroll_periods',
+        verbose_name=_('reversed by'),
+    )
+    reversed_at = models.DateTimeField(_('reversed at'), null=True, blank=True)
+    reversal_reason = models.TextField(_('reversal reason'), blank=True)
     notes = models.TextField(_('notes'), blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -680,8 +727,10 @@ class PaySlip(models.Model):
         ('draft', 'Draft'),
         ('approved', 'Approved'),
         ('paid', 'Paid'),
+        ('reversed', 'Reversed'),
     ]
 
+    payslip_number = models.CharField(_('payslip number'), max_length=30, unique=True, editable=False, null=True, blank=True)
     payroll_period = models.ForeignKey(
         PayrollPeriod,
         on_delete=models.CASCADE,
@@ -699,6 +748,15 @@ class PaySlip(models.Model):
     )
     overtime_pay = models.DecimalField(
         _('overtime pay'), max_digits=12, decimal_places=2, default=0,
+    )
+    unpaid_leave_deduction = models.DecimalField(
+        _('unpaid leave deduction'), max_digits=12, decimal_places=2, default=0,
+    )
+    absence_deduction = models.DecimalField(
+        _('absence deduction'), max_digits=12, decimal_places=2, default=0,
+    )
+    proration_factor = models.DecimalField(
+        _('proration factor'), max_digits=6, decimal_places=4, default=1,
     )
     allowances = models.JSONField(
         _('allowances'), default=dict, blank=True,
@@ -725,6 +783,7 @@ class PaySlip(models.Model):
     payment_reference = models.CharField(
         _('payment reference'), max_length=100, blank=True,
     )
+    is_locked = models.BooleanField(_('locked'), default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -733,9 +792,13 @@ class PaySlip(models.Model):
         verbose_name_plural = _('payslips')
         ordering = ['-payroll_period__start_date', 'employee__user__last_name']
         unique_together = ['payroll_period', 'employee']
+        indexes = [
+            models.Index(fields=['payslip_number']),
+            models.Index(fields=['status', 'is_locked']),
+        ]
 
     def __str__(self):
-        return f"{self.employee.full_name} - {self.payroll_period.name}"
+        return f"{self.payslip_number or self.employee.full_name} - {self.payroll_period.name}"
 
     def calculate_pay(self):
         """Calculate gross and net pay based on components"""
@@ -778,11 +841,58 @@ class PaySlip(models.Model):
                     pass
 
         self.gross_pay = (self.basic_salary or Decimal('0')) + (self.overtime_pay or Decimal('0')) + total_allowances
-        self.net_pay = self.gross_pay - total_deductions - (self.tax_amount or Decimal('0'))
+        self.net_pay = (
+            self.gross_pay
+            - total_deductions
+            - (self.tax_amount or Decimal('0'))
+            - (self.unpaid_leave_deduction or Decimal('0'))
+            - (self.absence_deduction or Decimal('0'))
+        )
 
     def save(self, *args, **kwargs):
+        allow_locked_update = kwargs.pop('_allow_locked_update', False)
+        if self.pk:
+            old = PaySlip.objects.filter(pk=self.pk).only('is_locked').first()
+            if old and old.is_locked and not allow_locked_update:
+                from django.core.exceptions import ValidationError
+                raise ValidationError(_('Paid or approved payslips are locked. Reverse or reopen payroll before editing.'))
+        if not self.payslip_number:
+            year = self.payroll_period.end_date.year if self.payroll_period_id else timezone.now().year
+            next_number = (PaySlip.objects.filter(payslip_number__startswith=f"PS{year}").count() or 0) + 1
+            self.payslip_number = f"PS{year}{next_number:06d}"
         self.calculate_pay()
         super().save(*args, **kwargs)
+
+
+class PayrollAuditLog(models.Model):
+    """Payroll audit trail for sensitive compensation and payroll actions."""
+
+    ACTION_CHOICES = [
+        ('salary_component_created', 'Salary Component Created'),
+        ('salary_component_updated', 'Salary Component Updated'),
+        ('salary_component_deleted', 'Salary Component Deleted'),
+        ('payslip_updated', 'Payslip Updated'),
+        ('period_processed', 'Period Processed'),
+        ('period_approved', 'Period Approved'),
+        ('period_paid', 'Period Paid'),
+        ('period_reversed', 'Period Reversed'),
+    ]
+
+    action = models.CharField(max_length=40, choices=ACTION_CHOICES)
+    employee = models.ForeignKey(EmployeeProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_audit_logs')
+    payroll_period = models.ForeignKey(PayrollPeriod, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    payslip = models.ForeignKey(PaySlip, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    performed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='payroll_audit_logs')
+    changes = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['action', 'created_at']),
+            models.Index(fields=['employee', 'created_at']),
+            models.Index(fields=['payroll_period', 'created_at']),
+        ]
 
 
 # =============================================================================

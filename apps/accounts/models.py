@@ -146,11 +146,11 @@ class User(AbstractUser):
         """
         from apps.branches.models import Branch
         
-        if self.role == 'admin':
+        if self.role in ['admin', 'super-admin']:
             return Branch.objects.filter(is_active=True)
         elif self.role == 'manager':
             return self.managed_branches.filter(is_active=True)
-        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
             if self.branch:
                 return Branch.objects.filter(id=self.branch.id, is_active=True)
             return Branch.objects.none()
@@ -158,23 +158,23 @@ class User(AbstractUser):
     
     def has_branch_access(self, branch):
         """Check if user has access to a specific branch"""
-        if self.role == 'admin':
+        if self.role in ['admin', 'super-admin']:
             return True
         elif self.role == 'manager':
             return self.managed_branches.filter(id=branch.id).exists()
-        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
             return self.branch and self.branch.id == branch.id
         return False
     
     @property
     def primary_branch(self):
         """Get the primary branch for this user"""
-        if self.role == 'admin':
+        if self.role in ['admin', 'super-admin']:
             from apps.branches.models import Branch
             return Branch.objects.filter(is_headquarters=True).first() or Branch.objects.filter(is_active=True).first()
         elif self.role == 'manager':
             return self.managed_branches.filter(is_active=True).first()
-        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
             return self.branch
         return None
 
@@ -206,4 +206,3 @@ class RegistrationOTP(models.Model):
 
     def __str__(self):
         return f"OTP for {self.email} - {self.otp_code}"
-

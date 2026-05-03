@@ -91,6 +91,8 @@ class SubscriptionTests(TestCase):
             created_by=self.admin
         )
         SubscriptionService.activate_subscription(sub)
+        sub.activation_date = timezone.now().date()
+        sub.save(update_fields=['activation_date'])
         
         # Check initial allowance
         initial = sub.get_remaining_allowance('battery_boosts')
@@ -120,6 +122,8 @@ class SubscriptionTests(TestCase):
             created_by=self.admin
         )
         SubscriptionService.activate_subscription(sub)
+        sub.activation_date = timezone.now().date()
+        sub.save(update_fields=['activation_date'])
         
         # 'battery_boost' is the service type key, 'battery_boosts' is feature key in package
         usage = SubscriptionUsageService.consume_allowance(
@@ -167,6 +171,8 @@ class SubscriptionTests(TestCase):
             created_by=self.admin
         )
         SubscriptionService.activate_subscription(sub)
+        sub.activation_date = timezone.now().date()
+        sub.save(update_fields=['activation_date'])
         
         # Consume
         SubscriptionUsageService.consume_allowance(sub, 'battery_boosts', 1, created_by=self.admin) # Use canonical name to be safe for now
@@ -183,3 +189,85 @@ class SubscriptionTests(TestCase):
         # Verify restored
         self.assertEqual(sub.get_remaining_allowance('battery_boosts'), 5)
 
+    def test_activation_delay_blocks_usage_until_activation_date(self):
+        sub, _ = SubscriptionService.create_subscription_with_invoice(
+            customer=self.customer,
+            package=self.package,
+            vehicle=self.vehicle,
+            created_by=self.admin
+        )
+        SubscriptionService.activate_subscription(sub)
+
+        with self.assertRaises(Exception):
+            SubscriptionUsageService.consume_allowance(
+                sub,
+                'battery_boost',
+                1,
+                created_by=self.admin,
+            )
+
+    def test_renewal_keeps_current_subscription_active_until_invoice_payment(self):
+        sub, _ = SubscriptionService.create_subscription_with_invoice(
+            customer=self.customer,
+            package=self.package,
+            vehicle=self.vehicle,
+            created_by=self.admin
+        )
+        SubscriptionService.activate_subscription(sub)
+        sub.activation_date = timezone.now().date()
+        sub.payment_status = 'paid'
+        sub.save(update_fields=['activation_date', 'payment_status'])
+        original_start = sub.start_date
+        original_end = sub.end_date
+
+        renewed, invoice = SubscriptionService.renew_subscription(sub, created_by=self.admin)
+        renewed.refresh_from_db()
+
+        self.assertEqual(renewed.status, 'active')
+        self.assertEqual(renewed.payment_status, 'paid')
+        self.assertEqual(renewed.start_date, original_start)
+        self.assertEqual(renewed.end_date, original_end)
+        self.assertEqual(renewed.metadata['pending_renewal']['invoice_id'], invoice.id)
+
+        SubscriptionService.activate_subscription(renewed, invoice)
+        renewed.refresh_from_db()
+        self.assertEqual(renewed.start_date, original_end + timezone.timedelta(days=1))
+        self.assertNotIn('pending_renewal', renewed.metadata)
+
+    def test_payment_activates_invoice_linked_subscription_only(self):
+        vehicle_two = Vehicle.objects.create(
+            owner=self.customer,
+            license_plate="SUB-222",
+            make="Toyota",
+            model="RAV4",
+            year=2021,
+            current_mileage=25000,
+            vin="SUBSVIN222"
+        )
+        sub_one, invoice_one = SubscriptionService.create_subscription_with_invoice(
+            customer=self.customer,
+            package=self.package,
+            vehicle=self.vehicle,
+            created_by=self.admin
+        )
+        sub_two, _invoice_two = SubscriptionService.create_subscription_with_invoice(
+            customer=self.customer,
+            package=self.package,
+            vehicle=vehicle_two,
+            created_by=self.admin
+        )
+
+        Payment.objects.create(
+            invoice=invoice_one,
+            customer=self.customer,
+            payment_method='cash',
+            amount=invoice_one.total,
+            processed_by=self.admin,
+        )
+
+        sub_one.refresh_from_db()
+        sub_two.refresh_from_db()
+        self.assertEqual(sub_one.status, 'active')
+        self.assertEqual(sub_one.payment_status, 'paid')
+        self.assertEqual(sub_two.status, 'pending')
+        self.assertEqual(sub_two.payment_status, 'pending')

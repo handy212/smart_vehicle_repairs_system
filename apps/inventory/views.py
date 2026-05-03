@@ -598,11 +598,11 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                 
                 for item in category_stock:
                     part = Part.objects.get(id=item['part'])
-                    qty = item['total_qty']
+                    qty = item['total_qty'] or 0
                     cat_qty += qty
-                if part.cost_price:
+                    if part.cost_price:
                         cat_cost_value += part.cost_price * qty
-                if part.selling_price:
+                    if part.selling_price:
                         cat_sell_value += part.selling_price * qty
             
             by_category.append({
@@ -634,12 +634,13 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
             
             for stock_item in stock_items:
                 part = stock_item.part
-            if part.last_sold_date:
-                days_since_sale = (today - part.last_sold_date).days
-            elif part.created_at:
-                days_since_sale = (today - part.created_at.date()).days
-            else:
-                days_since_sale = 0
+                last_sold_date = getattr(part, 'last_sold_date', None)
+                if last_sold_date:
+                    days_since_sale = (today - last_sold_date).days
+                elif part.created_at:
+                    days_since_sale = (today - part.created_at.date()).days
+                else:
+                    days_since_sale = 0
             
                 # Calculate value from StockItem
                 qty = stock_item.quantity_in_stock
@@ -665,10 +666,11 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
             
             for item in stock_items:
                 part = Part.objects.get(id=item['part'])
-                qty = item['total_qty']
+                qty = item['total_qty'] or 0
                 
-                if part.last_sold_date:
-                    days_since_sale = (today - part.last_sold_date).days
+                last_sold_date = getattr(part, 'last_sold_date', None)
+                if last_sold_date:
+                    days_since_sale = (today - last_sold_date).days
                 elif part.created_at:
                     days_since_sale = (today - part.created_at.date()).days
                 else:
@@ -676,18 +678,18 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                 
                 part_value = part.cost_price * qty if part.cost_price else Decimal('0')
             
-            if days_since_sale <= 90:
-                aging_categories['0-90_days']['count'] += 1
-                aging_categories['0-90_days']['value'] += part_value
-            elif days_since_sale <= 180:
-                aging_categories['91-180_days']['count'] += 1
-                aging_categories['91-180_days']['value'] += part_value
-            elif days_since_sale <= 365:
-                aging_categories['181-365_days']['count'] += 1
-                aging_categories['181-365_days']['value'] += part_value
-            else:
-                aging_categories['over_365_days']['count'] += 1
-                aging_categories['over_365_days']['value'] += part_value
+                if days_since_sale <= 90:
+                    aging_categories['0-90_days']['count'] += 1
+                    aging_categories['0-90_days']['value'] += part_value
+                elif days_since_sale <= 180:
+                    aging_categories['91-180_days']['count'] += 1
+                    aging_categories['91-180_days']['value'] += part_value
+                elif days_since_sale <= 365:
+                    aging_categories['181-365_days']['count'] += 1
+                    aging_categories['181-365_days']['value'] += part_value
+                else:
+                    aging_categories['over_365_days']['count'] += 1
+                    aging_categories['over_365_days']['value'] += part_value
         
         return Response({
             'period': {

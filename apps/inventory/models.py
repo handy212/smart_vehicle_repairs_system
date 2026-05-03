@@ -764,8 +764,13 @@ class InventoryTransaction(models.Model):
         ('adjustment', 'Manual Adjustment'),
         ('return', 'Return to Supplier'),
         ('damage', 'Damage/Loss'),
+        ('loss', 'Loss'),
         ('transfer', 'Transfer'),
+        ('transfer_in', 'Transfer In'),
+        ('transfer_out', 'Transfer Out'),
         ('count', 'Physical Count'),
+        ('correction', 'Correction'),
+        ('found', 'Found Stock'),
         ('reserve', 'Reservation'),
         ('release', 'Release Reservation'),
     ]
@@ -1285,6 +1290,8 @@ class PhysicalCountItem(models.Model):
             raise ValueError("Item is already reconciled")
         
         if create_adjustment and self.discrepancy != 0:
+            from .services import InventoryService
+
             # Create adjustment transaction
             InventoryService.record_transaction(
                 part=self.part,

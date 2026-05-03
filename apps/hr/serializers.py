@@ -4,6 +4,8 @@ HR Management Serializers
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from datetime import timedelta
+from decimal import Decimal
 from apps.accounts.serializers import UserSerializer
 from apps.branches.models import Branch
 from .models import (
@@ -11,11 +13,25 @@ from .models import (
     LeaveType, LeaveBalance, LeaveRequest,
     AttendancePolicy, Attendance,
     SalaryComponent, EmployeeSalaryComponent, PayrollPeriod, PaySlip, TaxRule,
+    PayrollAuditLog,
     JobOpening, Applicant, Interview,
     PerformanceReview, TrainingProgram, EmployeeTraining, ComplianceDocument,
 )
 
 User = get_user_model()
+
+
+def count_business_days(start_date, end_date):
+    """Count Monday-Friday days inclusively."""
+    if not start_date or not end_date or start_date > end_date:
+        return 0
+    count = 0
+    current = start_date
+    while current <= end_date:
+        if current.weekday() < 5:
+            count += 1
+        current += timedelta(days=1)
+    return count
 
 
 # =============================================================================
@@ -99,6 +115,13 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at', 'updated_at']
 
     def validate(self, attrs):
+        request = self.context.get('request')
+        user_data = attrs.get('user') or {}
+        branch = user_data.get('branch')
+        if request and branch and getattr(request.user, 'role', None) not in ['admin', 'super-admin']:
+            if not request.user.has_branch_access(branch):
+                raise serializers.ValidationError({'branch': 'You cannot assign staff to a branch you do not have access to.'})
+
         if self.instance is None:
             required_fields = ['email', 'first_name', 'last_name', 'password']
             missing = {field: 'This field is required when creating a staff profile.' for field in required_fields if not attrs.get(field)}
@@ -257,6 +280,16 @@ class LeaveBalanceSerializer(serializers.ModelSerializer):
             'remaining_days', 'utilization_percentage',
         ]
 
+    def validate(self, attrs):
+        total_days = attrs.get('total_days', getattr(self.instance, 'total_days', 0))
+        used_days = attrs.get('used_days', getattr(self.instance, 'used_days', 0))
+        carried_forward = attrs.get('carried_forward', getattr(self.instance, 'carried_forward', 0))
+        if used_days < 0 or total_days < 0 or carried_forward < 0:
+            raise serializers.ValidationError('Leave balances cannot contain negative values.')
+        if used_days > total_days + carried_forward:
+            raise serializers.ValidationError({'used_days': 'Used days cannot exceed available leave.'})
+        return attrs
+
 
 class LeaveRequestSerializer(serializers.ModelSerializer):
     staff = serializers.PrimaryKeyRelatedField(source='employee', queryset=EmployeeProfile.objects.all(), required=False)
@@ -289,13 +322,36 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
     def validate(self, data):
         start_date = data.get('start_date')
         end_date = data.get('end_date')
+        employee = data.get('employee') or (self.instance.employee if self.instance else None)
+        if not employee:
+            request = self.context.get('request')
+            if request and getattr(request, 'user', None) and request.user.is_authenticated:
+                employee = EmployeeProfile.objects.filter(user=request.user).first()
+        leave_type = data.get('leave_type') or (self.instance.leave_type if self.instance else None)
 
         if start_date and end_date:
             if start_date > end_date:
                 raise serializers.ValidationError({'end_date': 'End date must be after start date.'})
             if 'days_count' not in data:
-                delta = end_date - start_date
-                data['days_count'] = delta.days + 1
+                data['days_count'] = Decimal(str(count_business_days(start_date, end_date)))
+
+        if data.get('days_count') is not None and data['days_count'] <= 0:
+            raise serializers.ValidationError({'days_count': 'Leave days must be greater than zero.'})
+
+        if leave_type and leave_type.requires_document and not (data.get('document') or getattr(self.instance, 'document', None)):
+            raise serializers.ValidationError({'document': 'A supporting document is required for this leave type.'})
+
+        if employee and start_date and end_date:
+            overlaps = LeaveRequest.objects.filter(
+                employee=employee,
+                status__in=['pending', 'approved'],
+                start_date__lte=end_date,
+                end_date__gte=start_date,
+            )
+            if self.instance:
+                overlaps = overlaps.exclude(pk=self.instance.pk)
+            if overlaps.exists():
+                raise serializers.ValidationError({'start_date': 'This employee already has a pending or approved leave request in this date range.'})
         return data
 
 
@@ -339,6 +395,22 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'branch': {'required': False},
         }
 
+    def validate(self, attrs):
+        clock_in = attrs.get('clock_in', getattr(self.instance, 'clock_in', None))
+        clock_out = attrs.get('clock_out', getattr(self.instance, 'clock_out', None))
+        break_start = attrs.get('break_start', getattr(self.instance, 'break_start', None))
+        break_end = attrs.get('break_end', getattr(self.instance, 'break_end', None))
+
+        if clock_in and clock_out and clock_out <= clock_in:
+            raise serializers.ValidationError({'clock_out': 'Clock out must be after clock in.'})
+        if break_start and break_end and break_end <= break_start:
+            raise serializers.ValidationError({'break_end': 'Break end must be after break start.'})
+        if clock_in and break_start and break_start < clock_in:
+            raise serializers.ValidationError({'break_start': 'Break cannot start before clock in.'})
+        if clock_out and break_end and break_end > clock_out:
+            raise serializers.ValidationError({'break_end': 'Break cannot end after clock out.'})
+        return attrs
+
 
 # =============================================================================
 # Payroll
@@ -370,6 +442,30 @@ class EmployeeSalaryComponentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at', 'updated_at']
 
+    def validate(self, attrs):
+        employee = attrs.get('employee', getattr(self.instance, 'employee', None))
+        if employee and PaySlip.objects.filter(
+            employee=employee,
+            payroll_period__status__in=['processing', 'approved'],
+        ).exists():
+            raise serializers.ValidationError(
+                'Salary components cannot be changed while this employee has an open payroll run.'
+            )
+        return attrs
+
+
+class PayrollAuditLogSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.full_name', read_only=True, default=None)
+    performed_by_name = serializers.CharField(source='performed_by.get_full_name', read_only=True, default=None)
+
+    class Meta:
+        model = PayrollAuditLog
+        fields = [
+            'id', 'action', 'employee', 'employee_name', 'payroll_period',
+            'payslip', 'performed_by', 'performed_by_name', 'changes', 'created_at',
+        ]
+        read_only_fields = fields
+
 
 class TaxRuleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -388,15 +484,24 @@ class PaySlipSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaySlip
         fields = [
-            'id', 'payroll_period', 'period_name',
+            'id', 'payslip_number', 'payroll_period', 'period_name',
             'staff', 'staff_name',
-            'basic_salary', 'overtime_pay',
+            'basic_salary', 'overtime_pay', 'unpaid_leave_deduction',
+            'absence_deduction', 'proration_factor',
             'allowances', 'deductions',
             'gross_pay', 'tax_amount', 'net_pay',
-            'status', 'payment_date', 'payment_reference',
+            'status', 'payment_date', 'payment_reference', 'is_locked',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['gross_pay', 'net_pay', 'created_at', 'updated_at']
+        read_only_fields = [
+            'payslip_number', 'gross_pay', 'net_pay', 'is_locked',
+            'created_at', 'updated_at',
+        ]
+
+    def validate(self, attrs):
+        if self.instance and self.instance.is_locked:
+            raise serializers.ValidationError('This payslip is locked. Reverse or reopen payroll before editing.')
+        return attrs
 
 
 class PayrollPeriodSerializer(serializers.ModelSerializer):
@@ -408,6 +513,7 @@ class PayrollPeriodSerializer(serializers.ModelSerializer):
     total_net_pay = serializers.DecimalField(
         max_digits=14, decimal_places=2, read_only=True,
     )
+    journal_entry_id = serializers.SerializerMethodField()
 
     class Meta:
         model = PayrollPeriod
@@ -415,17 +521,37 @@ class PayrollPeriodSerializer(serializers.ModelSerializer):
             'id', 'name', 'start_date', 'end_date',
             'status', 'branch', 'branch_name',
             'created_by', 'created_by_name',
-            'approved_by', 'approved_at', 'notes',
-            'total_payslips', 'total_net_pay',
+            'approved_by', 'approved_at', 'paid_by', 'paid_at',
+            'payment_batch_reference', 'reversed_by', 'reversed_at',
+            'reversal_reason', 'notes',
+            'total_payslips', 'total_net_pay', 'journal_entry_id',
             'created_at', 'updated_at',
         ]
         read_only_fields = [
-            'created_by', 'approved_by', 'approved_at',
+            'created_by', 'approved_by', 'approved_at', 'paid_by', 'paid_at',
+            'reversed_by', 'reversed_at', 'reversal_reason',
             'created_at', 'updated_at',
         ]
         extra_kwargs = {
             'branch': {'required': False},
         }
+
+    def validate(self, attrs):
+        start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
+        end_date = attrs.get('end_date', getattr(self.instance, 'end_date', None))
+        if start_date and end_date and start_date > end_date:
+            raise serializers.ValidationError({'end_date': 'End date must be after start date.'})
+        return attrs
+
+    def get_journal_entry_id(self, obj):
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounting.models import JournalEntry
+
+        content_type = ContentType.objects.get_for_model(obj)
+        return JournalEntry.objects.filter(
+            content_type=content_type,
+            object_id=obj.id,
+        ).values_list('id', flat=True).first()
 
 
 # =============================================================================

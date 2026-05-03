@@ -91,7 +91,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'subscription_number',
             'customer', 'customer_name', 'customer_full_name',
-            'package', 'package_name', 'package_code',
+            'package', 'package_name', 'package_code', 'vehicle',
             'start_date', 'end_date', 'activation_date',
             'status', 'is_active_status','is_expired_status', 'days_remaining',
             'auto_renew',
@@ -179,7 +179,7 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'subscription_number',
             'customer', 'customer_name',
-            'package', 'package_name',
+            'package', 'package_name', 'vehicle',
             'start_date', 'end_date',
             'status', 'days_remaining',
             'payment_status'
@@ -235,10 +235,11 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         if vehicle and data.get('customer') and vehicle.owner_id != data.get('customer').id:
             raise serializers.ValidationError({'vehicle': 'Vehicle does not belong to this customer'})
         
-        # Prevent multiple subscriptions for same vehicle (regardless of status)
+        # Prevent overlapping live/pending subscriptions for the same vehicle.
         if vehicle:
             overlaps = Subscription.objects.filter(
-                vehicle=vehicle
+                vehicle=vehicle,
+                status__in=['pending', 'active', 'suspended'],
             )
             if self.instance:
                 overlaps = overlaps.exclude(pk=self.instance.pk)
@@ -351,4 +352,3 @@ class SubscriptionUsageCreateSerializer(serializers.ModelSerializer):
             })
         
         return data
-

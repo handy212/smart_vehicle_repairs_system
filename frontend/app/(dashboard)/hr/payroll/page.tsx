@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
     Banknote, Plus, Filter, ArrowRight, CheckCircle2, Play, CreditCard,
-    Pencil, Trash2, MoreHorizontal,
+    Pencil, Trash2, MoreVertical, RotateCcw,
 } from "lucide-react";
-import { useEffect } from "react";
 import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import Link from "next/link";
@@ -38,6 +37,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { TaxRulesDialog } from "./TaxRulesDialog";
 import { Calculator } from "lucide-react";
 
+type ApiError = {
+    response?: {
+        data?: {
+            detail?: string;
+            error?: string;
+            message?: string;
+            non_field_errors?: string[];
+        } | Record<string, unknown>;
+    };
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+    const data = (error as ApiError)?.response?.data;
+    if (!data) return fallback;
+    if ("detail" in data && typeof data.detail === "string") return data.detail;
+    if ("error" in data && typeof data.error === "string") return data.error;
+    if ("message" in data && typeof data.message === "string") return data.message;
+    if ("non_field_errors" in data && Array.isArray(data.non_field_errors)) return data.non_field_errors.join(" ");
+    const firstValue = Object.values(data)[0];
+    if (Array.isArray(firstValue)) return String(firstValue[0]);
+    if (typeof firstValue === "string") return firstValue;
+    return fallback;
+}
+
 export default function PayrollPage() {
     return (
         <PermissionGuard permission="view_payroll">
@@ -55,6 +78,8 @@ function PayrollContent() {
     const [showTaxRules, setShowTaxRules] = useState(false);
     const [editingPeriod, setEditingPeriod] = useState<PayrollPeriod | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [paymentPeriod, setPaymentPeriod] = useState<PayrollPeriod | null>(null);
+    const [reversingPeriod, setReversingPeriod] = useState<PayrollPeriod | null>(null);
 
     const { data, isLoading } = useQuery({
         queryKey: ["hr", "payroll-periods", statusFilter],
@@ -70,7 +95,7 @@ function PayrollContent() {
             toast.success("Payroll processing started");
             queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
         },
-        onError: () => toast.error("Failed to process payroll"),
+        onError: (error) => toast.error(getErrorMessage(error, "Failed to process payroll")),
     });
 
     const approveMutation = useMutation({
@@ -79,16 +104,28 @@ function PayrollContent() {
             toast.success("Payroll approved");
             queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
         },
-        onError: () => toast.error("Failed to approve payroll"),
+        onError: (error) => toast.error(getErrorMessage(error, "Failed to approve payroll")),
     });
 
     const markPaidMutation = useMutation({
-        mutationFn: (id: number) => hrApi.payrollPeriods.markPaid(id),
+        mutationFn: ({ id, data }: { id: number; data: { payment_date?: string; payment_reference?: string; payment_batch_reference?: string } }) =>
+            hrApi.payrollPeriods.markPaid(id, data),
         onSuccess: () => {
             toast.success("Payroll marked as paid");
             queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
+            setPaymentPeriod(null);
         },
-        onError: () => toast.error("Failed to mark payroll as paid"),
+        onError: (error) => toast.error(getErrorMessage(error, "Failed to mark payroll as paid")),
+    });
+
+    const reverseMutation = useMutation({
+        mutationFn: ({ id, reason }: { id: number; reason: string }) => hrApi.payrollPeriods.reverse(id, { reason }),
+        onSuccess: () => {
+            toast.success("Payroll reversed");
+            queryClient.invalidateQueries({ queryKey: ["hr", "payroll-periods"] });
+            setReversingPeriod(null);
+        },
+        onError: (error) => toast.error(getErrorMessage(error, "Failed to reverse payroll")),
     });
 
     const getStatusConfig = (status: string) => {
@@ -97,6 +134,7 @@ function PayrollContent() {
             case "processing": return { color: "bg-info/10 text-blue-700 border-info/20 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800", label: "Processing" };
             case "approved": return { color: "bg-warning/10 text-amber-700 border-warning/20 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800", label: "Approved" };
             case "paid": return { color: "bg-success/10 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800", label: "Paid" };
+            case "reversed": return { color: "bg-destructive/10 text-destructive border-destructive/20", label: "Reversed" };
             default: return { color: "", label: status };
         }
     };
@@ -195,6 +233,7 @@ function PayrollContent() {
                                 <DropdownMenuItem onClick={() => setStatusFilter("processing")}>Processing</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setStatusFilter("approved")}>Approved</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setStatusFilter("paid")}>Paid</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setStatusFilter("reversed")}>Reversed</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -252,54 +291,45 @@ function PayrollContent() {
                                                 <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 border shadow-none", cfg.color)}>
                                                     {cfg.label}
                                                 </Badge>
+                                                {period.payment_batch_reference && (
+                                                    <div className="mt-1 text-[10px] text-muted-foreground">{period.payment_batch_reference}</div>
+                                                )}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                                                 <PermissionGuard permission="process_payroll">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        {period.status === "draft" && (
-                                                            <Button
-                                                                variant="ghost" size="sm"
-                                                                className="h-7 px-2 text-primary hover:text-blue-700 hover:bg-info/10"
-                                                                onClick={() => processMutation.mutate(period.id)}
-                                                                disabled={processMutation.isPending}
-                                                            >
-                                                                <Play className="h-3.5 w-3.5 mr-1" />
-                                                                Process
-                                                            </Button>
-                                                        )}
-                                                        {period.status === "processing" && (
-                                                            <Button
-                                                                variant="ghost" size="sm"
-                                                                className="h-7 px-2 text-warning hover:text-amber-700 hover:bg-warning/10"
-                                                                onClick={() => approveMutation.mutate(period.id)}
-                                                                disabled={approveMutation.isPending}
-                                                            >
-                                                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                                                Approve
-                                                            </Button>
-                                                        )}
-                                                        {period.status === "approved" && (
-                                                            <Button
-                                                                variant="ghost" size="sm"
-                                                                className="h-7 px-2 text-success hover:text-green-700 hover:bg-success/10"
-                                                                onClick={() => markPaidMutation.mutate(period.id)}
-                                                                disabled={markPaidMutation.isPending}
-                                                            >
-                                                                <CreditCard className="h-3.5 w-3.5 mr-1" />
-                                                                Mark Paid
-                                                            </Button>
-                                                        )}
                                                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => router.push(`/hr/payroll/${period.id}`)}>
                                                             <ArrowRight className="h-4 w-4" />
                                                         </Button>
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreVertical className="h-4 w-4" /></Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => setEditingPeriod(period)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                                                                {period.status === "draft" && (
+                                                                    <DropdownMenuItem disabled={processMutation.isPending} onClick={() => processMutation.mutate(period.id)}>
+                                                                        <Play className="h-4 w-4 mr-2" />Process
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {period.status === "processing" && (
+                                                                    <DropdownMenuItem disabled={approveMutation.isPending} onClick={() => approveMutation.mutate(period.id)}>
+                                                                        <CheckCircle2 className="h-4 w-4 mr-2" />Approve
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {period.status === "approved" && (
+                                                                    <DropdownMenuItem onClick={() => setPaymentPeriod(period)}>
+                                                                        <CreditCard className="h-4 w-4 mr-2" />Mark Paid
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {period.status === "paid" && (
+                                                                    <DropdownMenuItem className="text-destructive" onClick={() => setReversingPeriod(period)}>
+                                                                        <RotateCcw className="h-4 w-4 mr-2" />Reverse
+                                                                    </DropdownMenuItem>
+                                                                )}
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingId(period.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
+                                                                <DropdownMenuItem disabled={period.status !== "draft"} onClick={() => setEditingPeriod(period)}><Pencil className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem disabled={period.status !== "draft"} className="text-destructive" onClick={() => setDeletingId(period.id)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </div>
@@ -325,6 +355,7 @@ function PayrollContent() {
             </Card>
 
             <EditPeriodDialog
+                key={editingPeriod?.id ?? "none"}
                 period={editingPeriod}
                 open={!!editingPeriod}
                 onOpenChange={(o) => !o && setEditingPeriod(null)}
@@ -339,24 +370,31 @@ function PayrollContent() {
             />
 
             <TaxRulesDialog open={showTaxRules} onOpenChange={setShowTaxRules} />
+            <MarkPaidDialog
+                key={paymentPeriod?.id ?? "payment-none"}
+                period={paymentPeriod}
+                open={!!paymentPeriod}
+                onOpenChange={(open) => !open && setPaymentPeriod(null)}
+                onSubmit={(data) => paymentPeriod && markPaidMutation.mutate({ id: paymentPeriod.id, data })}
+                isPending={markPaidMutation.isPending}
+            />
+            <ReversePayrollDialog
+                key={reversingPeriod?.id ?? "reverse-none"}
+                period={reversingPeriod}
+                open={!!reversingPeriod}
+                onOpenChange={(open) => !open && setReversingPeriod(null)}
+                onSubmit={(reason) => reversingPeriod && reverseMutation.mutate({ id: reversingPeriod.id, reason })}
+                isPending={reverseMutation.isPending}
+            />
         </div>
     );
 }
 
 function EditPeriodDialog({ period, open, onOpenChange, onUpdated }: { period: PayrollPeriod | null, open: boolean, onOpenChange: (o: boolean) => void, onUpdated: () => void }) {
-    const [name, setName] = useState("");
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [notes, setNotes] = useState("");
-
-    useEffect(() => {
-        if (period) {
-            setName(period.name);
-            setStartDate(period.start_date);
-            setEndDate(period.end_date);
-            setNotes(period.notes || "");
-        }
-    }, [period]);
+    const [name, setName] = useState(period?.name || "");
+    const [startDate, setStartDate] = useState(period?.start_date || "");
+    const [endDate, setEndDate] = useState(period?.end_date || "");
+    const [notes, setNotes] = useState(period?.notes || "");
 
     const mut = useMutation({
         mutationFn: (data: Partial<PayrollPeriod>) => hrApi.payrollPeriods.update(period!.id, data),
@@ -399,6 +437,119 @@ function DeleteConfirmDialog({ open, onOpenChange, id, onDeleted }: { open: bool
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button variant="destructive" onClick={() => mut.mutate()} disabled={mut.isPending}>Delete</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function MarkPaidDialog({
+    period,
+    open,
+    onOpenChange,
+    onSubmit,
+    isPending,
+}: {
+    period: PayrollPeriod | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSubmit: (data: { payment_date?: string; payment_reference?: string; payment_batch_reference?: string }) => void;
+    isPending: boolean;
+}) {
+    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+    const [paymentReference, setPaymentReference] = useState("");
+    const [batchReference, setBatchReference] = useState("");
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Mark Payroll Paid</DialogTitle>
+                    <DialogDescription>
+                        Record the payment batch for {period?.name}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                    <div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/30 p-3 text-xs">
+                        <div>
+                            <p className="text-muted-foreground">Payslips</p>
+                            <p className="font-semibold">{period?.total_payslips ?? 0}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-muted-foreground">Net Pay</p>
+                            <p className="font-semibold">{parseFloat(period?.total_net_pay || "0").toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        </div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="payment-date">Payment Date</Label>
+                        <Input id="payment-date" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="payment-reference">Payment Reference</Label>
+                        <Input id="payment-reference" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="Bank transfer reference" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="batch-reference">Batch Reference</Label>
+                        <Input id="batch-reference" value={batchReference} onChange={(e) => setBatchReference(e.target.value)} placeholder="Payroll batch/file reference" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button
+                        onClick={() => onSubmit({
+                            payment_date: paymentDate,
+                            payment_reference: paymentReference,
+                            payment_batch_reference: batchReference || paymentReference,
+                        })}
+                        disabled={!paymentDate || isPending}
+                    >
+                        {isPending ? "Posting..." : "Mark Paid"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function ReversePayrollDialog({
+    period,
+    open,
+    onOpenChange,
+    onSubmit,
+    isPending,
+}: {
+    period: PayrollPeriod | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSubmit: (reason: string) => void;
+    isPending: boolean;
+}) {
+    const [reason, setReason] = useState("");
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Reverse Payroll</DialogTitle>
+                    <DialogDescription>
+                        Reverse {period?.name} and create the accounting reversal entry.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 py-2">
+                    <Label htmlFor="reversal-reason">Reason</Label>
+                    <Textarea
+                        id="reversal-reason"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        rows={3}
+                        placeholder="Reason for reversal"
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button variant="destructive" onClick={() => onSubmit(reason)} disabled={!reason.trim() || isPending}>
+                        {isPending ? "Reversing..." : "Reverse Payroll"}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

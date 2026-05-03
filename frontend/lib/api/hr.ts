@@ -188,36 +188,48 @@ export interface PayrollPeriod {
     name: string;
     start_date: string;
     end_date: string;
-    status: "draft" | "processing" | "approved" | "paid";
+    status: "draft" | "processing" | "approved" | "paid" | "reversed";
     branch: number;
     branch_name: string;
     created_by: number | null;
     created_by_name: string | null;
     approved_by: number | null;
     approved_at: string | null;
+    paid_by: number | null;
+    paid_at: string | null;
+    payment_batch_reference: string;
+    reversed_by: number | null;
+    reversed_at: string | null;
+    reversal_reason: string;
     notes: string;
     total_payslips: number;
     total_net_pay: string;
+    journal_entry_id: number | null;
     created_at: string;
     updated_at: string;
 }
 
 export interface PaySlip {
     id: number;
+    payslip_number: string | null;
     payroll_period: number;
     period_name: string;
     staff: number;
     staff_name: string;
     basic_salary: string;
     overtime_pay: string;
+    unpaid_leave_deduction: string;
+    absence_deduction: string;
+    proration_factor: string;
     allowances: Record<string, string>;
     deductions: Record<string, string>;
     gross_pay: string;
     tax_amount: string;
     net_pay: string;
-    status: "draft" | "approved" | "paid";
+    status: "draft" | "approved" | "paid" | "reversed";
     payment_date: string | null;
     payment_reference: string;
+    is_locked: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -258,6 +270,19 @@ export interface TaxRule {
 }
 
 export type EmployeeProfile = StaffProfile;
+
+export interface PayrollAuditLog {
+    id: number;
+    action: string;
+    employee: number | null;
+    employee_name: string | null;
+    payroll_period: number | null;
+    payslip: number | null;
+    performed_by: number | null;
+    performed_by_name: string | null;
+    changes: Record<string, unknown>;
+    created_at: string;
+}
 
 export interface JobOpening {
     id: number;
@@ -608,8 +633,10 @@ export const hrApi = {
             apiClient.post(`${BASE}/payroll-periods/${id}/process/`),
         approve: (id: number) =>
             apiClient.post<PayrollPeriod>(`${BASE}/payroll-periods/${id}/approve/`),
-        markPaid: (id: number, data?: { payment_date?: string; payment_reference?: string }) =>
+        markPaid: (id: number, data?: { payment_date?: string; payment_reference?: string; payment_batch_reference?: string }) =>
             apiClient.post<PayrollPeriod>(`${BASE}/payroll-periods/${id}/mark_paid/`, data),
+        reverse: (id: number, data: { reason: string }) =>
+            apiClient.post<PayrollPeriod>(`${BASE}/payroll-periods/${id}/reverse/`, data),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/payroll-periods/${id}/`),
     },
@@ -623,7 +650,7 @@ export const hrApi = {
             apiClient.get<PaySlip[]>(`${BASE}/payslips/my_payslips/`),
         downloadPdf: (id: number) =>
             apiClient.get(`${BASE}/payslips/${id}/download_pdf/`, { responseType: 'blob' }),
-        update: (id: number, data: Partial<PaySlip>) =>
+        update: (id: number, data: Partial<Omit<PaySlip, "allowances" | "deductions">> & { allowances?: unknown; deductions?: unknown }) =>
             apiClient.patch<PaySlip>(`${BASE}/payslips/${id}/`, data),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/payslips/${id}/`),
@@ -666,6 +693,11 @@ export const hrApi = {
             apiClient.patch<TaxRule>(`${BASE}/tax-rules/${id}/`, data),
         delete: (id: number) =>
             apiClient.delete(`${BASE}/tax-rules/${id}/`),
+    },
+
+    payrollAuditLogs: {
+        list: (params?: { action?: string; employee?: number; payroll_period?: number; payslip?: number; page?: number }) =>
+            apiClient.get<PaginatedResponse<PayrollAuditLog>>(`${BASE}/payroll-audit-logs/`, { params }),
     },
 
     // ------- Recruitment -------

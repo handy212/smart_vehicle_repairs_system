@@ -7,15 +7,19 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from django.utils.dateparse import parse_date
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q, Count, Sum
+from django.db import transaction
 from decimal import Decimal
 
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.models import User
 from .models import (
     Department, Position, EmployeeProfile,
     LeaveType, LeaveBalance, LeaveRequest,
     AttendancePolicy, Attendance,
-    SalaryComponent, EmployeeSalaryComponent, PayrollPeriod, PaySlip,
+    SalaryComponent, EmployeeSalaryComponent, PayrollPeriod, PaySlip, PayrollAuditLog,
     JobOpening, Applicant, Interview,
     PerformanceReview, TrainingProgram, EmployeeTraining, ComplianceDocument,
     TaxRule,
@@ -26,6 +30,7 @@ from .serializers import (
     LeaveTypeSerializer, LeaveBalanceSerializer, LeaveRequestSerializer,
     AttendancePolicySerializer, AttendanceSerializer,
     SalaryComponentSerializer, EmployeeSalaryComponentSerializer, PayrollPeriodSerializer, PaySlipSerializer,
+    PayrollAuditLogSerializer,
     JobOpeningSerializer, ApplicantSerializer, InterviewSerializer,
     PerformanceReviewSerializer, TrainingProgramSerializer,
     EmployeeTrainingSerializer, ComplianceDocumentSerializer, TaxRuleSerializer,
@@ -37,7 +42,7 @@ def filter_queryset_for_user_branches(queryset, user, branch_field='branch'):
     Filter queryset based on user's accessible branches.
     Mirrors the pattern used in technicians/views.py.
     """
-    if user.role == 'admin':
+    if user.role in ['admin', 'super-admin']:
         return queryset
     accessible_branches = user.get_accessible_branches()
     return queryset.filter(**{f'{branch_field}__in': accessible_branches})
@@ -401,13 +406,12 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 {'detail': 'Only pending requests can be approved.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        leave_request.status = 'approved'
-        leave_request.reviewed_by = request.user
-        leave_request.reviewed_at = timezone.now()
-        leave_request.reviewer_notes = request.data.get('notes', '')
-        leave_request.save()
+        if leave_request.employee.user_id == request.user.id:
+            return Response(
+                {'detail': 'You cannot approve your own leave request.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # Update leave balance
         year = leave_request.start_date.year
         balance, _created = LeaveBalance.objects.get_or_create(
             employee=leave_request.employee,
@@ -415,6 +419,19 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             year=year,
             defaults={'total_days': leave_request.leave_type.days_allowed},
         )
+        if balance.remaining_days < leave_request.days_count:
+            return Response(
+                {'detail': f'Insufficient leave balance. Remaining: {balance.remaining_days} day(s).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        leave_request.status = 'approved'
+        leave_request.reviewed_by = request.user
+        leave_request.reviewed_at = timezone.now()
+        leave_request.reviewer_notes = request.data.get('notes', '')
+        leave_request.save()
+
+        # Update leave balance
         balance.used_days += leave_request.days_count
         balance.save()
 
@@ -442,6 +459,13 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     def cancel(self, request, pk=None):
         """Cancel a leave request (by the employee)"""
         leave_request = self.get_object()
+        from apps.accounts.permissions import user_has_permission
+        can_manage = user_has_permission(request.user, 'manage_leave') or user_has_permission(request.user, 'approve_leave')
+        if leave_request.employee.user_id != request.user.id and not can_manage:
+            return Response(
+                {'detail': 'You can only cancel your own leave request.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if leave_request.status not in ('pending', 'approved'):
             return Response(
                 {'detail': 'This request cannot be cancelled.'},
@@ -456,7 +480,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                     leave_type=leave_request.leave_type,
                     year=year,
                 )
-                balance.used_days -= leave_request.days_count
+                balance.used_days = max(Decimal('0.0'), balance.used_days - leave_request.days_count)
                 balance.save()
             except LeaveBalance.DoesNotExist:
                 pass
@@ -735,6 +759,63 @@ class EmployeeSalaryComponentViewSet(viewsets.ModelViewSet):
     filterset_fields = ['employee', 'component', 'is_active']
     search_fields = ['employee__user__first_name', 'employee__user__last_name', 'component__name']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return filter_queryset_for_user_branches(
+            qs, self.request.user, branch_field='employee__user__branch',
+        )
+
+    def perform_create(self, serializer):
+        component = serializer.save()
+        PayrollAuditLog.objects.create(
+            action='salary_component_created',
+            employee=component.employee,
+            performed_by=self.request.user,
+            changes={
+                'component_id': component.component_id,
+                'amount': str(component.amount),
+                'is_active': component.is_active,
+            },
+        )
+
+    def perform_update(self, serializer):
+        before = None
+        if serializer.instance:
+            before = {
+                'component_id': serializer.instance.component_id,
+                'amount': str(serializer.instance.amount),
+                'is_active': serializer.instance.is_active,
+            }
+        component = serializer.save()
+        PayrollAuditLog.objects.create(
+            action='salary_component_updated',
+            employee=component.employee,
+            performed_by=self.request.user,
+            changes={
+                'before': before,
+                'after': {
+                    'component_id': component.component_id,
+                    'amount': str(component.amount),
+                    'is_active': component.is_active,
+                },
+            },
+        )
+
+    def perform_destroy(self, instance):
+        employee = instance.employee
+        changes = {
+            'component_id': instance.component_id,
+            'amount': str(instance.amount),
+            'is_active': instance.is_active,
+        }
+        instance.delete()
+        PayrollAuditLog.objects.create(
+            action='salary_component_deleted',
+            employee=employee,
+            performed_by=self.request.user,
+            changes=changes,
+        )
+
 
 class TaxRuleViewSet(viewsets.ModelViewSet):
     queryset = TaxRule.objects.all().order_by('min_income')
@@ -748,6 +829,32 @@ class TaxRuleViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
+
+
+class PayrollAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PayrollAuditLogSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['action', 'employee', 'payroll_period', 'payslip']
+    ordering = ['-created_at']
+
+    def get_permissions(self):
+        return [
+            IsAuthenticated(),
+            IsModuleEnabled('hr')(),
+            HasPermission('view_payroll')(),
+        ]
+
+    def get_queryset(self):
+        qs = PayrollAuditLog.objects.select_related(
+            'employee__user', 'payroll_period__branch', 'payslip', 'performed_by',
+        )
+        if self.request.user.role in ['admin', 'super-admin']:
+            return qs
+        accessible_branches = self.request.user.get_accessible_branches()
+        return qs.filter(
+            Q(payroll_period__branch__in=accessible_branches)
+            | Q(employee__user__branch__in=accessible_branches)
+        )
 
 
 class PayrollPeriodViewSet(viewsets.ModelViewSet):
@@ -791,12 +898,29 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
             user__branch=period.branch,
             employment_status__in=['active', 'probation'],
         )
+        if not employees.exists():
+            return Response(
+                {'detail': 'No active or probation employees found for this payroll period branch.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        from .services import PayrollService
-        payslips_created = PayrollService.process_period(period, employees)
+        with transaction.atomic():
+            from .services import PayrollService
+            payslips_created = PayrollService.process_period(period, employees)
+            if payslips_created == 0:
+                return Response(
+                    {'detail': 'No payslips were generated. This period may already have payslips.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        period.status = 'processing'
-        period.save()
+            period.status = 'processing'
+            period.save(update_fields=['status', 'updated_at'])
+            PayrollAuditLog.objects.create(
+                action='period_processed',
+                payroll_period=period,
+                performed_by=request.user,
+                changes={'payslips_created': payslips_created},
+            )
 
         return Response({
             'detail': f'{payslips_created} payslips generated.',
@@ -812,13 +936,25 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
                 {'detail': 'Only processing periods can be approved.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        period.status = 'approved'
-        period.approved_by = request.user
-        period.approved_at = timezone.now()
-        period.save()
+        if period.created_by_id == request.user.id and request.user.role not in ['admin', 'super-admin']:
+            return Response(
+                {'detail': 'Payroll must be approved by a different authorized user.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # Approve all payslips
-        period.payslips.update(status='approved')
+        with transaction.atomic():
+            period.status = 'approved'
+            period.approved_by = request.user
+            period.approved_at = timezone.now()
+            period.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+
+            period.payslips.update(status='approved', is_locked=True)
+            PayrollAuditLog.objects.create(
+                action='period_approved',
+                payroll_period=period,
+                performed_by=request.user,
+                changes={'payslips_locked': period.payslips.count()},
+            )
 
         serializer = self.get_serializer(period)
         return Response(serializer.data)
@@ -832,37 +968,118 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
                 {'detail': 'Only approved periods can be marked as paid.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if not period.payslips.exists():
+            return Response(
+                {'detail': 'Cannot mark payroll as paid without payslips.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         payment_date = request.data.get('payment_date', timezone.now().date())
         payment_reference = request.data.get('payment_reference', '')
+        payment_batch_reference = request.data.get('payment_batch_reference', payment_reference)
 
-        period.status = 'paid'
-        period.save()
-
-        period.payslips.update(
-            status='paid',
-            payment_date=payment_date,
-            payment_reference=payment_reference,
-        )
-
-        # Post journal entry to accounting GL
         try:
-            from apps.accounting.services import AccountingService
-            je = AccountingService.post_payroll(period)
-            if je:
-                journal_entry_id = je.id
-            else:
-                journal_entry_id = None
-        except Exception as e:
-            # Log the error but don't block payroll
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to post payroll journal entry for period {period.id}: {e}", exc_info=True)
-            journal_entry_id = None
+            with transaction.atomic():
+                period.status = 'paid'
+                period.paid_by = request.user
+                period.paid_at = timezone.now()
+                period.payment_batch_reference = payment_batch_reference or ''
+                period.save(update_fields=[
+                    'status', 'paid_by', 'paid_at', 'payment_batch_reference', 'updated_at',
+                ])
+
+                period.payslips.update(
+                    status='paid',
+                    payment_date=payment_date,
+                    payment_reference=payment_reference,
+                    is_locked=True,
+                )
+                PayrollAuditLog.objects.create(
+                    action='period_paid',
+                    payroll_period=period,
+                    performed_by=request.user,
+                    changes={
+                        'payment_date': str(payment_date),
+                        'payment_reference': payment_reference,
+                        'payment_batch_reference': period.payment_batch_reference,
+                    },
+                )
+        except DjangoValidationError as exc:
+            return Response({'detail': exc.messages[0] if hasattr(exc, 'messages') else str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounting.models import JournalEntry
+        period_type = ContentType.objects.get_for_model(period)
+        journal_entry_id = JournalEntry.objects.filter(
+            content_type=period_type,
+            object_id=period.id,
+        ).values_list('id', flat=True).first()
 
         serializer = self.get_serializer(period)
         data = serializer.data
         data['journal_entry_id'] = journal_entry_id
         return Response(data)
+
+    @action(detail=True, methods=['post'])
+    def reverse(self, request, pk=None):
+        """Reverse a paid payroll period and its accounting journal."""
+        period = self.get_object()
+        if period.status != 'paid':
+            return Response(
+                {'detail': 'Only paid payroll periods can be reversed.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return Response(
+                {'detail': 'A reversal reason is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounting.models import JournalEntry
+        from apps.accounting.services import AccountingService
+
+        period_type = ContentType.objects.get_for_model(period)
+        journal_entry = JournalEntry.objects.filter(
+            content_type=period_type,
+            object_id=period.id,
+            posted=True,
+        ).first()
+
+        try:
+            with transaction.atomic():
+                reversal_id = None
+                if journal_entry:
+                    reversal = AccountingService.reverse_journal_entry(
+                        journal_entry,
+                        request.user,
+                        reason=reason,
+                    )
+                    reversal_id = reversal.id
+
+                period.status = 'reversed'
+                period.reversed_by = request.user
+                period.reversed_at = timezone.now()
+                period.reversal_reason = reason
+                period.save(update_fields=[
+                    'status', 'reversed_by', 'reversed_at', 'reversal_reason', 'updated_at',
+                ])
+                period.payslips.update(status='reversed', is_locked=True)
+                PayrollAuditLog.objects.create(
+                    action='period_reversed',
+                    payroll_period=period,
+                    performed_by=request.user,
+                    changes={
+                        'reason': reason,
+                        'journal_entry_id': journal_entry.id if journal_entry else None,
+                        'reversal_journal_entry_id': reversal_id,
+                    },
+                )
+        except DjangoValidationError as exc:
+            return Response({'detail': exc.messages[0] if hasattr(exc, 'messages') else str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(period)
+        return Response(serializer.data)
 
 
 class PaySlipViewSet(viewsets.ModelViewSet):
@@ -888,6 +1105,37 @@ class PaySlipViewSet(viewsets.ModelViewSet):
             qs, self.request.user, branch_field='payroll_period__branch',
         )
 
+    def perform_update(self, serializer):
+        before = None
+        if serializer.instance:
+            before = {
+                'basic_salary': str(serializer.instance.basic_salary),
+                'overtime_pay': str(serializer.instance.overtime_pay),
+                'allowances': serializer.instance.allowances,
+                'deductions': serializer.instance.deductions,
+                'tax_amount': str(serializer.instance.tax_amount),
+                'status': serializer.instance.status,
+            }
+        payslip = serializer.save()
+        PayrollAuditLog.objects.create(
+            action='payslip_updated',
+            employee=payslip.employee,
+            payroll_period=payslip.payroll_period,
+            payslip=payslip,
+            performed_by=self.request.user,
+            changes={
+                'before': before,
+                'after': {
+                    'basic_salary': str(payslip.basic_salary),
+                    'overtime_pay': str(payslip.overtime_pay),
+                    'allowances': payslip.allowances,
+                    'deductions': payslip.deductions,
+                    'tax_amount': str(payslip.tax_amount),
+                    'status': payslip.status,
+                },
+            },
+        )
+
     @action(detail=False, methods=['get'])
     def my_payslips(self, request):
         """Get current user's payslips"""
@@ -909,7 +1157,8 @@ class PaySlipViewSet(viewsets.ModelViewSet):
         """Download payslip as PDF"""
         payslip = self.get_object()
         # Ensure user can only download their own payslip unless they have manage_payroll permission
-        if not request.user.has_perm('hr.manage_payroll') and payslip.employee.user != request.user:
+        from apps.accounts.permissions import user_has_permission
+        if not user_has_permission(request.user, 'manage_payroll') and payslip.employee.user != request.user:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         from apps.core.services.print_service import generate_payslip_pdf
@@ -1009,7 +1258,7 @@ class ApplicantViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def hire(self, request, pk=None):
-        """Hire an applicant — creates an EmployeeProfile"""
+        """Hire an applicant and create an employee profile."""
         applicant = self.get_object()
         if applicant.status == 'hired':
             return Response(
@@ -1017,14 +1266,73 @@ class ApplicantViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        applicant.status = 'hired'
-        applicant.save()
+        password = request.data.get('password')
+        if not password:
+            return Response(
+                {'password': 'Temporary password is required to onboard the applicant.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if EmployeeProfile.objects.filter(user__email__iexact=applicant.email).exists():
+            return Response(
+                {'email': 'An employee profile already exists for this applicant email.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        role = request.data.get('role') or 'technician'
+        employment_type = request.data.get('employment_type') or applicant.job_opening.employment_type
+        salary_type = request.data.get('salary_type') or 'monthly'
+        try:
+            base_salary = Decimal(str(request.data.get('base_salary') or '0.00'))
+        except Exception:
+            return Response(
+                {'base_salary': 'Enter a valid salary amount.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        start_date_value = request.data.get('start_date')
+        start_date = parse_date(start_date_value) if start_date_value else timezone.now().date()
+        if start_date_value and not start_date:
+            return Response(
+                {'start_date': 'Enter a valid date in YYYY-MM-DD format.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        department = applicant.job_opening.department
+        position = applicant.job_opening.position
+        branch = applicant.job_opening.branch
+
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=applicant.email,
+                email=applicant.email,
+                password=password,
+                first_name=applicant.first_name,
+                last_name=applicant.last_name,
+                phone=applicant.phone,
+                role=role,
+                branch=branch,
+            )
+
+            profile = user.employee_profile
+            profile.department = department
+            profile.position = position
+            profile.employment_type = employment_type
+            profile.employment_status = request.data.get('employment_status') or 'probation'
+            profile.salary_type = salary_type
+            profile.base_salary = base_salary
+            profile.start_date = start_date
+            profile.notes = f"Hired from applicant #{applicant.id} for {applicant.job_opening.title}"
+            profile.save()
+
+            applicant.status = 'hired'
+            applicant.save(update_fields=['status', 'updated_at'])
 
         serializer = self.get_serializer(applicant)
+        profile_serializer = EmployeeProfileSerializer(profile, context={'request': request})
         return Response({
-            'detail': 'Applicant marked as hired. Create an employee profile to onboard.',
+            'detail': 'Applicant hired and employee profile created.',
             'applicant': serializer.data,
-        })
+            'employee': profile_serializer.data,
+        }, status=status.HTTP_201_CREATED)
 
 
 class InterviewViewSet(viewsets.ModelViewSet):
@@ -1119,7 +1427,11 @@ class TrainingProgramViewSet(viewsets.ModelViewSet):
     filterset_fields = ['department', 'is_mandatory', 'is_active']
 
     def get_queryset(self):
-        return TrainingProgram.objects.select_related('department')
+        qs = TrainingProgram.objects.select_related('department', 'department__branch')
+        if self.request.user.role in ['admin', 'super-admin']:
+            return qs
+        accessible_branches = self.request.user.get_accessible_branches()
+        return qs.filter(Q(department__branch__in=accessible_branches) | Q(department__isnull=True))
 
     @action(detail=True, methods=['post'])
     def enroll(self, request, pk=None):
@@ -1127,11 +1439,16 @@ class TrainingProgramViewSet(viewsets.ModelViewSet):
         program = self.get_object()
         employee_id = request.data.get('employee_id') or request.data.get('staff_id')
         try:
-            employee = EmployeeProfile.objects.get(id=employee_id)
+            employee = EmployeeProfile.objects.select_related('user__branch').get(id=employee_id)
         except EmployeeProfile.DoesNotExist:
             return Response(
                 {'detail': 'Staff member not found with the provided ID.'},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        if request.user.role not in ['admin', 'super-admin'] and employee.user.branch not in request.user.get_accessible_branches():
+            return Response(
+                {'detail': 'You cannot enroll staff outside your accessible branches.'},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         enrollment, created = EmployeeTraining.objects.get_or_create(
@@ -1180,7 +1497,7 @@ class EmployeeTrainingViewSet(viewsets.ModelViewSet):
 class ComplianceDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = ComplianceDocumentSerializer
     def get_permissions(self):
-        permission_classes = [IsAuthenticated]
+        permission_classes = [IsAuthenticated, IsModuleEnabled('hr')]
         if self.action in ['list', 'retrieve']:
             permission_classes.append(HasPermission('view_compliance'))
         else:

@@ -9,7 +9,8 @@ User = get_user_model()
 class TransferServiceTests(TestCase):
     def setUp(self):
         # Create User
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = User.objects.create_user(username='testuser', email='testuser@example.com', password='password')
+        self.approver = User.objects.create_user(username='approver', email='approver@example.com', password='password', role='manager')
         
         # Create Branches
         self.branch_a = Branch.objects.create(name='Branch A', code='BRA', address='123 Main St', created_by=self.user)
@@ -57,14 +58,14 @@ class TransferServiceTests(TestCase):
         self.assertEqual(transfer.items.first().quantity_requested, 10)
         
         # 2. Submit for Approval
-        InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.user)
+        InventoryService.submit_transfer_for_approval(transfer, approver=self.approver, user=self.user)
         self.assertEqual(transfer.status, 'pending_approval')
-        self.assertEqual(transfer.assigned_approver, self.user)
+        self.assertEqual(transfer.assigned_approver, self.approver)
         self.assertTrue(transfer.submitted_at is not None)
         
         # 3. Approve Transfer
         # Should reserve stock at Branch A
-        InventoryService.approve_transfer(transfer, user=self.user)
+        InventoryService.approve_transfer(transfer, user=self.approver)
         
         self.stock_a.refresh_from_db()
         self.assertEqual(self.stock_a.quantity_reserved, 10)
@@ -109,15 +110,15 @@ class TransferServiceTests(TestCase):
             user=self.user
         )
         
-        InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.user)
+        InventoryService.submit_transfer_for_approval(transfer, approver=self.approver, user=self.user)
         self.assertEqual(transfer.status, 'pending_approval')
         
         reason = 'Not needed right now'
-        InventoryService.reject_transfer(transfer, reason=reason, user=self.user)
+        InventoryService.reject_transfer(transfer, reason=reason, user=self.approver)
         
         self.assertEqual(transfer.status, 'rejected')
         self.assertEqual(transfer.rejection_reason, reason)
-        self.assertEqual(transfer.rejected_by, self.user)
+        self.assertEqual(transfer.rejected_by, self.approver)
         self.assertTrue(transfer.rejected_at is not None)
         
         # Verify no stock was reserved

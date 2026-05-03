@@ -9,9 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Loader2, Plus, Trash2, Save } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -29,13 +28,51 @@ interface ComponentItem {
     amount: number;
 }
 
+type PayslipUpdatePayload = Pick<
+    PaySlip,
+    "basic_salary" | "overtime_pay" | "unpaid_leave_deduction" | "absence_deduction"
+> & {
+    allowances: ComponentItem[];
+    deductions: ComponentItem[];
+};
+
+type ApiError = {
+    response?: {
+        data?: {
+            detail?: string;
+            error?: string;
+        };
+    };
+};
+
+const parseComponents = (data: unknown): ComponentItem[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) {
+        return data.map((item, index) => {
+            const record = item as { name?: unknown; amount?: unknown };
+            return {
+                name: String(record.name || `Item ${index + 1}`),
+                amount: parseFloat(String(record.amount || "0")),
+            };
+        });
+    }
+    if (typeof data === "object") {
+        return Object.entries(data as Record<string, unknown>).map(([key, val]) => ({
+            name: key,
+            amount: parseFloat(String(val || "0")),
+        }));
+    }
+    return [];
+};
+
 export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: EditPayslipDialogProps) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const queryClient = useQueryClient();
-    const [basicSalary, setBasicSalary] = useState<string>("");
-    const [overtimePay, setOvertimePay] = useState<string>("");
-    const [allowances, setAllowances] = useState<ComponentItem[]>([]);
-    const [deductions, setDeductions] = useState<ComponentItem[]>([]);
+    const [basicSalary, setBasicSalary] = useState<string>(payslip?.basic_salary || "");
+    const [overtimePay, setOvertimePay] = useState<string>(payslip?.overtime_pay || "0");
+    const [unpaidLeaveDeduction, setUnpaidLeaveDeduction] = useState<string>(payslip?.unpaid_leave_deduction || "0");
+    const [absenceDeduction, setAbsenceDeduction] = useState<string>(payslip?.absence_deduction || "0");
+    const [allowances, setAllowances] = useState<ComponentItem[]>(parseComponents(payslip?.allowances));
+    const [deductions, setDeductions] = useState<ComponentItem[]>(parseComponents(payslip?.deductions));
 
     // Tracks new items being added
     const [newAllowanceName, setNewAllowanceName] = useState("");
@@ -43,37 +80,20 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
     const [newDeductionName, setNewDeductionName] = useState("");
     const [newDeductionAmount, setNewDeductionAmount] = useState("");
 
-    useEffect(() => {
-        if (payslip) {
-            setBasicSalary(payslip.basic_salary);
-            setOvertimePay(payslip.overtime_pay || "0");
-
-            // Parse JSON fields safely
-
-            const parseComponents = (data: any): ComponentItem[] => {
-                if (!data) return [];
-
-                if (Array.isArray(data)) return data.map((item: any) => ({ name: item.name || "Item", amount: parseFloat(item.amount || "0") }));
-                if (typeof data === 'object') {
-                    return Object.entries(data).map(([key, val]) => ({ name: key, amount: parseFloat(val as string || "0") }));
-                }
-                return [];
-            };
-
-            setAllowances(parseComponents(payslip.allowances));
-            setDeductions(parseComponents(payslip.deductions));
-        }
-    }, [payslip]);
-
     const updateMut = useMutation({
 
-        mutationFn: (data: any) => hrApi.payslips.update(payslip!.id, data),
+        mutationFn: (data: PayslipUpdatePayload) => hrApi.payslips.update(payslip!.id, data),
         onSuccess: () => {
             toast.success("Payslip updated");
+            queryClient.invalidateQueries({ queryKey: ["hr", "payslips", payslip?.payroll_period] });
+            queryClient.invalidateQueries({ queryKey: ["hr", "payroll-period", payslip?.payroll_period] });
             onSaved();
             onOpenChange(false);
         },
-        onError: () => toast.error("Failed to update payslip"),
+        onError: (error: unknown) => {
+            const data = (error as ApiError)?.response?.data;
+            toast.error(data?.detail || data?.error || "Failed to update payslip");
+        },
     });
 
     const handleSave = () => {
@@ -91,6 +111,8 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
         updateMut.mutate({
             basic_salary: basicSalary,
             overtime_pay: overtimePay,
+            unpaid_leave_deduction: unpaidLeaveDeduction,
+            absence_deduction: absenceDeduction,
             allowances: formatForSave(allowances),
             deductions: formatForSave(deductions),
         });
@@ -121,19 +143,34 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
     };
 
     if (!payslip) return null;
+    if (payslip.is_locked) {
+        return (
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Locked Payslip</DialogTitle>
+                        <DialogDescription>
+                            This payslip belongs to an approved, paid, or reversed payroll period and cannot be edited.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Edit Payslip - {payslip.staff_name}</DialogTitle>
-                    <DialogDescription>
-                        Modify salary details. Totals will incur recalculation upon save.
-                    </DialogDescription>
+                    <DialogDescription>Modify draft payroll details before approval locks the payslip.</DialogDescription>
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 pr-4 -mr-4">
-                    <div className="space-y-6 py-4">
+                    <div className="space-y-5 py-4">
                         {/* Basic Pay */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -143,6 +180,16 @@ export function EditPayslipDialog({ payslip, open, onOpenChange, onSaved }: Edit
                             <div className="space-y-2">
                                 <Label>Overtime Pay</Label>
                                 <Input type="number" step="0.01" value={overtimePay} onChange={e => setOvertimePay(e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Unpaid Leave Deduction</Label>
+                                <Input type="number" step="0.01" value={unpaidLeaveDeduction} onChange={e => setUnpaidLeaveDeduction(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Absence Deduction</Label>
+                                <Input type="number" step="0.01" value={absenceDeduction} onChange={e => setAbsenceDeduction(e.target.value)} />
                             </div>
                         </div>
 

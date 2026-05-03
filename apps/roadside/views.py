@@ -263,6 +263,23 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             roadside_request.subscription_usage_record = None
             roadside_request.subscription_allowance_deducted = False
             roadside_request.save()
+
+    def _refund_subscription_allowance(self, request, roadside_request, reason):
+        if not roadside_request.subscription_allowance_deducted or not roadside_request.subscription_usage_record:
+            return
+
+        usage_record = roadside_request.subscription_usage_record
+        SubscriptionUsageService.refund_allowance(
+            subscription=usage_record.subscription,
+            usage_type=usage_record.usage_type,
+            quantity_to_refund=usage_record.quantity_used,
+            reference_type='roadside',
+            reference_id=roadside_request.id,
+            description=f"Refund: {reason} {roadside_request.request_number}",
+            created_by=request.user
+        )
+        roadside_request.subscription_allowance_deducted = False
+        roadside_request.save(update_fields=['subscription_allowance_deducted', 'updated_at'])
     
     @action(detail=True, methods=['post'])
     def assign_dispatch(self, request, pk=None):
@@ -275,6 +292,16 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 from apps.accounts.models import User
                 try:
                     technician = User.objects.get(id=technician_id)
+                    if not technician.is_technician:
+                        return Response(
+                            {'error': 'Assigned user must be a technician'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    if roadside_request.branch and not technician.has_branch_access(roadside_request.branch):
+                        return Response(
+                            {'error': 'Technician does not have access to this request branch'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
                     roadside_request.mark_dispatched(technician=technician)
                 except User.DoesNotExist:
                     return Response(
@@ -358,63 +385,19 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         roadside_request = self.get_object()
         
         try:
-            roadside_request.mark_completed()
+            with transaction.atomic():
+                roadside_request.mark_completed()
+                invoice_id = self._create_completion_invoice(request, roadside_request)
         except ValueError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Create invoice if service is not covered by subscription and has charge amount
-        invoice_id = None
-        if not roadside_request.is_covered_by_subscription and roadside_request.charge_amount and roadside_request.charge_amount > 0:
-            try:
-                from apps.billing.models import Invoice, InvoiceLineItem
-                from apps.branches.utils import resolve_branch
-                
-                branch = roadside_request.branch or resolve_branch(request)
-                if not branch:
-                    # Fallback to customer's branch or first active branch
-                    if hasattr(roadside_request.customer, 'branch') and roadside_request.customer.branch:
-                        branch = roadside_request.customer.branch
-                    else:
-                        from apps.branches.models import Branch
-                        branch = Branch.objects.filter(is_active=True).first()
-                
-                invoice = Invoice.objects.create(
-                    customer=roadside_request.customer,
-                    vehicle=roadside_request.vehicle,
-                    branch=branch,
-                    invoice_date=timezone.now().date(),
-                    due_date=timezone.now().date(),
-                    description=f"Roadside Assistance: {roadside_request.get_service_type_display()} - {roadside_request.request_number}",
-                    subtotal=roadside_request.charge_amount,
-                    total=roadside_request.charge_amount,
-                    amount_due=roadside_request.charge_amount,
-                    status='pending',
-                    created_by=request.user
-                )
-                
-                InvoiceLineItem.objects.create(
-                    invoice=invoice,
-                    item_type='service',
-                    description=f"{roadside_request.get_service_type_display()} - {roadside_request.request_number}",
-                    quantity=1,
-                    unit_price=roadside_request.charge_amount,
-                    total=roadside_request.charge_amount,
-                )
-                
-                invoice_id = invoice.id
-                
-                # Link invoice to roadside request
-                roadside_request.invoice = invoice
-                roadside_request.notes = f"{roadside_request.notes}\nInvoice: {invoice.invoice_number}" if roadside_request.notes else f"Invoice: {invoice.invoice_number}"
-                roadside_request.save()
-                
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Failed to create invoice for roadside request {roadside_request.id}: {e}", exc_info=True)
+        except DjangoValidationError as e:
+            return Response(
+                {'error': e.messages[0] if hasattr(e, 'messages') else str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Send notification
         try:
@@ -427,6 +410,54 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         if invoice_id:
             response_data['invoice_id'] = invoice_id
         return Response(response_data)
+
+    def _create_completion_invoice(self, request, roadside_request):
+        if roadside_request.invoice_id:
+            return roadside_request.invoice_id
+        if roadside_request.is_covered_by_subscription:
+            return None
+        if not roadside_request.charge_amount or roadside_request.charge_amount <= 0:
+            return None
+
+        from apps.billing.models import Invoice, InvoiceLineItem
+
+        branch = roadside_request.branch or resolve_branch(request)
+        if not branch:
+            if hasattr(roadside_request.customer, 'branch') and roadside_request.customer.branch:
+                branch = roadside_request.customer.branch
+            else:
+                from apps.branches.models import Branch
+                branch = Branch.objects.filter(is_active=True).first()
+        if not branch:
+            raise DjangoValidationError('A branch is required to invoice roadside service.')
+
+        invoice = Invoice.objects.create(
+            customer=roadside_request.customer,
+            vehicle=roadside_request.vehicle,
+            branch=branch,
+            invoice_date=timezone.now().date(),
+            due_date=timezone.now().date(),
+            description=f"Roadside Assistance: {roadside_request.get_service_type_display()} - {roadside_request.request_number}",
+            subtotal=roadside_request.charge_amount,
+            total=roadside_request.charge_amount,
+            amount_due=roadside_request.charge_amount,
+            status='pending',
+            created_by=request.user
+        )
+
+        InvoiceLineItem.objects.create(
+            invoice=invoice,
+            item_type='service',
+            description=f"{roadside_request.get_service_type_display()} - {roadside_request.request_number}",
+            quantity=1,
+            unit_price=roadside_request.charge_amount,
+            total=roadside_request.charge_amount,
+        )
+
+        roadside_request.invoice = invoice
+        roadside_request.notes = f"{roadside_request.notes}\nInvoice: {invoice.invoice_number}" if roadside_request.notes else f"Invoice: {invoice.invoice_number}"
+        roadside_request.save(update_fields=['invoice', 'notes', 'updated_at'])
+        return invoice.id
     
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -434,31 +465,18 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         roadside_request = self.get_object()
         
         try:
-            # Check for subscription refund before cancelling
-            if roadside_request.subscription_allowance_deducted and roadside_request.subscription_usage_record:
-                try:
-                    from apps.subscriptions.services import SubscriptionUsageService
-                    usage_record = roadside_request.subscription_usage_record
-                    
-                    SubscriptionUsageService.refund_allowance(
-                        subscription=usage_record.subscription,
-                        usage_type=usage_record.usage_type,
-                        quantity_to_refund=usage_record.quantity_used,
-                        reference_type='roadside',
-                        reference_id=roadside_request.id,
-                        description=f"Refund: Cancelled Request {roadside_request.request_number}",
-                        created_by=request.user
-                    )
-                    
-                    roadside_request.subscription_allowance_deducted = False
-                    roadside_request.save(update_fields=['subscription_allowance_deducted'])
-                except Exception as e:
-                    logger.error(f"Failed to refund allowance for cancelled request {roadside_request.id}: {e}")
-
-            roadside_request.mark_cancelled()
+            with transaction.atomic():
+                self._refund_subscription_allowance(request, roadside_request, 'Cancelled Request')
+                roadside_request.mark_cancelled()
         except ValueError as e:
             return Response(
                 {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Failed to cancel roadside request {roadside_request.id}: {e}", exc_info=True)
+            return Response(
+                {'error': 'Failed to cancel request safely.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -478,7 +496,9 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         reason = request.data.get('reason', '')
         try:
-            roadside_request.mark_failed(reason=reason)
+            with transaction.atomic():
+                self._refund_subscription_allowance(request, roadside_request, 'Failed Request')
+                roadside_request.mark_failed(reason=reason)
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -544,6 +564,11 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
 
         rating = request.data.get('rating')
         feedback = request.data.get('customer_feedback') or request.data.get('feedback')
+        if roadside_request.status != 'completed':
+            return Response(
+                {'error': 'Only completed roadside requests can be rated'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         if not rating:
             return Response(
@@ -691,4 +716,3 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         channel = request.query_params.get('channel', 'email')
         suggestion = AIService.get_suggested_message(roadside_request, channel=channel, context_type='roadside')
         return Response(suggestion)
-

@@ -16,8 +16,8 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
     service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     assigned_technician_name = serializers.SerializerMethodField()
-    is_active = serializers.BooleanField(read_only=True)
-    can_be_cancelled = serializers.BooleanField(read_only=True)
+    is_active = serializers.SerializerMethodField()
+    can_be_cancelled = serializers.SerializerMethodField()
     subscription_number = serializers.SerializerMethodField()
     invoice_number = serializers.SerializerMethodField()
     customer_email = serializers.ReadOnlyField(source='customer.user.email')
@@ -65,6 +65,12 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
         if obj.invoice:
             return obj.invoice.invoice_number
         return None
+
+    def get_is_active(self, obj):
+        return obj.is_active()
+
+    def get_can_be_cancelled(self, obj):
+        return obj.can_be_cancelled()
     
     class Meta:
         model = RoadsideRequest
@@ -81,14 +87,14 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
             'subscription_used', 'subscription_number', 'subscription_allowance_deducted',
             'is_covered_by_subscription', 'charge_amount',
             'invoice', 'invoice_number',
-            'notes', 'customer_feedback',
+            'notes', 'customer_feedback', 'rating',
             'requested_at', 'created_by', 'updated_at',
             'is_active', 'can_be_cancelled',
         ]
         read_only_fields = [
             'request_number', 'dispatched_at', 'arrived_at', 
             'completed_at', 'subscription_allowance_deducted',
-            'requested_at', 'updated_at',
+            'requested_at', 'updated_at', 'rating',
         ]
 
 
@@ -105,10 +111,27 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
             'notes',
         ]
         read_only_fields = ['id', 'request_number']
+        extra_kwargs = {
+            'customer': {'required': False},
+        }
     
     def validate(self, data):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
         customer = data.get('customer')
         vehicle = data.get('vehicle')
+
+        if user and getattr(user, 'role', None) == 'customer':
+            customer_profile = getattr(user, 'customer_profile', None)
+            if not customer_profile:
+                try:
+                    customer_profile = Customer.objects.get(user=user)
+                except Customer.DoesNotExist:
+                    customer_profile = None
+            if not customer_profile:
+                raise serializers.ValidationError({"customer": "Customer profile not found"})
+            data['customer'] = customer_profile
+            customer = customer_profile
         
         if not customer:
             raise serializers.ValidationError({"customer": "Customer is required"})
@@ -201,3 +224,21 @@ class RoadsideRequestUpdateSerializer(serializers.ModelSerializer):
             'notes', 'customer_feedback',
             'charge_amount',
         ]
+
+    def validate(self, data):
+        if data.get('charge_amount') is not None and data['charge_amount'] < 0:
+            raise serializers.ValidationError({'charge_amount': 'Charge amount cannot be negative'})
+
+        customer = getattr(self.instance, 'customer', None)
+        vehicle = getattr(self.instance, 'vehicle', None)
+        service_type = getattr(self.instance, 'service_type', None)
+
+        if vehicle and customer and vehicle.owner_id != customer.id:
+            raise serializers.ValidationError({'vehicle': 'Vehicle does not belong to this customer'})
+
+        if service_type == 'towing':
+            tow_distance = data.get('tow_distance_km', getattr(self.instance, 'tow_distance_km', None))
+            if not tow_distance or tow_distance <= 0:
+                raise serializers.ValidationError({'tow_distance_km': 'Tow distance is required and must be greater than 0 for towing service'})
+
+        return data

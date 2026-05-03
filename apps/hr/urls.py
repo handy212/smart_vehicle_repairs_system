@@ -8,7 +8,7 @@ from .views import (
     LeaveTypeViewSet, LeaveBalanceViewSet, LeaveRequestViewSet,
     AttendancePolicyViewSet, AttendanceViewSet,
     SalaryComponentViewSet, EmployeeSalaryComponentViewSet, TaxRuleViewSet,
-    PayrollPeriodViewSet, PaySlipViewSet,
+    PayrollPeriodViewSet, PaySlipViewSet, PayrollAuditLogViewSet,
     JobOpeningViewSet, ApplicantViewSet, InterviewViewSet,
     PerformanceReviewViewSet, TrainingProgramViewSet,
     EmployeeTrainingViewSet, ComplianceDocumentViewSet,
@@ -36,6 +36,7 @@ router.register(r'employee-salary-components', EmployeeSalaryComponentViewSet, b
 router.register(r'tax-rules', TaxRuleViewSet, basename='tax-rule')
 router.register(r'payroll-periods', PayrollPeriodViewSet, basename='payroll-period')
 router.register(r'payslips', PaySlipViewSet, basename='payslip')
+router.register(r'payroll-audit-logs', PayrollAuditLogViewSet, basename='payroll-audit-log')
 
 # Recruitment
 router.register(r'job-openings', JobOpeningViewSet, basename='job-opening')

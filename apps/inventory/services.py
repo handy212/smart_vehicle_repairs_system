@@ -96,6 +96,14 @@ class InventoryService:
         if not branch:
             raise ValueError("Branch is required for inventory transactions")
             
+        quantity = int(quantity)
+        if transaction_type in ['reserve', 'release', 'purchase', 'receive', 'transfer_in', 'transfer_out', 'sale', 'damage', 'loss', 'return', 'found'] and quantity <= 0:
+            raise ValueError("Quantity must be greater than 0")
+
+        inbound_types = {'receive', 'purchase', 'transfer_in', 'found'}
+        outbound_types = {'sale', 'transfer_out', 'damage', 'loss', 'return'}
+        signed_types = {'adjustment', 'correction', 'count'}
+
         with db_transaction.atomic():
             # Get or create stock item
             stock_item, created = StockItem.objects.get_or_create(
@@ -112,19 +120,37 @@ class InventoryService:
             
             old_balance = stock_item.quantity_in_stock
             
-            if transaction_type in ['adjustment', 'receive', 'purchase', 'transfer_in']:
+            transaction_quantity = quantity
+
+            if transaction_type in inbound_types:
                 stock_item.quantity_in_stock += quantity
-            elif transaction_type in ['sale', 'transfer_out']:
+                transaction_quantity = abs(quantity)
+            elif transaction_type in outbound_types:
+                quantity = abs(quantity)
+                if stock_item.quantity_in_stock < quantity:
+                    raise ValueError(f"Insufficient stock. Available: {stock_item.quantity_in_stock}")
                 stock_item.quantity_in_stock -= quantity
-                # If we're selling/shipping something that was reserved, decrease reservation
+                transaction_quantity = -quantity
                 if transaction_type == 'sale':
                     stock_item.quantity_reserved = max(0, stock_item.quantity_reserved - quantity)
+            elif transaction_type in signed_types:
+                new_quantity = stock_item.quantity_in_stock + quantity
+                if new_quantity < 0:
+                    raise ValueError(f"Insufficient stock. Available: {stock_item.quantity_in_stock}")
+                stock_item.quantity_in_stock = new_quantity
+                transaction_quantity = quantity
             elif transaction_type == 'reserve':
                 if stock_item.available_quantity < quantity:
                     raise ValueError(f"Insufficient stock. Available: {stock_item.available_quantity}")
                 stock_item.quantity_reserved += quantity
+                transaction_quantity = quantity
             elif transaction_type == 'release':
+                if stock_item.quantity_reserved < quantity:
+                    raise ValueError(f"Cannot release more than reserved. Reserved: {stock_item.quantity_reserved}")
                 stock_item.quantity_reserved = max(0, stock_item.quantity_reserved - quantity)
+                transaction_quantity = -quantity
+            else:
+                raise ValueError(f"Unsupported inventory transaction type: {transaction_type}")
                 
             stock_item.save()
             
@@ -132,7 +158,7 @@ class InventoryService:
             transaction = InventoryTransaction.objects.create(
                 part=part,
                 branch=branch,
-                quantity=quantity,
+                quantity=transaction_quantity,
                 transaction_type=transaction_type,
                 balance_after=stock_item.quantity_in_stock,
                 unit_cost=unit_cost or part.cost_price,
@@ -152,6 +178,11 @@ class InventoryService:
         """Initiate a stock transfer between branches"""
         from .models import Transfer, TransferItem, Part
         from django.db import transaction as db_transaction
+
+        if source_branch == destination_branch:
+            raise ValueError("Source and destination branches must be different")
+        if not items:
+            raise ValueError("At least one transfer item is required")
         
         with db_transaction.atomic():
             transfer = Transfer.objects.create(
@@ -162,9 +193,15 @@ class InventoryService:
                 status='draft'
             )
             
+            seen_parts = set()
             for item_data in items:
                 part_id = item_data['part_id']
-                quantity = item_data['quantity']
+                quantity = int(item_data['quantity'])
+                if quantity <= 0:
+                    raise ValueError("Transfer item quantity must be greater than 0")
+                if part_id in seen_parts:
+                    raise ValueError("Duplicate parts are not allowed in one transfer")
+                seen_parts.add(part_id)
                 part = Part.objects.get(id=part_id)
                 
                 TransferItem.objects.create(
@@ -178,6 +215,17 @@ class InventoryService:
     @staticmethod
     def submit_transfer_for_approval(transfer, approver, user):
         """Submit transfer for approval"""
+        if transfer.status != 'draft':
+            raise ValueError("Only draft transfers can be submitted for approval")
+        if not transfer.items.exists():
+            raise ValueError("Cannot submit a transfer with no items")
+        if not approver:
+            raise ValueError("Select an approver before submitting this transfer")
+        if approver.id == user.id:
+            raise ValueError("Transfers must be approved by someone other than the submitter")
+        if getattr(approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'}:
+            raise ValueError("Selected approver must be a manager, admin, or parts manager")
+
         transfer.status = 'pending_approval'
         transfer.assigned_approver = approver
         transfer.submitted_by = user
@@ -188,6 +236,13 @@ class InventoryService:
     def approve_transfer(transfer, user):
         """Approve transfer and reserve stock"""
         from django.db import transaction as db_transaction
+
+        if transfer.status != 'pending_approval':
+            raise ValueError("Only transfers pending approval can be approved")
+        if transfer.assigned_approver_id and transfer.assigned_approver_id != user.id and getattr(user, 'role', None) not in {'admin', 'super-admin'} and not getattr(user, 'is_superuser', False):
+            raise ValueError("Only the assigned approver, admin, or super admin can approve this transfer")
+        if transfer.submitted_by_id == user.id and getattr(user, 'role', None) not in {'admin', 'super-admin'}:
+            raise ValueError("Transfers cannot be approved by the same user who submitted them")
         
         with db_transaction.atomic():
             transfer.status = 'approved'
@@ -210,6 +265,13 @@ class InventoryService:
     @staticmethod
     def reject_transfer(transfer, reason, user):
         """Reject transfer"""
+        if transfer.status != 'pending_approval':
+            raise ValueError("Only transfers pending approval can be rejected")
+        if transfer.assigned_approver_id and transfer.assigned_approver_id != user.id and getattr(user, 'role', None) not in {'admin', 'super-admin'} and not getattr(user, 'is_superuser', False):
+            raise ValueError("Only the assigned approver, admin, or super admin can reject this transfer")
+        if not (reason or '').strip():
+            raise ValueError("A rejection reason is required")
+
         transfer.status = 'rejected'
         transfer.rejected_by = user
         transfer.rejected_at = timezone.now()
@@ -264,16 +326,24 @@ class InventoryService:
         if transfer.status != 'in_transit':
             raise ValueError("Only in-transit transfers can be received")
             
-        with db_transaction.atomic():
-            transfer.status = 'received'
-            transfer.received_by = user
-            transfer.received_date = timezone.now()
-            transfer.save()
+        if not items_received:
+            raise ValueError("At least one received item is required")
+
+        transfer_items = {item.part_id: item for item in transfer.items.all()}
+        for part_id, quantity in items_received.items():
+            quantity = int(quantity)
+            if quantity <= 0:
+                raise ValueError("Received quantity must be greater than 0")
+            if part_id not in transfer_items:
+                raise ValueError("Received part is not on this transfer")
+            item = transfer_items[part_id]
+            if item.quantity_received + quantity > item.quantity_sent:
+                raise ValueError(f"Cannot receive more than shipped for {item.part.part_number}")
             
+        with db_transaction.atomic():
             for part_id, quantity in items_received.items():
-                from .models import Part
-                part = Part.objects.get(id=part_id)
-                item = transfer.items.get(part=part)
+                item = transfer_items[part_id]
+                part = item.part
                 
                 InventoryService.record_transaction(
                     part=part,
@@ -285,8 +355,14 @@ class InventoryService:
                     reason=f"Received from transfer {transfer.transfer_number}"
                 )
                 
-                item.quantity_received = quantity
+                item.quantity_received += int(quantity)
                 item.save()
+
+            if all(item.quantity_received >= item.quantity_sent for item in transfer.items.all()):
+                transfer.status = 'received'
+                transfer.received_by = user
+                transfer.received_date = timezone.now()
+                transfer.save()
 
     @staticmethod
     def check_and_create_stock_alerts(part=None, branch=None):
@@ -299,21 +375,26 @@ class InventoryService:
         if branch:
             queryset = queryset.filter(branch=branch)
             
-        alerts_created = 0
+        alerts_created = []
         for item in queryset:
             if item.quantity_in_stock <= item.reorder_point:
+                is_out = item.quantity_in_stock <= 0
                 # Create alert if one doesn't already exist for this part/branch/status=open
                 alert, created = StockAlert.objects.get_or_create(
                     part=item.part,
                     branch=item.branch,
-                    status='open',
+                    status='active',
                     defaults={
-                        'alert_type': 'low_stock',
+                        'stock_item': item,
+                        'alert_type': 'out_of_stock' if is_out else 'low_stock',
                         'message': f"Low stock alert for {item.part.name} at {item.branch.name}. Current: {item.quantity_in_stock}, Reorder Point: {item.reorder_point}",
-                        'severity': 'medium'
+                        'severity': 'critical' if is_out else 'warning',
+                        'current_quantity': item.quantity_in_stock,
+                        'reorder_point': item.reorder_point,
+                        'minimum_stock': item.minimum_stock,
                     }
                 )
                 if created:
-                    alerts_created += 1
+                    alerts_created.append(alert)
                     
         return alerts_created

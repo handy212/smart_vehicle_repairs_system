@@ -12,6 +12,7 @@ from apps.vehicles.models import Vehicle
 from apps.branches.models import Branch
 from apps.roadside.models import RoadsideRequest
 from apps.subscriptions.models import Package, Subscription, SubscriptionUsage
+from apps.accounts.admin_models import SystemModule
 
 class RoadsideRequestTests(TestCase):
     def setUp(self):
@@ -30,6 +31,11 @@ class RoadsideRequestTests(TestCase):
         
         # Create core data
         self.branch = Branch.objects.create(name="Main Branch", code="MB01", created_by=self.manager)
+        SystemModule.objects.get_or_create(slug='roadside', defaults={'name': 'Roadside', 'is_enabled': True})
+        self.manager.branch = self.branch
+        self.manager.save(update_fields=['branch'])
+        self.technician.branch = self.branch
+        self.technician.save(update_fields=['branch'])
         self.customer = Customer.objects.create(
             user=self.user,
             customer_number="CUST001"
@@ -105,6 +111,33 @@ class RoadsideRequestTests(TestCase):
         usage = SubscriptionUsage.objects.get(reference_id=request.id)
         self.assertEqual(usage.usage_type, 'battery_boosts')
         self.assertEqual(usage.quantity_used, 1)
+
+    def test_customer_create_binds_to_own_customer_profile(self):
+        other_user = User.objects.create_user(
+            username='other', password='password', email='other@example.com', role='customer'
+        )
+        other_customer = Customer.objects.create(user=other_user, customer_number="CUST002")
+        other_vehicle = Vehicle.objects.create(
+            owner=other_customer,
+            license_plate="ZZZ-222",
+            make="Nissan",
+            model="Altima",
+            year=2021,
+            current_mileage=10000,
+            vin="VINROAD2222"
+        )
+
+        response = self.client.post(self.url, {
+            'customer': other_customer.id,
+            'vehicle': other_vehicle.id,
+            'service_type': 'battery_boost',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890',
+            'branch': self.branch.id
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Vehicle does not belong to this customer', str(response.data))
 
     def test_create_request_insufficient_allowance(self):
         """Test creation blocked when allowance is exceeded"""
@@ -325,4 +358,3 @@ class RoadsideRequestTests(TestCase):
         self.assertEqual(response.data['total_requests'], 2)
         self.assertEqual(response.data['active_requests'], 1) # One requested
         self.assertEqual(response.data['completed_requests'], 1)
-

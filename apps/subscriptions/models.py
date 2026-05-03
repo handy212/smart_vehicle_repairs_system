@@ -162,8 +162,6 @@ class Package(models.Model):
         Returns:
             int/float: Allowance quantity for the service
         """
-        from . import SERVICE_TYPE_MAP
-        
         # Map roadside service type to feature key
         feature_key = SERVICE_TYPE_MAP.get(service_type)
         if not feature_key:
@@ -679,4 +677,3 @@ class SubscriptionUsage(models.Model):
     
     def __str__(self):
         return f"{self.subscription.subscription_number} - {self.usage_type} - {self.quantity_used}"
-

@@ -3,7 +3,6 @@ Signals for subscription module
 """
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from .models import Subscription
 from apps.billing.models import Invoice, Payment
@@ -26,15 +25,19 @@ def activate_subscription_on_payment(sender, instance, created, **kwargs):
     if 'subscription' not in invoice.description.lower():
         return
     
-    # Find pending subscription for this customer
+    # Find the subscription explicitly linked to this invoice.
     from .models import Subscription
     from .services import SubscriptionService
     
     subscription = Subscription.objects.filter(
         customer=invoice.customer,
-        status='pending',
-        payment_status='pending'
-    ).order_by('-created_at').first()
+        metadata__invoice_id=invoice.id,
+    ).first()
+    if not subscription:
+        subscription = Subscription.objects.filter(
+            customer=invoice.customer,
+            metadata__renewal_invoice_id=invoice.id,
+        ).first()
     
     if subscription:
         try:
@@ -50,23 +53,17 @@ def check_duplicate_subscription(sender, instance, **kwargs):
     """
     Prevent duplicate subscriptions for same vehicle (regardless of status).
     """
-    if instance.pk is None:  # New instance
-        if not instance.vehicle:
-            return
-            
-        # Check for existing ACTIVE or PENDING subscription for this vehicle
-        existing = Subscription.objects.filter(
-            vehicle=instance.vehicle,
-            status__in=['active', 'pending', 'suspended']
-        ).exclude(pk=instance.pk).first()
-        
-        if existing:
-            # We raise DRFValidationError to ensure 400 response in API
-            # but we also provide a way to handle it if called outside API
-            message = (
-                f"Vehicle {instance.vehicle.license_plate} already has an existing subscription. "
-                f"Duplicate subscriptions for the same vehicle are not allowed."
-            )
-            # Use DRF ValidationError for API compatibility
-            raise DRFValidationError(message)
+    if not instance.vehicle:
+        return
 
+    existing = Subscription.objects.filter(
+        vehicle=instance.vehicle,
+        status__in=['active', 'pending', 'suspended']
+    ).exclude(pk=instance.pk).first()
+
+    if existing:
+        message = (
+            f"Vehicle {instance.vehicle.license_plate} already has an existing live or pending subscription. "
+            f"Duplicate subscriptions for the same vehicle are not allowed."
+        )
+        raise DRFValidationError(message)

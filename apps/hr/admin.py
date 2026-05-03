@@ -7,7 +7,7 @@ from .models import (
     LeaveType, LeaveBalance, LeaveRequest,
     AttendancePolicy, Attendance,
     SalaryComponent, EmployeeSalaryComponent, TaxRule,
-    PayrollPeriod, PaySlip,
+    PayrollPeriod, PaySlip, PayrollAuditLog,
     JobOpening, Applicant, Interview,
     PerformanceReview, TrainingProgram, EmployeeTraining, ComplianceDocument,
 )
@@ -104,19 +104,31 @@ class TaxRuleAdmin(admin.ModelAdmin):
 
 @admin.register(PayrollPeriod)
 class PayrollPeriodAdmin(admin.ModelAdmin):
-    list_display = ['name', 'start_date', 'end_date', 'status', 'branch', 'created_by']
+    list_display = ['name', 'start_date', 'end_date', 'status', 'branch', 'created_by', 'approved_by', 'paid_by']
     list_filter = ['status', 'branch']
-    raw_id_fields = ['created_by', 'approved_by']
+    raw_id_fields = ['created_by', 'approved_by', 'paid_by', 'reversed_by']
 
 
 @admin.register(PaySlip)
 class PaySlipAdmin(admin.ModelAdmin):
     list_display = [
-        'employee', 'payroll_period', 'basic_salary',
-        'gross_pay', 'net_pay', 'status',
+        'payslip_number', 'employee', 'payroll_period', 'basic_salary',
+        'gross_pay', 'net_pay', 'status', 'is_locked',
     ]
-    list_filter = ['status', 'payroll_period']
+    list_filter = ['status', 'is_locked', 'payroll_period']
     raw_id_fields = ['employee']
+
+
+@admin.register(PayrollAuditLog)
+class PayrollAuditLogAdmin(admin.ModelAdmin):
+    list_display = ['action', 'employee', 'payroll_period', 'payslip', 'performed_by', 'created_at']
+    list_filter = ['action', 'created_at']
+    search_fields = [
+        'employee__user__first_name', 'employee__user__last_name',
+        'payroll_period__name', 'payslip__payslip_number',
+    ]
+    raw_id_fields = ['employee', 'payroll_period', 'payslip', 'performed_by']
+    readonly_fields = ['action', 'employee', 'payroll_period', 'payslip', 'performed_by', 'changes', 'created_at']
 
 
 @admin.register(JobOpening)

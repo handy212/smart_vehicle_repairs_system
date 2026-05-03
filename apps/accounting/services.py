@@ -1038,6 +1038,7 @@ class AccountingService:
         total_tax = Decimal('0')
         total_deductions = Decimal('0')
         total_net = Decimal('0')
+        total_unpaid_absence = Decimal('0')
 
         for slip in payslips:
             total_basic += slip.basic_salary or Decimal('0')
@@ -1046,6 +1047,9 @@ class AccountingService:
             total_tax += slip.tax_amount or Decimal('0')
             total_deductions += _sum_json_values(slip.deductions)
             total_net += slip.net_pay or Decimal('0')
+            total_unpaid_absence += (slip.unpaid_leave_deduction or Decimal('0')) + (slip.absence_deduction or Decimal('0'))
+
+        salary_expense_amount = total_basic - total_unpaid_absence
 
         with transaction.atomic():
             # 1. Get or create GL accounts
@@ -1068,11 +1072,11 @@ class AccountingService:
             )
 
             # 3. Debit lines (expenses)
-            if total_basic > 0:
+            if salary_expense_amount > 0:
                 Transaction.objects.create(
                     journal_entry=je, account=salary_expense,
-                    amount=total_basic, transaction_type='debit',
-                    description='Basic salaries',
+                    amount=salary_expense_amount, transaction_type='debit',
+                    description='Basic salaries net of unpaid leave and absence deductions',
                 )
             if total_overtime > 0:
                 Transaction.objects.create(
@@ -1111,7 +1115,7 @@ class AccountingService:
             if not je.validate_balanced():
                 raise ValidationError(
                     f"Payroll Journal Entry for '{payroll_period.name}' is not balanced. "
-                    f"Debits: {total_basic + total_overtime + total_allowances}, "
+                    f"Debits: {salary_expense_amount + total_overtime + total_allowances}, "
                     f"Credits: {total_tax + total_deductions + total_net}"
                 )
 

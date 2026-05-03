@@ -4,7 +4,8 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from decimal import Decimal
 from django.utils import timezone
-from apps.inventory.models import Part, PartCategory, StockItem, InventoryTransaction
+from apps.inventory.models import Part, PartCategory, StockAlert, StockItem, InventoryTransaction
+from apps.inventory.services import InventoryService
 from apps.accounts.models import User
 from apps.branches.models import Branch
 
@@ -97,6 +98,17 @@ class TestInventoryAPI:
         # Verify transaction record
         assert InventoryTransaction.objects.filter(part=part, transaction_type='adjustment').count() == 1
 
+    def test_stock_adjust_cannot_make_branch_stock_negative(self, api_client, user, setup_data):
+        api_client.force_authenticate(user=user)
+        category, part, stock_item = setup_data
+
+        url = reverse('api_inventory:part-adjust', args=[part.id])
+        response = api_client.post(url, {"quantity": -11, "reason": "Bad count"})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+        stock_item.refresh_from_db()
+        assert stock_item.quantity_in_stock == 10
+
     def test_stock_reserve_and_release(self, api_client, user, setup_data):
         api_client.force_authenticate(user=user)
         category, part, stock_item = setup_data
@@ -118,6 +130,30 @@ class TestInventoryAPI:
         stock_item.refresh_from_db()
         assert stock_item.quantity_reserved == 2
         assert stock_item.available_quantity == 8
+
+    def test_release_cannot_exceed_reserved_quantity(self, api_client, user, setup_data):
+        api_client.force_authenticate(user=user)
+        category, part, stock_item = setup_data
+
+        url = reverse('api_inventory:part-release-reservation', args=[part.id])
+        response = api_client.post(url, {"quantity": 1, "reason": "Nothing reserved"})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_outbound_transaction_is_logged_as_negative(self, user, setup_data, branch):
+        category, part, stock_item = setup_data
+
+        transaction = InventoryService.record_transaction(
+            part=part,
+            quantity=2,
+            transaction_type='sale',
+            user=user,
+            branch=branch,
+            reason='Issued to work order',
+        )
+
+        stock_item.refresh_from_db()
+        assert stock_item.quantity_in_stock == 8
+        assert transaction.quantity == -2
 
     def test_low_stock_filtering(self, api_client, user, setup_data, branch):
         api_client.force_authenticate(user=user)
@@ -149,3 +185,25 @@ class TestInventoryAPI:
         part_ids = [p['id'] for p in results]
         assert low_part.id in part_ids
         assert part.id not in part_ids
+
+    def test_stock_alerts_use_active_status(self, user, setup_data, branch):
+        category, part, stock_item = setup_data
+        stock_item.quantity_in_stock = 0
+        stock_item.save(update_fields=['quantity_in_stock'])
+
+        alerts = InventoryService.check_and_create_stock_alerts(part=part, branch=branch)
+
+        assert len(alerts) == 1
+        alert = StockAlert.objects.get(part=part, branch=branch)
+        assert alert.status == 'active'
+        assert alert.alert_type == 'out_of_stock'
+        assert alert.severity == 'critical'
+
+    def test_inventory_accounting_report_uses_branch_stock(self, api_client, user, setup_data):
+        api_client.force_authenticate(user=user)
+
+        url = reverse('api_inventory:part-inventory-accounting-report')
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['inventory_summary']['total_quantity'] == 10

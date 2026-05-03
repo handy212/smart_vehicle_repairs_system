@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from decimal import Decimal
+from dateutil.relativedelta import relativedelta
 from .models import Subscription, SubscriptionUsage, Package
 from apps.billing.models import Invoice, InvoiceLineItem
 from apps.customers.models import Customer
@@ -52,21 +53,18 @@ class SubscriptionService:
         if vehicle.owner_id != customer.id:
             raise ValidationError("Vehicle does not belong to this customer.")
         
-        # Check for duplicate active subscription for same customer+vehicle
+        # Check for duplicate live/pending subscription for same vehicle.
         existing = Subscription.objects.filter(
             customer=customer,
             vehicle=vehicle,
-            package=package,
-            status='active'
+            status__in=['pending', 'active', 'suspended'],
         ).first()
         
-        if existing and existing.is_active():
+        if existing:
             raise ValidationError(
-                f"Customer already has an active subscription for {package.name} on this vehicle."
+                "Customer already has a live or pending subscription on this vehicle."
             )
         
-        # Calculate end date using relativedelta for proper month handling
-        from dateutil.relativedelta import relativedelta
         end_date = start_date + relativedelta(months=package.duration_months)
         
         # Calculate discounts
@@ -123,8 +121,8 @@ class SubscriptionService:
         if not branch:
             if hasattr(customer, 'branch') and customer.branch:
                 branch = customer.branch
-            elif created_by and hasattr(created_by, 'primary_branch') and created_by.primary_branch:
-                branch = created_by.primary_branch
+            elif created_by and getattr(created_by, 'branch', None):
+                branch = created_by.branch
         
         # Create invoice
         invoice = Invoice.objects.create(
@@ -174,11 +172,24 @@ class SubscriptionService:
         Activate a subscription after payment.
         Implements AA 5-working-day activation delay.
         """
-        if subscription.status == 'active' and subscription.is_active():
-            return  # Already active
+        if subscription.status == 'active' and subscription.is_active() and not (
+            invoice and subscription.metadata and subscription.metadata.get('pending_renewal', {}).get('invoice_id') == invoice.id
+        ):
+            return subscription
         
         # Calculate activation date (5 working days after payment)
         payment_date = timezone.now().date()
+        pending_renewal = (subscription.metadata or {}).get('pending_renewal')
+        if pending_renewal and invoice and pending_renewal.get('invoice_id') == invoice.id:
+            subscription.start_date = pending_renewal['start_date']
+            subscription.end_date = pending_renewal['end_date']
+            subscription.original_price = Decimal(str(pending_renewal['original_price']))
+            subscription.purchase_price = Decimal(str(pending_renewal['purchase_price']))
+            subscription.discount_applied = Decimal(str(pending_renewal.get('discount_applied') or '0'))
+            subscription.discount_reason = pending_renewal.get('discount_reason') or ''
+            subscription.metadata['last_renewal_invoice_id'] = invoice.id
+            subscription.metadata.pop('pending_renewal', None)
+            subscription.metadata.pop('renewal_invoice_id', None)
         subscription.activation_date = subscription.calculate_activation_date(payment_date)
         
         subscription.status = 'active'
@@ -194,6 +205,7 @@ class SubscriptionService:
         
         # Send activation notification
         SubscriptionNotificationService.send_activation_notification(subscription)
+        return subscription
     
     @staticmethod
     @transaction.atomic
@@ -224,9 +236,11 @@ class SubscriptionService:
                     "No system user available to create invoice. Please ensure at least one admin user exists."
                 )
         
-        # Calculate new dates using relativedelta
-        from dateutil.relativedelta import relativedelta
-        
+        if subscription.status in ['cancelled', 'suspended']:
+            raise ValidationError("Cancelled or suspended subscriptions cannot be renewed.")
+        if subscription.metadata and subscription.metadata.get('pending_renewal'):
+            raise ValidationError("This subscription already has a pending renewal invoice.")
+
         new_start_date = subscription.end_date + relativedelta(days=1)
         new_end_date = new_start_date + relativedelta(months=months)
         
@@ -252,17 +266,6 @@ class SubscriptionService:
             discount_amount = (original_price * discount_percentage) / Decimal('100')
             purchase_price = original_price - discount_amount
             
-        # Update subscription
-        subscription.start_date = new_start_date
-        subscription.end_date = new_end_date
-        subscription.original_price = original_price
-        subscription.purchase_price = purchase_price
-        subscription.discount_applied = discount_percentage
-        subscription.discount_reason = discount_reason
-        subscription.status = 'pending'  # Pending payment
-        subscription.payment_status = 'pending'
-        subscription.save()
-        
         # Vehicle must remain tied to the subscription
         vehicle = subscription.vehicle
         if not vehicle:
@@ -278,8 +281,8 @@ class SubscriptionService:
         if not branch:
             if hasattr(subscription.customer, 'branch') and subscription.customer.branch:
                 branch = subscription.customer.branch
-            elif created_by and hasattr(created_by, 'primary_branch') and created_by.primary_branch:
-                branch = created_by.primary_branch
+            elif created_by and getattr(created_by, 'branch', None):
+                branch = created_by.branch
         
         # Create renewal invoice
         invoice = Invoice.objects.create(
@@ -311,10 +314,20 @@ class SubscriptionService:
             order=1
         )
         
-        # Store renewal invoice_id in subscription metadata
+        # Store pending renewal terms without interrupting current paid coverage.
         subscription.metadata = subscription.metadata or {}
         subscription.metadata['renewal_invoice_id'] = invoice.id
-        subscription.save(update_fields=['metadata'])
+        subscription.metadata['pending_renewal'] = {
+            'invoice_id': invoice.id,
+            'months': months,
+            'start_date': new_start_date.isoformat(),
+            'end_date': new_end_date.isoformat(),
+            'original_price': str(original_price),
+            'purchase_price': str(purchase_price),
+            'discount_applied': str(discount_percentage),
+            'discount_reason': discount_reason,
+        }
+        subscription.save(update_fields=['metadata', 'updated_at'])
         
         # Send renewal notification
         SubscriptionNotificationService.send_renewal_notification(subscription, invoice)
@@ -383,9 +396,13 @@ class SubscriptionUsageService:
         Raises:
             ValidationError: If insufficient allowance
         """
-        # Check if subscription is active
-        # Relaxed check: if status is active, we allow usage even if activation date is future (consistent with display)
-        if subscription.status != 'active' or subscription.is_expired():
+        subscription = Subscription.objects.select_for_update().get(pk=subscription.pk)
+        quantity_used = Decimal(str(quantity_used or 0))
+        if quantity_used <= 0:
+            raise ValidationError('Quantity used must be greater than zero')
+
+        # Enforce paid + active-date coverage before benefits can be consumed.
+        if not subscription.is_active() or subscription.is_expired():
             raise ValidationError('Subscription is not active or has expired')
         
         feature_key = SubscriptionUsageService.USAGE_TO_FEATURE_KEY.get(usage_type, usage_type)
@@ -430,6 +447,9 @@ class SubscriptionUsageService:
         Creates a negative usage record.
         """
         feature_key = SubscriptionUsageService.USAGE_TO_FEATURE_KEY.get(usage_type, usage_type)
+        quantity_to_refund = Decimal(str(quantity_to_refund or 0))
+        if quantity_to_refund <= 0:
+            raise ValidationError('Quantity to refund must be greater than zero')
         
         # Create negative usage record
         usage = SubscriptionUsage.objects.create(
@@ -464,10 +484,12 @@ class SubscriptionUsageService:
         )
         if vehicle:
             qs = qs.filter(vehicle=vehicle)
-        subscription = qs.first()
+        subscription = qs.order_by('-activation_date', '-start_date').first()
         
         if not subscription or subscription.status != 'active':
             return False, None, 0
+        if not subscription.is_active():
+            return False, subscription, 0
         
         # Map feature keys to usage types
         feature_to_usage_type = {
@@ -478,6 +500,7 @@ class SubscriptionUsageService:
         }
         
         usage_type = feature_to_usage_type.get(feature_key, feature_key)
+        quantity_needed = Decimal(str(quantity_needed or 0))
         remaining = subscription.get_remaining_allowance(feature_key)  # Use feature_key for package lookup
         has_allowance = remaining >= quantity_needed
         
@@ -631,4 +654,3 @@ class SubscriptionNotificationService:
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to send low allowance notification: {e}")
-
