@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.urls import reverse
 from apps.workorders.models import WorkOrder, WorkOrderPart
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -142,6 +143,118 @@ class PartRequisitionTests(TestCase):
         part_id = response.data['id']
         part = WorkOrderPart.objects.get(id=part_id)
         self.assertEqual(part.requested_by, self.technician)
+
+    def test_api_create_rejects_direct_ready_or_installed_status(self):
+        """New part requests must enter through requisition statuses."""
+        self.client.force_authenticate(user=self.technician)
+        try:
+            url = reverse('workorderpart-list')
+        except:
+            url = '/api/workorders/parts/'
+
+        for unsafe_status in ['ready', 'received', 'installed', 'returned']:
+            response = self.client.post(url, {
+                'work_order': self.work_order.id,
+                'part_name': f'Unsafe {unsafe_status}',
+                'quantity': 1,
+                'unit_cost': 10,
+                'status': unsafe_status,
+            })
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn('status', response.data)
+
+    def test_api_create_after_customer_approval_triggers_additional_work(self):
+        """Adding a part after approval must reset approval through additional-work flow."""
+        self.work_order.status = 'approved'
+        self.work_order.requires_approval = True
+        self.work_order.approved_by_customer = True
+        self.work_order.approved_at = timezone.now()
+        self.work_order.save()
+
+        self.client.force_authenticate(user=self.technician)
+        try:
+            url = reverse('workorderpart-list')
+        except:
+            url = '/api/workorders/parts/'
+
+        response = self.client.post(url, {
+            'work_order': self.work_order.id,
+            'part_name': 'Extra Brake Sensor',
+            'quantity': 1,
+            'unit_cost': 25,
+            'status': 'pending',
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data.get('additional_work_triggered'))
+
+        self.work_order.refresh_from_db()
+        self.assertEqual(self.work_order.status, 'additional_work_found')
+        self.assertTrue(self.work_order.requires_approval)
+        self.assertFalse(self.work_order.approved_by_customer)
+        self.assertIsNone(self.work_order.approved_at)
+        self.assertTrue(
+            self.work_order.notes.filter(
+                note_type='parts',
+                note__icontains='Additional part requested after customer approval'
+            ).exists()
+        )
+
+    def test_api_create_rejects_parts_after_repair_is_finished(self):
+        """Completed/closed stages cannot accept new parts on the same work order."""
+        self.client.force_authenticate(user=self.technician)
+        try:
+            url = reverse('workorderpart-list')
+        except:
+            url = '/api/workorders/parts/'
+
+        for locked_status in ['quality_check', 'completed', 'invoiced', 'closed']:
+            self.work_order.status = locked_status
+            self.work_order.save(update_fields=['status'])
+
+            response = self.client.post(url, {
+                'work_order': self.work_order.id,
+                'part_name': f'Late Part {locked_status}',
+                'quantity': 1,
+                'unit_cost': 10,
+                'status': 'pending',
+            })
+
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(
+                WorkOrderPart.objects.filter(
+                    work_order=self.work_order,
+                    part_name=f'Late Part {locked_status}',
+                ).count(),
+                0,
+            )
+
+    def test_api_create_before_approval_stays_in_current_flow(self):
+        """Pre-approval part requests should not force additional work."""
+        self.work_order.status = 'diagnosis'
+        self.work_order.requires_approval = True
+        self.work_order.approved_by_customer = False
+        self.work_order.approved_at = None
+        self.work_order.save()
+
+        self.client.force_authenticate(user=self.technician)
+        try:
+            url = reverse('workorderpart-list')
+        except:
+            url = '/api/workorders/parts/'
+
+        response = self.client.post(url, {
+            'work_order': self.work_order.id,
+            'part_name': 'Quoted Oil Filter',
+            'quantity': 1,
+            'unit_cost': 12,
+            'status': 'pending',
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data.get('additional_work_triggered'))
+        self.work_order.refresh_from_db()
+        self.assertEqual(self.work_order.status, 'diagnosis')
         
     def test_approve_action(self):
         """Test the approve action API"""

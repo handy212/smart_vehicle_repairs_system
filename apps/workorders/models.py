@@ -421,10 +421,10 @@ class WorkOrder(models.Model):
         'assigned': ['diagnosis', 'intake'],
         'diagnosis': ['awaiting_approval'],
         'awaiting_approval': ['approved', 'diagnosis'],
-        'approved': ['in_progress'],
+        'approved': ['in_progress', 'additional_work_found'],
         'in_progress': ['paused', 'quality_check', 'additional_work_found'],
         'additional_work_found': ['awaiting_approval'],
-        'paused': ['in_progress'],
+        'paused': ['in_progress', 'additional_work_found'],
         'quality_check': ['completed', 'in_progress'],
         'completed': ['invoiced', 'closed'],
         'invoiced': ['closed'],
@@ -1478,7 +1478,7 @@ class ServiceTask(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='tasks')
     
     # Task Details
-    task_type = models.CharField(max_length=20, choices=TASK_TYPE_CHOICES, default='repair')
+    task_type = models.CharField(max_length=50, default='repair')
     description = models.CharField(max_length=255)
     detailed_notes = models.TextField(blank=True)
     
@@ -1594,7 +1594,10 @@ class ServiceTask(models.Model):
             delta = self.completed_at - self.started_at
             hours = Decimal(str(delta.total_seconds() / 3600))
             if hours > 0:
-                return hours.quantize(Decimal('0.01'))
+                rounded_hours = hours.quantize(Decimal('0.01'))
+                if self.status == 'completed' and rounded_hours <= 0:
+                    return Decimal('0.01')
+                return rounded_hours
         
         # If task is completed but started_at is missing, use created_at as fallback
         if self.status == 'completed' and self.completed_at:
@@ -1671,6 +1674,39 @@ class ServiceTask(models.Model):
         """Update work order's actual labor hours and cost"""
         # Use centralized recalculation method
         self.work_order.recalculate_totals()
+
+
+class ServiceTaskType(models.Model):
+    """Configurable service task type used when creating service tasks."""
+
+    code = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    default_labor_rate = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0'))],
+    )
+    is_billable = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+        indexes = [
+            models.Index(fields=['is_active', 'sort_order']),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.code and self.name:
+            self.code = slugify(self.name)
+        super().save(*args, **kwargs)
 
 
 class WorkOrderPart(models.Model):

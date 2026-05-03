@@ -141,3 +141,39 @@ class RepeatIssueAPITests(TestCase):
                                f"Expected at least 1 match. Got: {repeat_matches}")
         self.assertEqual(repeat_matches[0]['work_order_id'], historical.id)
 
+    def test_api_create_warranty_rework_accepts_related_work_order_id(self):
+        from rest_framework import status
+        from rest_framework.test import APIClient
+
+        historical = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Transmission slips between second and third gear',
+            odometer_in=61000,
+            status='completed',
+            completed_at=timezone.now(),
+            priority='normal',
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=self.admin)
+
+        payload = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'branch': self.branch.id,
+            'customer_concerns': 'Transmission slips between second and third gear again',
+            'odometer_in': 61200,
+            'priority': 'normal',
+            'is_warranty_rework': True,
+            'related_work_order': historical.id,
+            'warranty_reason': 'Repeat issue under warranty.',
+        }
+
+        response = client.post('/api/workorders/work-orders/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, f"Response: {response.data}")
+        work_order = WorkOrder.objects.get(id=response.data['id'])
+        self.assertTrue(work_order.is_warranty_rework)
+        self.assertEqual(work_order.related_work_order_id, historical.id)

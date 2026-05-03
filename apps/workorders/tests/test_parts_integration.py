@@ -300,6 +300,9 @@ class PartsIntegrationTests(TestCase):
         recommendation.refresh_from_db()
         self.assertEqual(part_request.task_id, recommendation.converted_to_task_id)
         self.assertEqual(part_request.status, 'pending')
+        part_request.approved_by = self.manager
+        part_request.approved_at = timezone.now()
+        part_request.save(update_fields=['approved_by', 'approved_at', 'updated_at'])
 
         blocked_response = self.client.post(
             reverse('api_workorders:workorder-start-work', args=[self.work_order.id]),
@@ -329,6 +332,16 @@ class PartsIntegrationTests(TestCase):
         self.assertEqual(self.work_order.status, 'in_progress')
 
     def test_allocate_uses_branch_stock_item_before_deprecated_part_quantity(self):
+        self.work_order.status = 'approved'
+        self.work_order.requires_approval = True
+        self.work_order.approved_by_customer = True
+        self.work_order.approved_at = timezone.now()
+        self.work_order.save(update_fields=[
+            'status',
+            'requires_approval',
+            'approved_by_customer',
+            'approved_at',
+        ])
         self.catalog_part.quantity_in_stock = 0
         self.catalog_part.save(update_fields=['quantity_in_stock'])
         stock_item = StockItem.objects.create(
@@ -345,6 +358,8 @@ class PartsIntegrationTests(TestCase):
             quantity=2,
             unit_cost=self.catalog_part.cost_price,
             status='pending',
+            approved_by=self.manager,
+            approved_at=timezone.now(),
         )
 
         status_payload = part_request.get_inventory_status_payload()

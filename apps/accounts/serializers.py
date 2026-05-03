@@ -478,10 +478,18 @@ class PublicUserSerializer(serializers.ModelSerializer):
     """Minimal serializer for public user info"""
     
     full_name = serializers.CharField(source='get_full_name', read_only=True)
+    branch = serializers.SerializerMethodField()
+    branch_name = serializers.SerializerMethodField()
     
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'full_name', 'email', 'role', 'employee_id']
+        fields = ['id', 'first_name', 'last_name', 'full_name', 'email', 'role', 'employee_id', 'branch', 'branch_name']
+
+    def get_branch(self, obj):
+        return obj.branch_id
+
+    def get_branch_name(self, obj):
+        return obj.branch.name if obj.branch else None
 
 
 class ManualRegistrationInitiateSerializer(serializers.Serializer):

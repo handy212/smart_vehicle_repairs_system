@@ -18,13 +18,13 @@ from apps.notifications_app.triggers import notification_triggers
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
 
 from .models import (
-    WorkOrder, ServiceTask, WorkOrderPart,
+    WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart,
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
 )
 from .serializers import (
     WorkOrderListSerializer, WorkOrderDetailSerializer,
     WorkOrderCreateSerializer, WorkOrderUpdateSerializer,
-    ServiceTaskSerializer, ServiceTaskCreateSerializer,
+    ServiceTaskSerializer, ServiceTaskCreateSerializer, ServiceTaskTypeSerializer,
     WorkOrderPartSerializer, WorkOrderPartCreateSerializer,
     TechnicianTimeLogSerializer, TechnicianTimeLogCreateSerializer,
     TechnicianTimeLogClockOutSerializer,
@@ -51,6 +51,7 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         'service_type', 'service_bundle', 'estimate', 'invoice'
     ).prefetch_related(
         'assigned_technicians',
+        'gate_passes',
         Prefetch('tasks', queryset=ServiceTask.objects.select_related('assigned_to')),
         Prefetch('notes', queryset=WorkOrderNote.objects.select_related('created_by')),
         Prefetch('parts', queryset=WorkOrderPart.objects.select_related(
@@ -90,6 +91,8 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         """
         Get statistics for work orders dashboard.
         """
+        from apps.gatepass.models import GatePass
+
         # Filter by branch if applicable
         queryset = self.get_queryset()
         
@@ -99,12 +102,19 @@ class WorkOrderViewSet(WorkOrderDocumentMixin, WorkOrderStateTransitionMixin, vi
         pending = queryset.filter(status='pending').count()
         completed = queryset.filter(status='completed').count()
         cancelled = queryset.filter(status='cancelled').count()
-        
+
+        # Closed WOs where a gate pass has been fully completed (vehicle picked up)
+        picked_up_count = queryset.filter(
+            status='closed',
+            gate_passes__status='completed'
+        ).distinct().count()
+
         return Response({
             'total_workorders': total_workorders,
             'in_progress': in_progress,
             'pending': pending,
-            'completed': completed,
+            'completed': completed + picked_up_count,
+            'picked_up': picked_up_count,
             'cancelled': cancelled
         })
     
@@ -928,7 +938,19 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return ServiceTaskCreateSerializer
         return ServiceTaskSerializer
-    
+
+    @action(detail=False, methods=['get'])
+    def task_types(self, request):
+        """Return available service task types."""
+        task_types = ServiceTaskType.objects.filter(is_active=True).order_by('sort_order', 'name')
+        if task_types.exists():
+            serializer = ServiceTaskTypeSerializer(task_types, many=True)
+            return Response(serializer.data)
+        return Response([
+            {'value': value, 'label': label, 'code': value, 'name': label, 'default_labor_rate': '0.00', 'is_active': True}
+            for value, label in ServiceTask.TASK_TYPE_CHOICES
+        ])
+
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         """Start task and auto-clock in technician"""
@@ -987,6 +1009,7 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
         actual_hours = request.data.get('actual_hours')
         notes = request.data.get('notes', '')
+        completion_time = timezone.now()
 
         # Handle Time Logs (Clock Out)
         user = request.user
@@ -999,7 +1022,7 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
             )
             
             for log in open_logs:
-                log.clock_out = timezone.now()
+                log.clock_out = completion_time
                 # Calculate hours if needed, mostly handled by save() or property?
                 # Let's ensure notes are added if provided
                 if notes:
@@ -1018,13 +1041,22 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+        task.completed_at = completion_time
+
+        if not actual_hours and task.calculated_actual_hours <= 0 and task.started_at:
+            duration = completion_time - task.started_at
+            if duration.total_seconds() > 0:
+                task.actual_hours = max(
+                    (Decimal(str(duration.total_seconds())) / Decimal('3600')).quantize(Decimal('0.01')),
+                    Decimal('0.01')
+                )
+
         if task.calculated_actual_hours <= 0:
             return Response(
                 {
-                    'error': 'Actual labor hours are required before completing this task. '
-                             'Enter hours directly or use technician clock-in/out logs.',
-                    'field': 'actual_hours',
-                    'next_step': 'Enter the labor hours spent on this task, then complete it again.',
+                    'error': 'Task must be started before completion so labor time can be calculated.',
+                    'field': 'started_at',
+                    'next_step': 'Start the task, then complete it again.',
                     'task': {
                         'id': task.id,
                         'description': task.description,
@@ -1035,7 +1067,6 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
             )
 
         task.status = 'completed'
-        task.completed_at = timezone.now()
 
         if notes:
             task.detailed_notes = notes
@@ -1047,6 +1078,16 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(task)
         return Response(serializer.data)
+
+class ServiceTaskTypeViewSet(viewsets.ModelViewSet):
+    """CRUD for service task types."""
+    queryset = ServiceTaskType.objects.all().order_by('sort_order', 'name')
+    serializer_class = ServiceTaskTypeSerializer
+    permission_classes = [IsAuthenticated, IsModuleEnabled('workorders')]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['is_active', 'is_billable']
+    search_fields = ['code', 'name', 'description']
+    ordering_fields = ['sort_order', 'name', 'created_at']
 
 
 class WorkOrderPartViewSet(viewsets.ModelViewSet):
@@ -1087,7 +1128,11 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         part = self.get_object()
         
         # Check permissions
-        if request.user.role not in ['manager', 'admin', 'service_coordinator', 'workshop_manager']:
+        if (
+            request.user.role not in ['manager', 'admin', 'service_coordinator', 'workshop_manager']
+            and not user_has_permission(request.user, 'approve_part_requests')
+            and not user_has_permission(request.user, 'manage_inventory')
+        ):
              return Response(
                  {'error': 'You do not have permission to approve requisitions.'},
                  status=status.HTTP_403_FORBIDDEN
@@ -1155,6 +1200,35 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return WorkOrderPartCreateSerializer
         return WorkOrderPartSerializer
+
+    def _validate_stores_fulfillment_allowed(self, wo_part):
+        user = self.request.user
+        if (
+            user.role not in ['manager', 'admin', 'service_coordinator', 'workshop_manager']
+            and not user_has_permission(user, 'manage_inventory')
+            and not user_has_permission(user, 'approve_part_requests')
+        ):
+            return (
+                False,
+                "You do not have permission to fulfill part requests in Stores."
+            )
+        if not wo_part.approved_by_id:
+            return (
+                False,
+                "Part requisition approval is required before Stores can order or allocate this part."
+            )
+        work_order = wo_part.work_order
+        if not work_order.is_approved:
+            return (
+                False,
+                "Customer approval is required before Stores can order or allocate this part."
+            )
+        if work_order.status not in {'approved', 'in_progress', 'paused'}:
+            return (
+                False,
+                f"Stores fulfillment is not allowed while the work order is {work_order.status.replace('_', ' ')}."
+            )
+        return True, None
     
     @action(detail=True, methods=['post'])
     def allocate(self, request, pk=None):
@@ -1163,6 +1237,10 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         from apps.inventory.services import InventoryService
         
         wo_part = self.get_object()
+        allowed, error = self._validate_stores_fulfillment_allowed(wo_part)
+        if not allowed:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+
         if wo_part.status not in ['pending', 'draft', 'po_created', 'awaiting_stock', 'received', 'ordered']: # 'ordered' kept for backward compatibility
              return Response(
                  {'error': f'Cannot allocate part in {wo_part.status} status'},
@@ -1262,6 +1340,9 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         from apps.inventory.models import PurchaseOrder, PurchaseOrderItem
         
         wo_part = self.get_object()
+        allowed, error = self._validate_stores_fulfillment_allowed(wo_part)
+        if not allowed:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         
         # Validation
         if wo_part.status not in ['pending', 'draft', 'po_created']: # 'po_created' allows re-triggering/updating PO
@@ -1380,6 +1461,9 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         from decimal import Decimal
         
         wo_part = self.get_object()
+        allowed, error = self._validate_stores_fulfillment_allowed(wo_part)
+        if not allowed:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         
         # Validation
         # Validation
@@ -1514,6 +1598,11 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         }
         
         for wo_part in parts_to_order:
+            allowed, error = self._validate_stores_fulfillment_allowed(wo_part)
+            if not allowed:
+                results['errors'].append(f"Part {wo_part.id}: {error}")
+                continue
+
             if wo_part.quantity <= 0:
                 results['errors'].append(f"Part {wo_part.id}: Quantity must be positive")
                 continue
@@ -1596,6 +1685,25 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         part = serializer.save()
+        work_order = part.work_order
+
+        if work_order.status in {'approved', 'in_progress', 'paused'}:
+            try:
+                work_order.transition_to('additional_work_found', user=self.request.user)
+                part.additional_work_triggered = True
+                WorkOrderNote.objects.create(
+                    work_order=work_order,
+                    note_type='parts',
+                    note=(
+                        f"Additional part requested after customer approval: "
+                        f"{part.part_name} x{part.quantity}. Customer approval is required before repairs continue."
+                    ),
+                    created_by=self.request.user,
+                    is_important=True,
+                    is_customer_visible=False,
+                )
+            except ValidationError as exc:
+                raise DRFValidationError({'error': '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)})
         
         # Trigger notification
         try:

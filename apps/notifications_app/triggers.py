@@ -494,7 +494,7 @@ You can now start work.'''
             'customer_name': customer_name,
             'vehicle': vehicle_display,
             'vehicle_display': vehicle_display,
-            'problem_description': work_order.diagnosis_notes or work_order.problem_description or "See work order for details",
+            'problem_description': work_order.diagnosis_notes or work_order.customer_concerns or "See work order for details",
         })
         
         title = f'Approval Required - {work_order.work_order_number}'

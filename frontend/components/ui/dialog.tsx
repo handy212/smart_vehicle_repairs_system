@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "./button";
@@ -25,17 +26,13 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
 
   if (!open || !mounted) return null;
 
-  // Use createPortal to render outside the current DOM hierarchy (Stacking Context)
-  // This ensures z-index works relative to the viewport/body, not the parent container
-  const { createPortal } = require("react-dom");
-
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       <div
         className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-[100] animate-in fade-in zoom-in-95 duration-200">{children}</div>
+      <div className="pointer-events-none relative z-[100] flex w-full justify-center animate-in fade-in zoom-in-95 duration-200">{children}</div>
     </div>,
     document.body
   );
@@ -47,7 +44,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       <div
         ref={ref}
         className={cn(
-          "relative bg-card rounded-lg shadow-lg max-w-lg w-full mx-4 border border-border max-h-[90vh] overflow-hidden flex flex-col",
+          "pointer-events-auto relative bg-card rounded-lg shadow-lg w-full max-w-lg border border-border max-h-[90vh] overflow-hidden flex flex-col gap-4 p-6",
           className
         )}
         {...props}
@@ -64,7 +61,7 @@ const DialogHeader = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col space-y-1.5 text-left p-6", className)}
+    className={cn("flex flex-col space-y-1.5 text-left", className)}
     {...props}
   />
 );
@@ -98,7 +95,7 @@ const DialogFooter = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 pt-4", className)}
+    className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-0 sm:space-x-2", className)}
     {...props}
   />
 );
@@ -127,19 +124,14 @@ const DialogTrigger = React.forwardRef<
   }
 >(({ asChild, children, onClick, ...props }, ref) => {
   if (asChild && React.isValidElement(children)) {
-
-    const childProps = children.props as any;
-    return React.cloneElement(children, {
+    const child = children as React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>;
+    return React.cloneElement(child, {
       ...props,
-      ref,
       onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
         onClick?.(e);
-        if (childProps?.onClick) {
-          childProps.onClick(e);
-        }
+        child.props.onClick?.(e);
       },
-
-    } as any);
+    });
   }
   return (
     <button ref={ref} onClick={onClick} {...props}>
@@ -159,4 +151,3 @@ export {
   DialogClose,
   DialogTrigger,
 };
-

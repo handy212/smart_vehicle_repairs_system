@@ -2,23 +2,15 @@
 
 import React from "react";
 import { ListChecks, CheckCircle2, Wrench, Eye } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import type { QualityChecklist, QualityCheckWorkOrder } from "./QualityCheckForm";
 
 interface ChecklistProps {
-    checklist: {
-        allTasksCompleted: boolean;
-        allPartsInstalled: boolean;
-        vehicleClean: boolean;
-        noDamage: boolean;
-        testDrivePassed: boolean;
-        customerSatisfied: boolean;
-        afterRepairsInspection: boolean;
-    };
-    handleChecklistChange: (key: any) => void;
-    workOrder: any;
+    checklist: QualityChecklist;
+    handleChecklistChange: (key: keyof QualityChecklist) => void;
+    workOrder?: QualityCheckWorkOrder;
     allChecksPassed: boolean;
 }
 
@@ -28,155 +20,125 @@ export function Checklist({
     workOrder,
     allChecksPassed,
 }: ChecklistProps) {
+    const doneCount = Object.values(checklist).filter((v) => v).length;
+    const totalCount = Object.values(checklist).length;
+
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
-                    <div className="bg-primary/10 p-1.5 rounded-md">
-                        <ListChecks className="w-4 h-4 text-primary" />
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground">Verification Checklist</h3>
+                    <ListChecks className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">Verification Checklist</h3>
                 </div>
                 {allChecksPassed ? (
-                    <Badge className="bg-success/100/10 text-success border-green-200/50 hover:bg-success/100/10 gap-1 px-1.5 py-0 h-5 text-[10px]">
+                    <Badge variant="success" className="h-5 gap-1 px-1.5 py-0 text-[10px]">
                         <CheckCircle2 className="w-3 h-3" />
                         Verified
                     </Badge>
                 ) : (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground border-border/50 font-medium h-5">
-                        {Object.values(checklist).filter((v) => v).length}/{Object.values(checklist).length} Done
+                    <Badge variant="outline" className="h-5 text-[10px] text-muted-foreground">
+                        {doneCount}/{totalCount} Done
                     </Badge>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Category: Execution */}
-                <Card className="border-border/40 shadow-none bg-background/40 overflow-hidden h-full">
-                    <div className="py-2 px-4 bg-muted/20 border-b border-border/30 flex items-center gap-2">
-                        <Wrench className="w-3 h-3 text-muted-foreground/70" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Execution</span>
+            <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-md border border-border bg-background">
+                    <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+                        <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground">Execution</span>
                     </div>
-                    <CardContent className="p-3 space-y-3">
-                        <div className="flex items-start space-x-3 group cursor-pointer" onClick={() => handleChecklistChange("allTasksCompleted")}>
-                            <Checkbox
-                                id="allTasksCompleted"
-                                checked={checklist.allTasksCompleted}
-                                onCheckedChange={() => handleChecklistChange("allTasksCompleted")}
-                                className="mt-0.5"
-                            />
-                            <div className="grid gap-0.5 leading-none">
-                                <Label htmlFor="allTasksCompleted" className="text-sm font-semibold cursor-pointer group-hover:text-primary transition-colors">
-                                    Technical Tasks
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">
-                                    All assigned work completed
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start space-x-3 group cursor-pointer" onClick={() => handleChecklistChange("allPartsInstalled")}>
-                            <Checkbox
-                                id="allPartsInstalled"
-                                checked={checklist.allPartsInstalled}
-                                onCheckedChange={() => handleChecklistChange("allPartsInstalled")}
-                                className="mt-0.5"
-                            />
-                            <div className="grid gap-0.5 leading-none">
-                                <Label htmlFor="allPartsInstalled" className="text-sm font-semibold cursor-pointer group-hover:text-primary transition-colors">
-                                    Parts Verification
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">
-                                    All parts accounted for
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start space-x-3 group cursor-pointer" onClick={() => handleChecklistChange("testDrivePassed")}>
-                            <Checkbox
-                                id="testDrivePassed"
-                                checked={checklist.testDrivePassed}
-                                onCheckedChange={() => handleChecklistChange("testDrivePassed")}
-                                className="mt-0.5"
-                            />
-                            <div className="grid gap-0.5 leading-none">
-                                <Label htmlFor="testDrivePassed" className="text-sm font-semibold cursor-pointer group-hover:text-primary transition-colors">
-                                    Test Drive
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">Operational check passed</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Category: Quality & Care */}
-                <Card className="border-border/40 shadow-none bg-background/40 overflow-hidden h-full">
-                    <div className="py-2 px-4 bg-muted/20 border-b border-border/30 flex items-center gap-2">
-                        <Eye className="w-3 h-3 text-muted-foreground/70" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Quality & Care</span>
+                    <div className="divide-y divide-border">
+                        <CheckItem
+                            id="allTasksCompleted"
+                            checked={checklist.allTasksCompleted}
+                            label="Technical Tasks"
+                            helper="All assigned work completed"
+                            onChange={() => handleChecklistChange("allTasksCompleted")}
+                        />
+                        <CheckItem
+                            id="allPartsInstalled"
+                            checked={checklist.allPartsInstalled}
+                            label="Parts Verification"
+                            helper="All parts installed or returned"
+                            onChange={() => handleChecklistChange("allPartsInstalled")}
+                        />
+                        <CheckItem
+                            id="testDrivePassed"
+                            checked={checklist.testDrivePassed}
+                            label="Test Drive"
+                            helper="Operational check passed"
+                            onChange={() => handleChecklistChange("testDrivePassed")}
+                        />
                     </div>
-                    <CardContent className="p-3 space-y-3">
-                        <div className="flex items-start space-x-3 group cursor-pointer" onClick={() => handleChecklistChange("afterRepairsInspection")}>
-                            <Checkbox
-                                id="afterRepairsInspection"
-                                checked={checklist.afterRepairsInspection}
-                                onCheckedChange={() => handleChecklistChange("afterRepairsInspection")}
-                                className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary"
-                            />
-                            <div className="grid gap-0.5 leading-none">
-                                <Label htmlFor="afterRepairsInspection" className="text-sm font-bold cursor-pointer group-hover:text-primary transition-colors text-primary italic">
-                                    Post-Repair Inspection
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground italic">Final inspection confirmed</p>
-                            </div>
-                        </div>
+                </div>
 
-                        <div className="flex items-start space-x-3 group cursor-pointer" onClick={() => handleChecklistChange("noDamage")}>
-                            <Checkbox
-                                id="noDamage"
-                                checked={checklist.noDamage}
-                                onCheckedChange={() => handleChecklistChange("noDamage")}
-                                className="mt-0.5"
-                            />
-                            <div className="grid gap-0.5 leading-none">
-                                <Label htmlFor="noDamage" className="text-sm font-semibold cursor-pointer group-hover:text-primary transition-colors">
-                                    Condition Integrity
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">No damage markers</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start space-x-3 group cursor-pointer" onClick={() => handleChecklistChange("vehicleClean")}>
-                            <Checkbox
-                                id="vehicleClean"
-                                checked={checklist.vehicleClean}
-                                onCheckedChange={() => handleChecklistChange("vehicleClean")}
-                                className="mt-0.5"
-                            />
-                            <div className="grid gap-0.5 leading-none">
-                                <Label htmlFor="vehicleClean" className="text-sm font-semibold cursor-pointer group-hover:text-primary transition-colors">
-                                    Cleanliness
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">Ready for delivery</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start space-x-3 group cursor-pointer" onClick={() => handleChecklistChange("customerSatisfied")}>
-                            <Checkbox
-                                id="customerSatisfied"
-                                checked={checklist.customerSatisfied}
-                                onCheckedChange={() => handleChecklistChange("customerSatisfied")}
-                                className="mt-0.5"
-                            />
-                            <div className="grid gap-0.5 leading-none">
-                                <Label htmlFor="customerSatisfied" className="text-sm font-semibold cursor-pointer group-hover:text-primary transition-colors">
-                                    Internal QC Approved
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">Workshop standards met</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="rounded-md border border-border bg-background">
+                    <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+                        <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground">Quality & Care</span>
+                    </div>
+                    <div className="divide-y divide-border">
+                        <CheckItem
+                            id="afterRepairsInspection"
+                            checked={checklist.afterRepairsInspection}
+                            label="Post-Repair Inspection"
+                            helper="Final inspection confirmed"
+                            onChange={() => handleChecklistChange("afterRepairsInspection")}
+                        />
+                        <CheckItem
+                            id="noDamage"
+                            checked={checklist.noDamage}
+                            label="Condition Integrity"
+                            helper="No new damage found"
+                            onChange={() => handleChecklistChange("noDamage")}
+                        />
+                        <CheckItem
+                            id="vehicleClean"
+                            checked={checklist.vehicleClean}
+                            label="Cleanliness"
+                            helper="Ready for delivery"
+                            onChange={() => handleChecklistChange("vehicleClean")}
+                        />
+                        <CheckItem
+                            id="customerSatisfied"
+                            checked={checklist.customerSatisfied}
+                            label="Internal QC Approved"
+                            helper="Workshop standards met"
+                            onChange={() => handleChecklistChange("customerSatisfied")}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
+    );
+}
+
+function CheckItem({
+    id,
+    checked,
+    label,
+    helper,
+    onChange,
+}: {
+    id: string;
+    checked: boolean;
+    label: string;
+    helper: string;
+    onChange: () => void;
+}) {
+    return (
+        <label htmlFor={id} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40">
+            <Checkbox
+                id={id}
+                checked={checked}
+                onCheckedChange={onChange}
+                className="shrink-0"
+            />
+            <span className="min-w-0">
+                <span className="block text-sm font-medium leading-tight text-foreground">{label}</span>
+                <span className="block text-xs leading-tight text-muted-foreground">{helper}</span>
+            </span>
+        </label>
     );
 }

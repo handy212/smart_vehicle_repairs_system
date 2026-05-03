@@ -453,7 +453,11 @@ class EstimateActionMixin:
             return Response({"error": "Only approved estimates can be converted"}, status=status.HTTP_400_BAD_REQUEST)
         
         invoice = estimate.convert_to_invoice()
-        return Response({"message": "Invoice created", "invoice_id": invoice.id})
+        return Response({
+            "message": "Invoice created",
+            "invoice_id": invoice.id,
+            "invoice_number": invoice.invoice_number,
+        })
 
     @action(detail=False, methods=['get'])
     def next_number(self, request):

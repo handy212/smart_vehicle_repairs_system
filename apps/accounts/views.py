@@ -234,6 +234,10 @@ class UserViewSet(viewsets.ModelViewSet):
         # Apply branch filtering to show only technicians from accessible branches
         accessible_branches = get_user_accessible_branches(request.user)
         technicians = technicians.filter(branch__in=accessible_branches)
+
+        branch_id = request.query_params.get('branch')
+        if branch_id:
+            technicians = technicians.filter(branch_id=branch_id)
         
         serializer = PublicUserSerializer(technicians, many=True)
         return Response(serializer.data)

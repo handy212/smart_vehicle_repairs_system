@@ -1,9 +1,16 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
-    WorkOrder, ServiceTask, WorkOrderPart,
+    WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart,
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto, RepeatVisitAlert
 )
+
+
+@admin.register(ServiceTaskType)
+class ServiceTaskTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'default_labor_rate', 'is_billable', 'is_active', 'sort_order']
+    list_filter = ['is_active', 'is_billable']
+    search_fields = ['name', 'code', 'description']
 
 
 class ServiceTaskInline(admin.TabularInline):
@@ -259,4 +266,3 @@ class RepeatVisitAlertAdmin(admin.ModelAdmin):
             'fields': ('marked_as_warranty', 'resolved_by')
         }),
     )
-

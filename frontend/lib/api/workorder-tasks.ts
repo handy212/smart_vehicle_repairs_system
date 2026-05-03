@@ -13,6 +13,8 @@ export interface ServiceTask {
   estimated_hours?: number;
   actual_hours?: number;
   calculated_hours?: number;
+  labor_rate?: number | string;
+  labor_cost?: number | string;
   started_at?: string;
   completed_at?: string;
   created_at: string;
@@ -26,6 +28,19 @@ export interface ServiceTaskListResponse {
   next: string | null;
   previous: string | null;
   results: ServiceTask[];
+}
+
+export interface ServiceTaskType {
+  id?: number;
+  code?: string;
+  name?: string;
+  value: string;
+  label: string;
+  description?: string;
+  default_labor_rate?: string;
+  is_billable?: boolean;
+  is_active?: boolean;
+  sort_order?: number;
 }
 
 export const workOrderTasksApi = {
@@ -45,6 +60,16 @@ export const workOrderTasksApi = {
 
   create: async (data: Partial<ServiceTask>): Promise<ServiceTask> => {
     const response = await apiClient.post("/workorders/tasks/", data);
+    return response.data;
+  },
+
+  taskTypes: async (): Promise<ServiceTaskType[]> => {
+    const response = await apiClient.get("/workorders/task-types/", { params: { is_active: true } });
+    return response.data.results || response.data;
+  },
+
+  taskTypeChoices: async (): Promise<ServiceTaskType[]> => {
+    const response = await apiClient.get("/workorders/tasks/task_types/");
     return response.data;
   },
 
@@ -68,3 +93,23 @@ export const workOrderTasksApi = {
   },
 };
 
+export const serviceTaskTypesApi = {
+  list: async (): Promise<ServiceTaskType[]> => {
+    const response = await apiClient.get("/workorders/task-types/");
+    return response.data.results || response.data;
+  },
+
+  create: async (data: Partial<ServiceTaskType>): Promise<ServiceTaskType> => {
+    const response = await apiClient.post("/workorders/task-types/", data);
+    return response.data;
+  },
+
+  update: async (id: number, data: Partial<ServiceTaskType>): Promise<ServiceTaskType> => {
+    const response = await apiClient.patch(`/workorders/task-types/${id}/`, data);
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiClient.delete(`/workorders/task-types/${id}/`);
+  },
+};

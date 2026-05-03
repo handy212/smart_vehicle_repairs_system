@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShoppingCart, CheckCircle, ExternalLink, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ShoppingCart, CheckCircle, ExternalLink, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { InlineInventoryForm, InventoryFormData } from "./InlineInventoryForm";
@@ -213,13 +213,31 @@ export function PartRequestDetailDialog({
         },
     });
 
+    const approveMutation = useMutation({
+        mutationFn: (id: number) => workordersApi.parts.approve(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["parts-requests"] });
+            onRefresh();
+            toast({ title: "Requisition Approved", variant: "success" });
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Approval Failed",
+                description: getApiErrorMessage(error),
+                variant: "destructive",
+            });
+        },
+    });
+
     if (!workOrderId || parts.length === 0) return null;
 
     // Identify parts eligible for bulk order
     const outOfStockParts = parts.filter(p => {
         const isReady = p.status === 'ready' || p.status === 'received' || p.status === 'po_created' || p.status === 'awaiting_stock';
         const inStock = p.inventory_status?.available;
-        return !isReady && !inStock && p.part_number; // Only orderable parts
+        const requisitionApproved = !!p.approved_by;
+        const customerApproved = p.work_order_is_approved !== false;
+        return requisitionApproved && customerApproved && !isReady && !inStock && p.part_number; // Only orderable parts
     });
 
     const canBulkOrder = outOfStockParts.length > 0;
@@ -294,10 +312,11 @@ export function PartRequestDetailDialog({
                                         const isAwaitingStock = part.status === 'awaiting_stock';
                                         const inStock = part.inventory_status?.available;
                                         const stockQty = part.inventory_status?.quantity || 0;
+                                        const needsRequisitionApproval = !part.approved_by && ['draft', 'pending'].includes(part.status);
+                                        const customerApproved = part.work_order_is_approved !== false;
 
-                                        // Determine what to show in the action column
-                                        const showAllocate = !isReady && inStock;
-                                        const showPO = !isReady && !isOrdered && !isReceived && !isAwaitingStock && !inStock;
+                                        const showAllocate = !needsRequisitionApproval && customerApproved && !isReady && inStock;
+                                        const showPO = !needsRequisitionApproval && customerApproved && !isReady && !isOrdered && !isReceived && !isAwaitingStock && !inStock;
 
                                         return (
                                             <React.Fragment key={part.id}>
@@ -333,47 +352,49 @@ export function PartRequestDetailDialog({
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="py-2.5 text-right pr-4">
-                                                        {isReady ? (
-                                                            <Badge variant="success" className="h-6 px-2">Ready</Badge>
-                                                        ) : showAllocate ? (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="default" // Primary action
-                                                                className="h-7 text-xs font-medium bg-success hover:bg-green-700 text-white shadow-sm"
-                                                                onClick={() => allocateMutation.mutate(part.id)}
-                                                                disabled={allocateMutation.isPending}
-                                                            >
-                                                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                                                                Allocate
-                                                            </Button>
-                                                        ) : showPO ? (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="h-7 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 border-primary/20"
-                                                                onClick={() => orderMutation.mutate(part.id)}
-                                                                disabled={orderMutation.isPending || showInventoryForm === part.id}
-                                                            >
-                                                                <ShoppingCart className="w-3.5 h-3.5 mr-1.5" />
-                                                                PO
-                                                            </Button>
-                                                        ) : (
-                                                            <Badge variant="secondary" className="h-6 px-2">
-                                                                {isReceived ? 'Received' :
-                                                                    isAwaitingStock ? 'Awaiting Stock' :
-                                                                        part.purchase_order_number ? `PO #${part.purchase_order_number}` : 'PO Created'}
-                                                            </Badge>
-                                                        )}
-
-                                                        {/* Actions Menu */}
-                                                        <div className="inline-flex ml-2">
+                                                        <div className="inline-flex items-center gap-2">
+                                                            {!customerApproved ? (
+                                                                <Badge variant="warning" className="h-6 px-2">Awaiting Customer</Badge>
+                                                            ) : isReady ? (
+                                                                <Badge variant="success" className="h-6 px-2">Ready</Badge>
+                                                            ) : isReceived || isAwaitingStock || isOrdered ? (
+                                                                <Badge variant="secondary" className="h-6 px-2">
+                                                                    {isReceived ? 'Received' :
+                                                                        isAwaitingStock ? 'Awaiting Stock' :
+                                                                            part.purchase_order_number ? `PO #${part.purchase_order_number}` : 'PO Created'}
+                                                                </Badge>
+                                                            ) : null}
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                                                                        <MoreHorizontal className="w-4 h-4" />
+                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Open part request actions">
+                                                                        <MoreVertical className="w-4 h-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
+                                                                    {needsRequisitionApproval && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => approveMutation.mutate(part.id)}
+                                                                            disabled={approveMutation.isPending}
+                                                                        >
+                                                                            <CheckCircle className="mr-2 h-4 w-4" /> Approve Requisition
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    {showAllocate && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => allocateMutation.mutate(part.id)}
+                                                                            disabled={allocateMutation.isPending}
+                                                                        >
+                                                                            <CheckCircle className="mr-2 h-4 w-4" /> Allocate
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    {showPO && (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => orderMutation.mutate(part.id)}
+                                                                            disabled={orderMutation.isPending || showInventoryForm === part.id}
+                                                                        >
+                                                                            <ShoppingCart className="mr-2 h-4 w-4" /> Create PO
+                                                                        </DropdownMenuItem>
+                                                                    )}
                                                                     <DropdownMenuItem onClick={() => setEditingPart(part)}>
                                                                         <Pencil className="mr-2 h-4 w-4" /> Edit Details
                                                                     </DropdownMenuItem>

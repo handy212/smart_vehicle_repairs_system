@@ -3,8 +3,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
+import { adminApi, type User } from "@/lib/api/admin";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,24 +15,39 @@ import { useState } from "react";
 import { AxiosError } from "axios";
 
 const taskSchema = z.object({
-  task_type: z.enum(["inspection", "repair", "replacement", "diagnostic"]),
+  task_type: z.string().min(1, "Task type is required"),
   description: z.string().min(1, "Description is required"),
   detailed_notes: z.string().optional(),
   estimated_hours: z.number().min(0).optional(),
+  labor_rate: z.number().min(0).optional(),
   sequence_order: z.number().min(0).optional(),
+  assigned_to: z.number().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
 
 interface AddTaskDialogProps {
   workOrderId: number;
+  branchId?: number | null;
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }: AddTaskDialogProps) {
+export default function AddTaskDialog({ workOrderId, branchId, open, onClose, onSuccess }: AddTaskDialogProps) {
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const { data: taskTypes = [] } = useQuery({
+    queryKey: ["service-task-types"],
+    queryFn: () => workOrderTasksApi.taskTypes(),
+    enabled: open,
+  });
+
+  const { data: technicians = [], isLoading: techniciansLoading } = useQuery({
+    queryKey: ["technicians", "task-assignment", branchId],
+    queryFn: () => adminApi.users.technicians(branchId ? { branch: branchId } : undefined),
+    enabled: open,
+  });
 
   const {
     register,
@@ -109,21 +125,63 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
               </label>
               <Select
                 value={watch("task_type")}
-
-                onValueChange={(val) => setValue("task_type", val as any)}
+                onValueChange={(val) => {
+                  setValue("task_type", val, { shouldValidate: true });
+                  const selectedType = taskTypes.find((type) => type.value === val || type.code === val);
+                  if (selectedType?.default_labor_rate) {
+                    setValue("labor_rate", Number(selectedType.default_labor_rate), { shouldValidate: true });
+                  }
+                }}
               >
                 <SelectTrigger id="task_type" className="w-full">
                   <SelectValue placeholder="Select task type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inspection">Inspection</SelectItem>
-                  <SelectItem value="repair">Repair</SelectItem>
-                  <SelectItem value="replacement">Replacement</SelectItem>
-                  <SelectItem value="diagnostic">Diagnostic</SelectItem>
+                  {(taskTypes.length > 0 ? taskTypes : [
+                    { value: "repair", label: "Repair" },
+                    { value: "diagnostic", label: "Diagnostic" },
+                  ]).map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.task_type && (
                 <p className="mt-1 text-sm text-destructive">{errors.task_type.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="assigned_to" className="block text-sm font-medium text-foreground mb-2">
+                Assign Technician
+              </label>
+              <Select
+                value={watch("assigned_to") ? String(watch("assigned_to")) : "unassigned"}
+                onValueChange={(val) => {
+                  setValue("assigned_to", val === "unassigned" ? undefined : Number(val), { shouldValidate: true });
+                }}
+              >
+                <SelectTrigger id="assigned_to" className="w-full">
+                  <SelectValue placeholder={techniciansLoading ? "Loading technicians..." : "Select technician"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {technicians.map((technician: User) => (
+                    <SelectItem key={technician.id} value={String(technician.id)}>
+                      {technician.full_name || `${technician.first_name} ${technician.last_name}`}
+                      {technician.branch_name ? ` - ${technician.branch_name}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.assigned_to && (
+                <p className="mt-1 text-sm text-destructive">{errors.assigned_to.message}</p>
+              )}
+              {branchId && technicians.length === 0 && !techniciansLoading && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No active technicians are available for this work order branch.
+                </p>
               )}
             </div>
 
@@ -162,10 +220,25 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
                   id="estimated_hours"
                   type="number"
                   step="0.5"
-                  {...register("estimated_hours", { valueAsNumber: true })}
+                  {...register("estimated_hours", { setValueAs: (value) => value === "" ? undefined : Number(value) })}
                   className="w-full"
                 />
               </div>
+              <div>
+                <label htmlFor="labor_rate" className="block text-sm font-medium text-foreground mb-2">
+                  Labor Rate
+                </label>
+                <Input
+                  id="labor_rate"
+                  type="number"
+                  step="0.01"
+                  {...register("labor_rate", { setValueAs: (value) => value === "" ? undefined : Number(value) })}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="sequence_order" className="block text-sm font-medium text-foreground mb-2">
                   Sequence Order
@@ -173,7 +246,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
                 <Input
                   id="sequence_order"
                   type="number"
-                  {...register("sequence_order", { valueAsNumber: true })}
+                  {...register("sequence_order", { setValueAs: (value) => value === "" ? undefined : Number(value) })}
                   className="w-full"
                 />
               </div>
@@ -192,4 +265,3 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
     </Dialog>
   );
 }
-

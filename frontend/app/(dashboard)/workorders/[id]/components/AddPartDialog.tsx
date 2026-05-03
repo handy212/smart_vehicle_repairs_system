@@ -29,13 +29,14 @@ type PartFormData = z.infer<typeof partSchema>;
 
 interface AddPartDialogProps {
   workOrderId: number;
+  workOrderStatus?: string;
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 export default function AddPartDialog({
-    workOrderId, open, onClose, onSuccess }: AddPartDialogProps) {
+    workOrderId, workOrderStatus, open, onClose, onSuccess }: AddPartDialogProps) {
     const { formatCurrency } = useCurrency();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -68,7 +69,7 @@ export default function AddPartDialog({
         work_order: workOrderId,
         unit_cost: data.unit_cost.toString(),
         total_cost: totalCost.toFixed(2),
-        status: "ordered",
+        status: "pending",
       }),
     onSuccess: () => {
       reset();
@@ -142,6 +143,15 @@ export default function AddPartDialog({
               Searching inventory will auto-fill the part details below. You can still edit them manually.
             </p>
           </div>
+
+          {["approved", "in_progress", "paused"].includes(workOrderStatus || "") && (
+            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-900">
+              <p className="text-sm font-medium">This will be treated as additional work.</p>
+              <p className="mt-1 text-xs">
+                Because the customer has already approved the job, adding a new part will move the work order to additional work found and require approval before repairs continue.
+              </p>
+            </div>
+          )}
 
           <div className="relative flex py-2 items-center">
             <div className="flex-grow border-t border-border"></div>

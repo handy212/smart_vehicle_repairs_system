@@ -1,312 +1,250 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo } from "react";
 import { format } from "date-fns";
-import { Clock, FileCheck, Receipt, CreditCard } from "lucide-react";
+import { Clock } from "lucide-react";
 import { WorkOrder } from "@/lib/api/workorders";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface TimelineProps {
-    workOrder: WorkOrder;
-    notes: Array<{
-        id?: number | string;
-        created_at?: string;
-        note?: string;
-        text?: string;
-        content?: string;
-        note_type?: string;
-        is_important?: boolean;
-        created_by_name?: string;
-        author_name?: string;
-    }>;
+  workOrder: WorkOrder;
+  notes: Array<{
+    id?: number | string;
+    created_at?: string;
+    note?: string;
+    text?: string;
+    content?: string;
+    note_type?: string;
+    is_important?: boolean;
+    created_by_name?: string;
+    author_name?: string;
+  }>;
 }
 
+type TimelineEvent = {
+  id: string;
+  timestamp: string;
+  category: string;
+  title: string;
+  detail?: string;
+  actor?: string;
+  variant?: BadgeProps["variant"];
+};
+
+const formatDate = (timestamp: string) => {
+  const isMidnightStamp = /T00:00:00(?:\.000)?(?:Z|[+-]\d{2}:\d{2})?$/.test(timestamp);
+  return {
+    date: format(new Date(timestamp), "MMM d, yyyy"),
+    time: isMidnightStamp ? "" : format(new Date(timestamp), "h:mm a"),
+  };
+};
+
+const createdByName = (createdBy: WorkOrder["created_by"]) => {
+  if (createdBy && typeof createdBy === "object") {
+    return `${createdBy.first_name || ""} ${createdBy.last_name || ""}`.trim() || "System";
+  }
+  return createdBy ? "System" : undefined;
+};
+
 export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
-    const formatWorkflowTimestamp = (timestamp?: string | null) => {
-        if (!timestamp) {
-            return "";
-        }
+  const events = useMemo<TimelineEvent[]>(() => {
+    const rows: TimelineEvent[] = [];
 
-        const isMidnightStamp = /T00:00:00(?:\.000)?(?:Z|[+-]\d{2}:\d{2})?$/.test(timestamp);
-        return format(
-            new Date(timestamp),
-            isMidnightStamp ? "MMM dd, yyyy" : "MMM dd, yyyy 'at' h:mm a"
-        );
-    };
+    if (workOrder.created_at) {
+      rows.push({
+        id: "work-order-created",
+        timestamp: workOrder.created_at,
+        category: "Workflow",
+        title: "Work Order Created",
+        detail: workOrder.work_order_number,
+        actor: createdByName(workOrder.created_by),
+        variant: "info",
+      });
+    }
 
-    const commercialEvents = [
-        workOrder.estimate_summary?.created_at
-            ? {
-                id: `estimate-created-${workOrder.estimate_summary.id}`,
-                title: "Stores Quote Created",
-                timestamp: workOrder.estimate_summary.created_at,
-                subtitle: `${workOrder.estimate_summary.estimate_number} • ${workOrder.estimate_summary.status.replace(/_/g, " ")}`,
-                color: "bg-primary",
-                icon: FileCheck,
-            }
-            : null,
-        workOrder.estimate_summary?.approved_date
-            ? {
-                id: `estimate-approved-${workOrder.estimate_summary.id}`,
-                title: "Stores Quote Approved",
-                timestamp: workOrder.estimate_summary.approved_date,
-                subtitle: `${workOrder.estimate_summary.estimate_number} • Total ${workOrder.estimate_summary.total}`,
-                color: "bg-success/100",
-                icon: FileCheck,
-            }
-            : null,
-        workOrder.invoice_summary?.created_at
-            ? {
-                id: `invoice-created-${workOrder.invoice_summary.id}`,
-                title: "Invoice Created",
-                timestamp: workOrder.invoice_summary.created_at,
-                subtitle: `${workOrder.invoice_summary.invoice_number} • ${workOrder.invoice_summary.status.replace(/_/g, " ")}`,
-                color: "bg-warning/100",
-                icon: Receipt,
-            }
-            : null,
-        workOrder.invoice_summary?.paid_at
-            ? {
-                id: `invoice-paid-${workOrder.invoice_summary.id}`,
-                title: "Invoice Paid",
-                timestamp: workOrder.invoice_summary.paid_at,
-                subtitle: `${workOrder.invoice_summary.invoice_number} • Paid ${workOrder.invoice_summary.amount_paid}`,
-                color: "bg-success",
-                icon: CreditCard,
-            }
-            : null,
-    ].filter(Boolean) as Array<{
-        id: string;
-        title: string;
-        timestamp: string;
-        subtitle: string;
-        color: string;
-        icon: typeof Clock;
-    }>;
+    if (workOrder.diagnosis_completed_at) {
+      rows.push({
+        id: "diagnosis-completed",
+        timestamp: workOrder.diagnosis_completed_at,
+        category: "Diagnosis",
+        title: "Diagnosis Completed",
+        detail: workOrder.diagnosis_notes || undefined,
+        variant: "secondary",
+      });
+    }
 
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Activity Timeline</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Chronological view of work order events and activities
-                </p>
-            </CardHeader>
-            <CardContent>
-                <div className="relative">
-                    {/* Timeline line */}
-                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
+    if (workOrder.approval_requested_at) {
+      rows.push({
+        id: "approval-requested",
+        timestamp: workOrder.approval_requested_at,
+        category: "Approval",
+        title: "Customer Approval Requested",
+        detail: workOrder.estimated_total ? `Estimate total ${workOrder.estimated_total}` : undefined,
+        variant: "warning",
+      });
+    }
 
-                    <div className="space-y-6 pl-8">
-                        {/* Work Order Created */}
-                        {workOrder.created_at && (
-                            <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-primary border-2 border-white border-border shadow-sm"></div>
-                                <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Work Order Created
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {formatWorkflowTimestamp(workOrder.created_at)}
-                                    </p>
-                                    {workOrder.created_by && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Created by:{" "}
-                                            {typeof workOrder.created_by === "object"
-                                                ? workOrder.created_by.first_name +
-                                                " " +
-                                                workOrder.created_by.last_name
-                                                : "System"}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
+    if (workOrder.approved_at) {
+      rows.push({
+        id: "work-order-approved",
+        timestamp: workOrder.approved_at,
+        category: "Approval",
+        title: "Work Order Approved",
+        detail: workOrder.approval_method ? `Method: ${workOrder.approval_method.replace(/_/g, " ")}` : undefined,
+        variant: "success",
+      });
+    }
+
+    if (workOrder.started_at) {
+      rows.push({
+        id: "repair-started",
+        timestamp: workOrder.started_at,
+        category: "Repair",
+        title: "Repair Work Started",
+        actor: workOrder.primary_technician_name,
+        variant: "info",
+      });
+    }
+
+    if (workOrder.quality_check_at) {
+      rows.push({
+        id: "quality-check",
+        timestamp: workOrder.quality_check_at,
+        category: "QC",
+        title: `Quality Check ${workOrder.quality_check_passed ? "Passed" : "Failed"}`,
+        detail: workOrder.quality_check_notes || undefined,
+        variant: workOrder.quality_check_passed ? "success" : "danger",
+      });
+    }
+
+    if (workOrder.completed_at) {
+      rows.push({
+        id: "completed",
+        timestamp: workOrder.completed_at,
+        category: "Workflow",
+        title: "Work Order Completed",
+        variant: "success",
+      });
+    }
+
+    if (workOrder.estimate_summary?.created_at) {
+      rows.push({
+        id: `estimate-created-${workOrder.estimate_summary.id}`,
+        timestamp: workOrder.estimate_summary.created_at,
+        category: "Commercial",
+        title: "Stores Quote Created",
+        detail: `${workOrder.estimate_summary.estimate_number} - ${workOrder.estimate_summary.status.replace(/_/g, " ")}`,
+        variant: "info",
+      });
+    }
+
+    if (workOrder.estimate_summary?.approved_date) {
+      rows.push({
+        id: `estimate-approved-${workOrder.estimate_summary.id}`,
+        timestamp: workOrder.estimate_summary.approved_date,
+        category: "Commercial",
+        title: "Stores Quote Approved",
+        detail: `${workOrder.estimate_summary.estimate_number} - Total ${workOrder.estimate_summary.total}`,
+        variant: "success",
+      });
+    }
+
+    if (workOrder.invoice_summary?.created_at) {
+      rows.push({
+        id: `invoice-created-${workOrder.invoice_summary.id}`,
+        timestamp: workOrder.invoice_summary.created_at,
+        category: "Billing",
+        title: "Invoice Created",
+        detail: `${workOrder.invoice_summary.invoice_number} - ${workOrder.invoice_summary.status.replace(/_/g, " ")}`,
+        variant: "warning",
+      });
+    }
+
+    if (workOrder.invoice_summary?.paid_at) {
+      rows.push({
+        id: `invoice-paid-${workOrder.invoice_summary.id}`,
+        timestamp: workOrder.invoice_summary.paid_at,
+        category: "Billing",
+        title: "Invoice Paid",
+        detail: `${workOrder.invoice_summary.invoice_number} - Paid ${workOrder.invoice_summary.amount_paid || ""}`,
+        variant: "success",
+      });
+    }
+
+    notes.forEach((note) => {
+      if (!note.created_at) return;
+      rows.push({
+        id: `note-${note.id || note.created_at}`,
+        timestamp: note.created_at,
+        category: "Note",
+        title: note.note_type === "customer" ? "Customer Note" : note.is_important ? "Important Note" : "Internal Note",
+        detail: note.note || note.text || note.content,
+        actor: note.created_by_name || note.author_name,
+        variant: note.is_important ? "danger" : note.note_type === "customer" ? "info" : "secondary",
+      });
+    });
+
+    return rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [workOrder, notes]);
+
+  return (
+    <Card>
+      <CardHeader className="px-4 py-3">
+        <CardTitle className="text-base">Activity Timeline</CardTitle>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {events.length} event{events.length === 1 ? "" : "s"} recorded
+        </p>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 pt-0">
+        {events.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-10 text-center">
+            <Clock className="h-9 w-9 text-muted-foreground" />
+            <p className="mt-3 text-sm font-medium text-foreground">No timeline events yet</p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-md border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[150px]">Date</TableHead>
+                  <TableHead className="w-[130px]">Category</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead className="w-[170px]">Actor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.map((event) => {
+                  const date = formatDate(event.timestamp);
+                  return (
+                    <TableRow key={event.id}>
+                      <TableCell className="align-top text-xs text-muted-foreground">
+                        {date.date}
+                        {date.time && <div>{date.time}</div>}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Badge variant={event.variant || "secondary"}>{event.category}</Badge>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="text-sm font-medium text-foreground">{event.title}</div>
+                        {event.detail && (
+                          <p className="mt-1 max-w-3xl whitespace-pre-wrap text-xs text-muted-foreground">
+                            {event.detail}
+                          </p>
                         )}
-
-                        {/* Status Changes */}
-                        {workOrder.diagnosis_completed_at && (
-                            <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-purple-500 border-2 border-white border-border shadow-sm"></div>
-                                <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Diagnosis Completed
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {formatWorkflowTimestamp(workOrder.diagnosis_completed_at)}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {workOrder.approval_requested_at && (
-                            <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-warning/100 border-2 border-white border-border shadow-sm"></div>
-                                <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Approval Requested
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {formatWorkflowTimestamp(workOrder.approval_requested_at)}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {workOrder.approved_at && (
-                            <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white border-border shadow-sm"></div>
-                                <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Work Order Approved
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {formatWorkflowTimestamp(workOrder.approved_at)}
-                                    </p>
-                                    {workOrder.approval_method && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Via: {workOrder.approval_method.replace(/_/g, " ")}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {workOrder.started_at && (
-                            <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success/100 border-2 border-white border-border shadow-sm"></div>
-                                <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Work Started
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {formatWorkflowTimestamp(workOrder.started_at)}
-                                    </p>
-                                    {workOrder.primary_technician_name && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Technician: {workOrder.primary_technician_name}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {workOrder.quality_check_at && (
-                            <div className="relative flex items-start">
-                                <div
-                                    className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${workOrder.quality_check_passed
-                                        ? "bg-success/100"
-                                        : "bg-destructive/100"
-                                        }`}
-                                ></div>
-                                <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Quality Check{" "}
-                                        {workOrder.quality_check_passed ? "Passed" : "Failed"}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {formatWorkflowTimestamp(workOrder.quality_check_at)}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {workOrder.completed_at && (
-                            <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-success border-2 border-white border-border shadow-sm"></div>
-                                <div className="flex-1 pt-0.5">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Work Order Completed
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {formatWorkflowTimestamp(workOrder.completed_at)}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {commercialEvents.length > 0 && (
-                            <>
-                                <div className="border-t border-border pt-6 mt-4">
-                                    <p className="text-sm font-semibold text-card-foreground mb-4">
-                                        Commercial Flow
-                                    </p>
-                                </div>
-                                {commercialEvents.map((event) => {
-                                    const Icon = event.icon;
-                                    return (
-                                        <div key={event.id} className="relative flex items-start">
-                                            <div className={`absolute -left-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white border-border shadow-sm ${event.color}`}>
-                                                <Icon className="h-3 w-3 text-white" />
-                                            </div>
-                                            <div className="flex-1 pt-0.5">
-                                                <p className="text-sm font-semibold text-foreground">{event.title}</p>
-                                                <p className="text-xs text-muted-foreground mt-0.5">
-                                                    {formatWorkflowTimestamp(event.timestamp)}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground mt-1">{event.subtitle}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </>
-                        )}
-
-                        {/* Notes Timeline */}
-                        {notes.length > 0 && (
-                            <>
-                                <div className="border-t border-border pt-6 mt-4">
-                                    <p className="text-sm font-semibold text-card-foreground mb-4">
-                                        Notes & Activity
-                                    </p>
-                                </div>
-                                {notes
-                                    .sort(
-                                        (a, b) =>
-                                            new Date(b.created_at || 0).getTime() -
-                                            new Date(a.created_at || 0).getTime()
-                                    )
-                                    .map((note) => (
-                                        <div key={note.id} className="relative flex items-start">
-                                            <div
-                                                className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white border-border shadow-sm ${note.note_type === "customer"
-                                                    ? "bg-primary"
-                                                    : note.is_important
-                                                        ? "bg-destructive/100"
-                                                        : "bg-gray-400"
-                                                    }`}
-                                            ></div>
-                                            <div className="flex-1 pt-0.5">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="text-sm font-semibold text-foreground">
-                                                        {note.note_type === "customer"
-                                                            ? "Customer Note"
-                                                            : note.is_important
-                                                                ? "Important Note"
-                                                                : "Internal Note"}
-                                                    </p>
-                                                </div>
-                                                <p className="text-sm text-card-foreground mt-1 whitespace-pre-wrap">
-                                                    {note.note || note.text || note.content}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    {formatWorkflowTimestamp(note.created_at)}
-                                                    {note.created_by_name &&
-                                                        ` • ${note.created_by_name}`}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                            </>
-                        )}
-
-                        {!workOrder.created_at && notes.length === 0 && (
-                            <div className="text-center py-8">
-                                <Clock className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-3" />
-                                <p className="text-sm text-muted-foreground">No timeline events yet.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    );
+                      </TableCell>
+                      <TableCell className="align-top text-sm text-muted-foreground">
+                        {event.actor || "-"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }

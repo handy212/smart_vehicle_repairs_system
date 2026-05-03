@@ -356,7 +356,11 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
     pending:   recentWorkOrders.filter((w) => WO_FILTERS.pending.includes(w.status)).length,
     active:    recentWorkOrders.filter((w) => WO_FILTERS.active.includes(w.status)).length,
     attention: recentWorkOrders.filter((w) => WO_FILTERS.attention.includes(w.status)).length,
-    completed: recentWorkOrders.filter((w) => WO_FILTERS.completed.includes(w.status)).length,
+    // Count 'completed'/'ready'/'cancelled' statuses PLUS closed WOs with a completed gate pass
+    completed: recentWorkOrders.filter((w) =>
+      ["completed", "ready", "cancelled"].includes(w.status) ||
+      (w.status === "closed" && w.gate_pass_status === "completed")
+    ).length,
   }), [recentWorkOrders]);
 
   const invCounts = useMemo(() => ({
@@ -370,7 +374,18 @@ if (e.key === "r" && !inInput && !e.ctrlKey && !e.metaKey) handleRefresh();
   /* ── filtered + sorted WOs ── */
   const displayWOs = useMemo(() => {
     let list = recentWorkOrders;
-    if (woFilter !== "all") list = list.filter((w) => WO_FILTERS[woFilter].includes(w.status));
+    if (woFilter !== "all") {
+      if (woFilter === "completed") {
+        // 'completed' tab: normal completed statuses + closed WOs where gate pass is completed (picked up)
+        list = list.filter((w) =>
+          ["completed", "ready", "cancelled"].includes(w.status) ||
+          (w.status === "closed" && w.gate_pass_status === "completed")
+        );
+      } else {
+        // For all other filters, exclude 'closed' WOs unless they match the filter explicitly
+        list = list.filter((w) => WO_FILTERS[woFilter].includes(w.status));
+      }
+    }
     if (woDateStart) list = list.filter((w) => new Date(w.created_at) >= woDateStart);
     if (woSearch.trim()) {
       const q = woSearch.toLowerCase();

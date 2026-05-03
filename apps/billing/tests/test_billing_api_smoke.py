@@ -83,6 +83,13 @@ class TestBillingAPI:
         estimate.refresh_from_db()
         assert estimate.status == 'approved'
 
+        # Test convert_to_invoice returns the invoice id used by the frontend route
+        response = api_client.post(f"{url}convert_to_invoice/")
+        assert response.status_code == status.HTTP_200_OK, f"Convert failed: {response.data}"
+        assert response.data["invoice_id"]
+        assert response.data["invoice_number"]
+        assert Invoice.objects.filter(id=response.data["invoice_id"], estimate=estimate).exists()
+
     def test_invoice_actions_available(self, api_client, user, branch, customer):
         api_client.force_authenticate(user=user)
         

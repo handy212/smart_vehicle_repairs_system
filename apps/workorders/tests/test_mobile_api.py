@@ -198,7 +198,7 @@ class MobileAPITestCase(TestCase):
         self.work_order.refresh_from_db()
         self.assertEqual(self.work_order.status, 'completed')
 
-    def test_cannot_complete_task_without_actual_hours_or_time_logs(self, mock_filter):
+    def test_can_complete_started_task_without_manual_actual_hours(self, mock_filter):
         self.client.post(f'/api/workorders/work-orders/{self.work_order.id}/start_work/')
         self.client.post(f'/api/workorders/tasks/{self.task.id}/start/')
 
@@ -208,8 +208,11 @@ class MobileAPITestCase(TestCase):
             format='json'
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('Actual labor hours are required', response.data['error'])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.status, 'completed')
+        self.assertGreater(self.task.actual_hours, 0)
+        self.assertGreater(response.data['calculated_hours'], 0)
 
     def test_request_quality_check_is_idempotent_when_already_requested(self, mock_filter):
         """Repeated QC requests should return the current work order instead of failing."""

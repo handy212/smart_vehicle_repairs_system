@@ -198,7 +198,7 @@ def dashboard_overview(request):
         
         recent_work_orders = work_orders_qs.select_related(
             'customer', 'vehicle', 'customer__user'
-        ).order_by('-created_at')[:5]
+        ).prefetch_related('gate_passes').order_by('-created_at')[:5]
         
         recent_appointments = appointments_qs.select_related(
             'customer', 'vehicle', 'customer__user'
@@ -228,6 +228,19 @@ def dashboard_overview(request):
                         parts.append(wo.vehicle.model)
                     vehicle_info = ' '.join(parts) if parts else 'Unknown'
                 
+                # Derive gate_pass_status from prefetched gate_passes
+                gate_pass_status = None
+                try:
+                    gp_all = list(wo.gate_passes.all())
+                    if gp_all:
+                        # Prefer 'completed' if any gate pass is completed
+                        if any(gp.status == 'completed' for gp in gp_all):
+                            gate_pass_status = 'completed'
+                        else:
+                            gate_pass_status = gp_all[0].status
+                except Exception:
+                    pass
+
                 work_orders_list.append({
                     'id': wo.id,
                     'wo_number': wo.work_order_number,
@@ -236,6 +249,7 @@ def dashboard_overview(request):
                     'status': wo.status,
                     'created_at': wo.created_at.isoformat(),
                     'diagnosis_notes': wo.diagnosis_notes,
+                    'gate_pass_status': gate_pass_status,
                 })
             except Exception:
                 continue
@@ -702,7 +716,10 @@ def work_order_statistics(request):
         },
         'summary': {
             'total_work_orders': total_work_orders,
-            'completed': completed.count(),
+            'completed': completed.count() + work_orders.filter(
+                status='closed',
+                gate_passes__status='completed'
+            ).distinct().count(),
             'average_completion_hours': float(avg_completion_time) if avg_completion_time else None,
             # Active: work orders currently being worked on
             'active_count': work_orders.filter(

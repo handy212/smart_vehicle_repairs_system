@@ -419,7 +419,7 @@ export default function NewWorkOrderPage() {
             completed_at: wo.completed_at || null,
             customer_concerns: wo.customer_concerns || "",
             technician_name: wo.primary_technician_name || "Not assigned",
-            branch_name: wo.branch?.name || "Unknown Branch",
+            branch_name: typeof wo.branch === "object" ? wo.branch?.name || "Unknown Branch" : "Unknown Branch",
             days_ago: wo.completed_at ? Math.floor((new Date().getTime() - new Date(wo.completed_at).getTime()) / (1000 * 60 * 60 * 24)) : null,
           });
         }).catch(() => {

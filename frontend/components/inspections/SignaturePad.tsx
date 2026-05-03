@@ -4,7 +4,7 @@ import { useRef, useEffect } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2 } from "lucide-react";
+import { CheckCircle2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SignaturePadProps {
@@ -26,12 +26,15 @@ export function SignaturePad({
   disabled = false,
   width = 500,
   height = 200,
-  showPreview = true,
+  showPreview = false,
 }: SignaturePadProps) {
   const sigPadRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
-    if (value && sigPadRef.current) {
+    if (!sigPadRef.current) return;
+
+    sigPadRef.current.clear();
+    if (value) {
       sigPadRef.current.fromDataURL(value);
     }
   }, [value]);
@@ -53,31 +56,39 @@ export function SignaturePad({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden border-border shadow-none">
+      <CardHeader className="px-3 py-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">
-            {label}
-            {required && <span className="text-destructive ml-1">*</span>}
-          </CardTitle>
-          {!disabled && (
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-xs font-semibold">
+              {label}
+              {required && <span className="text-destructive ml-1">*</span>}
+            </CardTitle>
+            {value && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-success">
+                <CheckCircle2 className="h-3 w-3" />
+                Signed
+              </span>
+            )}
+          </div>
+          {!disabled && value && (
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onClick={handleClear}
-              disabled={!value}
+              className="h-7 px-2 text-xs"
             >
-              <Trash2 className="w-4 h-4 mr-1" />
+              <Trash2 className="mr-1 h-3.5 w-3.5" />
               Clear
             </Button>
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 pb-3 pt-0">
         <div 
           className={cn(
-            "border-2 border-dashed rounded-lg bg-background",
+            "overflow-hidden rounded-md border border-dashed bg-white",
             disabled ? "pointer-events-none opacity-50" : "border-border",
             !disabled && "border-border"
           )}
