@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 from apps.billing.models import Estimate, Invoice
+from apps.accounts.admin_models import SystemModule
 from apps.accounts.models import User
 from apps.branches.models import Branch
 from apps.customers.models import Customer
@@ -12,6 +13,13 @@ from decimal import Decimal
 @pytest.fixture
 def api_client():
     return APIClient()
+
+@pytest.fixture(autouse=True)
+def billing_module(db):
+    SystemModule.objects.update_or_create(
+        slug="billing",
+        defaults={"name": "Billing", "is_enabled": True},
+    )
 
 @pytest.fixture
 def user(db):

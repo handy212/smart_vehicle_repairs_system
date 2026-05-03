@@ -5,6 +5,7 @@ Comprehensive permission system covering all modules and operations
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from apps.accounts.permission_models import Permission, Role
+from apps.accounts.management.commands.seed_modules import Command as SeedModulesCommand
 from config import roles as config_roles
 from apps.accounts.management.commands._auditlog_utils import disable_auditlog
 
@@ -20,6 +21,8 @@ class Command(BaseCommand):
 
     def _do_init(self):
         with transaction.atomic():
+            SeedModulesCommand()._do_seed()
+
             # Comprehensive permission definitions covering all modules and operations
             # Format: 'code': ('category', 'Display Name', 'Description')
             permission_categories = {

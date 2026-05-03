@@ -28,7 +28,7 @@ PUBLIC_HOST="${PUBLIC_HOST:-${DJANGO_HOST:-localhost}}"
 
 # Virtualenv settings
 # Use a dedicated dev venv so we don't conflict with the production venv under /var/www/svr
-VENV_DIR="$BACKEND_DIR/venv-dev"
+VENV_DIR="${VENV_DIR:-$BACKEND_DIR/venv-dev}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 echo -e "${BLUE}========================================${NC}"
@@ -83,11 +83,12 @@ else
     echo ""
 fi
 
-# Create / ensure dev virtual environment exists (matching repo requirements)
-if [ ! -d "$VENV_DIR" ]; then
+create_dev_venv() {
+    local clear_flag="${1:-}"
+
     echo -e "${YELLOW}Creating Python virtual environment at: $VENV_DIR${NC}"
     cd "$BACKEND_DIR"
-    $PYTHON_BIN -m venv "$VENV_DIR" || {
+    $PYTHON_BIN -m venv $clear_flag "$VENV_DIR" || {
         echo -e "${RED}Failed to create virtual environment.${NC}"
         echo -e "${YELLOW}If you see 'No module named venv', install: sudo apt-get install python3-venv${NC}"
         exit 1
@@ -103,11 +104,16 @@ if [ ! -d "$VENV_DIR" ]; then
     }
     echo -e "${GREEN}✓ Virtual environment created and dependencies installed${NC}"
     echo ""
+}
+
+# Create / ensure dev virtual environment exists (matching repo requirements)
+if [ ! -d "$VENV_DIR" ]; then
+    create_dev_venv
 fi
 
 if [ ! -f "$VENV_DIR/bin/activate" ]; then
-    echo -e "${RED}Dev virtual environment is missing activate script: $VENV_DIR/bin/activate${NC}"
-    exit 1
+    echo -e "${YELLOW}Dev virtual environment is incomplete; recreating it: $VENV_DIR${NC}"
+    create_dev_venv "--clear"
 fi
 
 # Ensure dependencies are installed (in case a previous run was interrupted mid-install)

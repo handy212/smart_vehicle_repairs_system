@@ -1,11 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, TrendingUp, TrendingDown, DollarSign, Wrench, Package, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
@@ -24,6 +23,31 @@ function MarginBadge({ value }: { value: number }) {
         </span>
     );
 }
+
+type JobProfitabilityJob = {
+    work_order_id: number;
+    work_order_number: string;
+    customer: string;
+    created_at?: string;
+    revenue?: number;
+    labor_cost?: number;
+    parts_cost?: number;
+    gross_profit?: number;
+    margin_percent?: number;
+    labor_cost_is_actual?: boolean;
+    parts_cost_is_actual?: boolean;
+    labor_revenue?: number;
+    labor_margin_percent?: number;
+    parts_revenue?: number;
+    parts_margin_percent?: number;
+    other_revenue?: number;
+    other_margin_percent?: number;
+};
+
+type JobProfitabilityReport = {
+    totals?: Record<string, number>;
+    jobs?: JobProfitabilityJob[];
+};
 
 export default function JobProfitabilityPage() {
     const { formatCurrency } = useCurrency();
@@ -46,8 +70,9 @@ export default function JobProfitabilityPage() {
         },
     });
 
-    const totals = report?.totals ?? {};
-    const jobs: any[] = report?.jobs ?? [];
+    const typedReport = report as JobProfitabilityReport | undefined;
+    const totals = typedReport?.totals ?? {};
+    const jobs = typedReport?.jobs ?? [];
 
     return (
         <div className="space-y-4">
@@ -173,10 +198,9 @@ export default function JobProfitabilityPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {jobs.map((job: any) => (
-                                        <>
+                                    {jobs.map((job) => (
+                                        <Fragment key={job.work_order_id}>
                                             <TableRow
-                                                key={job.work_order_id}
                                                 className="hover:bg-muted/50 border-b border-border cursor-pointer"
                                                 onClick={() => setExpandedJob(expandedJob === job.work_order_id ? null : job.work_order_id)}
                                             >
@@ -217,7 +241,7 @@ export default function JobProfitabilityPage() {
 
                                             {/* Expanded per-category breakdown */}
                                             {expandedJob === job.work_order_id && (
-                                                <TableRow key={`${job.work_order_id}-detail`} className="bg-muted/30 border-b border-border">
+                                                <TableRow className="bg-muted/30 border-b border-border">
                                                     <TableCell colSpan={9} className="px-4 py-3">
                                                         <div className="grid grid-cols-3 gap-4 text-xs">
                                                             {/* Labor */}
@@ -253,7 +277,7 @@ export default function JobProfitabilityPage() {
                                                     </TableCell>
                                                 </TableRow>
                                             )}
-                                        </>
+                                        </Fragment>
                                     ))}
                                 </TableBody>
                             </Table>

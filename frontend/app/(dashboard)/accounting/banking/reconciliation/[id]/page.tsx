@@ -5,8 +5,7 @@ import { accountingApi } from "@/lib/api/accounting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { ArrowLeft, Check, Plus, Upload, RefreshCw, AlertCircle, Link as LinkIcon, X, Filter } from "lucide-react";
+import { ArrowLeft, Check, Plus, Upload } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { format } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -18,6 +17,61 @@ import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+type ApiError = {
+    response?: {
+        data?: {
+            error?: string;
+            detail?: string;
+        };
+    };
+};
+
+type BankLine = {
+    id: string;
+    transaction_date: string;
+    description: string;
+    debit_amount: string;
+    credit_amount: string;
+    matched: boolean;
+};
+
+type SystemTransaction = {
+    id: string;
+    account: {
+        id: string | number;
+    };
+    amount: string;
+    transaction_type: "debit" | "credit";
+    description?: string;
+    date?: string;
+};
+
+type BankStatement = {
+    id: string;
+    bank_account: string | number;
+    bank_account_name: string;
+    statement_date: string;
+    opening_balance: string;
+    closing_balance: string;
+    reconciled: boolean;
+    lines?: BankLine[];
+};
+
+type AccountOption = {
+    id: string | number;
+    code: string;
+    name: string;
+};
+
+type CreatedJournalEntry = {
+    transactions: SystemTransaction[];
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+    const data = (error as ApiError)?.response?.data;
+    return data?.error || data?.detail || fallback;
+}
+
 export default function ReconciliationDetailPage() {
     const params = useParams();
     const id = params?.id as string;
@@ -27,9 +81,8 @@ export default function ReconciliationDetailPage() {
 
     // State
 
-    const [selectedBankLine, setSelectedBankLine] = useState<any>(null);
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const [selectedSysTx, setSelectedSysTx] = useState<any>(null);
+    const [selectedBankLine, setSelectedBankLine] = useState<BankLine | null>(null);
+    const [selectedSysTx, setSelectedSysTx] = useState<SystemTransaction | null>(null);
     const [isMatchLoading, setIsMatchLoading] = useState(false);
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [isReconciling, setIsReconciling] = useState(false);
@@ -42,54 +95,54 @@ export default function ReconciliationDetailPage() {
     const [isCreatingTx, setIsCreatingTx] = useState(false);
 
     // Fetch Statement
-    const { data: statement, isLoading: isStatementLoading, refetch: refetchStatement } = useQuery({
+    const { data: statement, isLoading: isStatementLoading, refetch: refetchStatement } = useQuery<BankStatement>({
         queryKey: ["bank-statement", id],
         queryFn: () => accountingApi.getBankStatement(id),
         enabled: !!id
     });
 
     // Fetch Unreconciled Transactions (only if statement loaded)
-    const { data: transactions, isLoading: isTxLoading, refetch: refetchTx } = useQuery({
+    const { data: transactions, isLoading: isTxLoading, refetch: refetchTx } = useQuery<SystemTransaction[]>({
         queryKey: ["unreconciled-transactions", statement?.bank_account],
-        queryFn: () => accountingApi.getUnreconciledTransactions(
-            statement.bank_account,
-            undefined,
-            new Date(new Date(statement.statement_date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        ),
+        queryFn: () => {
+            if (!statement) return [];
+            return accountingApi.getUnreconciledTransactions(
+                String(statement.bank_account),
+                undefined,
+                new Date(new Date(statement.statement_date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            );
+        },
         enabled: !!statement?.bank_account
     });
 
     // Fetch All Accounts (for Create Dialog)
-    const { data: allAccounts } = useQuery({
+    const { data: allAccounts } = useQuery<AccountOption[]>({
         queryKey: ["all-accounts"],
         queryFn: async () => {
-            const accs = await accountingApi.getAccounts();
-            // Filter out current bank account
-
-            return accs.filter((a: any) => a.id.toString() !== statement?.bank_account?.toString());
+            const accs = await accountingApi.getAccounts() as AccountOption[];
+            return accs.filter((account) => account.id.toString() !== statement?.bank_account?.toString());
         },
         enabled: isCreateTxDialogOpen
     });
 
     // Derived State
-    const bankLines = useMemo(() => statement?.lines || [], [statement]);
+    const bankLines = useMemo<BankLine[]>(() => statement?.lines || [], [statement]);
 
-    const unmatchedBankLines = useMemo(() => bankLines.filter((l: any) => !l.matched), [bankLines]);
+    const unmatchedBankLines = useMemo(() => bankLines.filter((line) => !line.matched), [bankLines]);
 
-    const matchedBankLines = useMemo(() => bankLines.filter((l: any) => l.matched), [bankLines]);
+    const matchedBankLines = useMemo(() => bankLines.filter((line) => line.matched), [bankLines]);
 
     const visibleBankLines = viewMatched === "matched" ? matchedBankLines : unmatchedBankLines;
 
     // Calculate balances
     const reconciledBalance = useMemo(() => {
         if (!statement) return 0;
-        {/* eslint-disable-next-line prefer-const */ }
-        let balance = parseFloat(statement.opening_balance);
+        const balance = parseFloat(statement.opening_balance);
         let movement = 0;
 
-        matchedBankLines.forEach((l: any) => {
-            const debit = parseFloat(l.debit_amount) || 0;
-            const credit = parseFloat(l.credit_amount) || 0;
+        matchedBankLines.forEach((line) => {
+            const debit = parseFloat(line.debit_amount) || 0;
+            const credit = parseFloat(line.credit_amount) || 0;
             movement += (debit - credit);
         });
         return balance + movement;
@@ -110,9 +163,12 @@ export default function ReconciliationDetailPage() {
             : -parseFloat(selectedSysTx.amount);
 
         if (Math.abs(bankVal - sysVal) > 0.01) {
-            if (!confirm(`Amounts differ: Bank ${formatCurrency(bankVal)} vs System ${formatCurrency(sysVal)}. Match anyway?`)) {
-                return;
-            }
+            toast({
+                title: "Cannot Match",
+                description: `Amounts must match exactly. Bank ${formatCurrency(bankVal)} vs System ${formatCurrency(sysVal)}.`,
+                variant: "destructive"
+            });
+            return;
         }
 
         try {
@@ -131,7 +187,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to match transaction",
+                description: getErrorMessage(error, "Failed to match transaction"),
                 variant: "destructive"
             });
         } finally {
@@ -157,7 +213,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to unmatch transaction",
+                description: getErrorMessage(error, "Failed to unmatch transaction"),
                 variant: "destructive"
             });
         } finally {
@@ -188,7 +244,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to complete reconciliation",
+                description: getErrorMessage(error, "Failed to complete reconciliation"),
                 variant: "destructive"
             });
         } finally {
@@ -197,7 +253,7 @@ export default function ReconciliationDetailPage() {
     };
 
 
-    const handleUpload = async (e: any) => {
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -217,7 +273,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to upload statement",
+                description: getErrorMessage(error, "Failed to upload statement"),
                 variant: "destructive"
             });
         }
@@ -231,7 +287,7 @@ export default function ReconciliationDetailPage() {
     };
 
     const handleCreateAndMatch = async () => {
-        if (!selectedBankLine || !createTxAccount) return;
+        if (!selectedBankLine || !createTxAccount || !statement) return;
 
         try {
             setIsCreatingTx(true);
@@ -262,9 +318,9 @@ export default function ReconciliationDetailPage() {
                 transactions: [bankTx, otherTx]
             };
 
-            const je = await accountingApi.createJournalEntry(jePayload);
+            const je = await accountingApi.createJournalEntry(jePayload) as CreatedJournalEntry;
 
-            const createdBankTx = je.transactions.find((t: any) => t.account.id.toString() === statement.bank_account.toString());
+            const createdBankTx = je.transactions.find((transaction) => transaction.account.id.toString() === statement.bank_account.toString());
 
             if (createdBankTx) {
                 await accountingApi.matchBankLine(selectedBankLine.id, createdBankTx.id);
@@ -289,7 +345,7 @@ export default function ReconciliationDetailPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to create transaction",
+                description: getErrorMessage(error, "Failed to create transaction"),
                 variant: 'destructive'
             });
             console.error(error);
@@ -300,15 +356,19 @@ export default function ReconciliationDetailPage() {
 
     if (isStatementLoading) return <div className="p-8 text-center text-sm text-muted-foreground">Loading reconciliation...</div>;
 
+    if (!statement) {
+        return <div className="p-8 text-center text-sm text-muted-foreground">Bank statement not found.</div>;
+    }
+
     return (
-        <div className="space-y-4 h-[calc(100vh-100px)] flex flex-col">
-            <div className="flex justify-between items-start pt-2 flex-shrink-0">
+        <div className="space-y-3 h-[calc(100vh-100px)] flex flex-col">
+            <div className="flex justify-between items-start border-b border-border pb-3 flex-shrink-0">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => router.push('/accounting/banking/reconciliation')}>
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
-                        <h1 className="text-xl font-bold tracking-tight text-foreground">
+                        <h1 className="text-lg font-semibold tracking-tight text-foreground">
                             {statement?.bank_account_name} &middot; {format(new Date(statement?.statement_date), 'MMMM yyyy')}
                         </h1>
                         {statement?.reconciled &&
@@ -337,39 +397,38 @@ export default function ReconciliationDetailPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4 flex-shrink-0">
-                {/* Cards Summary */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 flex-shrink-0">
                 <Card className="border shadow-none bg-muted/50">
-                    <CardHeader className="p-4 pb-1">
+                    <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Statement Opening</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-1">
-                        <div className="text-xl font-mono">{formatCurrency(statement?.opening_balance)}</div>
+                    <CardContent className="p-3 pt-1">
+                        <div className="text-base font-mono">{formatCurrency(statement?.opening_balance)}</div>
                     </CardContent>
                 </Card>
                 <Card className="border shadow-none bg-muted/50">
-                    <CardHeader className="p-4 pb-1">
+                    <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Statement Closing</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-1">
-                        <div className="text-xl font-mono">{formatCurrency(statement?.closing_balance)}</div>
+                    <CardContent className="p-3 pt-1">
+                        <div className="text-base font-mono">{formatCurrency(statement?.closing_balance)}</div>
                     </CardContent>
                 </Card>
                 <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-card")}>
-                    <CardHeader className="p-4 pb-1">
+                    <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Reconciled Balance</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-1">
-                        <div className="text-xl font-mono font-semibold">{formatCurrency(reconciledBalance)}</div>
+                    <CardContent className="p-3 pt-1">
+                        <div className="text-base font-mono font-semibold">{formatCurrency(reconciledBalance)}</div>
                         <div className="text-[10px] text-muted-foreground mt-1">Based on matched lines</div>
                     </CardContent>
                 </Card>
                 <Card className={cn("border shadow-none", Math.abs(difference) < 0.01 ? "bg-success/10 dark:bg-green-900/10 border-green-200" : "bg-destructive/10 dark:bg-red-900/10 border-destructive/20")}>
-                    <CardHeader className="p-4 pb-1">
+                    <CardHeader className="p-3 pb-1">
                         <CardTitle className="text-xs font-medium text-muted-foreground uppercase">Difference</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-1">
-                        <div className={cn("text-xl font-mono font-bold", Math.abs(difference) < 0.01 ? "text-success" : "text-destructive")}>
+                    <CardContent className="p-3 pt-1">
+                        <div className={cn("text-base font-mono font-bold", Math.abs(difference) < 0.01 ? "text-success" : "text-destructive")}>
                             {formatCurrency(difference)}
                         </div>
                         <div className="text-[10px] text-muted-foreground mt-1">{Math.abs(difference) < 0.01 ? "Perfectly balanced" : "Review needed"}</div>
@@ -385,8 +444,8 @@ export default function ReconciliationDetailPage() {
                             <Badge variant="secondary" className="text-[10px]">{visibleBankLines.length}</Badge>
                         </div>
 
-                        <Tabs value={viewMatched} onValueChange={(v: any) => {
-                            setViewMatched(v);
+                        <Tabs value={viewMatched} onValueChange={(value) => {
+                            setViewMatched(value as "unmatched" | "matched");
                             setSelectedBankLine(null);
                         }} className="w-auto">
                             <TabsList className="grid w-full grid-cols-2 h-7 bg-muted/50">
@@ -403,7 +462,7 @@ export default function ReconciliationDetailPage() {
                         )}
                         <div className="divide-y relative">
 
-                            {visibleBankLines.map((line: any) => (
+                            {visibleBankLines.map((line) => (
                                 <div
                                     key={line.id}
                                     className={cn(
@@ -445,7 +504,7 @@ export default function ReconciliationDetailPage() {
                                     </div>
                                 ) : (
 
-                                    transactions?.map((tx: any) => (
+                                    transactions?.map((tx) => (
                                         <div
                                             key={tx.id}
                                             className={cn(
@@ -511,8 +570,8 @@ export default function ReconciliationDetailPage() {
                         <div className="text-sm">
                             Matched Line Selected
                         </div>
-                        <Button onClick={handleUnmatch} disabled={isMatchLoading} size="sm" variant="destructive">
-                            {isMatchLoading ? "Unmatching..." : "Unmatch Line"}
+                        <Button onClick={handleUnmatch} disabled={isMatchLoading || statement?.reconciled} size="sm" variant="destructive">
+                            {statement?.reconciled ? "Statement Reconciled" : isMatchLoading ? "Unmatching..." : "Unmatch Line"}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => setSelectedBankLine(null)}>
                             Cancel
@@ -572,7 +631,7 @@ export default function ReconciliationDetailPage() {
                                 >
                                     <option value="" disabled>Select account...</option>
 
-                                    {allAccounts?.map((acc: any) => (
+                                    {allAccounts?.map((acc) => (
                                         <option key={acc.id} value={acc.id}>
                                             {acc.code} - {acc.name}
                                         </option>

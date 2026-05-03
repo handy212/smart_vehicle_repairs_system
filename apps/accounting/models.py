@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator
@@ -102,8 +103,15 @@ class JournalEntry(models.Model):
                     )
 
     def save(self, *args, **kwargs):
+        is_initial_posted_create = self.pk is None and self.posted
         self.full_clean()
         super().save(*args, **kwargs)
+        if is_initial_posted_create:
+            # Legacy posting services create a posted header and immediately add
+            # its lines using the same in-memory instance. Keep that initial
+            # construction path working while still blocking later fetched
+            # posted-entry edits.
+            self._allow_initial_posted_lines = True
 
 
 class Transaction(models.Model):
@@ -133,7 +141,16 @@ class Transaction(models.Model):
     def clean(self):
         if self.amount <= 0:
             raise ValidationError(_("Transaction amount must be positive."))
-        if self.journal_entry_id and self.journal_entry.posted and not getattr(self, '_allow_posted_edit', False):
+        allow_initial_line = (
+            self.pk is None
+            and getattr(self.journal_entry, '_allow_initial_posted_lines', False)
+        )
+        if (
+            self.journal_entry_id
+            and self.journal_entry.posted
+            and not getattr(self, '_allow_posted_edit', False)
+            and not allow_initial_line
+        ):
             raise ValidationError(
                 _("Transactions on posted journal entries cannot be edited. Create a reversal entry instead.")
             )
@@ -482,6 +499,9 @@ class Accrual(models.Model):
     accrual_date = models.DateField(help_text="Date to recognize the expense/revenue")
     reversal_date = models.DateField(null=True, blank=True, help_text="Date to reverse the accrual (usually first day of next period)")
     description = models.TextField()
+    source_model = models.CharField(max_length=100, blank=True, help_text="Source document model, e.g. WorkOrder or PurchaseOrder")
+    source_id = models.PositiveIntegerField(null=True, blank=True, help_text="Source document primary key")
+    source_reference = models.CharField(max_length=100, blank=True, help_text="Human-readable source document number")
     
     accrual_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='accrual_entries')
     reversal_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='reversal_entries')
@@ -490,6 +510,19 @@ class Accrual(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['source_model', 'source_id']),
+            models.Index(fields=['status', 'accrual_type']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['accrual_type', 'source_model', 'source_id'],
+                condition=Q(source_id__isnull=False),
+                name='unique_active_accrual_source',
+            )
+        ]
     
     @property
     def is_reversed(self):

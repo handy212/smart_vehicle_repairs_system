@@ -6,9 +6,9 @@ from .services import AccountingService
 @receiver(post_save, sender=Invoice)
 def post_invoice_to_ledger(sender, instance, created, **kwargs):
     """
-    Automated posting when Invoice is finalized (Open) or Paid
+    Automated posting when Invoice is issued or paid
     """
-    if instance.status in ['open', 'paid']:
+    if instance.status in AccountingService.FINALIZED_INVOICE_STATUSES:
         AccountingService.post_invoice(instance)
         # Also post COGS
         AccountingService.post_cogs(instance)

@@ -8,6 +8,9 @@ from .models import Account, JournalEntry, Transaction
 from apps.billing.models import Invoice, Bill
 
 class AccountingService:
+    FINALIZED_INVOICE_STATUSES = {'sent', 'viewed', 'partial', 'paid', 'overdue', 'open'}
+    MONEY_QUANT = Decimal('0.01')
+
     @staticmethod
     def get_or_create_account(code, name, account_type, balance_type):
         """Helper to get or create system accounts"""
@@ -29,11 +32,18 @@ class AccountingService:
         lines: list of dicts with keys: 'account_id', 'type' ('debit'/'credit'), 'amount', 'description'
         """
         with transaction.atomic():
+            debits = sum(Decimal(str(line['amount'])) for line in lines if line['type'] == 'debit')
+            credits = sum(Decimal(str(line['amount'])) for line in lines if line['type'] == 'credit')
+            if debits != credits:
+                raise ValidationError(
+                    f"Journal Entry '{description}' is not balanced. Debits: {debits}, Credits: {credits}."
+                )
+
             je = JournalEntry.objects.create(
                 date=date,
                 description=description,
                 reference=reference,
-                posted=posted,
+                posted=False,
                 created_by=user,
                 branch=branch,
                 content_object=content_object
@@ -49,9 +59,128 @@ class AccountingService:
                 )
             
             if not je.validate_balanced():
-                 raise ValidationError(f"Journal Entry '{description}' is not balanced.")
+                raise ValidationError(f"Journal Entry '{description}' is not balanced.")
+
+            if posted:
+                je.posted = True
+                je.save(update_fields=['posted', 'updated_at'])
             
             return je
+
+    @classmethod
+    def reverse_journal_entry(cls, journal_entry, user, date=None, reason=''):
+        """
+        Create a posted reversing journal entry for an existing posted entry.
+        Posted entries remain immutable; corrections must be made through this
+        reversal plus a new correcting entry where needed.
+        """
+        if not journal_entry.posted:
+            raise ValidationError("Only posted journal entries can be reversed.")
+
+        if journal_entry.content_object and isinstance(journal_entry.content_object, JournalEntry):
+            raise ValidationError("Reversal entries cannot be reversed.")
+
+        reversal_type = ContentType.objects.get_for_model(journal_entry)
+        if JournalEntry.objects.filter(
+            content_type=reversal_type,
+            object_id=journal_entry.id,
+            reference=f"REV-JE-{journal_entry.id}",
+        ).exists():
+            raise ValidationError(f"Journal Entry #{journal_entry.id} has already been reversed.")
+
+        lines = [
+            {
+                'account_id': tx.account_id,
+                'type': 'credit' if tx.transaction_type == 'debit' else 'debit',
+                'amount': tx.amount,
+                'description': f"Reversal: {tx.description or journal_entry.description}",
+            }
+            for tx in journal_entry.transactions.select_related('account').all()
+        ]
+
+        if not lines:
+            raise ValidationError("Cannot reverse a journal entry with no transactions.")
+
+        reversal_reason = reason.strip() if reason else ''
+        description = f"Reversal of JE #{journal_entry.id}: {journal_entry.description}"
+        if reversal_reason:
+            description = f"{description} ({reversal_reason})"
+
+        return cls.create_journal_entry(
+            user=user,
+            date=date or timezone.now().date(),
+            description=description,
+            reference=f"REV-JE-{journal_entry.id}",
+            lines=lines,
+            posted=True,
+            branch=journal_entry.branch,
+            content_object=journal_entry,
+        )
+
+    @classmethod
+    def close_income_statement_period(cls, user, start_date, end_date, branch=None):
+        """
+        Close income and expense activity for a period into retained earnings.
+        This creates a posted closing entry and is idempotent for the same
+        period and branch.
+        """
+        if not start_date or not end_date:
+            raise ValidationError("start_date and end_date are required.")
+        if start_date > end_date:
+            raise ValidationError("start_date cannot be after end_date.")
+
+        branch_key = branch.id if branch else 'global'
+        reference = f"CLOSE-{start_date:%Y%m%d}-{end_date:%Y%m%d}-{branch_key}"
+        existing = JournalEntry.objects.filter(reference=reference, branch=branch).first()
+        if existing:
+            return existing
+
+        retained_earnings = cls.get_or_create_account('3200', 'Retained Earnings', 'equity', 'credit')
+        lines = []
+
+        for account in Account.objects.filter(account_type__in=['income', 'expense'], is_active=True).order_by('code'):
+            balance = ReportingService.get_account_balance(
+                account,
+                start_date=start_date,
+                end_date=end_date,
+                branch_id=branch.id if branch else None,
+            )
+            if balance == 0:
+                continue
+
+            amount = abs(balance).quantize(cls.MONEY_QUANT)
+            if account.account_type == 'income':
+                account_line_type = 'debit' if balance > 0 else 'credit'
+                retained_line_type = 'credit' if balance > 0 else 'debit'
+            else:
+                account_line_type = 'credit' if balance > 0 else 'debit'
+                retained_line_type = 'debit' if balance > 0 else 'credit'
+
+            lines.append({
+                'account_id': account.id,
+                'type': account_line_type,
+                'amount': amount,
+                'description': f"Close {account.code} for {start_date} to {end_date}",
+            })
+            lines.append({
+                'account_id': retained_earnings.id,
+                'type': retained_line_type,
+                'amount': amount,
+                'description': f"Close {account.code} to retained earnings",
+            })
+
+        if not lines:
+            raise ValidationError("No income or expense activity found for the selected period.")
+
+        return cls.create_journal_entry(
+            user=user,
+            date=end_date,
+            description=f"Close income statement for {start_date} to {end_date}",
+            reference=reference,
+            lines=lines,
+            posted=True,
+            branch=branch,
+        )
 
     @classmethod
     def post_invoice(cls, invoice):
@@ -61,12 +190,19 @@ class AccountingService:
         Credit: Sales Revenue (4000)
         Credit: Sales Tax Payable (2100)
         """
-        if invoice.status not in ['open', 'paid']:
+        if invoice.status not in cls.FINALIZED_INVOICE_STATUSES:
             return None  # Only post finalized invoices
 
-        # Check if already posted
         invoice_type = ContentType.objects.get_for_model(invoice)
-        if JournalEntry.objects.filter(content_type=invoice_type, object_id=invoice.id).exists():
+        invoice_reference = invoice.invoice_number or f"INV-{invoice.id}"
+
+        # Check if the AR/revenue entry has already been posted. COGS is a
+        # separate entry for the same invoice and should not block this one.
+        if JournalEntry.objects.filter(
+            content_type=invoice_type,
+            object_id=invoice.id,
+            reference=invoice_reference,
+        ).exists():
             return None
 
         with transaction.atomic():
@@ -78,8 +214,8 @@ class AccountingService:
             # 2. Create Header
             je = JournalEntry.objects.create(
                 date=invoice.invoice_date if invoice.invoice_date else timezone.now().date(),
-                description=f"Invoice #{invoice.invoice_number} for {str(invoice.customer)}",
-                reference=invoice.invoice_number,
+                description=f"Invoice #{invoice_reference} for {str(invoice.customer)}",
+                reference=invoice_reference,
                 posted=True,
                 created_by=invoice.created_by,
                 branch=invoice.branch,
@@ -88,31 +224,37 @@ class AccountingService:
 
             # 3. Create Transactions
             
+            total_amount = Decimal(str(invoice.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
+            tax_amount = Decimal(str(invoice.tax_amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
+            revenue_amount = Decimal(str(invoice.subtotal or Decimal('0'))).quantize(cls.MONEY_QUANT)
+            if revenue_amount == 0 and total_amount > 0:
+                revenue_amount = (total_amount - tax_amount).quantize(cls.MONEY_QUANT)
+
             # Debit AR (Total Amount)
             Transaction.objects.create(
                 journal_entry=je,
                 account=ar_account,
-                amount=invoice.total,
+                amount=total_amount,
                 transaction_type='debit',
                 description='Invoice Total'
             )
 
-            # Credit Revenue (Subtotal)
-            if invoice.subtotal > 0:
+            # Credit Revenue (Subtotal, or total less tax for legacy invoices)
+            if revenue_amount > 0:
                 Transaction.objects.create(
                     journal_entry=je,
                     account=sales_account,
-                    amount=invoice.subtotal,
+                    amount=revenue_amount,
                     transaction_type='credit',
                     description='Sales Revenue'
                 )
 
             # Credit Tax (Tax Amount)
-            if invoice.tax_amount > 0:
+            if tax_amount > 0:
                 Transaction.objects.create(
                     journal_entry=je,
                     account=tax_account,
-                    amount=invoice.tax_amount,
+                    amount=tax_amount,
                     transaction_type='credit',
                     description='Sales Tax'
                 )
@@ -120,7 +262,7 @@ class AccountingService:
             # Validate
             if not je.validate_balanced():
                 # Should rollback due to atomic block if we raise error, but let's be explicit
-                raise ValidationError(f"Journal Entry for Invoice {invoice.invoice_number} is not balanced.")
+                raise ValidationError(f"Journal Entry for Invoice {invoice_reference} is not balanced.")
             
             return je
 
@@ -131,6 +273,20 @@ class AccountingService:
         Debit: Cost of Goods Sold (5100)
         Credit: Inventory Asset (1500)
         """
+        if invoice.status not in cls.FINALIZED_INVOICE_STATUSES:
+            return None
+
+        invoice_type = ContentType.objects.get_for_model(invoice)
+        invoice_reference = invoice.invoice_number or f"INV-{invoice.id}"
+        cogs_reference = f"{invoice_reference}-COGS"
+
+        if JournalEntry.objects.filter(
+            content_type=invoice_type,
+            object_id=invoice.id,
+            reference=cogs_reference,
+        ).exists():
+            return None
+
         # Iterate over invoice line items, check if they are parts
         # Determine cost (use Part.cost_price for standard costing)
         # Note: In a real system we'd use FIFO/LIFO/Avg layers, but here we use current Unit Cost.
@@ -143,7 +299,7 @@ class AccountingService:
                 # Calculate cost: quantity * part.cost_price
                 qty = line.quantity or 0
                 cost = line.part.cost_price or 0
-                line_total_cost = qty * cost
+                line_total_cost = (qty * cost).quantize(cls.MONEY_QUANT)
                 
                 if line_total_cost > 0:
                     cogs_total += line_total_cost
@@ -162,8 +318,8 @@ class AccountingService:
             
             je = JournalEntry.objects.create(
                 date=invoice.invoice_date if invoice.invoice_date else timezone.now().date(),
-                description=f"COGS for Invoice #{invoice.invoice_number}",
-                reference=f"{invoice.invoice_number}-COGS",
+                description=f"COGS for Invoice #{invoice_reference}",
+                reference=cogs_reference,
                 posted=True,
                 created_by=invoice.created_by,
                 branch=invoice.branch,
@@ -189,7 +345,7 @@ class AccountingService:
             )
             
             if not je.validate_balanced():
-                raise ValidationError(f"COGS Journal Entry for Invoice {invoice.invoice_number} is not balanced.")
+                raise ValidationError(f"COGS Journal Entry for Invoice {invoice_reference} is not balanced.")
                 
             return je
 
@@ -429,15 +585,13 @@ class AccountingService:
         if inventory_transaction.transaction_type not in ['adjustment', 'damage', 'count']:
             return
         
-        # Get accounts
-        inventory_asset = Account.objects.filter(code='1300').first()  # Inventory Asset
-        shrinkage_expense = Account.objects.filter(code='5900').first()  # Inventory Shrinkage Expense
-        
-        if not inventory_asset or not shrinkage_expense:
-            return  # Accounts not set up yet
+        inventory_asset = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
+        shrinkage_expense = cls.get_or_create_account('5900', 'Inventory Shrinkage Expense', 'expense', 'debit')
         
         # Calculate value of adjustment
-        amount = abs(inventory_transaction.quantity) * (inventory_transaction.unit_cost or Decimal('0'))
+        quantity = Decimal(str(abs(inventory_transaction.quantity or 0)))
+        unit_cost = Decimal(str(inventory_transaction.unit_cost or 0))
+        amount = (quantity * unit_cost).quantize(cls.MONEY_QUANT)
         
         if amount == 0:
             return
@@ -499,12 +653,8 @@ class AccountingService:
         if credit_note.status != 'issued':
             return
         
-        # Get accounts
-        sales_returns = Account.objects.filter(code='4100').first()  # Sales Returns & Allowances
-        ar_account = Account.objects.filter(code='1200').first()  # Accounts Receivable
-        
-        if not sales_returns or not ar_account:
-            return
+        sales_returns = cls.get_or_create_account('4100', 'Sales Returns & Allowances', 'income', 'debit')
+        ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
         
         amount = credit_note.amount
         
@@ -546,12 +696,8 @@ class AccountingService:
         if refund.status != 'completed':
             return
         
-        # Get accounts
-        ar_account = Account.objects.filter(code='1200').first()
-        cash_account = Account.objects.filter(code='1000').first()
-        
-        if not ar_account or not cash_account:
-            return
+        ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
+        cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
         
         amount = refund.amount
         
@@ -592,19 +738,19 @@ class AccountingService:
         if transfer.status != 'received':
             return  # Only post when received
         
-        # Get accounts
-        inventory_asset = Account.objects.filter(code='1300').first()
-        due_from = Account.objects.filter(code='1900').first()  # Due From Other Branches
-        due_to = Account.objects.filter(code='2900').first()  # Due To Other Branches
-        
-        if not inventory_asset or not due_from or not due_to:
-            return
+        inventory_asset = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
+        due_from = cls.get_or_create_account('1900', 'Due From Other Branches', 'asset', 'debit')
+        due_to = cls.get_or_create_account('2900', 'Due To Other Branches', 'liability', 'credit')
         
         # Calculate total value of transfer
         total_value = sum(
-            item.quantity * (item.part.cost_price or Decimal('0'))
-            for item in transfer.items.all()
-        )
+            (
+                Decimal(str(item.quantity_received or item.quantity_sent or item.quantity_requested or 0))
+                * Decimal(str(item.part.cost_price or 0))
+                for item in transfer.items.all()
+            ),
+            Decimal('0.00'),
+        ).quantize(cls.MONEY_QUANT)
         
         if total_value == 0:
             return
@@ -675,12 +821,8 @@ class AccountingService:
         if till.status != 'open' or till.opening_balance == 0:
             return
         
-        # Get accounts
-        cash_drawer = Account.objects.filter(code='1020').first()  # Cash in Drawer
-        cash_safe = Account.objects.filter(code='1010').first()  # Cash in Safe
-        
-        if not cash_drawer or not cash_safe:
-            return  # Accounts not set up yet
+        cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
+        cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
         
         # Create Journal Entry
         je = JournalEntry.objects.create(
@@ -721,13 +863,9 @@ class AccountingService:
         if till.status != 'closed' or not till.closing_balance:
             return
         
-        # Get accounts
-        cash_drawer = Account.objects.filter(code='1020').first()
-        cash_safe = Account.objects.filter(code='1010').first()
-        cash_over_short = Account.objects.filter(code='5950').first()  # Cash Over/Short Expense
-        
-        if not cash_drawer or not cash_safe:
-            return
+        cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
+        cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
+        cash_over_short = cls.get_or_create_account('5950', 'Cash Over/Short Expense', 'expense', 'debit')
         
         # Base entry: deposit closing balance back to safe
         je = JournalEntry.objects.create(
@@ -758,7 +896,7 @@ class AccountingService:
         )
         
         # Handle Variance (Cash Over/Short)
-        if till.variance and till.variance != 0 and cash_over_short:
+        if till.variance and till.variance != 0:
             variance_je = JournalEntry.objects.create(
                 date=till.closed_at.date() if till.closed_at else timezone.now().date(),
                 description=f"Till Variance #{till.id} - {till.cashier.get_full_name()}",

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { Plus, Loader2, Search, Edit, Trash2, MoreVertical } from "lucide-react";
+import { Plus, Loader2, Search, Edit, MoreVertical, Power, PowerOff } from "lucide-react";
 import {
     Table,
     TableBody,
@@ -30,11 +30,11 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import apiClient from "@/lib/api/client";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useToast } from "@/lib/hooks/useToast";
 
 type AccountFormData = {
     code: string;
@@ -70,6 +70,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export default function ChartOfAccountsPage() {
     const { formatCurrency } = useCurrency();
+    const { success, error: toastError } = useToast();
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -97,10 +98,11 @@ export default function ChartOfAccountsPage() {
             queryClient.invalidateQueries({ queryKey: ["accounting", "accounts"] });
             setDialogOpen(false);
             resetForm();
+            success("Account created.");
         },
         onError: (error: unknown) => {
             console.error("Failed to create account:", error);
-            alert(getErrorMessage(error, "Failed to create account"));
+            toastError(getErrorMessage(error, "Failed to create account"));
         }
     });
 
@@ -114,24 +116,33 @@ export default function ChartOfAccountsPage() {
             setDialogOpen(false);
             setEditingAccount(null);
             resetForm();
+            success("Account updated.");
         },
         onError: (error: unknown) => {
             console.error("Failed to update account:", error);
-            alert(getErrorMessage(error, "Failed to update account"));
+            toastError(getErrorMessage(error, "Failed to update account"));
         }
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: async (id: number) => {
-            const response = await apiClient.delete(`/accounting/accounts/${id}/`);
+    const statusMutation = useMutation({
+        mutationFn: async ({ account, is_active }: { account: Account; is_active: boolean }) => {
+            const response = await apiClient.put(`/accounting/accounts/${account.id}/`, {
+                code: account.code,
+                name: account.name,
+                account_type: account.account_type,
+                balance_type: account.balance_type,
+                description: account.description || "",
+                is_active,
+            });
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ["accounting", "accounts"] });
+            success(variables.is_active ? "Account activated." : "Account deactivated.");
         },
         onError: (error: unknown) => {
-            console.error("Failed to delete account:", error);
-            alert(getErrorMessage(error, "Failed to delete account"));
+            console.error("Failed to update account status:", error);
+            toastError(getErrorMessage(error, "Failed to update account status"));
         }
     });
 
@@ -169,12 +180,6 @@ export default function ChartOfAccountsPage() {
         setDialogOpen(true);
     };
 
-    const handleDelete = (account: Account) => {
-        if (confirm(`Are you sure you want to delete account "${account.name}" (${account.code})?`)) {
-            deleteMutation.mutate(account.id);
-        }
-    };
-
     const handleNew = () => {
         setEditingAccount(null);
         resetForm();
@@ -196,12 +201,11 @@ export default function ChartOfAccountsPage() {
 
     return (
         <div className="space-y-4">
-            {/* Compact Header */}
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex justify-between items-center border-b border-border pb-3">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Chart of Accounts</h1>
+                    <h1 className="text-lg font-semibold tracking-tight text-foreground">Chart of Accounts</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                        Manage GL accounts and categories
+                        Maintain active GL accounts and normal balances
                     </p>
                 </div>
                 <Button onClick={handleNew} size="sm" className="h-9">
@@ -212,15 +216,17 @@ export default function ChartOfAccountsPage() {
 
             {/* Create/Edit Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[520px] p-0 gap-0">
                     <DialogHeader>
-                        <DialogTitle>{editingAccount ? "Edit Account" : "Create New Account"}</DialogTitle>
-                        <DialogDescription className="text-xs">
+                        <div className="border-b border-border px-5 py-4">
+                        <DialogTitle className="text-base">{editingAccount ? "Edit Account" : "Create Account"}</DialogTitle>
+                        <DialogDescription className="text-xs mt-1">
                             {editingAccount ? "Update account details below" : "Add a new account to your chart of accounts"}
                         </DialogDescription>
+                        </div>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit} className="px-6 pb-6">
-                        <div className="space-y-4">
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-4 px-5 py-4">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <Label htmlFor="code" className="mb-2 block text-sm font-medium">Account Code *</Label>
@@ -300,7 +306,7 @@ export default function ChartOfAccountsPage() {
                             </div>
                         </div>
 
-                        <DialogFooter className="mt-6">
+                        <DialogFooter className="border-t border-border px-5 py-3">
                             <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
                                 Cancel
                             </Button>
@@ -316,7 +322,7 @@ export default function ChartOfAccountsPage() {
             <Card className="overflow-hidden">
                 <CardHeader className="border-b border-border bg-muted/10 pb-3">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <CardTitle className="text-base">All Accounts ({filteredAccounts.length})</CardTitle>
+                    <CardTitle className="text-sm font-semibold">All Accounts ({filteredAccounts.length})</CardTitle>
                         <div className="relative w-full md:w-64">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
@@ -386,14 +392,17 @@ export default function ChartOfAccountsPage() {
                                                                     <Edit className="w-4 h-4 mr-2" />
                                                                     Edit
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
                                                                 <DropdownMenuItem
-                                                                    onClick={() => handleDelete(account)}
-                                                                    disabled={deleteMutation.isPending}
-                                                                    className="text-destructive focus:text-destructive cursor-pointer"
+                                                                    onClick={() => statusMutation.mutate({ account, is_active: !account.is_active })}
+                                                                    disabled={statusMutation.isPending}
+                                                                    className="cursor-pointer"
                                                                 >
-                                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                                    Delete
+                                                                    {account.is_active ? (
+                                                                        <PowerOff className="w-4 h-4 mr-2" />
+                                                                    ) : (
+                                                                        <Power className="w-4 h-4 mr-2" />
+                                                                    )}
+                                                                    {account.is_active ? "Deactivate" : "Activate"}
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>

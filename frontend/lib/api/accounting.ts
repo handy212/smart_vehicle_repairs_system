@@ -145,6 +145,18 @@ export const accountingApi = {
         return response.data;
     },
 
+
+    reverseJournalEntry: async (id: string | number, data?: { date?: string; reason?: string }): Promise<any> => {
+        const response = await apiClient.post(`/accounting/journal-entries/${id}/reverse/`, data || {});
+        return response.data;
+    },
+
+
+    closePeriod: async (data: { start_date: string; end_date: string; branch?: number | null }): Promise<any> => {
+        const response = await apiClient.post("/accounting/period-close/", data);
+        return response.data;
+    },
+
     // Bank Reconciliation
 
     getBankStatements: async (accountId?: string): Promise<any[]> => {

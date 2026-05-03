@@ -21,6 +21,13 @@ class AccrualService:
             'revenue': [],
             'expense': []
         }
+        active_sources = set(
+            Accrual.objects.filter(source_id__isnull=False).values_list(
+                'accrual_type',
+                'source_model',
+                'source_id',
+            )
+        )
         
         # 1. Accrued Revenue: Completed Work Orders not yet Invoiced
         # Assuming we check if 'invoices' relation exists or using status
@@ -33,6 +40,9 @@ class AccrualService:
         )
         
         for wo in uninvoiced_wos:
+            if ('revenue', 'WorkOrder', wo.id) in active_sources:
+                continue
+
             # Estimate revenue from Work Order total (parts + labor)
             # This requires calculating total if not stored
             # Assuming we can get a total price estimate
@@ -49,9 +59,16 @@ class AccrualService:
             # We'll skip complex calculation here and assume 0 for now or implement if needed.
             # Actually, let's just create a placeholder
             
+            amount = wo.actual_total or wo.estimated_total or Decimal('0.00')
+            if amount <= 0:
+                continue
+
             candidates['revenue'].append({
                 'source': wo,
-                'amount': wo.actual_total or wo.estimated_total or Decimal('0.00'),
+                'source_model': 'WorkOrder',
+                'source_id': wo.id,
+                'source_reference': wo.work_order_number,
+                'amount': amount,
                 'date': wo.updated_at.date(),
                 'description': f"Accrued Revenue for WO #{wo.work_order_number}"
             })
@@ -72,8 +89,17 @@ class AccrualService:
         )
         
         for po in received_pos:
+            if ('expense', 'PurchaseOrder', po.id) in active_sources:
+                continue
+
+            if po.total <= 0:
+                continue
+
             candidates['expense'].append({
                 'source': po,
+                'source_model': 'PurchaseOrder',
+                'source_id': po.id,
+                'source_reference': po.po_number,
                 'amount': po.total,
                 'date': po.received_date or po.updated_at.date(),
                 'description': f"Accrued Expense for PO {po.po_number} ({po.supplier.name})"
@@ -88,7 +114,18 @@ class AccrualService:
 
     @staticmethod
     @transaction.atomic
-    def create_accrual(user, account_id, amount, date, description, accrual_type, reversal_date=None):
+    def create_accrual(
+        user,
+        account_id,
+        amount,
+        date,
+        description,
+        accrual_type,
+        reversal_date=None,
+        source_model='',
+        source_id=None,
+        source_reference='',
+    ):
         """
         Create an Accrual record and post the Journal Entry.
         accrual_type: 'expense' or 'revenue'
@@ -105,6 +142,9 @@ class AccrualService:
             reversal_date=reversal_date,
             description=description,
             accrual_type=accrual_type,
+            source_model=source_model or '',
+            source_id=source_id,
+            source_reference=source_reference or '',
             status='active'
         )
         
@@ -194,4 +234,3 @@ class AccrualService:
         accrual.save()
         
         return je
-

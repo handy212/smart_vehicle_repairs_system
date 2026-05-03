@@ -2,18 +2,20 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveUpdateAPIView, ListCreateAPIView
+from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveAPIView, RetrieveUpdateAPIView, ListCreateAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils.dateparse import parse_date
+from django.core.exceptions import ValidationError as DjangoValidationError
 import csv
 import io
 from decimal import Decimal
 from django.utils import timezone
+from django.db.models import Q
 from datetime import datetime
 from apps.accounts.permissions import IsModuleEnabled
-from .services import ReportingService, DashboardService, ExportService
+from .services import AccountingService, ReportingService, DashboardService, ExportService
 from .models import JournalEntry, Account, AccountingControl, AuditLog
-from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
+from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, JournalEntryReverseSerializer, PeriodCloseSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
 
 from django.http import HttpResponse
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
@@ -216,6 +218,19 @@ class BankStatementViewSet(viewsets.ModelViewSet):
     def reconcile(self, request, pk=None):
         """Mark statement as reconciled"""
         statement = self.get_object()
+        if statement.reconciled:
+            return Response({'error': 'Statement is already reconciled'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not statement.lines.exists():
+            return Response({'error': 'Cannot reconcile a statement with no lines'}, status=status.HTTP_400_BAD_REQUEST)
+
+        unmatched_count = statement.lines.filter(Q(matched=False) | Q(matched_transaction__isnull=True)).count()
+        if unmatched_count:
+            return Response(
+                {'error': f'Cannot reconcile statement with {unmatched_count} unmatched line(s).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         statement.reconciled = True
         statement.reconciled_by = request.user
         statement.reconciled_at = timezone.now()
@@ -226,6 +241,9 @@ class BankStatementViewSet(viewsets.ModelViewSet):
     def upload(self, request, pk=None):
         """Upload and parse bank statement CSV"""
         statement = self.get_object()
+
+        if statement.reconciled:
+            return Response({'error': 'Cannot upload lines to a reconciled statement'}, status=status.HTTP_400_BAD_REQUEST)
         
         if 'statement_file' not in request.FILES:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -316,9 +334,35 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
         
         if not transaction_id:
             return Response({'error': 'transaction_id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if line.bank_statement.reconciled:
+            return Response({'error': 'Cannot match lines in a reconciled statement'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if line.matched or line.matched_transaction_id:
+            return Response({'error': 'Line is already matched'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if (line.debit_amount > 0 and line.credit_amount > 0) or (line.debit_amount == 0 and line.credit_amount == 0):
+            return Response({'error': 'Statement line must have exactly one debit or credit amount'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            transaction = Transaction.objects.get(id=transaction_id)
+            transaction = Transaction.objects.select_related('journal_entry', 'account').get(id=transaction_id)
+            if transaction.matched_bank_lines.exists():
+                return Response({'error': 'Transaction is already matched to a bank line'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if transaction.account_id != line.bank_statement.bank_account_id:
+                return Response({'error': 'Transaction account does not match the statement bank account'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not transaction.journal_entry.posted:
+                return Response({'error': 'Only posted transactions can be matched'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if transaction.journal_entry.date > line.bank_statement.statement_date:
+                return Response({'error': 'Transaction date is after the statement date'}, status=status.HTTP_400_BAD_REQUEST)
+
+            expected_type = 'debit' if line.debit_amount > 0 else 'credit'
+            expected_amount = line.debit_amount if line.debit_amount > 0 else line.credit_amount
+            if transaction.transaction_type != expected_type or transaction.amount != expected_amount:
+                return Response({'error': 'Transaction amount or debit/credit side does not match the statement line'}, status=status.HTTP_400_BAD_REQUEST)
+
             line.matched = True
             line.matched_transaction = transaction
             line.matched_by = request.user
@@ -341,6 +385,8 @@ class BankStatementLineViewSet(viewsets.ModelViewSet):
 
         line.matched_transaction = None
         line.matched = False
+        line.matched_by = None
+        line.matched_at = None
         line.save()
         
         return Response({'status': 'unmatched'})
@@ -369,6 +415,7 @@ class UnreconciledTransactionsView(ListAPIView):
             
         qs = Transaction.objects.filter(
             account_id=account_id,
+            journal_entry__posted=True,
             matched_bank_lines__isnull=True # Not matched to any bank line
         ).select_related('journal_entry', 'account')
         
@@ -617,7 +664,7 @@ class JournalEntryListView(ListAPIView):
 
         return qs
 
-class JournalEntryDetailView(RetrieveUpdateAPIView):
+class JournalEntryDetailView(RetrieveAPIView):
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
@@ -643,6 +690,54 @@ class JournalEntryCreateView(CreateAPIView):
         return [permission() for permission in permission_classes]
     serializer_class = JournalEntryCreateSerializer
     queryset = JournalEntry.objects.all()
+
+
+class JournalEntryReverseView(APIView):
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('manage_accounting')]
+        return [permission() for permission in permission_classes]
+
+    def post(self, request, pk):
+        serializer = JournalEntryReverseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            reversal = AccountingService.reverse_journal_entry(
+                journal_entry=JournalEntry.objects.get(pk=pk),
+                user=request.user,
+                date=serializer.validated_data.get('date'),
+                reason=serializer.validated_data.get('reason', ''),
+            )
+        except JournalEntry.DoesNotExist:
+            return Response({'error': 'Journal entry not found'}, status=status.HTTP_404_NOT_FOUND)
+        except DjangoValidationError as exc:
+            message = exc.messages[0] if hasattr(exc, 'messages') and exc.messages else str(exc)
+            return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(JournalEntrySerializer(reversal).data, status=status.HTTP_201_CREATED)
+
+
+class PeriodCloseView(APIView):
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('manage_accounting')]
+        return [permission() for permission in permission_classes]
+
+    def post(self, request):
+        serializer = PeriodCloseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            closing_entry = AccountingService.close_income_statement_period(
+                user=request.user,
+                start_date=serializer.validated_data['start_date'],
+                end_date=serializer.validated_data['end_date'],
+                branch=serializer.validated_data.get('branch'),
+            )
+        except DjangoValidationError as exc:
+            message = exc.messages[0] if hasattr(exc, 'messages') and exc.messages else str(exc)
+            return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(JournalEntrySerializer(closing_entry).data, status=status.HTTP_200_OK)
 
 
 class AccountListView(ListCreateAPIView):
@@ -674,7 +769,7 @@ class AccountListView(ListCreateAPIView):
         return queryset
 
 class AccountDetailView(RetrieveUpdateAPIView):
-    """View for retrieving, updating, and deleting individual accounts"""
+    """View for retrieving and updating individual accounts"""
     def get_permissions(self):
         permission_classes = [IsAuthenticated, IsModuleEnabled('accounting')]
         if hasattr(self, 'action') and getattr(self, 'action') in ['list', 'retrieve', 'candidates', 'my_requests', 'my_slips', 'my_summary']:
@@ -691,9 +786,10 @@ class AccountDetailView(RetrieveUpdateAPIView):
         return AccountSerializer
     
     def delete(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {'error': 'Accounts cannot be deleted. Deactivate the account instead.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
 
 # ============================================================================
@@ -784,9 +880,9 @@ class AccrualViewSet(viewsets.ModelViewSet):
         for item in candidates['revenue']:
             flat_list.append({
                 'type': 'revenue',
-                'source_model': 'WorkOrder',
-                'source_id': item['source'].id,
-                'source_reference': item['source'].work_order_number,
+                'source_model': item['source_model'],
+                'source_id': item['source_id'],
+                'source_reference': item['source_reference'],
                 'amount': item['amount'],
                 'date': item['date'],
                 'description': item['description']
@@ -794,9 +890,9 @@ class AccrualViewSet(viewsets.ModelViewSet):
         for item in candidates['expense']:
             flat_list.append({
                 'type': 'expense',
-                'source_model': 'PurchaseOrder',
-                'source_id': item['source'].id,
-                'source_reference': item['source'].po_number,
+                'source_model': item['source_model'],
+                'source_id': item['source_id'],
+                'source_reference': item['source_reference'],
                 'amount': item['amount'],
                 'date': item['date'],
                 'description': item['description']
@@ -842,7 +938,10 @@ class AccrualViewSet(viewsets.ModelViewSet):
                 date=parse_date(data.get('accrual_date')),
                 description=data.get('description'),
                 accrual_type=data.get('accrual_type'),
-                reversal_date=parse_date(data.get('reversal_date')) if data.get('reversal_date') else None
+                reversal_date=parse_date(data.get('reversal_date')) if data.get('reversal_date') else None,
+                source_model=data.get('source_model', ''),
+                source_id=data.get('source_id'),
+                source_reference=data.get('source_reference', ''),
             )
             serializer = self.get_serializer(accrual)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

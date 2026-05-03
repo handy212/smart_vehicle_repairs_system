@@ -1,4 +1,8 @@
 from rest_framework import serializers
+from django.db import transaction
+from django.core.exceptions import ValidationError as DjangoValidationError
+from .services import AccountingService
+from apps.branches.models import Branch
 from .models import (
     Account, JournalEntry, Transaction, AccountingControl, AuditLog,
     BankStatement, BankStatementLine, FundTransfer,
@@ -67,23 +71,28 @@ class JournalEntryCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         transactions_data = validated_data.pop('transactions')
-        journal_entry = JournalEntry.objects.create(
-            posted=True, # Auto-post manual entries for now 
-            created_by=self.context['request'].user, 
-            **validated_data
-        )
-        
-        for tx_data in transactions_data:
-            Transaction.objects.create(journal_entry=journal_entry, **tx_data)
-            
-        # Validate balance
-        if not journal_entry.validate_balanced():
-             # Rollback or raise error? 
-             # Ideally validate before commit, but validate_balanced checks DB aggregation.
-             # Better to calculate sum here.
-             pass 
-             
-        return journal_entry
+        lines = [
+            {
+                'account_id': tx_data['account'].id,
+                'type': tx_data['transaction_type'],
+                'amount': tx_data['amount'],
+                'description': tx_data.get('description', ''),
+            }
+            for tx_data in transactions_data
+        ]
+
+        try:
+            with transaction.atomic():
+                return AccountingService.create_journal_entry(
+                    user=self.context['request'].user,
+                    date=validated_data['date'],
+                    description=validated_data['description'],
+                    reference=validated_data.get('reference', ''),
+                    lines=lines,
+                    posted=True,
+                )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages if hasattr(exc, 'messages') else str(exc))
     
     def validate(self, data):
         # Validation logic to ensure credits == debits
@@ -102,6 +111,26 @@ class JournalEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = JournalEntry
         fields = ['id', 'date', 'description', 'reference', 'posted', 'created_at', 'transactions']
+
+
+class JournalEntryReverseSerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class PeriodCloseSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    branch = serializers.PrimaryKeyRelatedField(
+        queryset=Branch.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
+    def validate(self, data):
+        if data['start_date'] > data['end_date']:
+            raise serializers.ValidationError({'end_date': 'End date must be on or after start date.'})
+        return data
 
 from .models import AccountingControl, AuditLog
 

@@ -28,7 +28,9 @@ urlpatterns = [
     # Journal Entries
     path('journal-entries/', views.JournalEntryListView.as_view(), name='journal-entries'),
     path('journal-entries/create/', views.JournalEntryCreateView.as_view(), name='journal-entry-create'),
+    path('journal-entries/<int:pk>/reverse/', views.JournalEntryReverseView.as_view(), name='journal-entry-reverse'),
     path('journal-entries/<int:pk>/', views.JournalEntryDetailView.as_view(), name='journal-entry-detail'),
+    path('period-close/', views.PeriodCloseView.as_view(), name='period-close'),
     
     # Chart of Accounts
     path('accounts/', views.AccountListView.as_view(), name='accounts'),
