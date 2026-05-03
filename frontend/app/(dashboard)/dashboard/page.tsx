@@ -60,6 +60,42 @@ type SnapshotCard = {
   icon: LucideIcon;
 };
 
+type DashboardAppointment = {
+  id: number;
+  status: string;
+  customer_name?: string;
+  customer?: { name?: string } | number;
+  vehicle_display?: string;
+  vehicle_info?: string;
+  appointment_time?: string;
+};
+
+type LowStockReportItem = {
+  part?: {
+    id?: number;
+    name?: string;
+    part_number?: string;
+  };
+  stock?: {
+    current?: number;
+    reorder_point?: number;
+  };
+};
+
+type TechnicianPerformanceItem = {
+  technician?: {
+    name?: string;
+    role?: string;
+  };
+  metrics?: {
+    total_work_orders?: number;
+    completed?: number;
+    in_progress?: number;
+    average_completion_hours?: number | null;
+    revenue?: number;
+  };
+};
+
 export default function DashboardPage() {
   const { formatCurrency } = useCurrency();
   const { theme: activeTheme } = useTheme();
@@ -375,20 +411,21 @@ export default function DashboardPage() {
           status: wo.status,
           created_at: wo.created_at,
           diagnosis_notes: wo.diagnosis_notes ?? undefined,
-          customer: (wo as any).customer_name || (wo as any).customer || undefined,
-          vehicle: (wo as any).vehicle_display || (wo as any).vehicle || undefined,
+          customer: wo.customer || undefined,
+          vehicle: wo.vehicle || undefined,
+          gate_pass_status: wo.gate_pass_status ?? undefined,
         }))}
-        todayAppointments={todayAppointments?.map((appt) => ({
+        todayAppointments={(todayAppointments as DashboardAppointment[] | undefined)?.map((appt) => ({
           id: appt.id,
           status: appt.status,
-          customer_name: (appt as any).customer_name || (appt as any).customer?.name || undefined,
-          vehicle_display: (appt as any).vehicle_display || undefined,
-          vehicle_info: (appt as any).vehicle_info || undefined,
-          appointment_time: (appt as any).appointment_time || undefined,
+          customer_name: appt.customer_name || (typeof appt.customer === "object" ? appt.customer.name : undefined),
+          vehicle_display: appt.vehicle_display,
+          vehicle_info: appt.vehicle_info,
+          appointment_time: appt.appointment_time,
         }))}
-        lowStockItems={lowStockData?.items?.map((item: any) => ({
-          id: item.part?.id,
-          name: item.part?.name,
+        lowStockItems={(lowStockData?.items as LowStockReportItem[] | undefined)?.map((item) => ({
+          id: item.part?.id ?? 0,
+          name: item.part?.name ?? "Unknown part",
           part_number: item.part?.part_number,
           quantity: item.stock?.current ?? 0,
           reorder_point: item.stock?.reorder_point ?? 0,
@@ -405,18 +442,18 @@ export default function DashboardPage() {
           due_date: inv.due_date,
           invoice_date: inv.invoice_date,
         }))}
-        technicianData={techPerfData?.technicians?.map((t: any) => ({
+        technicianData={(techPerfData?.technicians as TechnicianPerformanceItem[] | undefined)?.map((t) => ({
           name: t.technician?.name,
           role: t.technician?.role,
           total_jobs: t.metrics?.total_work_orders,
           completed_jobs: t.metrics?.completed,
           in_progress_jobs: t.metrics?.in_progress,
           completion_rate: t.metrics?.total_work_orders
-            ? (t.metrics.completed / t.metrics.total_work_orders) * 100
+            ? ((t.metrics.completed ?? 0) / t.metrics.total_work_orders) * 100
             : 0,
           avg_completion_days: t.metrics?.average_completion_hours != null
             ? t.metrics.average_completion_hours / 24
-            : null,
+            : undefined,
           total_revenue: t.metrics?.revenue,
         }))}
         revenueChartData={revenueChartRaw?.daily ?? revenueChartRaw}

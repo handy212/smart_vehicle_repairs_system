@@ -5,7 +5,7 @@ from rest_framework import status
 from django.utils import timezone
 from apps.accounts.models import User
 from apps.branches.models import Branch
-from apps.workorders.models import WorkOrder, ServiceTask
+from apps.workorders.models import WorkOrder, ServiceTask, ServiceTaskType
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.diagnosis.models import Diagnosis, RepairRecommendation
@@ -91,6 +91,152 @@ class WorkOrderWorkflowTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'assigned')
         self.assertEqual(int(response.data['service_coordinator']), self.coordinator.id)
+
+    def test_service_task_can_be_assigned_to_same_branch_technician(self):
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake noise',
+            odometer_in=50000,
+            priority='normal',
+            status='in_progress',
+        )
+
+        response = self.client.post(reverse('api_workorders:servicetask-list'), {
+            'work_order': work_order.id,
+            'task_type': 'repair',
+            'description': 'Replace front brake pads',
+            'assigned_to': self.technician.id,
+            'estimated_hours': '1.50',
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        task = ServiceTask.objects.get(id=response.data['id'])
+        self.assertEqual(task.assigned_to_id, self.technician.id)
+
+    def test_service_task_rejects_cross_branch_technician_assignment(self):
+        other_branch = Branch.objects.create(name="Other Branch", code="OTHR", created_by=self.manager)
+        other_technician = User.objects.create_user(
+            username='othertech',
+            email='othertech@example.com',
+            password='password',
+            role='technician',
+            branch=other_branch,
+        )
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake noise',
+            odometer_in=50000,
+            priority='normal',
+            status='in_progress',
+        )
+
+        response = self.client.post(reverse('api_workorders:servicetask-list'), {
+            'work_order': work_order.id,
+            'task_type': 'repair',
+            'description': 'Replace front brake pads',
+            'assigned_to': other_technician.id,
+            'estimated_hours': '1.50',
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('assigned_to', response.data)
+
+    def test_service_task_types_endpoint_returns_backend_choices(self):
+        ServiceTaskType.objects.create(code='wheel_alignment', name='Wheel Alignment', sort_order=1)
+        response = self.client.get(reverse('api_workorders:servicetask-task-types'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        values = {item['value'] for item in response.data}
+        self.assertIn('wheel_alignment', values)
+
+    def test_service_task_type_crud(self):
+        create_response = self.client.post(reverse('api_workorders:servicetasktype-list'), {
+            'name': 'Road Test',
+            'code': 'road_test',
+            'default_labor_rate': '75.00',
+            'is_billable': True,
+            'is_active': True,
+            'sort_order': 15,
+        })
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED, create_response.data)
+        task_type_id = create_response.data['id']
+
+        update_response = self.client.patch(reverse('api_workorders:servicetasktype-detail', args=[task_type_id]), {
+            'default_labor_rate': '85.00',
+            'is_active': False,
+        })
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK, update_response.data)
+        self.assertEqual(update_response.data['default_labor_rate'], '85.00')
+        self.assertFalse(update_response.data['is_active'])
+
+    def test_work_order_update_allows_multiple_same_branch_technicians(self):
+        second_technician = User.objects.create_user(
+            username='tech2',
+            email='tech2@example.com',
+            password='password',
+            role='technician',
+            branch=self.branch,
+        )
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake noise',
+            odometer_in=50000,
+            priority='normal',
+            status='assigned',
+        )
+
+        response = self.client.patch(
+            reverse('api_workorders:workorder-detail', args=[work_order.id]),
+            {
+                'primary_technician': self.technician.id,
+                'assigned_technicians': [self.technician.id, second_technician.id],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        work_order.refresh_from_db()
+        self.assertEqual(work_order.primary_technician_id, self.technician.id)
+        self.assertEqual(
+            set(work_order.assigned_technicians.values_list('id', flat=True)),
+            {self.technician.id, second_technician.id},
+        )
+
+    def test_work_order_update_rejects_cross_branch_assigned_technician(self):
+        other_branch = Branch.objects.create(name="Remote Branch", code="RMT", created_by=self.manager)
+        other_technician = User.objects.create_user(
+            username='remote-tech',
+            email='remote-tech@example.com',
+            password='password',
+            role='technician',
+            branch=other_branch,
+        )
+        work_order = WorkOrder.objects.create(
+            customer=self.customer,
+            vehicle=self.vehicle,
+            branch=self.branch,
+            customer_concerns='Brake noise',
+            odometer_in=50000,
+            priority='normal',
+            status='assigned',
+        )
+
+        response = self.client.patch(
+            reverse('api_workorders:workorder-detail', args=[work_order.id]),
+            {'assigned_technicians': [other_technician.id]},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('assigned_technicians', response.data)
 
     def test_cannot_skip_from_draft_to_intake_even_with_completed_inspection(self):
         work_order = WorkOrder.objects.create(

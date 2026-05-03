@@ -30,6 +30,8 @@ export interface WorkOrder {
   diagnosis_by?: number;
   primary_technician?: number | { id: number; first_name: string; last_name: string };
   primary_technician_name?: string;
+  assigned_technicians?: Array<number | { id: number; first_name?: string; last_name?: string }>;
+  assigned_technicians_detail?: Array<{ id: number; name: string; email?: string; role?: string }>;
   service_coordinator?: number | { id: number; first_name: string; last_name: string };
   service_coordinator_name?: string;
   estimated_labor_cost?: string;
@@ -62,6 +64,7 @@ export interface WorkOrder {
   quality_check_completed?: boolean;
   quality_check_passed?: boolean;
   quality_check_at?: string;
+  quality_check_notes?: string;
   odometer_in?: number;
   odometer_out?: number;
   is_overdue?: boolean;
@@ -88,7 +91,7 @@ export interface WorkOrder {
     status: string;
   }>;
   warranty_reason?: string;
-  branch?: {
+  branch?: number | {
     id: number;
     name: string;
   };
@@ -458,6 +461,10 @@ export const workordersApi = {
       const response = await apiClient.post("/workorders/parts/", data);
       return response.data;
     },
+    approve: async (id: number): Promise<WorkOrderPart> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/approve/`);
+      return response.data;
+    },
     update: async (id: number, data: Partial<WorkOrderPart>): Promise<WorkOrderPart> => {
       const response = await apiClient.patch(`/workorders/parts/${id}/`, data);
       return response.data;
@@ -544,8 +551,13 @@ export interface WorkOrderPart {
     part_id: number | null;
     message?: string;
   };
+  approved_by?: number | null;
+  approved_by_name?: string | null;
+  approved_at?: string | null;
   // Enriched fields
   work_order_number?: string;
+  work_order_status?: string;
+  work_order_is_approved?: boolean;
   customer_name?: string;
   vehicle_info?: string;
   purchase_order_number?: string;

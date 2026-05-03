@@ -10,7 +10,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, CheckCircle2, Clock, Play, Workflow, User, AlertCircle, Info, Wrench, type LucideIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, CheckCircle2, Clock, Play, Workflow, User, Info, Wrench, MoreVertical, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import AddTaskDialog from "./AddTaskDialog";
 import { useToast } from "@/lib/hooks/useToast";
@@ -21,6 +27,7 @@ interface TasksTabProps {
   onRefresh: () => void;
   workOrder?: {
     status?: string;
+    branch?: number | { id: number; name?: string } | null;
     service_coordinator?: number | { id: number; first_name: string; last_name: string };
     service_coordinator_name?: string;
   };
@@ -42,6 +49,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
   const [completeTask, setCompleteTask] = useState<ServiceTask | null>(null);
   const [completeHours, setCompleteHours] = useState("");
   const [completeNotes, setCompleteNotes] = useState("");
+  const branchId = typeof workOrder?.branch === "object" ? workOrder.branch?.id : workOrder?.branch;
 
   // Separate workflow tasks from manual tasks and sort them
   const { workflowTasks, manualTasks } = useMemo(() => {
@@ -187,6 +195,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
     const taskInfo = isWorkflow ? getWorkflowTaskInfo(task) : null;
     const TaskIcon = taskInfo?.icon || Workflow;
     const isCurrentPhase = isWorkflow && task.workflow_phase === workOrder?.status;
+    const hasManualActions = !isWorkflow && ["pending", "in_progress"].includes(task.status);
 
     return (
       <TableRow
@@ -196,14 +205,14 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           ${isCurrentPhase ? "ring-2 ring-primary/20" : ""}
         `}
       >
-        <TableCell>
+        <TableCell className="min-w-[280px] py-3">
           <div className="flex items-start gap-2">
             {isWorkflow && (
               <TaskIcon className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
             )}
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-medium">{task.description}</p>
+                <p className="font-medium leading-snug">{task.description}</p>
                 {isWorkflow && (
                   <>
                     <Badge variant="secondary" className="text-xs">
@@ -236,10 +245,10 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
             </div>
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
           <span className="text-sm capitalize">{task.task_type?.replace(/_/g, " ")}</span>
         </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
           <div className="flex items-center gap-1">
             {isWorkflow && task.workflow_phase === 'assigned' && (
               <User className="w-3 h-3 text-muted-foreground" />
@@ -249,13 +258,13 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
             </span>
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
 
           <Badge variant={getStatusVariant(task.status)}>
             {task.status?.replace(/_/g, " ")}
           </Badge>
         </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
           <div className="text-sm">
             {(task.calculated_hours !== undefined && task.calculated_hours !== null && task.calculated_hours > 0) ? (
               <span>{Number(task.calculated_hours).toFixed(2)}h</span>
@@ -270,7 +279,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
             )}
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="py-3">
           <div className="text-xs text-muted-foreground">
             {task.created_at ? (
               <>
@@ -282,40 +291,42 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
             )}
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="w-[64px] py-3 text-right">
           {!isWorkflow ? (
-            <div className="flex items-center space-x-2">
-              {task.status === "pending" && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleStartTask(task.id)}
-                  disabled={startTaskMutation.isPending}
-                >
-                  <Play className="w-3 h-3 mr-1" />
-                  Start
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open task actions">
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-              )}
-              {task.status === "in_progress" && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleCompleteTask(task.id)}
-                  disabled={completeTaskMutation.isPending}
-                >
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Complete
-                </Button>
-              )}
-              {task.status === "completed" && (
-                <span className="text-xs text-muted-foreground">Completed</span>
-              )}
-              {task.status === "skipped" && (
-                <span className="text-xs text-muted-foreground">Skipped</span>
-              )}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {task.status === "pending" && (
+                  <DropdownMenuItem
+                    onClick={() => handleStartTask(task.id)}
+                    disabled={startTaskMutation.isPending}
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Start Task
+                  </DropdownMenuItem>
+                )}
+                {task.status === "in_progress" && (
+                  <DropdownMenuItem
+                    onClick={() => handleCompleteTask(task.id)}
+                    disabled={completeTaskMutation.isPending}
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Complete Task
+                  </DropdownMenuItem>
+                )}
+                {!hasManualActions && (
+                  <DropdownMenuItem disabled>
+                    {task.status === "completed" ? "Completed" : task.status?.replace(/_/g, " ") || "No actions available"}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <div className="flex items-center space-x-2">
+            <div className="flex justify-end">
               {task.status === "completed" ? (
                 <span className="text-xs text-primary italic flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
@@ -344,37 +355,22 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
         {/* Workflow Tasks Section */}
         {workflowTasks.length > 0 && (
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Workflow className="w-5 h-5 text-primary" />
-                <CardTitle>Workflow Tasks</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Workflow className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-base">Workflow Tasks</CardTitle>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {workflowTasks.filter(t => t.status === 'completed').length} completed • {workflowTasks.filter(t => t.status === 'in_progress').length} in progress • {workflowTasks.filter(t => t.status === 'pending').length} pending
+                </p>
               </div>
               <Badge variant="secondary" className="text-xs">
                 Auto-generated
               </Badge>
             </CardHeader>
-            <CardContent>
-              <div className="mb-4 space-y-3">
-                {/* Note text removed per request */}
-                {workflowTasks.length > 0 && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-success" />
-                      <span>Completed: {workflowTasks.filter(t => t.status === 'completed').length}</span>
-                    </div>
-                    <span>•</span>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-primary" />
-                      <span>In Progress: {workflowTasks.filter(t => t.status === 'in_progress').length}</span>
-                    </div>
-                    <span>•</span>
-                    <div className="flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3 text-muted-foreground" />
-                      <span>Pending: {workflowTasks.filter(t => t.status === 'pending').length}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <CardContent className="px-4 pb-4">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -391,22 +387,28 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                   {workflowTasks.map((task) => renderTaskRow(task, true))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {/* Manual Tasks Section */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Manual Tasks</CardTitle>
-            <Button onClick={() => setShowAddDialog(true)}>
+          <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
+            <div>
+              <CardTitle className="text-base">Service Tasks</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {manualTasks.length > 0 ? `${manualTasks.length} ${manualTasks.length === 1 ? "task" : "tasks"} added manually` : "No manual service tasks yet"}
+              </p>
+            </div>
+            <Button size="sm" onClick={() => setShowAddDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Task
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             {manualTasks.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-10">
                 <Wrench className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
                 <p className="text-sm font-medium text-foreground mb-1">
                   No manual tasks yet
@@ -420,6 +422,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 </Button>
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -436,6 +439,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                   {manualTasks.map((task) => renderTaskRow(task, false))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -455,6 +459,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
       {showAddDialog && (
         <AddTaskDialog
           workOrderId={workOrderId}
+          branchId={branchId}
           open={showAddDialog}
           onClose={() => setShowAddDialog(false)}
           onSuccess={() => {

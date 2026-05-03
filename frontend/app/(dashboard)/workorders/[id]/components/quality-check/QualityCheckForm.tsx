@@ -2,14 +2,12 @@
 
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { workordersApi } from "@/lib/api/workorders";
-import { inspectionsApi } from "@/lib/api/inspections";
+import { workordersApi, type WorkOrder } from "@/lib/api/workorders";
+import { inspectionsApi, type VehicleInspection } from "@/lib/api/inspections";
 import { useToast } from "@/lib/hooks/useToast";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 
 // Sub-components
 import { MileageRecording } from "./MileageRecording";
@@ -18,11 +16,34 @@ import { NotesSection } from "./NotesSection";
 import { SignatureSection } from "./SignatureSection";
 
 interface QualityCheckFormProps {
-    onSubmit: (data: any) => void;
+    onSubmit: (data: QualityCheckPayload) => void;
     onCancel: () => void;
     isSubmitting: boolean;
     workOrderId?: number;
 }
+
+type QualityCheckPayload = {
+    passed: boolean;
+    notes: string;
+    checklist: QualityChecklist;
+    signature: string | null;
+    odometer_out?: number;
+};
+
+export type QualityChecklist = {
+    allTasksCompleted: boolean;
+    allPartsInstalled: boolean;
+    vehicleClean: boolean;
+    noDamage: boolean;
+    testDrivePassed: boolean;
+    customerSatisfied: boolean;
+    afterRepairsInspection: boolean;
+};
+
+export type QualityCheckWorkOrder = WorkOrder & {
+    tasks?: Array<{ status: string }>;
+    parts?: Array<{ status: string }>;
+};
 
 export function QualityCheckForm({
     onSubmit,
@@ -33,7 +54,7 @@ export function QualityCheckForm({
     const { toast } = useToast();
     const [passed, setPassed] = useState(true);
     const [notes, setNotes] = useState("");
-    const [checklist, setChecklist] = useState({
+    const [checklist, setChecklist] = useState<QualityChecklist>({
         allTasksCompleted: false,
         allPartsInstalled: false,
         vehicleClean: false,
@@ -47,14 +68,14 @@ export function QualityCheckForm({
     const [isAiLoading, setIsAiLoading] = useState(false);
 
     // Fetch work order data to verify tasks and parts
-    const { data: workOrder } = useQuery({
+    const { data: workOrder } = useQuery<QualityCheckWorkOrder>({
         queryKey: ["workorder", workOrderId],
-        queryFn: () => workordersApi.get(workOrderId!),
+        queryFn: async () => workordersApi.get(workOrderId!) as Promise<QualityCheckWorkOrder>,
         enabled: !!workOrderId,
     });
 
     // Fetch initial inspection for comparison
-    const { data: initialInspection } = useQuery({
+    const { data: initialInspection } = useQuery<VehicleInspection | null>({
         queryKey: ["initial-inspection", workOrderId],
         queryFn: async () => {
             const response = await inspectionsApi.list({
@@ -69,13 +90,13 @@ export function QualityCheckForm({
     // Auto-check items based on actual data
     React.useEffect(() => {
         if (workOrder) {
-            const tasks = (workOrder as any).tasks || [];
-            const allTasksDone = tasks.length > 0 && tasks.every((t: any) =>
+            const tasks = workOrder.tasks || [];
+            const allTasksDone = tasks.length > 0 && tasks.every((t) =>
                 t.status === 'completed' || t.status === 'skipped'
             );
 
-            const parts = (workOrder as any).parts || [];
-            const allPartsInstalled = parts.length === 0 || parts.every((p: any) =>
+            const parts = workOrder.parts || [];
+            const allPartsInstalled = parts.length === 0 || parts.every((p) =>
                 p.status === 'installed' || p.status === 'returned'
             );
 
@@ -93,7 +114,7 @@ export function QualityCheckForm({
         }
     }, [workOrder, initialInspection]);
 
-    const handleChecklistChange = (key: keyof typeof checklist) => {
+    const handleChecklistChange = (key: keyof QualityChecklist) => {
         setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
@@ -135,8 +156,8 @@ export function QualityCheckForm({
 
     return (
         <div className="flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto px-4 pb-2">
-                <div className="space-y-4 pb-3">
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+                <div className="space-y-3">
                     <Checklist
                         checklist={checklist}
                         handleChecklistChange={handleChecklistChange}
@@ -144,28 +165,24 @@ export function QualityCheckForm({
                         allChecksPassed={allChecksPassed}
                     />
 
-                    <Separator className="bg-border/30" />
+                    <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
+                        <MileageRecording
+                            initialInspection={initialInspection}
+                            workOrder={workOrder}
+                            odometerOut={odometerOut}
+                            setOdometerOut={setOdometerOut}
+                        />
 
-                    <MileageRecording
-                        initialInspection={initialInspection}
-                        workOrder={workOrder}
-                        odometerOut={odometerOut}
-                        setOdometerOut={setOdometerOut}
-                    />
-
-                    <Separator className="bg-border/30" />
-
-                    <NotesSection
-                        passed={passed}
-                        setPassed={setPassed}
-                        notes={notes}
-                        setNotes={setNotes}
-                        isAiLoading={isAiLoading}
-                        handleSuggestNotes={handleSuggestNotes}
-                        workOrderId={workOrderId}
-                    />
-
-                    <Separator className="bg-border/30" />
+                        <NotesSection
+                            passed={passed}
+                            setPassed={setPassed}
+                            notes={notes}
+                            setNotes={setNotes}
+                            isAiLoading={isAiLoading}
+                            handleSuggestNotes={handleSuggestNotes}
+                            workOrderId={workOrderId}
+                        />
+                    </div>
 
                     <SignatureSection
                         signature={signature}
@@ -174,15 +191,15 @@ export function QualityCheckForm({
                 </div>
             </div>
 
-            <div className="px-4 pt-4 pb-4 border-t border-border/50 flex justify-end gap-3 shrink-0">
-                <Button variant="outline" onClick={onCancel} disabled={isSubmitting} className="h-10 border-border/50 font-medium px-6">
+            <DialogFooter className="shrink-0 border-t border-border px-4 py-3">
+                <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
                     Cancel
                 </Button>
                 <Button
                     type="button"
                     onClick={handleSubmit}
                     disabled={isSubmitting || !allChecksPassed || !signature}
-                    className={`h-10 px-8 font-bold transition-all shadow-md ${passed ? 'bg-primary hover:bg-primary/90' : 'bg-destructive hover:bg-destructive/90'}`}
+                    className={passed ? "font-medium" : "bg-destructive font-medium hover:bg-destructive/90"}
                 >
                     {isSubmitting ? (
                         "Processing..."
@@ -195,7 +212,7 @@ export function QualityCheckForm({
                         "Flag for Rework"
                     )}
                 </Button>
-            </div>
+            </DialogFooter>
         </div>
     );
 }

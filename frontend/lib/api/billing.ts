@@ -641,8 +641,16 @@ export const billingApi = {
 
     convertToInvoice: async (id: number): Promise<Invoice> => {
       const response = await apiClient.post(`/billing/estimates/${id}/convert_to_invoice/`);
-      // Backend returns { "message": "...", "invoice": {...} }
-      return response.data.invoice || response.data;
+      const data = response.data;
+      if (data.invoice) return data.invoice;
+      if (data.invoice_id) {
+        return {
+          ...data,
+          id: data.invoice_id,
+          invoice_number: data.invoice_number || "",
+        } as Invoice;
+      }
+      return data;
     },
 
     history: async (id: number) => {

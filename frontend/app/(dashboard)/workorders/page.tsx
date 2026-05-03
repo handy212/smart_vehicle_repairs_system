@@ -2,12 +2,13 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi } from "@/lib/api/workorders";
+import { serviceTaskTypesApi, type ServiceTaskType } from "@/lib/api/workorder-tasks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Wrench, Trash2, Download, X, ChevronDown, LayoutGrid, MoreHorizontal, Eye, Edit, FileText, Printer, Truck } from "lucide-react";
+import { Plus, Search, Wrench, Trash2, Download, X, ChevronDown, LayoutGrid, MoreHorizontal, Eye, Edit, FileText, Printer, Truck, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -59,6 +60,7 @@ export default function WorkOrdersPage() {
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [showTaskTypesDialog, setShowTaskTypesDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("in_progress");
 
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
@@ -469,6 +471,10 @@ export default function WorkOrdersPage() {
                   Export CSV
                 </DropdownMenuItem>
               </PermissionGuard>
+              <DropdownMenuItem onClick={() => setShowTaskTypesDialog(true)} className="text-xs">
+                <Settings2 className="w-3.5 h-3.5 mr-2" />
+                Manage Task Types
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -771,6 +777,216 @@ export default function WorkOrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TaskTypesDialog
+        open={showTaskTypesDialog}
+        onOpenChange={setShowTaskTypesDialog}
+      />
     </div>
+  );
+}
+
+function TaskTypesDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [editing, setEditing] = useState<ServiceTaskType | null>(null);
+  const [form, setForm] = useState({
+    code: "",
+    name: "",
+    description: "",
+    default_labor_rate: "0.00",
+    is_billable: true,
+    is_active: true,
+    sort_order: 0,
+  });
+
+  const { data: taskTypes = [], isLoading } = useQuery({
+    queryKey: ["service-task-types", "manage"],
+    queryFn: () => serviceTaskTypesApi.list(),
+    enabled: open,
+  });
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm({
+      code: "",
+      name: "",
+      description: "",
+      default_labor_rate: "0.00",
+      is_billable: true,
+      is_active: true,
+      sort_order: 0,
+    });
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const payload = {
+        ...form,
+        code: form.code || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""),
+      };
+      return editing?.id
+        ? serviceTaskTypesApi.update(editing.id, payload)
+        : serviceTaskTypesApi.create(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-task-types"] });
+      queryClient.invalidateQueries({ queryKey: ["service-task-types", "manage"] });
+      resetForm();
+      toast({ title: "Task type saved", variant: "success" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => serviceTaskTypesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-task-types"] });
+      queryClient.invalidateQueries({ queryKey: ["service-task-types", "manage"] });
+      toast({ title: "Task type removed", variant: "success" });
+    },
+  });
+
+  const startEdit = (taskType: ServiceTaskType) => {
+    setEditing(taskType);
+    setForm({
+      code: taskType.code || taskType.value,
+      name: taskType.name || taskType.label,
+      description: taskType.description || "",
+      default_labor_rate: taskType.default_labor_rate || "0.00",
+      is_billable: taskType.is_billable ?? true,
+      is_active: taskType.is_active ?? true,
+      sort_order: taskType.sort_order || 0,
+    });
+  };
+
+  const canSave = form.name.trim().length > 0;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle>Manage Service Task Types</DialogTitle>
+        </DialogHeader>
+        <div className="grid min-h-0 gap-4 md:grid-cols-[1fr_1.2fr]">
+          <div className="space-y-3 rounded-md border border-border p-3 md:max-h-[calc(85vh-8rem)] md:overflow-y-auto">
+            <Input
+              placeholder="Task type name"
+              value={form.name}
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+            />
+            <Input
+              placeholder="Code"
+              value={form.code}
+              onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))}
+            />
+            <Input
+              placeholder="Description"
+              value={form.description}
+              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="Default labor rate"
+                value={form.default_labor_rate}
+                onChange={(event) => setForm((current) => ({ ...current, default_labor_rate: event.target.value }))}
+              />
+              <Input
+                type="number"
+                placeholder="Sort order"
+                value={form.sort_order}
+                onChange={(event) => setForm((current) => ({ ...current, sort_order: Number(event.target.value) || 0 }))}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_billable}
+                onChange={(event) => setForm((current) => ({ ...current, is_billable: event.target.checked }))}
+              />
+              Billable
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_active}
+                onChange={(event) => setForm((current) => ({ ...current, is_active: event.target.checked }))}
+              />
+              Active
+            </label>
+            <div className="flex gap-2">
+              <Button onClick={() => saveMutation.mutate()} disabled={!canSave || saveMutation.isPending}>
+                {editing ? "Update" : "Add"} Type
+              </Button>
+              {editing && (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancel Edit
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="min-h-0 overflow-hidden rounded-md border border-border">
+            {isLoading ? (
+              <div className="p-4 text-sm text-muted-foreground">Loading task types...</div>
+            ) : (
+              <div className="max-h-[calc(85vh-8rem)] overflow-y-auto">
+                <Table>
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Rate</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {taskTypes.map((taskType) => (
+                    <TableRow key={taskType.id || taskType.value}>
+                      <TableCell>
+                        <div className="font-medium">{taskType.name || taskType.label}</div>
+                        <div className="text-xs text-muted-foreground">{taskType.code || taskType.value}</div>
+                      </TableCell>
+                      <TableCell>{taskType.default_labor_rate || "0.00"}</TableCell>
+                      <TableCell>
+                        <Badge variant={taskType.is_active === false ? "secondary" : "success"}>
+                          {taskType.is_active === false ? "Inactive" : "Active"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => startEdit(taskType)}>
+                          Edit
+                        </Button>
+                        {taskType.id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm(`Delete task type "${taskType.name || taskType.label}"?`)) {
+                                deleteMutation.mutate(taskType.id as number);
+                              }
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

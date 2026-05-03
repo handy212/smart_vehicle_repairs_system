@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { WorkOrderNote } from "@/lib/api/workorder-notes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertCircle, MessageSquare } from "lucide-react";
-import { format } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, MessageSquare } from "lucide-react";
 import AddNoteDialog from "./AddNoteDialog";
 
 interface NotesTabProps {
@@ -15,111 +16,91 @@ interface NotesTabProps {
   onRefresh: () => void;
 }
 
+const formatType = (value?: string) => (value || "internal").replace(/_/g, " ");
+
 export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: NotesTabProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const importantNotes = notes.filter((n) => n.is_important);
-  const regularNotes = notes.filter((n) => !n.is_important);
+  const sortedNotes = useMemo(
+    () => [...notes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [notes]
+  );
 
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Notes</CardTitle>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+        <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
+          <div>
+            <CardTitle className="text-base">Notes</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {notes.length} note{notes.length === 1 ? "" : "s"} recorded
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setShowAddDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
             Add Note
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="px-4 pb-4 pt-0">
           {notes.length === 0 ? (
-            <div className="text-center py-12">
-              <MessageSquare className="w-12 h-12 text-gray-300 text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm font-medium text-foreground mb-1">
-                No notes yet
+            <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border py-10 text-center">
+              <MessageSquare className="h-9 w-9 text-muted-foreground" />
+              <p className="mt-3 text-sm font-medium text-foreground">No notes yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Add notes for customer communications and internal updates.
               </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Add notes to track important information, customer communications, and internal updates.
-              </p>
-              <Button onClick={() => setShowAddDialog(true)} variant="secondary">
-                <Plus className="w-4 h-4 mr-2" />
+              <Button className="mt-4" size="sm" variant="secondary" onClick={() => setShowAddDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
                 Add First Note
               </Button>
             </div>
           ) : (
-            <>
-              {importantNotes.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-2 text-destructive" />
-                    Important Notes ({importantNotes.length})
-                  </h3>
-                  <div className="space-y-3">
-                    {importantNotes.map((note) => (
-                      <div
-                        key={note.id}
-                        className="border-l-4 border-destructive bg-destructive/10 dark:bg-red-900/20 p-4 rounded-r"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="danger" className="text-xs">{note.note_type?.replace('_', ' ')}</Badge>
-                            {note.is_customer_visible && (
-                              <Badge variant="secondary" className="text-xs">Customer Visible</Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(note.created_at), "MMM dd, yyyy 'at' h:mm a")}
-                          </span>
+            <div className="overflow-hidden rounded-md border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">Date</TableHead>
+                    <TableHead className="w-[150px]">Type</TableHead>
+                    <TableHead>Note</TableHead>
+                    <TableHead className="w-[160px]">By</TableHead>
+                    <TableHead className="w-[120px]">Flags</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedNotes.map((note) => (
+                    <TableRow key={note.id}>
+                      <TableCell className="align-top text-xs text-muted-foreground">
+                        {format(new Date(note.created_at), "MMM d, yyyy")}
+                        <div>{format(new Date(note.created_at), "h:mm a")}</div>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Badge variant={note.note_type === "customer" ? "info" : "secondary"} className="capitalize">
+                          {formatType(note.note_type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <p className="whitespace-pre-wrap text-sm text-foreground">{note.note}</p>
+                      </TableCell>
+                      <TableCell className="align-top text-sm text-muted-foreground">
+                        {note.created_by_name || "System"}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="flex flex-col gap-1">
+                          {note.is_important && <Badge variant="danger">Important</Badge>}
+                          {note.is_customer_visible && <Badge variant="outline">Customer</Badge>}
+                          {!note.is_important && !note.is_customer_visible && (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
                         </div>
-                        <p className="text-sm text-foreground whitespace-pre-wrap">{note.note}</p>
-                        {
-                          note.created_by_name && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                              By: {note.created_by_name}
-                            </p>
-                          )
-                        }
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {regularNotes.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    All Notes ({regularNotes.length})
-                  </h3>
-                  <div className="space-y-3">
-                    {regularNotes.map((note) => (
-                      <div key={note.id} className="border border-border bg-card p-4 rounded-lg">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="default" className="text-xs">{note.note_type?.replace('_', ' ')}</Badge>
-                            {note.is_customer_visible && (
-                              <Badge variant="secondary" className="text-xs">Customer Visible</Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(note.created_at), "MMM dd, yyyy 'at' h:mm a")}
-                          </span>
-                        </div>
-                        <p className="text-sm text-foreground whitespace-pre-wrap">{note.note}</p>
-                        {note.created_by_name && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            By: {note.created_by_name}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
-      </Card >
+      </Card>
 
       {showAddDialog && (
         <AddNoteDialog
@@ -131,9 +112,7 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
             onRefresh();
           }}
         />
-      )
-      }
+      )}
     </>
   );
 }
-

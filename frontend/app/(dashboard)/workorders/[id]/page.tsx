@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
 import { gatepassApi } from "@/lib/api/gatepass";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
@@ -209,8 +209,10 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
 export default function WorkOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const workOrderId = parseInt(params.id as string);
-  const [activeTab, setActiveTab] = useState("overview");
+  const requestedTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(requestedTab || "overview");
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
   const queryClient = useQueryClient();
@@ -519,6 +521,7 @@ export default function WorkOrderDetailPage() {
             workOrderId={workOrderId}
             parts={parts}
             onRefresh={refreshData}
+            workOrder={workOrder}
           />
         </TabsContent>
 

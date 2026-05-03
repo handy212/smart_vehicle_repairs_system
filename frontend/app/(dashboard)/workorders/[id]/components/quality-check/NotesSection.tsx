@@ -26,21 +26,21 @@ export function NotesSection({
     workOrderId,
 }: NotesSectionProps) {
     return (
-        <div className="space-y-3">
+        <div className="rounded-md border border-border bg-background p-3">
             {/* Result toggle */}
-            <div className="flex items-center justify-between px-1">
+            <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <MessageSquare className="w-3.5 h-3.5 text-primary" />
-                    <Label className="text-xs font-bold text-foreground">QC Result</Label>
+                    <Label className="text-xs font-semibold text-foreground">QC Result</Label>
                 </div>
-                <div className="flex items-center bg-muted/30 p-0.5 rounded-md border border-border/40">
+                <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
                     <Button
                         type="button"
                         variant={passed ? "default" : "ghost"}
                         size="sm"
                         className={passed
-                            ? "h-6 px-3 text-[10px] font-bold shadow-sm bg-green-600 hover:bg-green-700 rounded-sm"
-                            : "h-6 px-3 text-[10px] text-muted-foreground rounded-sm"
+                            ? "h-6 rounded-sm bg-green-600 px-3 text-[10px] font-semibold hover:bg-green-700"
+                            : "h-6 rounded-sm px-3 text-[10px] text-muted-foreground"
                         }
                         onClick={() => setPassed(true)}
                     >
@@ -51,8 +51,8 @@ export function NotesSection({
                         variant={!passed ? "destructive" : "ghost"}
                         size="sm"
                         className={!passed
-                            ? "h-6 px-3 text-[10px] font-bold shadow-sm rounded-sm"
-                            : "h-6 px-3 text-[10px] text-muted-foreground rounded-sm"
+                            ? "h-6 rounded-sm px-3 text-[10px] font-semibold"
+                            : "h-6 rounded-sm px-3 text-[10px] text-muted-foreground"
                         }
                         onClick={() => setPassed(false)}
                     >
@@ -63,15 +63,15 @@ export function NotesSection({
 
             {/* Notes area */}
             <div className="space-y-1.5">
-                <div className="flex items-center justify-between px-1">
-                    <Label htmlFor="notes" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="notes" className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Observations
                     </Label>
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-5 text-[9px] font-bold text-primary border-primary/20 hover:bg-primary/5 px-2 gap-1"
+                        className="h-6 gap-1 px-2 text-[10px] text-primary"
                         onClick={handleSuggestNotes}
                         disabled={isAiLoading || !workOrderId}
                     >
@@ -85,7 +85,7 @@ export function NotesSection({
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
                     placeholder="Findings, adjustments, or reasons for failure..."
-                    className="resize-none bg-background border-border/40 focus:border-primary/40 text-sm leading-relaxed p-2.5"
+                    className="min-h-[70px] resize-none bg-card text-sm leading-relaxed"
                 />
             </div>
         </div>

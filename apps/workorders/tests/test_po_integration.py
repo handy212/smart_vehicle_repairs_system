@@ -34,6 +34,12 @@ class POIntegrationTests(TestCase):
             password='testpassword',
             role='admin',
         )
+        self.technician = User.objects.create_user(
+            username='techuser',
+            email='tech@example.com',
+            password='testpassword',
+            role='technician',
+        )
         self.client.force_authenticate(user=self.user)
         
         # Create Branch
@@ -99,6 +105,10 @@ class POIntegrationTests(TestCase):
             branch=self.branch,
             customer=self.customer,
             vehicle=self.vehicle,
+            status='approved',
+            requires_approval=True,
+            approved_by_customer=True,
+            approved_at=datetime.datetime.now(datetime.timezone.utc),
             odometer_in=10000,
             customer_concerns="Need oil change",
             created_by=self.user
@@ -111,7 +121,9 @@ class POIntegrationTests(TestCase):
             part_number="OF-123",
             quantity=Decimal('2.00'),
             unit_cost=Decimal('10.00'),
-            status='pending'
+            status='pending',
+            approved_by=self.user,
+            approved_at=datetime.datetime.now(datetime.timezone.utc),
         )
 
     def test_create_po_from_request_success(self):
@@ -131,6 +143,65 @@ class POIntegrationTests(TestCase):
         self.assertEqual(po_item.quantity, 2)
         self.assertEqual(po_item.purchase_order.status, 'draft')
         self.assertEqual(po_item.purchase_order.supplier, self.supplier)
+
+    def test_order_requires_requisition_approval(self):
+        """Stores cannot order parts before the requisition itself is approved."""
+        self.wo_part.approved_by = None
+        self.wo_part.approved_at = None
+        self.wo_part.save(update_fields=['approved_by', 'approved_at', 'updated_at'])
+
+        url = reverse('api_workorders:workorderpart-order', args=[self.wo_part.id])
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('requisition approval is required', response.data['error'].lower())
+        self.assertFalse(PurchaseOrder.objects.exists())
+
+    def test_order_requires_customer_approval(self):
+        """Stores cannot order parts before the customer approves the work."""
+        WorkOrder.objects.filter(pk=self.work_order.pk).update(
+            status='awaiting_approval',
+            requires_approval=True,
+            approved_by_customer=False,
+            approved_at=None,
+        )
+        self.work_order.refresh_from_db()
+
+        url = reverse('api_workorders:workorderpart-order', args=[self.wo_part.id])
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('customer approval is required', response.data['error'].lower())
+        self.assertFalse(PurchaseOrder.objects.exists())
+
+    def test_order_requires_stores_permission(self):
+        """Technicians cannot perform Stores fulfillment from the API."""
+        self.client.force_authenticate(user=self.technician)
+
+        url = reverse('api_workorders:workorderpart-order', args=[self.wo_part.id])
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('permission', response.data['error'].lower())
+        self.assertFalse(PurchaseOrder.objects.exists())
+
+    def test_allocate_requires_stores_permission(self):
+        """Technicians cannot allocate stock even when the part is available."""
+        StockItem.objects.create(
+            part=self.part,
+            branch=self.branch,
+            quantity_in_stock=5,
+            quantity_reserved=0,
+        )
+        self.client.force_authenticate(user=self.technician)
+
+        url = reverse('api_workorders:workorderpart-allocate', args=[self.wo_part.id])
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('permission', response.data['error'].lower())
+        self.wo_part.refresh_from_db()
+        self.assertEqual(self.wo_part.status, 'pending')
 
     def test_order_rejects_when_branch_stock_is_available(self):
         """In-stock branch items should be allocated, not sent to PO."""
@@ -161,7 +232,9 @@ class POIntegrationTests(TestCase):
             part_number="OF-123",
             quantity=Decimal('3.00'),
             unit_cost=Decimal('10.00'),
-            status='pending'
+            status='pending',
+            approved_by=self.user,
+            approved_at=datetime.datetime.now(datetime.timezone.utc),
         )
         
         url_2 = reverse('api_workorders:workorderpart-order', args=[wo_part_2.id])
@@ -211,7 +284,9 @@ class POIntegrationTests(TestCase):
             part_number="AF-999",
             quantity=Decimal('1.00'),
             unit_cost=Decimal('15.00'),
-            status='pending'
+            status='pending',
+            approved_by=self.user,
+            approved_at=datetime.datetime.now(datetime.timezone.utc),
         )
         
         url = reverse('api_workorders:workorderpart-bulk-order')

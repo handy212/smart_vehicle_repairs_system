@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { workordersApi, WorkOrderPart } from "@/lib/api/workorders";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +80,13 @@ const StatsGrid = ({ stats, loading }: { stats?: PartsRequestStats, loading: boo
 };
 
 export default function PartsRequestsPage() {
-    const [selectedWoId, setSelectedWoId] = useState<number | null>(null);
+    const searchParams = useSearchParams();
+    const workOrderFilter = searchParams.get("work_order");
+    const parsedWorkOrderFilterId = workOrderFilter ? Number(workOrderFilter) : null;
+    const workOrderFilterId = parsedWorkOrderFilterId && Number.isFinite(parsedWorkOrderFilterId)
+        ? parsedWorkOrderFilterId
+        : null;
+    const [selectedWoId, setSelectedWoId] = useState<number | null>(workOrderFilterId);
     const [searchQuery, setSearchQuery] = useState("");
     const { toast } = useToast();
 
@@ -93,10 +100,11 @@ export default function PartsRequestsPage() {
 
     // Fetch parts list
     const { data: parts = [], isLoading, refetch } = useQuery({
-        queryKey: ["parts-requests", activeStatus],
+        queryKey: ["parts-requests", activeStatus, workOrderFilterId],
         queryFn: async () => {
             const response = await workordersApi.parts.list({
-                status: activeStatus === "all" ? undefined : activeStatus
+                status: activeStatus === "all" ? undefined : activeStatus,
+                work_order: workOrderFilterId || undefined,
             });
 
             return Array.isArray(response) ? response : (response as PaginatedPartsResponse).results || [];
@@ -104,16 +112,16 @@ export default function PartsRequestsPage() {
     });
 
     // Group parts by Work Order
-    const groupedParts = (parts as WorkOrderPart[]).reduce((acc: Record<number, WorkOrderPart[]>, part: WorkOrderPart) => {
+    const groupedParts = useMemo(() => (parts as WorkOrderPart[]).reduce((acc: Record<number, WorkOrderPart[]>, part: WorkOrderPart) => {
         const woId = part.work_order;
         if (!acc[woId]) {
             acc[woId] = [];
         }
         acc[woId].push(part);
         return acc;
-    }, {});
+    }, {}), [parts]);
 
-    const workOrderIds = Object.keys(groupedParts).map(Number);
+    const workOrderIds = useMemo(() => Object.keys(groupedParts).map(Number), [groupedParts]);
 
     // Filter by search query (Client side)
     const filteredWoIds = workOrderIds.filter(woId => {
@@ -156,6 +164,11 @@ export default function PartsRequestsPage() {
                             <h1 className="text-2xl font-bold tracking-tight text-foreground">
                                 Parts Requests
                             </h1>
+                            {workOrderFilterId && (
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Filtered to work order #{workOrderFilterId}
+                                </p>
+                            )}
                         </div>
                     </div>
 

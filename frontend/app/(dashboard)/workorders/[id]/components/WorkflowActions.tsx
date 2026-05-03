@@ -27,6 +27,7 @@ import {
   Eye,
   AlertTriangle,
   User,
+  Wrench,
 } from "lucide-react";
 
 // Refactored Forms
@@ -73,6 +74,51 @@ const getWorkflowErrorMessage = (error: any) => {
     return `${data?.next_step || "Open the Parts tab and resolve the blocking parts."} Blocking parts: ${list}${more}.`;
   }
   return data?.error || data?.errors?.join("; ") || error.message;
+};
+
+const extractApiErrorMessage = (error: any, fallback: string) => {
+  if (error?.isOffline || error?.queued || error?.response?.data?.queued) {
+    return error?.response?.data?.message || error?.message || "Request queued for offline sync.";
+  }
+
+  const data = error?.response?.data;
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+
+  if (data && typeof data === "object") {
+    const directMessage =
+      data.next_step ||
+      data.error ||
+      data.detail ||
+      data.message ||
+      (Array.isArray(data.errors) ? data.errors.filter(Boolean).join("; ") : "");
+
+    if (directMessage) {
+      return directMessage;
+    }
+
+    const fieldMessages = Object.entries(data)
+      .flatMap(([field, value]) => {
+        if (["blocking_tasks", "blocking_parts"].includes(field)) return [];
+        const label = field.replace(/_/g, " ");
+        if (Array.isArray(value)) return value.map((item) => `${label}: ${String(item)}`);
+        if (typeof value === "string" && value.trim()) return [`${label}: ${value}`];
+        return [];
+      })
+      .filter(Boolean);
+
+    if (fieldMessages.length) {
+      return fieldMessages.join("; ");
+    }
+  }
+
+  if (error?.message && error.message !== "[object Object]") {
+    return error.message;
+  }
+
+  const status = error?.response?.status;
+  return status ? `${fallback}. Server returned HTTP ${status}.` : fallback;
 };
 
 export default function WorkflowActions({
@@ -362,7 +408,7 @@ export default function WorkflowActions({
 
   // Start Diagnosis (Phase 1: Diagnosis) - Using new diagnosis system
   const startDiagnosisMutation = useMutation({
-    mutationFn: async (data?: { primary_technician?: number; priority?: string }) => {
+    mutationFn: async (data?: { primary_technician?: number; assigned_technicians?: number[]; priority?: string }) => {
       // Validate Service Coordinator is assigned before starting diagnosis
       if (!currentWorkOrder?.service_coordinator) {
         throw new Error('A Service Coordinator must be assigned before diagnosis can be carried out. Please assign a Service Coordinator during intake.');
@@ -399,10 +445,11 @@ export default function WorkflowActions({
       await workordersApi.startDiagnosis(workOrderId);
 
       // Update work order with additional info if provided
-      if (data && (data.primary_technician || data.priority)) {
+      if (data && (data.primary_technician || data.assigned_technicians?.length || data.priority)) {
 
         const updateData: any = {};
         if (data.primary_technician) updateData.primary_technician = data.primary_technician;
+        if (data.assigned_technicians?.length) updateData.assigned_technicians = data.assigned_technicians;
         if (data.priority) updateData.priority = data.priority;
 
         await workordersApi.update(workOrderId, updateData);
@@ -563,6 +610,7 @@ export default function WorkflowActions({
       });
       refreshWorkOrder();
       onStartRepairs?.();
+      router.push(`/workorders/${workOrderId}/repairs`);
     },
 
     onError: (error: any) => {
@@ -746,26 +794,12 @@ export default function WorkflowActions({
     },
 
     onError: (error: any) => {
-      let errorMessage = "Failed to mark as invoiced";
-      if (error.response?.data) {
-        const data = error.response.data;
-        if (data.odometer_out) {
-          errorMessage = Array.isArray(data.odometer_out) ? data.odometer_out[0] : data.odometer_out;
-        } else if (data.error) {
-          errorMessage = data.error;
-        } else if (data.detail) {
-          errorMessage = data.detail;
-        } else {
-          errorMessage = JSON.stringify(data);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      console.error("Mark invoiced error:", error.response?.data || error);
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: "Cannot mark as invoiced",
+        description: extractApiErrorMessage(
+          error,
+          "Unable to mark this work order as invoiced. Confirm odometer out is recorded and a finalized invoice exists."
+        ),
         variant: "destructive",
       });
     },
@@ -945,12 +979,10 @@ export default function WorkflowActions({
       case "in_progress":
         actions.push(
           {
-            label: "Additional Work Found",
-            icon: AlertTriangle,
-            onClick: () => setShowAdditionalWorkDialog(true),
-            disabled: additionalWorkFoundMutation.isPending,
-            variant: "outline",
-            description: "Flag new problems - requires customer approval",
+            label: "Open Repairs",
+            icon: Wrench,
+            onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
+            description: "Open the repair execution workspace",
           },
           {
             label: "Pause",
@@ -994,6 +1026,13 @@ export default function WorkflowActions({
             description: "Request customer approval for additional work",
           },
           {
+            label: "Open Repairs",
+            icon: Wrench,
+            onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
+            variant: "outline",
+            description: "Review the active repair workspace",
+          },
+          {
             label: "Continue Without Approval",
             icon: Play,
             onClick: async () => {
@@ -1021,13 +1060,22 @@ export default function WorkflowActions({
         break;
 
       case "paused":
-        actions.push({
-          label: "Resume",
-          icon: Play,
-          onClick: () => resumeMutation.mutate(),
-          disabled: resumeMutation.isPending,
-          description: "Resume paused work",
-        });
+        actions.push(
+          {
+            label: "Resume",
+            icon: Play,
+            onClick: () => resumeMutation.mutate(),
+            disabled: resumeMutation.isPending,
+            description: "Resume paused work",
+          },
+          {
+            label: "Open Repairs",
+            icon: Wrench,
+            onClick: () => router.push(`/workorders/${workOrderId}/repairs`),
+            variant: "outline",
+            description: "Review the repair execution workspace",
+          }
+        );
         break;
 
       // Phase 4: Quality Control & Billing
@@ -1186,8 +1234,8 @@ export default function WorkflowActions({
 
       {/* Quality Check Dialog */}
       <Dialog open={showQualityCheckDialog} onOpenChange={setShowQualityCheckDialog}>
-        <DialogContent className="bg-muted border-border max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[88vh] gap-0 overflow-hidden bg-card p-0">
+          <DialogHeader className="border-b border-border px-4 py-3">
             <DialogTitle className="text-foreground">Perform Quality Check</DialogTitle>
           </DialogHeader>
           <QualityCheckForm

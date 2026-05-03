@@ -40,6 +40,7 @@ export interface DashboardOverview {
       status: string;
       created_at: string;
       diagnosis_notes?: string | null;
+      gate_pass_status?: string | null;
     }>;
     appointments: Array<{
       id: number;

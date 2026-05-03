@@ -325,8 +325,8 @@ export const adminApi = {
       return response.data;
     },
 
-    technicians: async (): Promise<User[]> => {
-      const response = await apiClient.get("/accounts/users/technicians/");
+    technicians: async (params?: { branch?: number }): Promise<User[]> => {
+      const response = await apiClient.get("/accounts/users/technicians/", { params });
       return response.data;
     },
 
@@ -711,4 +711,3 @@ export const permissionsApi = {
     return response.data;
   },
 };
-

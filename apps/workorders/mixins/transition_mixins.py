@@ -162,15 +162,8 @@ class WorkOrderStateTransitionMixin:
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
         except ValidationError as e:
-            error_msg = str(e)
-            # Provide helpful error message
-            if 'odometer out' in error_msg.lower():
-                error_msg = "Odometer out reading is required. Please provide the odometer reading before marking as invoiced."
-            logger.warning(f"Failed to mark WO {work_order.work_order_number} as invoiced: {error_msg}")
-            return Response(
-                {'error': error_msg},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            logger.warning(f"Failed to mark WO {work_order.work_order_number} as invoiced: {e}")
+            return self._transition_error_response(work_order, 'invoiced', e)
 
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):

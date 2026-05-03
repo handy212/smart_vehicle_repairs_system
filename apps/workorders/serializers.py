@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from django.utils import timezone
+from django.utils.text import slugify
 from decimal import Decimal
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from drf_spectacular.types import OpenApiTypes
 from .models import (
-    WorkOrder, ServiceTask, WorkOrderPart, 
+    WorkOrder, ServiceTask, ServiceTaskType, WorkOrderPart, 
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
 )
 from django.contrib.auth import get_user_model
@@ -537,8 +538,9 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         
         # Extract repeat visit related fields
         is_warranty_rework = validated_data.pop('is_warranty_rework', False)
-        related_work_order_id = validated_data.pop('related_work_order', None)
+        related_work_order = validated_data.pop('related_work_order', None)
         warranty_reason = validated_data.pop('warranty_reason', '')
+        related_work_order_id = getattr(related_work_order, 'id', related_work_order)
         
         if not validated_data.get('branch'):
             raise serializers.ValidationError({'branch': 'Branch is required.'})
@@ -552,12 +554,8 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         if is_warranty_rework:
             validated_data['is_warranty'] = True
             validated_data['is_warranty_rework'] = True
-            if related_work_order_id:
-                # related_work_order_id might be an ID or a WorkOrder instance
-                if hasattr(related_work_order_id, 'id'):
-                    validated_data['related_work_order'] = related_work_order_id
-                else:
-                    validated_data['related_work_order_id'] = related_work_order_id
+            if related_work_order:
+                validated_data['related_work_order'] = related_work_order
             if warranty_reason:
                 validated_data['warranty_reason'] = warranty_reason
         
@@ -594,7 +592,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             from django.conf import settings
             
             try:
-                related_wo = WorkOrder.objects.get(id=related_work_order_id)
+                related_wo = related_work_order or WorkOrder.objects.get(id=related_work_order_id)
                 if related_wo.completed_at:
                     days_since = (timezone.now() - related_wo.completed_at).days
                 else:
@@ -645,6 +643,26 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'is_customer_waiting',
             'maintenance_type', 'service_type', 'service_bundle'
         ]
+
+    def _validate_branch_technician(self, technician, work_order, field_name):
+        if technician.role != 'technician':
+            raise serializers.ValidationError({field_name: "Only technicians can be assigned to diagnosis or repair work."})
+        if work_order and work_order.branch_id and technician.branch_id != work_order.branch_id:
+            raise serializers.ValidationError({field_name: "Assigned technician must belong to the same branch as the work order."})
+
+    def validate(self, data):
+        work_order = self.instance
+        primary_technician = data.get('primary_technician')
+        assigned_technicians = data.get('assigned_technicians')
+
+        if primary_technician:
+            self._validate_branch_technician(primary_technician, work_order, 'primary_technician')
+
+        if assigned_technicians is not None:
+            for technician in assigned_technicians:
+                self._validate_branch_technician(technician, work_order, 'assigned_technicians')
+
+        return data
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -691,6 +709,10 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         
         # Extract status if it's being updated
         new_status = validated_data.pop('status', None)
+        assigned_technicians = validated_data.pop('assigned_technicians', None)
+        if assigned_technicians is not None:
+            for technician in assigned_technicians:
+                self._validate_branch_technician(technician, instance, 'assigned_technicians')
         
         # Check if service_coordinator is being assigned/changed (before updating)
         old_service_coordinator_id = instance.service_coordinator.id if instance.service_coordinator else None
@@ -706,6 +728,9 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         # Update other fields first
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
+        if assigned_technicians is not None:
+            instance.assigned_technicians.set(assigned_technicians)
             
         # Check if maintenance type or service type implies applied bundle
         # We only apply if it wasn't applied before or explicit change. 
@@ -783,10 +808,52 @@ class ServiceTaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceTask
         fields = [
-            'work_order', 'task_type', 'description', 'detailed_notes',
+            'id', 'work_order', 'task_type', 'description', 'detailed_notes',
             'sequence_order', 'assigned_to',
             'estimated_hours', 'labor_rate'
         ]
+        read_only_fields = ['id']
+
+    def validate_assigned_to(self, value):
+        if value and value.role != 'technician':
+            raise serializers.ValidationError("Service tasks can only be assigned to a technician.")
+        return value
+
+    def validate(self, data):
+        work_order = data.get('work_order')
+        assigned_to = data.get('assigned_to')
+        if work_order and assigned_to:
+            if work_order.branch_id and assigned_to.branch_id != work_order.branch_id:
+                raise serializers.ValidationError({
+                    'assigned_to': "Assigned technician must belong to the same branch as the work order."
+                })
+        return data
+
+
+class ServiceTaskTypeSerializer(serializers.ModelSerializer):
+    """Manage service task types used by service tasks."""
+    value = serializers.CharField(source='code', read_only=True)
+    label = serializers.CharField(source='name', read_only=True)
+
+    class Meta:
+        model = ServiceTaskType
+        fields = [
+            'id', 'code', 'name', 'value', 'label', 'description',
+            'default_labor_rate', 'is_billable', 'is_active',
+            'sort_order', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'value', 'label']
+
+    def validate_code(self, value):
+        code = slugify(value).replace('-', '_') if value else ''
+        if not code:
+            raise serializers.ValidationError("Code is required.")
+        return code
+
+    def validate_name(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Name is required.")
+        return value.strip()
 
 
 # ============= Work Order Part Serializers =============
@@ -805,6 +872,8 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
     vehicle_info = serializers.SerializerMethodField()
     purchase_order_number = serializers.SerializerMethodField()
+    work_order_status = serializers.CharField(source='work_order.status', read_only=True)
+    work_order_is_approved = serializers.BooleanField(source='work_order.is_approved', read_only=True)
     
     work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
     
@@ -862,6 +931,7 @@ class WorkOrderPartCreateSerializer(serializers.ModelSerializer):
     """Create work order part"""
     requisition_number = serializers.CharField(read_only=True)
     requested_by = serializers.PrimaryKeyRelatedField(read_only=True)
+    additional_work_triggered = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrderPart
@@ -873,8 +943,28 @@ class WorkOrderPartCreateSerializer(serializers.ModelSerializer):
             'quantity', 'unit_cost', 'markup_percentage',
             'status', 'warranty_months', 'warranty_notes',
             'resolution_notes',
-            'requisition_number', 'requested_by'
+            'requisition_number', 'requested_by',
+            'additional_work_triggered',
         ]
+
+    def validate_status(self, value):
+        if value not in {'draft', 'pending'}:
+            raise serializers.ValidationError(
+                "New part requests must start as draft or pending. Stores must allocate, receive, or install parts through the parts workflow."
+            )
+        return value
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_additional_work_triggered(self, obj):
+        return bool(getattr(obj, 'additional_work_triggered', False))
+
+    def validate(self, data):
+        work_order = data.get('work_order')
+        if work_order and work_order.status in {'quality_check', 'completed', 'invoiced', 'closed'}:
+            raise serializers.ValidationError(
+                "Parts cannot be added at this stage. Reopen the repair workflow or create a new work order."
+            )
+        return data
     
     def create(self, validated_data):
         # Set requested_by to current user
