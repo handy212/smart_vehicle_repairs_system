@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction as db_transaction
 from .models import (
     Account, JournalEntry, Transaction, AccountingControl, AuditLog,
     BankStatement, BankStatementLine, FundTransfer,
@@ -14,26 +15,22 @@ class AccountSimpleSerializer(serializers.ModelSerializer):
     
     def get_balance(self, obj):
         """Calculate current account balance from transactions"""
-        from django.db.models import Sum, Q
+        from django.db.models import Sum
         from .models import Transaction
         
-        # Get sum of debit transactions
         debits = Transaction.objects.filter(
             account=obj,
             transaction_type='debit'
         ).aggregate(total=Sum('amount'))['total'] or 0
         
-        # Get sum of credit transactions
         credits = Transaction.objects.filter(
             account=obj,
             transaction_type='credit'
         ).aggregate(total=Sum('amount'))['total'] or 0
         
-        # Calculate balance based on account's balance type
         if obj.balance_type == 'debit':
             return float(debits - credits)
-        else:
-            return float(credits - debits)
+        return float(credits - debits)
 
 class AccountSerializer(serializers.ModelSerializer):
     """Full serializer for creating and updating accounts"""
@@ -67,27 +64,28 @@ class JournalEntryCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         transactions_data = validated_data.pop('transactions')
-        journal_entry = JournalEntry.objects.create(
-            posted=True, # Auto-post manual entries for now 
-            created_by=self.context['request'].user, 
-            **validated_data
-        )
-        
-        for tx_data in transactions_data:
-            Transaction.objects.create(journal_entry=journal_entry, **tx_data)
+        with db_transaction.atomic():
+            journal_entry = JournalEntry.objects.create(
+                posted=False,
+                created_by=self.context['request'].user,
+                **validated_data
+            )
             
-        # Validate balance
-        if not journal_entry.validate_balanced():
-             # Rollback or raise error? 
-             # Ideally validate before commit, but validate_balanced checks DB aggregation.
-             # Better to calculate sum here.
-             pass 
-             
-        return journal_entry
+            for tx_data in transactions_data:
+                Transaction.objects.create(journal_entry=journal_entry, **tx_data)
+                
+            if not journal_entry.validate_balanced():
+                raise serializers.ValidationError("Journal Entry is not balanced after creation. Transaction was rolled back.")
+
+            journal_entry.posted = True
+            journal_entry.save(update_fields=['posted', 'updated_at'])
+            return journal_entry
     
     def validate(self, data):
-        # Validation logic to ensure credits == debits
         transactions = data.get('transactions', [])
+        if len(transactions) < 2:
+            raise serializers.ValidationError("A journal entry must have at least two transaction lines.")
+
         debits = sum(tx['amount'] for tx in transactions if tx['transaction_type'] == 'debit')
         credits = sum(tx['amount'] for tx in transactions if tx['transaction_type'] == 'credit')
         
