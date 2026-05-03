@@ -3,6 +3,7 @@ HR Management Serializers
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from apps.accounts.serializers import UserSerializer
 from apps.branches.models import Branch
 from .models import (
@@ -63,11 +64,10 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
     is_active_employee = serializers.BooleanField(read_only=True)
     technician_id = serializers.SerializerMethodField()
 
-    # Write-only fields for user creation / update
     email = serializers.EmailField(write_only=True, required=False)
-    first_name = serializers.CharField(write_only=True, required=False)
-    last_name = serializers.CharField(write_only=True, required=False)
-    password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
+    first_name = serializers.CharField(write_only=True, required=False, allow_blank=False)
+    last_name = serializers.CharField(write_only=True, required=False, allow_blank=False)
+    password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'}, min_length=8)
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
     role = serializers.CharField(write_only=True, required=False)
     profile_picture = serializers.ImageField(source='user.profile_picture', required=False, allow_null=True)
@@ -77,10 +77,6 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Queryset is already set in field definition, but could be further refined here if needed
 
     class Meta:
         model = EmployeeProfile
@@ -97,11 +93,23 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             'emergency_contact_relationship',
             'national_id', 'tax_id', 'notes',
             'created_at', 'updated_at',
-            # User model fields
             'email', 'first_name', 'last_name', 'password', 'phone', 'role',
             'profile_picture', 'branch',
         ]
         read_only_fields = ['user', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        if self.instance is None:
+            required_fields = ['email', 'first_name', 'last_name', 'password']
+            missing = {field: 'This field is required when creating a staff profile.' for field in required_fields if not attrs.get(field)}
+            if missing:
+                raise serializers.ValidationError(missing)
+
+            email = attrs.get('email')
+            if email and User.objects.filter(email__iexact=email).exists():
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+
+        return attrs
 
     def get_branch_name(self, obj):
         branch = obj.branch
@@ -116,47 +124,41 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         try:
             if hasattr(obj.user, 'technician_profile') and obj.user.technician_profile:
                 return obj.user.technician_profile.id
-        except:
+        except Exception:
             pass
-        # Fallback: Query for technician profile if relationship not loaded
         from apps.technicians.models import Technician
-        tech = Technician.objects.filter(user=obj.user).values_list('id', flat=True).first()
-        return tech
+        return Technician.objects.filter(user=obj.user).values_list('id', flat=True).first()
 
     def create(self, validated_data):
-        # Extract user fields
         email = validated_data.pop('email')
         password = validated_data.pop('password')
         first_name = validated_data.pop('first_name')
         last_name = validated_data.pop('last_name')
         phone = validated_data.pop('phone', '')
         role = validated_data.pop('role', 'technician')
-
-        # DRF nests source='user.branch' and source='user.profile_picture'
-        # under a 'user' dict in validated_data
         user_data = validated_data.pop('user', {})
 
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            phone=phone,
-            role=role,
-        )
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                role=role,
+            )
 
-        # Apply nested user fields (branch, profile_picture)
-        if user_data:
             for attr, value in user_data.items():
                 setattr(user, attr, value)
-            user.save()
+            if user_data:
+                user.save()
 
-        profile, created = EmployeeProfile.objects.update_or_create(
-            user=user,
-            defaults=validated_data
-        )
-        return profile
+            profile, _created = EmployeeProfile.objects.update_or_create(
+                user=user,
+                defaults=validated_data
+            )
+            return profile
 
     def update(self, instance, validated_data):
         user_fields = {}
@@ -164,31 +166,32 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             if field in validated_data:
                 user_fields[field] = validated_data.pop(field)
 
-        # Handle profile_picture and branch (source='user.xxx')
-        # These will be in validated_data via the 'user' source key if we don't pop them carefully
-        # Actually with source='user.branch', DRF puts it under 'user' dictionary in validated_data
-        
         user_data = validated_data.pop('user', {})
-        
-        if user_fields or user_data:
-            user = instance.user
-            # Update from flat user_fields
-            for attr, value in user_fields.items():
-                if attr == 'password':
-                    user.set_password(value)
-                elif attr == 'email':
-                    user.email = value
-                    user.username = value
-                else:
-                    setattr(user, attr, value)
-            
-            # Update from nested user_data
-            for attr, value in user_data.items():
-                setattr(user, attr, value)
-                
-            user.save()
+        if 'email' in user_fields:
+            email = user_fields['email']
+            existing = User.objects.filter(email__iexact=email).exclude(pk=instance.user_id).exists()
+            if existing:
+                raise serializers.ValidationError({'email': 'A user with this email already exists.'})
 
-        return super().update(instance, validated_data)
+        with transaction.atomic():
+            if user_fields or user_data:
+                user = instance.user
+                for attr, value in user_fields.items():
+                    if attr == 'password':
+                        if value:
+                            user.set_password(value)
+                    elif attr == 'email':
+                        user.email = value
+                        user.username = value
+                    else:
+                        setattr(user, attr, value)
+
+                for attr, value in user_data.items():
+                    setattr(user, attr, value)
+
+                user.save()
+
+            return super().update(instance, validated_data)
 
 
 class EmployeeProfileListSerializer(serializers.ModelSerializer):
@@ -218,12 +221,10 @@ class EmployeeProfileListSerializer(serializers.ModelSerializer):
         try:
             if hasattr(obj.user, 'technician_profile') and obj.user.technician_profile:
                 return obj.user.technician_profile.id
-        except:
+        except Exception:
             pass
-        # Fallback: Query for technician profile if relationship not loaded
         from apps.technicians.models import Technician
-        tech = Technician.objects.filter(user=obj.user).values_list('id', flat=True).first()
-        return tech
+        return Technician.objects.filter(user=obj.user).values_list('id', flat=True).first()
 
 
 # =============================================================================
@@ -291,17 +292,10 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
 
         if start_date and end_date:
             if start_date > end_date:
-                raise serializers.ValidationError(
-                    {'end_date': 'End date must be after start date.'}
-                )
-            
-            # Auto-calculate days_count if not provided
+                raise serializers.ValidationError({'end_date': 'End date must be after start date.'})
             if 'days_count' not in data:
-                # Simple calculation: inclusive difference
-                # TODO: Exclude weekends/holidays based on policy
                 delta = end_date - start_date
                 data['days_count'] = delta.days + 1
-                
         return data
 
 
