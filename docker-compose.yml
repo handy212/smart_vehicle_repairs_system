@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
@@ -17,7 +15,7 @@ services:
       - "5433:5432"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-svr_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-svr_user} -d ${DB_NAME:-svr_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,7 +33,7 @@ services:
       - "6379:6379"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-changeme} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,7 +44,19 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: svr_backend
-    command: gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 config.wsgi:application
+    command:
+      - gunicorn
+      - --bind
+      - 0.0.0.0:8000
+      - --workers
+      - "3"
+      - --timeout
+      - "120"
+      - --access-logfile
+      - "-"
+      - --error-logfile
+      - "-"
+      - config.wsgi:application
     environment:
       - DJANGO_ENVIRONMENT=production
       - DEBUG=False
@@ -76,6 +86,12 @@ services:
     restart: unless-stopped
     expose:
       - 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
 
   # Celery Worker
   celery:
@@ -83,10 +99,17 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: svr_celery
-    command: celery -A config worker --loglevel=info
+    command:
+      - celery
+      - -A
+      - config
+      - worker
+      - --loglevel=info
     environment:
       - DJANGO_ENVIRONMENT=production
       - DEBUG=False
+      - DJANGO_MIGRATE=0
+      - DJANGO_COLLECTSTATIC=0
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${DB_USER:-svr_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-svr_db}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
@@ -102,9 +125,12 @@ services:
     networks:
       - svr_network
     depends_on:
-      - db
-      - redis
-      - backend
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   # Celery Beat
@@ -113,10 +139,19 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: svr_celerybeat
-    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command:
+      - celery
+      - -A
+      - config
+      - beat
+      - --loglevel=info
+      - --scheduler
+      - django_celery_beat.schedulers:DatabaseScheduler
     environment:
       - DJANGO_ENVIRONMENT=production
       - DEBUG=False
+      - DJANGO_MIGRATE=0
+      - DJANGO_COLLECTSTATIC=0
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${DB_USER:-svr_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-svr_db}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
@@ -126,9 +161,12 @@ services:
     networks:
       - svr_network
     depends_on:
-      - db
-      - redis
-      - backend
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   # Next.js Frontend
@@ -147,6 +185,12 @@ services:
     restart: unless-stopped
     expose:
       - 3000
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode < 500 ? 0 : 1)}).on('error', () => process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
 
   # Nginx Reverse Proxy
   nginx:
@@ -164,8 +208,10 @@ services:
     networks:
       - svr_network
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
@@ -176,4 +222,3 @@ volumes:
 networks:
   svr_network:
     driver: bridge
-

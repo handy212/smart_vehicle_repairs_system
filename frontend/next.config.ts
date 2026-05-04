@@ -23,6 +23,7 @@ const getApiHost = () => {
 const apiConfig = getApiHost();
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   // Silence Turbopack/webpack config conflict (Next.js 16 defaults to Turbopack)
   turbopack: {},
   // Ensure Next doesn't infer the workspace root from a different lockfile when deployed
@@ -94,4 +95,3 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 });
 
 export default withPWA(nextConfig);
-

@@ -8,6 +8,8 @@ venv/
 env/
 ENV/
 .venv
+.venv/
+venv-dev/
 *.egg-info/
 dist/
 build/
@@ -23,13 +25,16 @@ db.sqlite3-journal
 
 # Node
 node_modules/
+**/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .next/
+**/.next/
 out/
 .cache/
 .turbo/
+**/.turbo/
 *.tsbuildinfo
 
 # IDE
@@ -65,4 +70,3 @@ pytest.ini
 *.tmp
 .coverage
 htmlcov/
-

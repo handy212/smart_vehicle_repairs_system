@@ -112,6 +112,15 @@ def api_root(request):
     })
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """
+    Lightweight container health endpoint.
+    """
+    return Response({'status': 'ok'})
+
+
 class HomePageView(TemplateView):
     """
     Homepage view.

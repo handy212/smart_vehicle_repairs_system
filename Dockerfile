@@ -1,47 +1,70 @@
-# Multi-stage build for Django backend
-FROM python:3.12-slim as backend
+# syntax=docker/dockerfile:1
 
-# Set environment variables
+# Multi-stage production image for the Django backend.
+FROM python:3.12-slim AS builder
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    postgresql-client \
+    --no-install-recommends \
     build-essential \
+    pkg-config \
     libpq-dev \
-    curl \
+    libffi-dev \
+    libcairo2-dev \
+    libpango1.0-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# Create app user
-RUN useradd -m -u 1000 svr && \
-    mkdir -p /app /app/logs /app/media /app/staticfiles && \
-    chown -R svr:svr /app
 
 WORKDIR /app
 
-# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --upgrade pip \
+    && /opt/venv/bin/pip install -r requirements.txt gunicorn
 
-# Copy application code
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    DJANGO_ENVIRONMENT=production \
+    PORT=8000
+
+RUN apt-get update && apt-get install -y \
+    --no-install-recommends \
+    curl \
+    postgresql-client \
+    libpq5 \
+    libffi8 \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    shared-mime-info \
+    fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin svr \
+    && mkdir -p /app/logs /app/media /app/staticfiles \
+    && chown -R svr:svr /app
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+
 COPY --chown=svr:svr . .
+COPY --chown=svr:svr docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Switch to non-root user
 USER svr
 
-# Collect static files (will be overridden in production with volume)
-RUN python manage.py collectstatic --noinput || true
-
-# Expose port
 EXPOSE 8000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/api/health/ || exit 1
 
-# Default command
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "config.wsgi:application"]
-
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "config.wsgi:application"]
