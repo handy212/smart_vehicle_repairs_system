@@ -25,6 +25,7 @@ import { Calendar, User, Car, Package as PackageIcon, CheckCircle2, ShieldCheck,
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const subscriptionCreateSchema = z.object({
     customer: z.number().min(1, "Customer is required"),
@@ -106,7 +107,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
         onError: (error: any) => {
             toast({
                 title: "Creation Failed",
-                description: error.response?.data?.detail || "Could not create subscription",
+                description: getApiErrorMessage(error, "Could not create subscription"),
                 variant: "destructive",
             });
         },

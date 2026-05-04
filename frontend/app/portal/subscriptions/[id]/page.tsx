@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { cn } from "@/lib/utils/cn";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const USAGE_TYPE_LABELS: Record<string, string> = {
   kilometer: "Kilometer",
@@ -57,13 +58,16 @@ export default function SubscriptionDetailPage() {
 
   const renewMutation = useMutation({
     mutationFn: () => subscriptionsApi.renew(subId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["portal", "subscription", subId] });
       queryClient.invalidateQueries({ queryKey: ["my-subscriptions"] });
-      toast({ title: "Renewed", description: "Subscription renewed successfully." });
+      toast({
+        title: "Renewal Invoice Created",
+        description: data.message || `Invoice ${data.invoice_number || data.invoice_id || ""} is pending payment.`,
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.response?.data?.detail || "Failed to renew.", variant: "destructive" });
+      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to renew."), variant: "destructive" });
     },
   });
 
@@ -105,7 +109,7 @@ export default function SubscriptionDetailPage() {
     );
   }
 
-  const statusVariant = subscription.status === "active"
+  const statusVariant = subscription.status === "active" && subscription.is_active_status !== false
     ? "default"
     : subscription.status === "expired" || subscription.status === "cancelled"
     ? "danger"
@@ -144,7 +148,7 @@ export default function SubscriptionDetailPage() {
               <p className="text-xs text-muted-foreground mt-0.5">{subscription.subscription_number}</p>
             </div>
             <Badge variant={statusVariant} className="capitalize text-[10px] shrink-0">
-              {subscription.status}
+              {subscription.status === "active" && subscription.is_active_status === false ? "pending activation" : subscription.status}
             </Badge>
           </div>
         </CardHeader>
@@ -171,6 +175,16 @@ export default function SubscriptionDetailPage() {
                 {subscription.days_remaining ?? 0} days
               </p>
             </div>
+            {subscription.activation_date && (
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1 flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Benefits Start
+                </p>
+                <p className={cn("text-sm font-medium", subscription.is_active_status === false ? "text-warning" : "")}>
+                  {format(new Date(subscription.activation_date), "MMM dd, yyyy")}
+                </p>
+              </div>
+            )}
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1 flex items-center gap-1">
                 <CreditCard className="h-3 w-3" /> Payment

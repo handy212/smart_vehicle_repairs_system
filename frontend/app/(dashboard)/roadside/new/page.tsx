@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils/cn";
 import { Badge } from "@/components/ui/badge";
 import { useEffect } from "react";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const roadsideRequestSchema = z.object({
     customer: z.number().min(1, "Customer is required"),
@@ -114,7 +115,8 @@ export default function NewRoadsideRequestDashboardPage() {
         enabled: !!selectedCustomerId && !!selectedVehicleId,
     });
 
-    const activeSubscription = activeSubscriptionData?.results?.[0];
+    const activeSubscription = activeSubscriptionData?.results?.find((subscription) => subscription.is_active_status) || null;
+    const pendingActivationSubscription = activeSubscriptionData?.results?.find((subscription) => !subscription.is_active_status) || null;
 
     const createMutation = useMutation({
         mutationFn: (data: RoadsideRequestFormData) => roadsideApi.create(data),
@@ -128,9 +130,7 @@ export default function NewRoadsideRequestDashboardPage() {
         },
 
         onError: (error: any) => {
-            const errorMessage = error.response?.data?.detail ||
-                Object.values(error.response?.data || {}).flat().join(", ") ||
-                "Failed to create request";
+            const errorMessage = getApiErrorMessage(error, "Failed to create request");
             setServerError(errorMessage);
         },
     });
@@ -328,9 +328,17 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     <div className="flex items-center justify-between text-sm">
                                                         <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
                                                             <Check className="w-4 h-4" />
-                                                            <span>Active Subscription: {activeSubscription.package_name || "Standard Coverage"}</span>
+                                                            <span>Usable Subscription: {activeSubscription.package_name || "Standard Coverage"}</span>
                                                         </div>
                                                         <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">Covered</Badge>
+                                                    </div>
+                                                ) : pendingActivationSubscription ? (
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <div className="flex items-center gap-2 text-warning dark:text-amber-400 font-medium">
+                                                            <Info className="w-4 h-4" />
+                                                            <span>Membership activates {pendingActivationSubscription.activation_date || "after payment processing"}</span>
+                                                        </div>
+                                                        <Badge variant="warning" className="bg-amber-100 text-warning border-warning/20">Not Yet Usable</Badge>
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-between text-sm">
@@ -517,7 +525,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         <Info className="h-5 w-5 text-primary mt-0.5" />
                                         <div className="space-y-1">
                                             <p className="text-xs font-bold text-foreground uppercase tracking-wider">Policy Check</p>
-                                            <p className="text-[11px] text-muted-foreground leading-relaxed">System will auto-check AA Membership during submission and apply covered benefits immediately.</p>
+                                            <p className="text-[11px] text-muted-foreground leading-relaxed">System will auto-check usable AA membership during submission and apply benefits only when active and within allowance.</p>
                                         </div>
                                     </div>
                                 </div>

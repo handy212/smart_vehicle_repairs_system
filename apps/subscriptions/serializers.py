@@ -172,7 +172,9 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
     
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     package_name = serializers.CharField(source='package.name', read_only=True)
+    is_active_status = serializers.SerializerMethodField()
     days_remaining = serializers.SerializerMethodField()
+    invoice_id = serializers.SerializerMethodField()
     
     class Meta:
         model = Subscription
@@ -180,14 +182,28 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
             'id', 'subscription_number',
             'customer', 'customer_name',
             'package', 'package_name', 'vehicle',
-            'start_date', 'end_date',
-            'status', 'days_remaining',
+            'start_date', 'end_date', 'activation_date',
+            'status', 'is_active_status', 'days_remaining',
+            'invoice_id',
             'payment_status'
         ]
+
+    def get_is_active_status(self, obj):
+        """Check if subscription is currently usable."""
+        return obj.is_active()
     
     def get_days_remaining(self, obj):
         """Get days remaining"""
         return obj.days_remaining()
+
+    def get_invoice_id(self, obj):
+        """Get the most relevant invoice ID for list actions."""
+        if getattr(obj, 'metadata', None):
+            if obj.metadata.get('renewal_invoice_id'):
+                return obj.metadata.get('renewal_invoice_id')
+            if obj.metadata.get('invoice_id'):
+                return obj.metadata.get('invoice_id')
+        return None
 
 
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
@@ -231,10 +247,6 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
                            f'Allowed types: Saloon, SUV, Pick-Up, Mini van.'
             })
             
-        # Ensure vehicle belongs to the customer
-        if vehicle and data.get('customer') and vehicle.owner_id != data.get('customer').id:
-            raise serializers.ValidationError({'vehicle': 'Vehicle does not belong to this customer'})
-        
         # Prevent overlapping live/pending subscriptions for the same vehicle.
         if vehicle:
             overlaps = Subscription.objects.filter(
@@ -253,10 +265,24 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         customer = data.get('customer')
 
         # Auto-bind customer if caller is a customer
-        if not customer and user and getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
-            data['customer'] = user.customer_profile
+        if not customer and user and getattr(user, 'role', None) == 'customer':
+            customer_profile = getattr(user, 'customer_profile', None)
+            if not customer_profile:
+                try:
+                    customer_profile = Customer.objects.get(user=user)
+                except Customer.DoesNotExist:
+                    customer_profile = None
+            if customer_profile:
+                data['customer'] = customer_profile
         elif not customer:
             raise serializers.ValidationError({'customer': 'Customer is required'})
+
+        if not data.get('customer'):
+            raise serializers.ValidationError({'customer': 'Customer is required'})
+
+        # Ensure vehicle belongs to the customer after customer auto-binding.
+        if vehicle and vehicle.owner_id != data['customer'].id:
+            raise serializers.ValidationError({'vehicle': 'Vehicle does not belong to this customer'})
 
         if not package:
             raise serializers.ValidationError({'package': 'Package is required'})

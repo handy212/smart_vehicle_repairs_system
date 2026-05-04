@@ -20,6 +20,7 @@ import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils/cn";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const roadsideRequestSchema = z.object({
   vehicle: z.number().min(1, "Vehicle is required"),
@@ -99,7 +100,8 @@ export default function NewRoadsideRequestPage() {
   });
 
   // Get the first active subscription for the vehicle (should be unique per vehicle)
-  const activeSubscription = vehicleSubscriptions?.results?.[0];
+  const activeSubscription = vehicleSubscriptions?.results?.find((subscription) => subscription.is_active_status) || null;
+  const pendingActivationSubscription = vehicleSubscriptions?.results?.find((subscription) => !subscription.is_active_status) || null;
 
   const [isLocating, setIsLocating] = useState(false);
 
@@ -145,7 +147,6 @@ export default function NewRoadsideRequestPage() {
         throw new Error("Customer profile not found");
       }
       const requestData: RoadsideRequestCreate = {
-        customer: customerId,
         vehicle: data.vehicle,
         service_type: data.service_type,
         breakdown_location: data.breakdown_location,
@@ -169,10 +170,7 @@ export default function NewRoadsideRequestPage() {
     },
 
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.detail ||
-        error.response?.data?.message ||
-        Object.values(error.response?.data || {}).flat().join(", ") ||
-        "Failed to submit request. Please try again.";
+      const errorMessage = getApiErrorMessage(error, "Failed to submit request. Please try again.");
       setServerError(errorMessage);
       toast({
         title: "Error",
@@ -322,6 +320,11 @@ export default function NewRoadsideRequestPage() {
                             allowanceText = "Pay-As-You-Go";
                           }
                         }
+                      } else if (pendingActivationSubscription) {
+                        allowanceText = pendingActivationSubscription.activation_date
+                          ? `Activates ${pendingActivationSubscription.activation_date}`
+                          : "Awaiting activation";
+                        isPayAsYouGo = true;
                       }
 
                       return (

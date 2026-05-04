@@ -8,11 +8,18 @@ class ReportSchedule(models.Model):
     
     REPORT_TYPE_CHOICES = [
         ('revenue', 'Revenue Report'),
+        ('profit_margin', 'Profit Margin Report'),
         ('work_orders', 'Work Orders Report'),
         ('inventory', 'Inventory Report'),
+        ('inventory_turnover', 'Inventory Turnover Report'),
         ('customers', 'Customer Report'),
+        ('vehicles', 'Vehicle Report'),
+        ('service_due', 'Service Due Report'),
+        ('subscriptions', 'Subscription Analytics'),
+        ('service_bundles', 'Service Bundle Popularity'),
         ('technician_performance', 'Technician Performance'),
         ('appointments', 'Appointments Report'),
+        ('controls', 'Controls & Overrides'),
         ('overdue_invoices', 'Overdue Invoices'),
         ('low_stock', 'Low Stock Alert'),
     ]
@@ -55,11 +62,18 @@ class SavedReport(models.Model):
     
     REPORT_TYPE_CHOICES = [
         ('revenue', 'Revenue Report'),
+        ('profit_margin', 'Profit Margin Report'),
         ('work_orders', 'Work Orders Report'),
         ('inventory', 'Inventory Report'),
+        ('inventory_turnover', 'Inventory Turnover Report'),
         ('customers', 'Customer Report'),
+        ('vehicles', 'Vehicle Report'),
+        ('service_due', 'Service Due Report'),
+        ('subscriptions', 'Subscription Analytics'),
+        ('service_bundles', 'Service Bundle Popularity'),
         ('technician_performance', 'Technician Performance'),
         ('appointments', 'Appointments Report'),
+        ('controls', 'Controls & Overrides'),
         ('custom', 'Custom Report'),
     ]
     
@@ -124,3 +138,43 @@ class DashboardWidget(models.Model):
     
     def __str__(self):
         return f"{self.user.email} - {self.get_widget_type_display()}"
+
+
+class ReportExportLog(models.Model):
+    """Audit trail for report exports and generated report files."""
+
+    STATUS_CHOICES = [
+        ('started', 'Started'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    FORMAT_CHOICES = [
+        ('pdf', 'PDF'),
+        ('csv', 'CSV'),
+        ('xlsx', 'Excel'),
+        ('json', 'JSON'),
+    ]
+
+    report_type = models.CharField(max_length=50)
+    report_name = models.CharField(max_length=200, blank=True)
+    export_format = models.CharField(max_length=10, choices=FORMAT_CHOICES, default='pdf')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='completed')
+    parameters = models.JSONField(default=dict, blank=True)
+    file_name = models.CharField(max_length=255, blank=True)
+    error_message = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='report_export_logs')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['report_type', 'created_at']),
+            models.Index(fields=['created_by', 'created_at']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.report_type} {self.export_format} export by {self.created_by_id}"

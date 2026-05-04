@@ -58,7 +58,68 @@ export interface DateRangeParams {
   period?: 'daily' | 'weekly' | 'monthly';
 }
 
+export interface ReportCatalogItem {
+  key: string;
+  name: string;
+  category: string;
+  endpoint: string;
+  exports: string[];
+  drill_down: boolean;
+}
+
+export interface SavedReport {
+  id: number;
+  name: string;
+  report_type: string;
+  description?: string;
+  parameters: Record<string, unknown>;
+  is_public: boolean;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportSchedule {
+  id: number;
+  name: string;
+  report_type: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly';
+  email_recipients: string;
+  is_active: boolean;
+  next_run_date: string;
+  last_run_date?: string | null;
+  parameters: Record<string, unknown>;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportExportLog {
+  id: number;
+  report_type: string;
+  report_name?: string;
+  export_format: 'pdf' | 'csv' | 'xlsx' | 'json';
+  status: 'started' | 'completed' | 'failed';
+  parameters: Record<string, unknown>;
+  file_name?: string;
+  error_message?: string;
+  created_by_name?: string;
+  created_at: string;
+}
+
+type Paginated<T> = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+};
+
 export const reportingApi = {
+  catalog: async (): Promise<{ reports: ReportCatalogItem[]; controls: Record<string, number | boolean> }> => {
+    const response = await apiClient.get('/reporting/catalog/');
+    return response.data;
+  },
+
   dashboard: async (): Promise<DashboardOverview> => {
     const response = await apiClient.get('/reporting/dashboard-overview/');
     return response.data;
@@ -138,5 +199,63 @@ export const reportingApi = {
   serviceBundlePopularity: async (params: Omit<DateRangeParams, 'period'>) => {
     const response = await apiClient.get('/reporting/service-bundle-popularity/', { params });
     return response.data;
+  },
+
+  savedReports: {
+    list: async (params?: { report_type?: string; search?: string }): Promise<Paginated<SavedReport>> => {
+      const response = await apiClient.get('/reporting/saved-reports/', { params });
+      return response.data;
+    },
+    create: async (data: {
+      name: string;
+      report_type: string;
+      description?: string;
+      parameters: Record<string, unknown>;
+      is_public?: boolean;
+    }): Promise<SavedReport> => {
+      const response = await apiClient.post('/reporting/saved-reports/', data);
+      return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/reporting/saved-reports/${id}/`);
+    },
+  },
+
+  schedules: {
+    list: async (params?: { report_type?: string; is_active?: boolean }): Promise<Paginated<ReportSchedule>> => {
+      const response = await apiClient.get('/reporting/schedules/', { params });
+      return response.data;
+    },
+    create: async (data: {
+      name: string;
+      report_type: string;
+      frequency: ReportSchedule['frequency'];
+      email_recipients: string;
+      parameters: Record<string, unknown>;
+      is_active?: boolean;
+      next_run_date?: string;
+    }): Promise<ReportSchedule> => {
+      const response = await apiClient.post('/reporting/schedules/', data);
+      return response.data;
+    },
+  },
+
+  exportLogs: {
+    list: async (params?: { report_type?: string; status?: string }): Promise<Paginated<ReportExportLog>> => {
+      const response = await apiClient.get('/reporting/export-logs/', { params });
+      return response.data;
+    },
+    create: async (data: {
+      report_type: string;
+      report_name?: string;
+      export_format: ReportExportLog['export_format'];
+      status: ReportExportLog['status'];
+      parameters: Record<string, unknown>;
+      file_name?: string;
+      error_message?: string;
+    }): Promise<ReportExportLog> => {
+      const response = await apiClient.post('/reporting/export-logs/', data);
+      return response.data;
+    },
   },
 };

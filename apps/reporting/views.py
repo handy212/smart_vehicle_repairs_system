@@ -1,7 +1,10 @@
+import logging
+
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from django.db.models import Count, Sum, Avg, Q, F, DecimalField, ExpressionWrapper
 from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
 from django.utils import timezone
@@ -23,6 +26,32 @@ from apps.branches.utils import (
     resolve_branch,
 )
 from apps.accounts.permissions import IsModuleEnabled
+from .models import ReportExportLog, ReportSchedule, SavedReport
+from .serializers import ReportExportLogSerializer, ReportScheduleSerializer, SavedReportSerializer
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_date_range(request, default_days=30, default_current_month=False):
+    start_date = request.query_params.get('start_date')
+    end_date = request.query_params.get('end_date')
+
+    if not start_date or not end_date:
+        today = timezone.now().date()
+        if default_current_month:
+            return today.replace(day=1), today
+        return today - timedelta(days=default_days), today
+
+    try:
+        parsed_start = datetime.strptime(start_date, '%Y-%m-%d').date()
+        parsed_end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        raise ValueError('Dates must use YYYY-MM-DD format')
+
+    if parsed_start > parsed_end:
+        raise ValueError('start_date cannot be after end_date')
+
+    return parsed_start, parsed_end
 
 
 def _filter_branch_queryset(queryset, request, use_active_branch=True):
@@ -43,6 +72,134 @@ def _get_branch_ids(request, use_active_branch=True):
     return list(branches.values_list("id", flat=True))
 
 
+def _branch_customer_ids(request):
+    branch_ids = _get_branch_ids(request, use_active_branch=True)
+    if not branch_ids:
+        return None
+
+    invoice_customers = Invoice.objects.filter(branch_id__in=branch_ids).values_list('customer_id', flat=True)
+    work_order_customers = WorkOrder.objects.filter(branch_id__in=branch_ids).values_list('customer_id', flat=True)
+    appointment_customers = Appointment.objects.filter(branch_id__in=branch_ids).values_list('customer_id', flat=True)
+    vehicle_customers = Vehicle.objects.filter(work_orders__branch_id__in=branch_ids).values_list('owner_id', flat=True)
+
+    return set(invoice_customers) | set(work_order_customers) | set(appointment_customers) | set(vehicle_customers)
+
+
+def _branch_vehicle_ids(request):
+    branch_ids = _get_branch_ids(request, use_active_branch=True)
+    if not branch_ids:
+        return None
+
+    work_order_vehicles = WorkOrder.objects.filter(branch_id__in=branch_ids).values_list('vehicle_id', flat=True)
+    appointment_vehicles = Appointment.objects.filter(branch_id__in=branch_ids).values_list('vehicle_id', flat=True)
+    invoice_vehicles = WorkOrder.objects.filter(invoice__branch_id__in=branch_ids).values_list('vehicle_id', flat=True)
+
+    return set(work_order_vehicles) | set(appointment_vehicles) | set(invoice_vehicles)
+
+
+REPORT_CATALOG = [
+    {'key': 'revenue', 'name': 'Revenue Report', 'category': 'financial', 'endpoint': 'revenue-report', 'exports': ['pdf'], 'drill_down': True},
+    {'key': 'profit_margin', 'name': 'Profit Margin', 'category': 'financial', 'endpoint': 'profit-margin-report', 'exports': [], 'drill_down': False},
+    {'key': 'work_orders', 'name': 'Work Order Statistics', 'category': 'operations', 'endpoint': 'work-order-statistics', 'exports': [], 'drill_down': True},
+    {'key': 'technician_performance', 'name': 'Technician Performance', 'category': 'operations', 'endpoint': 'technician-performance', 'exports': [], 'drill_down': True},
+    {'key': 'appointments', 'name': 'Appointment Statistics', 'category': 'operations', 'endpoint': 'appointment-statistics', 'exports': [], 'drill_down': True},
+    {'key': 'inventory', 'name': 'Inventory Valuation', 'category': 'inventory', 'endpoint': 'inventory-valuation', 'exports': [], 'drill_down': True},
+    {'key': 'inventory_turnover', 'name': 'Inventory Turnover', 'category': 'inventory', 'endpoint': 'inventory-turnover', 'exports': [], 'drill_down': True},
+    {'key': 'low_stock', 'name': 'Low Stock Alert', 'category': 'inventory', 'endpoint': 'low-stock-report', 'exports': [], 'drill_down': True},
+    {'key': 'customers', 'name': 'Customer Statistics', 'category': 'customers', 'endpoint': 'customer-statistics', 'exports': [], 'drill_down': True},
+    {'key': 'vehicles', 'name': 'Vehicle Statistics', 'category': 'vehicles', 'endpoint': 'vehicle-statistics', 'exports': [], 'drill_down': True},
+    {'key': 'service_due', 'name': 'Service Due Report', 'category': 'vehicles', 'endpoint': 'service-due-report', 'exports': [], 'drill_down': True},
+    {'key': 'subscriptions', 'name': 'Subscription Analytics', 'category': 'subscriptions', 'endpoint': 'subscription-analytics', 'exports': [], 'drill_down': True},
+    {'key': 'service_bundles', 'name': 'Service Bundle Popularity', 'category': 'operations', 'endpoint': 'service-bundle-popularity', 'exports': [], 'drill_down': True},
+    {'key': 'controls', 'name': 'Controls & Overrides', 'category': 'governance', 'endpoint': 'frontend-controls', 'exports': [], 'drill_down': True},
+]
+
+
+class SavedReportViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedReportSerializer
+    permission_classes = [IsAuthenticated, IsModuleEnabled('reports')]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['name', 'description', 'report_type']
+    filterset_fields = ['report_type', 'is_public']
+
+    def get_queryset(self):
+        user = self.request.user
+        return SavedReport.objects.filter(Q(created_by=user) | Q(is_public=True)).select_related('created_by')
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.created_by_id != self.request.user.id and getattr(self.request.user, 'role', None) != 'admin':
+            raise PermissionDenied('You can only update reports you created')
+        serializer.save()
+
+
+class ReportScheduleViewSet(viewsets.ModelViewSet):
+    serializer_class = ReportScheduleSerializer
+    permission_classes = [IsAuthenticated, IsModuleEnabled('reports')]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['name', 'report_type', 'email_recipients']
+    filterset_fields = ['report_type', 'frequency', 'is_active']
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = ReportSchedule.objects.select_related('created_by')
+        if getattr(user, 'role', None) == 'admin':
+            return queryset
+        return queryset.filter(created_by=user)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class ReportExportLogViewSet(viewsets.ModelViewSet):
+    serializer_class = ReportExportLogSerializer
+    permission_classes = [IsAuthenticated, IsModuleEnabled('reports')]
+    http_method_names = ['get', 'post', 'head', 'options']
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['report_type', 'report_name', 'file_name']
+    filterset_fields = ['report_type', 'export_format', 'status']
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = ReportExportLog.objects.select_related('created_by')
+        if getattr(user, 'role', None) == 'admin':
+            return queryset
+        return queryset.filter(created_by=user)
+
+    def perform_create(self, serializer):
+        request = self.request
+        serializer.save(
+            created_by=request.user,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsModuleEnabled('reports')])
+def report_catalog(request):
+    """Return available enterprise report definitions and enabled controls."""
+    saved_count = SavedReport.objects.filter(Q(created_by=request.user) | Q(is_public=True)).count()
+    if getattr(request.user, 'role', None) == 'admin':
+        schedule_count = ReportSchedule.objects.count()
+    else:
+        schedule_count = ReportSchedule.objects.filter(created_by=request.user).count()
+    export_count = ReportExportLog.objects.filter(created_by=request.user).count()
+
+    return Response({
+        'reports': REPORT_CATALOG,
+        'controls': {
+            'saved_reports': saved_count,
+            'scheduled_reports': schedule_count,
+            'export_logs': export_count,
+            'branch_scoped': True,
+            'date_validation': True,
+        }
+    })
+
+
 # ============================================================================
 # Dashboard Views
 # ============================================================================
@@ -53,10 +210,6 @@ def dashboard_overview(request):
     """
     Get comprehensive dashboard overview with key metrics
     """
-    import traceback
-    import logging
-    logger = logging.getLogger(__name__)
-    
     try:
         today = timezone.now().date()
         week_start = today - timedelta(days=today.weekday())
@@ -169,17 +322,18 @@ def dashboard_overview(request):
         # Subscription metrics
         try:
             from apps.subscriptions.models import Subscription
-            active_subscriptions = Subscription.objects.filter(
+            active_subscriptions_qs = Subscription.objects.filter(
                 status='active',
                 payment_status='paid'
-            ).count()
+            )
+            customer_ids = _branch_customer_ids(request)
+            if customer_ids is not None:
+                active_subscriptions_qs = active_subscriptions_qs.filter(customer_id__in=customer_ids)
+            active_subscriptions = active_subscriptions_qs.count()
             
             # Calculate MRR (Monthly Recurring Revenue)
             # MRR = Sum of (purchase_price / duration_months) for all active paid subscriptions
-            active_subs = Subscription.objects.filter(
-                status='active',
-                payment_status='paid'
-            ).select_related('package')
+            active_subs = active_subscriptions_qs.select_related('package')
             
             mrr = Decimal('0')
             for sub in active_subs:
@@ -323,19 +477,11 @@ def dashboard_overview(request):
             }
         })
     except Exception as e:
-        logger.error(f"Error in dashboard_overview: {e}")
-        logger.error(traceback.format_exc())
-        # Return a minimal response that won't break the frontend
-        today = timezone.now().date()
-        return Response({
-            'today': {'appointments': 0, 'revenue': 0.0, 'roadside_requests': 0, 'roadside_completed': 0, 'date': today.isoformat()},
-            'week': {'revenue': 0.0, 'start_date': (today - timedelta(days=today.weekday())).isoformat()},
-            'month': {'revenue': 0.0, 'start_date': today.replace(day=1).isoformat()},
-            'alerts': {'active_work_orders': 0, 'active_roadside_requests': 0, 'overdue_invoices': {'count': 0, 'total': 0.0}, 'low_stock_items': 0, 'pending_estimates': 0},
-            'subscriptions': {'active_count': 0, 'mrr': 0.0, 'arr': 0.0},
-            'recent_activity': {'work_orders': [], 'appointments': []},
-            'error': str(e)
-        }, status=status.HTTP_200_OK)
+        logger.exception("Error in dashboard_overview")
+        return Response(
+            {'detail': 'Unable to generate dashboard overview', 'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # ============================================================================
@@ -348,24 +494,16 @@ def revenue_report(request):
     """
     Detailed revenue report with breakdown by period, service type, and technician
     """
-    import traceback
-    import logging
-    logger = logging.getLogger(__name__)
-    
     try:
         # Get date range from query params
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
         period = request.query_params.get('period', 'daily')  # daily, weekly, monthly
-        
-        if not start_date or not end_date:
-            # Default to current month
-            today = timezone.now().date()
-            start_date = today.replace(day=1)
-            end_date = today
-        else:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        if period not in {'daily', 'weekly', 'monthly'}:
+            return Response({'detail': 'period must be daily, weekly, or monthly'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            start_date, end_date = _parse_date_range(request, default_current_month=True)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         
         invoices_qs = _filter_branch_queryset(Invoice.objects.all(), request)
         invoices = invoices_qs.filter(
@@ -526,22 +664,11 @@ def revenue_report(request):
             ]
         })
     except Exception as e:
-        logger.error(f"Error in revenue_report: {e}")
-        logger.error(traceback.format_exc())
-        # Return a minimal response that won't break the frontend
-        today = timezone.now().date()
-        try:
-            period_val = period
-        except:
-            period_val = 'daily'
-        return Response({
-            'period': {'start_date': today.replace(day=1).isoformat(), 'end_date': today.isoformat(), 'grouping': period_val},
-            'summary': {'total_invoiced': 0.0, 'total_paid': 0.0, 'total_outstanding': 0.0, 'payment_rate': 0.0, 'subscription_revenue': 0.0, 'service_revenue': 0.0},
-            'revenue_by_period': [],
-            'revenue_by_payment_method': [],
-            'revenue_by_technician': [],
-            'error': str(e)
-        }, status=status.HTTP_200_OK)
+        logger.exception("Error in revenue_report")
+        return Response(
+            {'detail': 'Unable to generate revenue report', 'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['GET'])
@@ -550,16 +677,10 @@ def profit_margin_report(request):
     """
     Calculate profit margins by analyzing revenue vs costs
     """
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    
-    if not start_date or not end_date:
-        today = timezone.now().date()
-        start_date = today.replace(day=1)
-        end_date = today
-    else:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    try:
+        start_date, end_date = _parse_date_range(request, default_current_month=True)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     
     # Revenue from invoices
     invoices = _filter_branch_queryset(
@@ -629,16 +750,10 @@ def work_order_statistics(request):
     """
     Comprehensive work order statistics
     """
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    
-    if not start_date or not end_date:
-        # Default to last 30 days
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
-    else:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    try:
+        start_date, end_date = _parse_date_range(request, default_days=30)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     
     work_orders = _filter_branch_queryset(
         WorkOrder.objects.filter(
@@ -746,16 +861,10 @@ def technician_performance(request):
     """
     Technician performance metrics including efficiency
     """
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    
-    if not start_date or not end_date:
-        # Default to last 30 days
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
-    else:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    try:
+        start_date, end_date = _parse_date_range(request, default_days=30)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     
     # Get technicians and service coordinators, filtered by active branch
     staff_qs = User.objects.filter(role__in=['technician', 'service_coordinator'])
@@ -776,7 +885,7 @@ def technician_performance(request):
         # Filter by branch
         work_orders = _filter_branch_queryset(work_orders, request)
         
-        completed = work_orders.filter(status='completed')
+        completed = work_orders.filter(status__in=['completed', 'invoiced', 'closed'])
         
         # Calculate revenue & hours
         revenue = Decimal('0')
@@ -855,20 +964,17 @@ def appointment_statistics(request):
     """
     Appointment statistics including no-show rate
     """
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
+    try:
+        start_date, end_date = _parse_date_range(request, default_days=30)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     
-    if not start_date or not end_date:
-        # Default to last 30 days
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
-    else:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-    
-    appointments = Appointment.objects.filter(
-        appointment_date__gte=start_date,
-        appointment_date__lte=end_date
+    appointments = _filter_branch_queryset(
+        Appointment.objects.filter(
+            appointment_date__gte=start_date,
+            appointment_date__lte=end_date
+        ),
+        request
     )
     
     total = appointments.count()
@@ -966,9 +1072,10 @@ def inventory_turnover(request):
     """
     Calculate inventory turnover rates
     """
-    # Get date range (default last 90 days for turnover)
-    end_date = timezone.now().date()
-    start_date = end_date - timedelta(days=90)
+    try:
+        start_date, end_date = _parse_date_range(request, default_days=90)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     
     # Get parts with usage data
     parts_data = []
@@ -981,8 +1088,8 @@ def inventory_turnover(request):
         usage = InventoryTransaction.objects.filter(
             part=part,
             transaction_type='sale',
-            transaction_date__gte=start_date,
-            transaction_date__lte=end_date
+            transaction_date__date__gte=start_date,
+            transaction_date__date__lte=end_date
         ).aggregate(total=Sum('quantity'))['total'] or 0
         
         # Calculate turnover rate
@@ -1016,7 +1123,7 @@ def inventory_turnover(request):
         'period': {
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat(),
-            'days': 90
+            'days': (end_date - start_date).days + 1
         },
         'summary': {
             'total_parts': len(parts_data),
@@ -1084,20 +1191,30 @@ def customer_statistics(request):
     """
     Customer statistics and retention metrics
     """
+    try:
+        start_date, end_date = _parse_date_range(request, default_days=30)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    customers_qs = Customer.objects.all()
+    customer_ids = _branch_customer_ids(request)
+    if customer_ids is not None:
+        customers_qs = customers_qs.filter(id__in=customer_ids)
+
     # Total customers
-    total_customers = Customer.objects.count()
-    active_customers = Customer.objects.filter(status='active').count()
+    total_customers = customers_qs.count()
+    active_customers = customers_qs.filter(status='active').count()
     
-    # New customers (last 30 days)
-    thirty_days_ago = timezone.now() - timedelta(days=30)
-    new_customers = Customer.objects.filter(
-        created_at__gte=thirty_days_ago
+    # New customers in period
+    new_customers = customers_qs.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
     ).count()
     
     # Subscription metrics
     try:
         from apps.subscriptions.models import Subscription
-        customers_with_subscriptions = Customer.objects.filter(
+        customers_with_subscriptions = customers_qs.filter(
             subscriptions__status='active',
             subscriptions__payment_status='paid'
         ).distinct().count()
@@ -1108,11 +1225,11 @@ def customer_statistics(request):
     
     # Customer lifetime value (top 10)
     top_customers = []
-    for customer in Customer.objects.filter(status='active'):
-        total_spent = Invoice.objects.filter(
+    for customer in customers_qs.filter(status='active'):
+        total_spent = _filter_branch_queryset(Invoice.objects.filter(
             customer=customer,
             status__in=['paid', 'partial']
-        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        ), request).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
         
         # Check if customer has active subscription
         has_active_subscription = False
@@ -1142,7 +1259,7 @@ def customer_statistics(request):
     top_customers.sort(key=lambda x: x['lifetime_value'], reverse=True)
 
     # Customer type breakdown
-    by_type_qs = Customer.objects.values('customer_type').annotate(
+    by_type_qs = customers_qs.values('customer_type').annotate(
         count=Count('id')
     ).order_by('-count')
     type_label_map = dict(Customer.CUSTOMER_TYPE_CHOICES)
@@ -1186,30 +1303,35 @@ def vehicle_statistics(request):
     Vehicle statistics by make, model, year
     """
     try:
+        vehicles_qs = Vehicle.objects.all()
+        vehicle_ids = _branch_vehicle_ids(request)
+        if vehicle_ids is not None:
+            vehicles_qs = vehicles_qs.filter(id__in=vehicle_ids)
+
         # Get statistics without loading all vehicles
         try:
-            by_make = list(Vehicle.objects.values('make').annotate(
+            by_make = list(vehicles_qs.values('make').annotate(
                 count=Count('id')
             ).order_by('-count')[:10])
         except Exception as e:
             by_make = []
         
         try:
-            by_year = list(Vehicle.objects.values('year').annotate(
+            by_year = list(vehicles_qs.values('year').annotate(
                 count=Count('id')
             ).order_by('-year'))
         except Exception as e:
             by_year = []
         
         try:
-            total_vehicles = Vehicle.objects.count()
+            total_vehicles = vehicles_qs.count()
         except Exception as e:
             total_vehicles = 0
         
         # Average vehicle age (in years) based on manufacturing year
         try:
             current_year = timezone.now().year
-            avg_age_val = Vehicle.objects.aggregate(
+            avg_age_val = vehicles_qs.aggregate(
                 avg_age=Avg(
                     ExpressionWrapper(
                         current_year - F('year'),
@@ -1225,7 +1347,7 @@ def vehicle_statistics(request):
         # Use aggregation to get work order counts efficiently
         most_serviced = []
         try:
-            vehicles_with_counts = Vehicle.objects.annotate(
+            vehicles_with_counts = vehicles_qs.annotate(
                 wo_count=Count('work_orders')
             ).filter(wo_count__gt=0).order_by('-wo_count')[:10].select_related('customer', 'customer__user')
             
@@ -1295,20 +1417,18 @@ def subscription_analytics(request):
     try:
         from apps.subscriptions.models import Subscription, Package
         
-        # Get date range from query params
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        
-        if not start_date or not end_date:
-            # Default to last 30 days
-            end_date = timezone.now().date()
-            start_date = end_date - timedelta(days=30)
-        else:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        try:
+            start_date, end_date = _parse_date_range(request, default_days=30)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        subscriptions_qs = Subscription.objects.all()
+        customer_ids = _branch_customer_ids(request)
+        if customer_ids is not None:
+            subscriptions_qs = subscriptions_qs.filter(customer_id__in=customer_ids)
         
         # Active subscriptions
-        active_subscriptions = Subscription.objects.filter(
+        active_subscriptions = subscriptions_qs.filter(
             status='active',
             payment_status='paid'
         )
@@ -1323,18 +1443,18 @@ def subscription_analytics(request):
         arr = mrr * Decimal('12')
         
         # Subscription counts by status
-        subscriptions_by_status = Subscription.objects.values('status').annotate(
+        subscriptions_by_status = subscriptions_qs.values('status').annotate(
             count=Count('id')
         )
         
         # New subscriptions in period
-        new_subscriptions = Subscription.objects.filter(
+        new_subscriptions = subscriptions_qs.filter(
             created_at__date__gte=start_date,
             created_at__date__lte=end_date
         ).count()
         
         # Renewals in period
-        renewals = Subscription.objects.filter(
+        renewals = subscriptions_qs.filter(
             metadata__has_key='renewal_invoice_id',
             updated_at__date__gte=start_date,
             updated_at__date__lte=end_date,
@@ -1342,7 +1462,7 @@ def subscription_analytics(request):
         ).count()
         
         # Churn (expired/cancelled in period)
-        churned = Subscription.objects.filter(
+        churned = subscriptions_qs.filter(
             status__in=['expired', 'cancelled'],
             updated_at__date__gte=start_date,
             updated_at__date__lte=end_date
@@ -1351,7 +1471,7 @@ def subscription_analytics(request):
         # Revenue by package
         revenue_by_package = []
         for package in Package.objects.filter(is_active=True):
-            package_subs = Subscription.objects.filter(
+            package_subs = subscriptions_qs.filter(
                 package=package,
                 status='active',
                 payment_status='paid'
@@ -1374,7 +1494,7 @@ def subscription_analytics(request):
         revenue_by_package.sort(key=lambda x: x['mrr'], reverse=True)
         
         # Subscription trends (new subscriptions over time)
-        subscriptions_trend = Subscription.objects.filter(
+        subscriptions_trend = subscriptions_qs.filter(
             created_at__date__gte=start_date,
             created_at__date__lte=end_date
         ).annotate(
@@ -1389,7 +1509,7 @@ def subscription_analytics(request):
         )['avg'] or Decimal('0')
         
         # Renewal rate calculation (simplified)
-        total_eligible_for_renewal = Subscription.objects.filter(
+        total_eligible_for_renewal = subscriptions_qs.filter(
             status='active',
             end_date__lte=end_date + timedelta(days=30)  # Expiring in next 30 days
         ).count()
@@ -1402,7 +1522,7 @@ def subscription_analytics(request):
             },
             'summary': {
                 'active_subscriptions': active_subscriptions.count(),
-                'total_subscriptions': Subscription.objects.count(),
+                'total_subscriptions': subscriptions_qs.count(),
                 'mrr': float(mrr),
                 'arr': float(arr),
                 'average_subscription_value': float(avg_subscription_value),
@@ -1427,10 +1547,7 @@ def subscription_analytics(request):
             'error': 'Subscriptions module not available'
         }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     except Exception as e:
-        import traceback
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error in subscription_analytics: {e}")
-        logger.error(traceback.format_exc())
+        logger.exception("Error in subscription_analytics")
         return Response({
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1452,6 +1569,9 @@ def service_due_report(request):
         # Vehicles not serviced in 6 months
         vehicles_due = []
         active_vehicles = Vehicle.objects.filter(status='active')
+        vehicle_ids = _branch_vehicle_ids(request)
+        if vehicle_ids is not None:
+            active_vehicles = active_vehicles.filter(id__in=vehicle_ids)
         
         for vehicle in active_vehicles:
             try:
@@ -1516,7 +1636,7 @@ def service_due_report(request):
     except Exception as e:
         import logging
         import traceback
-        logging.getLogger(__name__).error("Error in service_due_report: %s\n%s", e, traceback.format_exc(), exc_info=True)
+        logger.error("Error in service_due_report: %s\n%s", e, traceback.format_exc(), exc_info=True)
         from django.conf import settings
         msg = str(e) if settings.DEBUG else 'An error occurred while generating the report.'
         return Response({'error': msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1531,18 +1651,10 @@ def service_bundle_popularity(request):
     # Import locally to avoid potential circular imports
     from apps.inventory.models import ServiceBundle
     
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    
-    if not start_date or not end_date:
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
-    else:
-        try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        except ValueError:
-             return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        start_date, end_date = _parse_date_range(request, default_days=30)
+    except ValueError as exc:
+        return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
     # Get all active bundles
     bundles = ServiceBundle.objects.filter(is_active=True).order_by('name')
@@ -1551,17 +1663,23 @@ def service_bundle_popularity(request):
     
     for bundle in bundles:
         # Count appointments for this bundle in range
-        appt_count = Appointment.objects.filter(
-            service_bundle=bundle,
-            appointment_date__gte=start_date,
-            appointment_date__lte=end_date
+        appt_count = _filter_branch_queryset(
+            Appointment.objects.filter(
+                service_bundle=bundle,
+                appointment_date__gte=start_date,
+                appointment_date__lte=end_date
+            ),
+            request
         ).count()
         
         # Count work orders for this bundle in range
-        wo_qs = WorkOrder.objects.filter(
-            service_bundle=bundle,
-            created_at__date__gte=start_date,
-            created_at__date__lte=end_date
+        wo_qs = _filter_branch_queryset(
+            WorkOrder.objects.filter(
+                service_bundle=bundle,
+                created_at__date__gte=start_date,
+                created_at__date__lte=end_date
+            ),
+            request
         )
         wo_count = wo_qs.count()
         

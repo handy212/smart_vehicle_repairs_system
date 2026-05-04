@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi } from "@/lib/api/roadside";
 import { adminApi } from "@/lib/api/admin";
@@ -40,6 +40,7 @@ import { z } from "zod";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const editRequestSchema = z.object({
     breakdown_location: z.string().min(1, "Location is required"),
@@ -55,6 +56,7 @@ type EditRequestFormData = z.infer<typeof editRequestSchema>;
 export default function RoadsideDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { currencySymbol } = useCurrency();
@@ -102,8 +104,9 @@ export default function RoadsideDetailPage() {
     };
 
     const { data: technicians } = useQuery({
-        queryKey: ["technicians", "list"],
-        queryFn: () => adminApi.users.technicians(),
+        queryKey: ["technicians", "list", request?.branch],
+        queryFn: () => adminApi.users.technicians(request?.branch ? { branch: request.branch } : undefined),
+        enabled: !!request,
     });
 
     const dispatchMutation = useMutation({
@@ -112,6 +115,13 @@ export default function RoadsideDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
             toast({ title: "Success", description: "Technician dispatched" });
             setIsDispatchDialogOpen(false);
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Dispatch Failed",
+                description: getApiErrorMessage(error, "Technician could not be dispatched"),
+                variant: "destructive",
+            });
         }
     });
 
@@ -147,16 +157,25 @@ export default function RoadsideDetailPage() {
         onSuccess: (data: any, action) => {
             queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
 
-            if (action === 'complete' && data?.invoice_id) {
+            const invoiceId = data?.invoice || data?.invoice_id;
+
+            if (action === 'complete' && invoiceId) {
                 toast({
                     title: "Service Completed",
-                    description: `Status changed to completed. Invoice GH#${data.invoice_id} generated. Redirecting...`,
+                    description: `Status changed to completed. Invoice ${data.invoice_number || `#${invoiceId}`} generated. Redirecting...`,
                     variant: "success"
                 });
-                setTimeout(() => router.push(`/billing/invoices/${data.invoice_id}`), 2000);
+                setTimeout(() => router.push(`/billing/invoices/${invoiceId}`), 2000);
             } else {
                 toast({ title: "Updated", description: `Status changed to ${action}` });
             }
+        },
+        onError: (error: any, action) => {
+            toast({
+                title: "Action Failed",
+                description: getApiErrorMessage(error, `Could not ${action.replace("_", " ")} this request`),
+                variant: "destructive",
+            });
         }
     });
 
@@ -207,6 +226,12 @@ export default function RoadsideDetailPage() {
             fetchSuggestion(communicationMethod);
         }
     }, [isSmsDialogOpen, communicationMethod]);
+
+    useEffect(() => {
+        if (request && searchParams.get("action") === "dispatch" && request.status === "requested") {
+            setIsDispatchDialogOpen(true);
+        }
+    }, [request, searchParams]);
 
     const getStatusVariant = (status: string) => {
         switch (status) {

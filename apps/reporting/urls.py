@@ -1,9 +1,18 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 from . import views
 
 # app_name = 'reporting'  # Commented out to avoid conflict with frontend namespace
 
+router = DefaultRouter()
+router.register(r'saved-reports', views.SavedReportViewSet, basename='saved-report')
+router.register(r'schedules', views.ReportScheduleViewSet, basename='report-schedule')
+router.register(r'export-logs', views.ReportExportLogViewSet, basename='report-export-log')
+
 urlpatterns = [
+    path('', include(router.urls)),
+    path('catalog/', views.report_catalog, name='report_catalog'),
+
     # Dashboard
     path('dashboard-overview/', views.dashboard_overview, name='dashboard_overview'),
     

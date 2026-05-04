@@ -308,6 +308,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             return Response({
                 'subscription': serializer.data,
                 'invoice_id': invoice.id,
+                'invoice_number': invoice.invoice_number,
                 'message': 'Subscription renewed. Please pay the invoice to activate.'
             })
         except ValidationError as e:
@@ -461,4 +462,3 @@ class SubscriptionUsageViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set created_by when creating usage record"""
         serializer.save(created_by=self.request.user)
-

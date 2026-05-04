@@ -35,37 +35,11 @@ import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 import { CreateSubscriptionDialog } from "./components/CreateSubscriptionDialog";
 import { SubscriptionDetailsDialog } from "./components/SubscriptionDetailsDialog";
 
-
-const formatError = (error: any, defaultMessage: string) => {
-  console.error("Subscription Error:", error);
-  const data = error.response?.data;
-  if (!data) return defaultMessage;
-
-  if (typeof data === 'string') return data;
-
-  if (data.detail) return data.detail;
-  if (data.message) return data.message;
-
-  if (data && typeof data === 'object' && !Array.isArray(data)) {
-    const messages = Object.entries(data)
-      .map(([key, value]) => {
-        const message = Array.isArray(value) ? value[0] : value;
-        return `${key}: ${message}`;
-      })
-      .join('\n');
-    return messages || defaultMessage;
-  }
-
-  if (Array.isArray(data)) {
-    return data[0] || defaultMessage;
-  }
-
-  return defaultMessage;
-};
 
 export default function SubscriptionsPage() {
   const { formatCurrency } = useCurrency();
@@ -145,7 +119,7 @@ export default function SubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: formatError(error, "Failed to delete subscription"),
+        description: getApiErrorMessage(error, "Failed to delete subscription"),
         variant: "destructive",
       });
     },
@@ -165,7 +139,7 @@ export default function SubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: formatError(error, "Failed to change plan"),
+        description: getApiErrorMessage(error, "Failed to change plan"),
         variant: "destructive",
       });
     },
@@ -174,15 +148,18 @@ export default function SubscriptionsPage() {
   const renewMutation = useMutation({
     mutationFn: ({ id, months }: { id: number; months?: number }) =>
       subscriptionsApi.renew(id, months),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
-      toast({ title: "Success", description: "Subscription renewed successfully" });
+      toast({
+        title: "Renewal Invoice Created",
+        description: data.message || `Invoice ${data.invoice_number || data.invoice_id || ""} is pending payment before the new period starts.`,
+      });
     },
 
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: formatError(error, "Failed to renew subscription"),
+        description: getApiErrorMessage(error, "Failed to renew subscription"),
         variant: "destructive",
       });
     },

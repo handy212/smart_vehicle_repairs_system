@@ -76,6 +76,13 @@ export interface Subscription {
     metadata?: Record<string, any>;
 }
 
+export interface SubscriptionRenewalResponse {
+    subscription: Subscription;
+    invoice_id?: number | null;
+    invoice_number?: string | null;
+    message?: string;
+}
+
 export interface SubscriptionUsage {
     id: number;
     subscription: number;
@@ -219,7 +226,7 @@ export const subscriptionsApi = {
     },
 
     // Custom actions
-    renew: async (id: number, months?: number): Promise<Subscription> => {
+    renew: async (id: number, months?: number): Promise<SubscriptionRenewalResponse> => {
         const response = await apiClient.post(`/subscriptions/subscriptions/${id}/renew/`, {
             months,
         });

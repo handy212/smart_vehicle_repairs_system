@@ -56,10 +56,12 @@ export interface RoadsideRequest {
     invoice_number?: string;
     subscription_used?: number;
     assigned_technician?: number;
+    branch?: number;
+    rating?: number | null;
 }
 
 export interface RoadsideRequestCreate {
-    customer: number;
+    customer?: number;
     vehicle: number;
     service_type: string;
     breakdown_location: string;

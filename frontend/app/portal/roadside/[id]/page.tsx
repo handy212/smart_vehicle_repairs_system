@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function RoadsideRequestDetailPage() {
   const params = useParams();
@@ -78,7 +79,7 @@ export default function RoadsideRequestDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Cancellation Failed",
-        description: error.response?.data?.error || "Failed to cancel request. Please try again.",
+        description: getApiErrorMessage(error, "Failed to cancel request. Please try again."),
         variant: "destructive",
       });
     },
@@ -97,7 +98,7 @@ export default function RoadsideRequestDetailPage() {
     onError: (error: any) => {
       toast({
         title: "Submission Failed",
-        description: error.response?.data?.detail || "Failed to submit feedback",
+        description: getApiErrorMessage(error, "Failed to submit feedback"),
         variant: "destructive",
       });
     },
@@ -371,11 +372,18 @@ export default function RoadsideRequestDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {req.customer_feedback ? (
+                {req.customer_feedback || req.rating ? (
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Your Feedback:</p>
+                    {req.rating && (
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star key={star} className={`h-4 w-4 ${star <= req.rating! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                        ))}
+                      </div>
+                    )}
                     <div className="p-4 bg-card/50 rounded-xl italic text-sm">
-                      "{req.customer_feedback}"
+                      {req.customer_feedback ? `"${req.customer_feedback}"` : "No written comment submitted."}
                     </div>
                   </div>
                 ) : (

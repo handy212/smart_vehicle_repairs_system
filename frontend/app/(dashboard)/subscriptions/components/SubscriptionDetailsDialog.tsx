@@ -97,7 +97,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                         </div>
 
                         <Badge variant={getStatusVariant(subscription.status) as any} className="capitalize px-3 py-1">
-                            {subscription.status}
+                            {subscription.status === "active" && subscription.is_active_status === false ? "pending activation" : subscription.status}
                         </Badge>
                     </div>
                 </DialogHeader>
@@ -155,6 +155,14 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                         {subscription.auto_renew ? "On" : "Off"}
                                     </span>
                                 </div>
+                                {subscription.activation_date && (
+                                    <div className="flex justify-between items-center text-[12px]">
+                                        <span className="text-muted-foreground">Benefits Start</span>
+                                        <span className={cn("font-medium", subscription.is_active_status === false ? "text-warning" : "text-foreground")}>
+                                            {format(new Date(subscription.activation_date), "MMM dd, yyyy")}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

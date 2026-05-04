@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import ReportSchedule, SavedReport, DashboardWidget
+from .models import DashboardWidget, ReportExportLog, ReportSchedule, SavedReport
 
 
 @admin.register(ReportSchedule)
@@ -221,3 +221,22 @@ class DashboardWidgetAdmin(admin.ModelAdmin):
             '<span style="color: #757575; font-weight: bold;">👁‍🗨 Hidden</span>'
         )
     is_visible_badge.short_description = 'Visibility'
+
+
+@admin.register(ReportExportLog)
+class ReportExportLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'report_type',
+        'report_name',
+        'export_format',
+        'status',
+        'created_by',
+        'created_at',
+    ]
+    list_filter = ['report_type', 'export_format', 'status', 'created_at']
+    search_fields = ['report_type', 'report_name', 'file_name', 'created_by__email']
+    readonly_fields = [
+        'report_type', 'report_name', 'export_format', 'status',
+        'parameters', 'file_name', 'error_message', 'ip_address',
+        'user_agent', 'created_by', 'created_at',
+    ]

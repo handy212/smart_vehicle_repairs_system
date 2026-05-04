@@ -19,6 +19,7 @@ import { authApi } from "@/lib/api/auth";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { PortalPageHeader } from "../components/PortalPageHeader";
 import { cn } from "@/lib/utils/cn";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function MySubscriptionsPage() {
   const { toast } = useToast();
@@ -55,11 +56,8 @@ export default function MySubscriptionsPage() {
 
   const purchaseMutation = useMutation({
     mutationFn: (pkg: Package) => {
-      const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
-      if (!customerId) throw new Error("Customer ID not found");
       if (!selectedVehicleId) throw new Error("Please select a vehicle");
       return subscriptionsApi.create({
-        customer: customerId,
         package: pkg.id,
         vehicle: parseInt(selectedVehicleId),
         payment_status: "pending",
@@ -67,25 +65,28 @@ export default function MySubscriptionsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-subscriptions"] });
-      toast({ title: "Success", description: "Subscription purchased successfully" });
+      toast({ title: "Invoice Created", description: "Please pay the invoice before membership benefits become usable." });
       setIsPurchaseDialogOpen(false);
       setSelectedPackage(null);
       setSelectedVehicleId("");
       setViewMode("my-subscriptions");
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.response?.data?.detail || error.message || "Failed to purchase subscription", variant: "destructive" });
+      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to purchase subscription"), variant: "destructive" });
     },
   });
 
   const renewMutation = useMutation({
     mutationFn: (subscription: Subscription) => subscriptionsApi.renew(subscription.id),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["my-subscriptions"] });
-      toast({ title: "Success", description: "Subscription renewed successfully" });
+      toast({
+        title: "Renewal Invoice Created",
+        description: data.message || `Invoice ${data.invoice_number || data.invoice_id || ""} is pending payment.`,
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.response?.data?.detail || "Failed to renew subscription", variant: "destructive" });
+      toast({ title: "Error", description: getApiErrorMessage(error, "Failed to renew subscription"), variant: "destructive" });
     },
   });
 
@@ -178,10 +179,10 @@ export default function MySubscriptionsPage() {
                         <p className="text-xs text-muted-foreground mt-0.5">{subscription.subscription_number}</p>
                       </div>
                       <Badge
-                        variant={subscription.status === "active" ? "default" : subscription.status === "expired" ? "danger" : "secondary"}
+                        variant={subscription.status === "active" && subscription.is_active_status !== false ? "default" : subscription.status === "expired" ? "danger" : "secondary"}
                         className="capitalize text-[10px] shrink-0"
                       >
-                        {subscription.status}
+                        {subscription.status === "active" && subscription.is_active_status === false ? "pending activation" : subscription.status}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -233,6 +234,12 @@ export default function MySubscriptionsPage() {
                         </div>
                       </div>
                     </div>
+
+                    {subscription.status === "active" && subscription.is_active_status === false && (
+                      <div className="mb-3 rounded-md border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning">
+                        Benefits are not usable until {subscription.activation_date ? format(new Date(subscription.activation_date), "MMM dd, yyyy") : "activation is complete"}.
+                      </div>
+                    )}
 
                     {subscription.remaining_allowances && Object.keys(subscription.remaining_allowances).length > 0 && (
                       <div className="border-t pt-3">

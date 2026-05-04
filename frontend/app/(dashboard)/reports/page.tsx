@@ -1,12 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { reportingApi } from "@/lib/api/reporting";
 import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Download, Calendar, TrendingUp, DollarSign, Users, Car, Package, Wrench, AlertCircle, Filter } from "lucide-react";
 import { useState, useMemo } from "react";
@@ -36,18 +39,36 @@ import { RevenueForecastChart } from "@/components/reporting/RevenueForecastChar
 import { TechnicianProductivityHeatmap } from "@/components/reporting/TechnicianProductivityHeatmap";
 import { InventoryTurnoverChart } from "@/components/reporting/InventoryTurnoverChart";
 import { useTheme } from "@/lib/hooks/useTheme";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
+
+const REPORT_TYPE_BY_TAB: Record<string, string> = {
+  financial: "revenue",
+  operational: "work_orders",
+  inventory: "inventory",
+  customers: "customers",
+  vehicles: "vehicles",
+  controls: "controls",
+};
 
 export default function ReportsPage() {
   const { formatCurrency } = useCurrency();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [activeTab, setActiveTab] = useState("financial");
   const [showFilters, setShowFilters] = useState(false);
   const [showForecast, setShowForecast] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [savedReportName, setSavedReportName] = useState("");
+  const [savedReportDescription, setSavedReportDescription] = useState("");
+  const [scheduleName, setScheduleName] = useState("");
+  const [scheduleRecipients, setScheduleRecipients] = useState("");
+  const [scheduleFrequency, setScheduleFrequency] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
 
   const { theme: activeTheme } = useTheme();
   const isPerfex = activeTheme === "perfex";
@@ -57,6 +78,37 @@ export default function ReportsPage() {
   const pCardContent = isPerfex ? "p-4" : "";
   const pTH = isPerfex ? "bg-[#f1f5f9] text-[11px] font-semibold text-[#374151] px-4 py-2.5" : "text-xs sm:text-sm";
   const pTD = isPerfex ? "px-4 py-2.5 text-xs" : "text-xs sm:text-sm";
+  const currentReportType = REPORT_TYPE_BY_TAB[activeTab] || activeTab;
+  const currentReportParams = useMemo(() => ({
+    start_date: startDate,
+    end_date: endDate,
+    period,
+    tab: activeTab,
+  }), [activeTab, endDate, period, startDate]);
+
+  const { data: reportCatalog } = useQuery({
+    queryKey: ["reporting", "catalog"],
+    queryFn: () => reportingApi.catalog(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: savedReportsData } = useQuery({
+    queryKey: ["reporting", "saved-reports"],
+    queryFn: () => reportingApi.savedReports.list(),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: schedulesData } = useQuery({
+    queryKey: ["reporting", "schedules"],
+    queryFn: () => reportingApi.schedules.list(),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: exportLogsData } = useQuery({
+    queryKey: ["reporting", "export-logs"],
+    queryFn: () => reportingApi.exportLogs.list(),
+    staleTime: 60 * 1000,
+  });
 
   // Dashboard Overview
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -163,6 +215,50 @@ export default function ReportsPage() {
     ) || [];
   }, [recentInvoices]);
 
+  const saveReportMutation = useMutation({
+    mutationFn: () => reportingApi.savedReports.create({
+      name: savedReportName,
+      report_type: currentReportType,
+      description: savedReportDescription,
+      parameters: currentReportParams,
+      is_public: false,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reporting", "saved-reports"] });
+      queryClient.invalidateQueries({ queryKey: ["reporting", "catalog"] });
+      toast({ title: "Saved", description: "Report view saved successfully." });
+      setSaveDialogOpen(false);
+      setSavedReportName("");
+      setSavedReportDescription("");
+    },
+    onError: (error) => {
+      toast({ title: "Save Failed", description: getApiErrorMessage(error, "Could not save report view."), variant: "destructive" });
+    },
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: () => reportingApi.schedules.create({
+      name: scheduleName,
+      report_type: currentReportType,
+      frequency: scheduleFrequency,
+      email_recipients: scheduleRecipients,
+      parameters: currentReportParams,
+      is_active: true,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reporting", "schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["reporting", "catalog"] });
+      toast({ title: "Scheduled", description: "Report schedule created successfully." });
+      setScheduleDialogOpen(false);
+      setScheduleName("");
+      setScheduleRecipients("");
+      setScheduleFrequency("weekly");
+    },
+    onError: (error) => {
+      toast({ title: "Schedule Failed", description: getApiErrorMessage(error, "Could not schedule report."), variant: "destructive" });
+    },
+  });
+
   // Memoized date range calculations
   const dateRangeOptions = useMemo(
     () => [
@@ -209,6 +305,17 @@ export default function ReportsPage() {
           description: "The Revenue Summary has been downloaded successfully.",
           variant: "success",
         });
+        reportingApi.exportLogs.create({
+          report_type: "revenue",
+          report_name: "Revenue Summary",
+          export_format: "pdf",
+          status: "completed",
+          parameters: currentReportParams,
+          file_name: link.download,
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["reporting", "export-logs"] });
+          queryClient.invalidateQueries({ queryKey: ["reporting", "catalog"] });
+        });
       } else {
         toast({
           title: "Export Started",
@@ -218,9 +325,19 @@ export default function ReportsPage() {
       }
     } catch (error) {
       console.error("Failed to download report:", error);
+      reportingApi.exportLogs.create({
+        report_type: currentReportType,
+        report_name: `${activeTab} report`,
+        export_format: "pdf",
+        status: "failed",
+        parameters: currentReportParams,
+        error_message: getApiErrorMessage(error, "Export failed"),
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["reporting", "export-logs"] });
+      }).catch(() => undefined);
       toast({
         title: "Download Failed",
-        description: "Failed to download the report. Please try again.",
+        description: getApiErrorMessage(error, "Failed to download the report. Please try again."),
         variant: "destructive",
       });
     }
@@ -247,6 +364,12 @@ export default function ReportsPage() {
           >
             <Filter className="w-4 h-4 mr-2" />
             Filters
+          </Button>
+          <Button variant="outline" size="sm" className={isPerfex ? "h-8 text-xs" : ""} onClick={() => setSaveDialogOpen(true)}>
+            Save View
+          </Button>
+          <Button variant="outline" size="sm" className={isPerfex ? "h-8 text-xs" : ""} onClick={() => setScheduleDialogOpen(true)}>
+            Schedule
           </Button>
           <div
             className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${showFilters ? "flex" : "hidden sm:flex"
@@ -455,7 +578,7 @@ export default function ReportsPage() {
             ))}
           </div>
         ) : (
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto flex-wrap">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 h-auto flex-wrap">
             <TabsTrigger value="financial" className="text-xs sm:text-sm">
               Financial
             </TabsTrigger>
@@ -588,7 +711,7 @@ export default function ReportsPage() {
                         onClick={() => setShowForecast(!showForecast)}
                         className="text-xs"
                       >
-                        {showForecast ? "Vew Historical" : "Predict Revenue"}
+                        {showForecast ? "View Historical" : "Predict Revenue"}
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2 sm:mt-3">
@@ -1283,6 +1406,101 @@ export default function ReportsPage() {
 
         {(!isPerfex || activeTab === "controls") && (
         <TabsContent value="controls" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className={pCard}>
+              <CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Report Catalog</p>
+                <p className="text-2xl font-bold mt-1">{reportCatalog?.reports?.length || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className={pCard}>
+              <CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saved Views</p>
+                <p className="text-2xl font-bold mt-1">{savedReportsData?.count || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className={pCard}>
+              <CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Schedules</p>
+                <p className="text-2xl font-bold mt-1">{schedulesData?.count || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className={pCard}>
+              <CardContent className="p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Export Logs</p>
+                <p className="text-2xl font-bold mt-1">{exportLogsData?.count || 0}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Saved Report Views</CardTitle>
+              </CardHeader>
+              <CardContent className={isPerfex ? "p-0" : ""}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={pTH}>Name</TableHead>
+                      <TableHead className={pTH}>Type</TableHead>
+                      <TableHead className={pTH}>Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(savedReportsData?.results || []).slice(0, 5).map((report) => (
+                      <TableRow key={report.id}>
+                        <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "text-sm font-medium"}>{report.name}</TableCell>
+                        <TableCell className={pTD}>{report.report_type.replace(/_/g, " ")}</TableCell>
+                        <TableCell className={pTD}>{format(new Date(report.updated_at), "MMM dd, yyyy")}</TableCell>
+                      </TableRow>
+                    ))}
+                    {!savedReportsData?.results?.length && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
+                          No saved report views yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className={pCard}>
+              <CardHeader className={pCardHeader}>
+                <CardTitle className={pCardTitle}>Scheduled Reports</CardTitle>
+              </CardHeader>
+              <CardContent className={isPerfex ? "p-0" : ""}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={pTH}>Name</TableHead>
+                      <TableHead className={pTH}>Frequency</TableHead>
+                      <TableHead className={pTH}>Next Run</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(schedulesData?.results || []).slice(0, 5).map((schedule) => (
+                      <TableRow key={schedule.id}>
+                        <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "text-sm font-medium"}>{schedule.name}</TableCell>
+                        <TableCell className={pTD}>{schedule.frequency}</TableCell>
+                        <TableCell className={pTD}>{format(new Date(schedule.next_run_date), "MMM dd, yyyy")}</TableCell>
+                      </TableRow>
+                    ))}
+                    {!schedulesData?.results?.length && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
+                          No scheduled reports yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className={pCard}>
             <CardHeader className={pCardHeader}>
               <CardTitle className={pCardTitle}>Discounts & Overrides Analysis</CardTitle>
@@ -1332,9 +1550,127 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className={pCard}>
+            <CardHeader className={pCardHeader}>
+              <CardTitle className={pCardTitle}>Export Audit Trail</CardTitle>
+            </CardHeader>
+            <CardContent className={isPerfex ? "p-0" : ""}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className={pTH}>Report</TableHead>
+                    <TableHead className={pTH}>Format</TableHead>
+                    <TableHead className={pTH}>Status</TableHead>
+                    <TableHead className={pTH}>Exported</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(exportLogsData?.results || []).slice(0, 8).map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className={isPerfex ? "px-4 py-2.5 text-xs font-medium" : "text-sm font-medium"}>{log.report_name || log.report_type}</TableCell>
+                      <TableCell className={pTD}>{log.export_format.toUpperCase()}</TableCell>
+                      <TableCell className={pTD}>{log.status}</TableCell>
+                      <TableCell className={pTD}>{format(new Date(log.created_at), "MMM dd, yyyy h:mm a")}</TableCell>
+                    </TableRow>
+                  ))}
+                  {!exportLogsData?.results?.length && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                        No report exports recorded yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
         )}
       </Tabs>
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Report View</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="saved-report-name">Name</Label>
+              <Input
+                id="saved-report-name"
+                value={savedReportName}
+                onChange={(event) => setSavedReportName(event.target.value)}
+                placeholder="Monthly revenue review"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="saved-report-description">Description</Label>
+              <Textarea
+                id="saved-report-description"
+                value={savedReportDescription}
+                onChange={(event) => setSavedReportDescription(event.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => saveReportMutation.mutate()} disabled={!savedReportName.trim() || saveReportMutation.isPending}>
+              {saveReportMutation.isPending ? "Saving..." : "Save View"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Schedule Report</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="schedule-name">Name</Label>
+              <Input
+                id="schedule-name"
+                value={scheduleName}
+                onChange={(event) => setScheduleName(event.target.value)}
+                placeholder="Weekly operations pack"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="schedule-frequency">Frequency</Label>
+              <select
+                id="schedule-frequency"
+                value={scheduleFrequency}
+                onChange={(event) => setScheduleFrequency(event.target.value as typeof scheduleFrequency)}
+                className="h-9 w-full rounded-md border border-border bg-card px-3 text-sm"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="schedule-recipients">Recipients</Label>
+              <Textarea
+                id="schedule-recipients"
+                value={scheduleRecipients}
+                onChange={(event) => setScheduleRecipients(event.target.value)}
+                placeholder="manager@example.com, finance@example.com"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => scheduleMutation.mutate()} disabled={!scheduleName.trim() || !scheduleRecipients.trim() || scheduleMutation.isPending}>
+              {scheduleMutation.isPending ? "Scheduling..." : "Create Schedule"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
