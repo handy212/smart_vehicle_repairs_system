@@ -38,7 +38,7 @@ def initialize_default_settings():
             {'key': 'secondary_color', 'value': '#8b5cf6', 'description': 'Secondary brand color'},
             {'key': 'success_color', 'value': '#10b981', 'description': 'Success color'},
             {'key': 'danger_color', 'value': '#ef4444', 'description': 'Danger/error color'},
-            {'key': 'theme_mode', 'value': 'light', 'description': 'Theme mode (light/dark)'},
+            {'key': 'theme_mode', 'value': 'perfex', 'description': 'Theme mode (perfex/perfex-dark)'},
         ],
         # Email Settings
         'email': [
@@ -189,7 +189,7 @@ def initialize_category_settings(category):
             {'key': 'secondary_color', 'value': '#8b5cf6', 'description': 'Secondary brand color'},
             {'key': 'success_color', 'value': '#10b981', 'description': 'Success color'},
             {'key': 'danger_color', 'value': '#ef4444', 'description': 'Danger/error color'},
-            {'key': 'theme_mode', 'value': 'light', 'description': 'Theme mode (light/dark)'},
+            {'key': 'theme_mode', 'value': 'perfex', 'description': 'Theme mode (perfex/perfex-dark)'},
         ],
         'email': [
             {'key': 'email_enabled', 'value': 'false', 'description': 'Enable email notifications'},
@@ -297,4 +297,3 @@ def initialize_category_settings(category):
             created_count += 1
     
     return created_count
-

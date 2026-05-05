@@ -57,7 +57,7 @@ type AccountingSnapshot = {
 export default function AccountingDashboardPage() {
     const { error: toastError, success: toastSuccess } = useToast();
     const { theme: activeTheme } = useTheme();
-    const isPerfex = activeTheme === "perfex";
+    const isPerfex = activeTheme.startsWith("perfex");
     const [dateRange, setDateRange] = useState({
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date())

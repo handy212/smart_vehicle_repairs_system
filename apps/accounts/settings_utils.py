@@ -166,7 +166,7 @@ def get_branding_settings():
     ]
     
     return get_settings(keys, {
-        'theme_mode': 'light',
+        'theme_mode': 'perfex',
         'login_background_overlay': '0.85',  # Default 85% opacity
     })
 

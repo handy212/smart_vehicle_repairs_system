@@ -23,7 +23,7 @@ interface CustomerStatsProps {
 export function CustomerStats({ stats, isLoading, totalBalance }: CustomerStatsProps) {
   const { formatCurrency } = useCurrency();
   const { theme: activeTheme } = useTheme();
-  const isPerfex = activeTheme === "perfex";
+  const isPerfex = activeTheme.startsWith("perfex");
 
   if (isPerfex) {
     const perfexItems = [

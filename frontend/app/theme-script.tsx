@@ -6,19 +6,14 @@ export function ThemeScript() {
           (function() {
             try {
               const stored = localStorage.getItem('theme');
-              const theme = stored || 'light';
               const root = document.documentElement;
               root.classList.remove('dark', 'classic', 'perfex');
 
-              if (theme === 'dark') {
-                root.classList.add('dark');
-              } else if (theme === 'classic') {
-                root.classList.add('classic');
-              } else if (theme === 'perfex') {
+              var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              if (stored === 'dark' || stored === 'perfex-dark' || (stored === 'system' && prefersDark)) {
+                root.classList.add('perfex', 'dark');
+              } else {
                 root.classList.add('perfex');
-              } else if (theme === 'system') {
-                const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (isDark) root.classList.add('dark');
               }
             } catch (_) {}
           })();

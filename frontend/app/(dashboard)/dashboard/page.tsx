@@ -99,7 +99,7 @@ type TechnicianPerformanceItem = {
 export default function DashboardPage() {
   const { formatCurrency } = useCurrency();
   const { theme: activeTheme } = useTheme();
-  const isPerfex = activeTheme === "perfex";
+  const isPerfex = activeTheme.startsWith("perfex");
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   // Fetch dashboard overview from reporting API
@@ -399,7 +399,7 @@ export default function DashboardPage() {
     },
   ];
 
-  if (activeTheme === "perfex") {
+  if (activeTheme.startsWith("perfex")) {
     return (
       <PerfexDashboard
         isLoading={isLoading}

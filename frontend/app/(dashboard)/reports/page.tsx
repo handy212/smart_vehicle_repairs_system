@@ -71,7 +71,7 @@ export default function ReportsPage() {
   const [scheduleFrequency, setScheduleFrequency] = useState<"daily" | "weekly" | "monthly" | "quarterly">("weekly");
 
   const { theme: activeTheme } = useTheme();
-  const isPerfex = activeTheme === "perfex";
+  const isPerfex = activeTheme.startsWith("perfex");
   const pCard = isPerfex ? "border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)]" : "border-border";
   const pCardHeader = isPerfex ? "py-3 px-4 border-b border-border" : "pb-3 sm:pb-6";
   const pCardTitle = isPerfex ? "text-sm font-semibold text-foreground" : "text-base sm:text-lg";

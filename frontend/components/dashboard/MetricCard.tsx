@@ -27,7 +27,7 @@ interface MetricCardProps {
 export function MetricCard({ title, value, trend, icon, variant = "default", data, dataKey, onClick }: MetricCardProps) {
     const { formatCurrency } = useCurrency();
     const { theme } = useTheme();
-    const isPerfex = theme === "perfex";
+    const isPerfex = theme.startsWith("perfex");
 
     const getIcon = () => {
         switch (icon) {

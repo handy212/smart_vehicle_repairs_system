@@ -54,7 +54,7 @@ export function TemplateManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { theme: activeTheme } = useTheme();
-  const isPerfex = activeTheme === "perfex";
+  const isPerfex = activeTheme.startsWith("perfex");
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Template | null>(null);

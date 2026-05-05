@@ -6,7 +6,7 @@ import { useTheme } from "@/lib/hooks/useTheme";
 
 export default function SMSTemplatesPage() {
   const { theme: activeTheme } = useTheme();
-  const isPerfex = activeTheme === "perfex";
+  const isPerfex = activeTheme.startsWith("perfex");
 
   return (
     <PermissionGuard permission="send_notifications">

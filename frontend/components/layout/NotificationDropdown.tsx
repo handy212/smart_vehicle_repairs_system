@@ -192,7 +192,7 @@ export function NotificationDropdown() {
                     variant="ghost"
                     size="sm"
                     className={cn(
-                        "relative p-2.5 rounded-lg transition-all h-auto",
+                        "relative h-8 w-8 rounded-lg p-0 transition-all",
                         "text-muted-foreground hover:text-foreground hover:bg-muted",
                         "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                         unreadCount > 0 && "text-primary"
@@ -201,7 +201,7 @@ export function NotificationDropdown() {
                 >
                     <PremiumIcons.Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
-                        <span className="absolute top-1 right-1 flex items-center justify-center min-w-[20px] h-[20px] px-1.5 text-xs font-semibold text-white bg-destructive rounded-full ring-2 ring-background">
+                        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white ring-2 ring-background">
                             {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                     )}

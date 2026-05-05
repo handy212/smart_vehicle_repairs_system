@@ -44,7 +44,7 @@ class Command(BaseCommand):
                 ('secondary_color', '#6c757d', 'branding', 'Secondary brand color (hex)', False),
                 ('success_color', '#198754', 'branding', 'Success color (hex)', False),
                 ('danger_color', '#dc3545', 'branding', 'Danger color (hex)', False),
-                ('theme_mode', 'light', 'branding', 'Default theme: light, dark, or auto', False),
+                ('theme_mode', 'perfex', 'branding', 'Default theme: perfex or perfex-dark', False),
                 
                 # EMAIL SETTINGS
                 ('email_enabled', 'true', 'email', 'Enable email notifications', False),

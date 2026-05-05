@@ -1,63 +1,71 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type Theme = 'light' | 'dark' | 'system' | 'classic' | 'perfex';
+export type Theme = 'perfex' | 'perfex-dark' | 'system';
 
-const VALID_THEMES: readonly Theme[] = ['light', 'dark', 'system', 'classic', 'perfex'];
+const PERFEX_DARK_ALIASES = new Set(['dark', 'perfex-dark']);
+const PERFEX_SYSTEM_ALIASES = new Set(['auto', 'system']);
 
 let systemThemeMode: Theme | null = null;
-const THEME_VERSION = 'v2-light-default';
+const THEME_VERSION = 'v3-perfex-only';
+
+function normalizeTheme(value: string | null | undefined): Theme {
+  if (value && PERFEX_DARK_ALIASES.has(value)) return 'perfex-dark';
+  if (value && PERFEX_SYSTEM_ALIASES.has(value)) return 'system';
+  return 'perfex';
+}
 
 export function setSystemThemeMode(theme: Theme | null) {
   systemThemeMode = theme;
 }
 
 export function useTheme() {
-  // Default to light to avoid initial flash of dark mode
-  const [theme, setTheme] = useState<Theme>('light');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark' | 'classic' | 'perfex'>('light');
+  const [theme, setThemeState] = useState<Theme>('perfex');
+  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'perfex'>('perfex');
   const [mounted, setMounted] = useState(false);
 
   const applyTheme = useCallback((value: Theme) => {
     if (typeof window === 'undefined') return;
 
+    const resolved = value === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'perfex-dark' : 'perfex')
+      : value;
     const root = document.documentElement;
-    // Remove all theme classes first for a clean state
     root.classList.remove('dark', 'classic', 'perfex');
 
-    if (value === 'classic') {
-      root.classList.add('classic');
-      setResolvedTheme('classic');
-    } else if (value === 'perfex') {
+    if (resolved === 'perfex-dark') {
+      root.classList.add('perfex', 'dark');
+      setResolvedTheme('dark');
+    } else {
       root.classList.add('perfex');
       setResolvedTheme('perfex');
-    } else {
-      const isSystem = value === 'system';
-      const isDark = isSystem
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-        : value === 'dark';
-      setResolvedTheme(isDark ? 'dark' : 'light');
-      if (isDark) root.classList.add('dark');
     }
   }, []);
 
-  // Initial load — system setting always takes priority over cached localStorage value
+  const setTheme = useCallback((value: Theme) => {
+    const normalized = normalizeTheme(value);
+    setThemeState(normalized);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', normalized);
+      localStorage.setItem('theme_override', 'true');
+    }
+    applyTheme(normalized);
+  }, [applyTheme]);
+
+  // Initial load: local header override wins, otherwise use the branding default.
   useEffect(() => {
-    // Force-reset any old cached theme so we can apply new default (light)
+    // Force-reset old cached themes so legacy light/dark/classic values collapse to Perfex.
     const storedVersion = localStorage.getItem('theme_version');
     if (storedVersion !== THEME_VERSION) {
-      localStorage.removeItem('theme');
       localStorage.setItem('theme_version', THEME_VERSION);
     }
 
-    const rawStored = localStorage.getItem('theme');
-    const stored: Theme | null = rawStored && (VALID_THEMES as readonly string[]).includes(rawStored)
-      ? rawStored as Theme
-      : null;
+    const stored = normalizeTheme(localStorage.getItem('theme'));
+    const hasOverride = localStorage.getItem('theme_override') === 'true';
 
-    // System setting wins. Fall back to localStorage, then light.
-    const initial: Theme = systemThemeMode || stored || 'light';
+    // A header choice wins locally. Otherwise system branding setting wins.
+    const initial: Theme = hasOverride ? stored : (systemThemeMode || stored);
 
-    setTheme(initial);
+    setThemeState(initial);
     setMounted(true);
     applyTheme(initial);
   }, [applyTheme]);
@@ -69,7 +77,6 @@ export function useTheme() {
     localStorage.setItem('theme', theme);
   }, [theme, mounted, applyTheme]);
 
-  // Update if system OS preference changes (only relevant for 'system' theme)
   useEffect(() => {
     if (theme !== 'system' || !mounted) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -78,11 +85,11 @@ export function useTheme() {
     return () => mq.removeEventListener('change', handle);
   }, [theme, mounted, applyTheme]);
 
-  // System theme_mode from Settings > Branding always overrides — no user escape hatch
+  // Branding theme_mode applies when the user has not chosen a local header override.
   useEffect(() => {
     const handleSystemThemeChange = (e: CustomEvent) => {
-      const newTheme = e.detail as Theme;
-      setTheme(newTheme);
+      const newTheme = normalizeTheme(e.detail);
+      setThemeState(newTheme);
       applyTheme(newTheme);
       localStorage.setItem('theme', newTheme);
     };

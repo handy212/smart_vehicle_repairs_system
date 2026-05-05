@@ -142,10 +142,10 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     return item.href === longestMatch.href;
   };
 
-  const isPerfexTheme = activeTheme === "perfex";
+  const isPerfexTheme = activeTheme.startsWith("perfex");
   const isDark = resolvedTheme === "dark";
   const visiblePrimary = branding.primary_color ? ensureVisibleColor(branding.primary_color, isDark) : undefined;
-  const sidebarLeft = sidebarCollapsed ? 64 : (isPerfexTheme ? 230 : 256);
+  const sidebarLeft = sidebarCollapsed ? "64px" : (isPerfexTheme ? "var(--sidebar-width)" : "256px");
 
   // If module is disabled, hide the entire SubNav
   if (module && !isModuleEnabled(module)) {
@@ -271,8 +271,8 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     <>
       {/* Mobile: Horizontal scrollable tab bar */}
       <div className={cn(
-        "fixed top-16 left-0 right-0 z-20 border-b border-border bg-background shadow-sm lg:hidden",
-        isPerfexTheme && "bg-[#f9f9f9]"
+        "fixed top-[var(--header-height)] left-0 right-0 z-20 border-b border-border bg-background shadow-sm lg:hidden",
+        isPerfexTheme && "bg-card shadow-none"
       )}>
         <nav className="flex items-center gap-0 px-2 overflow-x-auto scrollbar-none">
           {filteredItems.map((item) => renderItem(item, "mobile"))}
@@ -282,20 +282,20 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
       {/* Desktop: Vertical sidebar */}
       <aside
         className={cn(
-          "fixed top-16 bottom-0 z-10 transition-all duration-200",
+          "fixed top-[var(--header-height)] bottom-0 z-10 transition-all duration-200",
           "hidden lg:block",
           isPerfexTheme
-            ? cn("border-r border-border bg-[#f9f9f9]", isCollapsed ? "w-12" : "w-52")
+            ? cn("border-r border-border bg-card", isCollapsed ? "w-12" : "w-52")
             : cn("border-r border-border bg-background shadow-sm", isCollapsed ? "w-12" : "w-52")
         )}
-        style={{ left: `${sidebarLeft}px` }}
+        style={{ left: sidebarLeft }}
       >
         <div className={cn(isPerfexTheme ? "pt-2" : "p-3", isCollapsed && "px-2")}>
           <div className={cn("flex items-center", isPerfexTheme ? "mb-1 px-3 py-2" : "mb-3", isCollapsed ? "justify-center" : "justify-between")}>
             {!isCollapsed && (
               <h2 className={cn(
                 "text-xs font-semibold uppercase tracking-wider",
-                isPerfexTheme ? "text-[#9ca3af] text-[10px]" : "text-muted-foreground"
+                isPerfexTheme ? "text-muted-foreground text-[10px]" : "text-muted-foreground"
               )}>
                 {title}
               </h2>

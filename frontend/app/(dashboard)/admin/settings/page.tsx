@@ -230,11 +230,10 @@ export default function SystemSettingsPage() {
       // Apply theme immediately when theme_mode is saved
       if (setting.key === 'theme_mode' && payload.value) {
         const themeMode = payload.value.toLowerCase().trim();
-        const validThemes = ['light', 'dark', 'system', 'auto', 'perfex', 'classic'];
+        const validThemes = ['perfex', 'perfex-dark'];
         if (validThemes.includes(themeMode)) {
-          const themeValue = themeMode === 'auto' ? 'system' : themeMode;
           localStorage.removeItem('theme_override');
-          window.dispatchEvent(new CustomEvent('systemThemeModeChanged', { detail: themeValue }));
+          window.dispatchEvent(new CustomEvent('systemThemeModeChanged', { detail: themeMode }));
         }
       }
 
@@ -444,7 +443,7 @@ export default function SystemSettingsPage() {
                                   ) : /* Theme Mode - Dropdown */
                                     setting.key === 'theme_mode' ? (
                                       <Select
-                                        value={getRowValue(setting) || 'light'}
+                                        value={getRowValue(setting) === 'perfex-dark' ? 'perfex-dark' : 'perfex'}
                                         onValueChange={(val) => handleRowChange(setting, { value: val })}
                                         disabled={!canManage}
                                       >
@@ -452,10 +451,8 @@ export default function SystemSettingsPage() {
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="light">Light</SelectItem>
-                                          <SelectItem value="dark">Dark</SelectItem>
-                                          <SelectItem value="auto">Auto (System Preference)</SelectItem>
-                                          <SelectItem value="perfex">Perfex</SelectItem>
+                                          <SelectItem value="perfex">Perfex Light</SelectItem>
+                                          <SelectItem value="perfex-dark">Perfex Dark</SelectItem>
                                         </SelectContent>
                                       </Select>
                                     ) : /* SMS Provider - Dropdown */

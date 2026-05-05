@@ -1,11 +1,17 @@
 "use client";
 
-import { Moon, Sun, Monitor, Archive, Layers } from "lucide-react";
+import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme, type Theme } from "@/lib/hooks/useTheme";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
-  const { theme, resolvedTheme, setTheme, applyTheme, mounted } = useTheme();
+  const { theme, resolvedTheme, setTheme, mounted } = useTheme();
 
   if (!mounted) {
     return (
@@ -15,51 +21,50 @@ export function ThemeToggle() {
     );
   }
 
-  const cycleTheme = () => {
-    const order: Theme[] = ["light", "dark", "system", "classic", "perfex"];
-    const newTheme = order[(order.indexOf(theme) + 1) % order.length];
-    // Apply immediately to DOM for instant visual feedback, then update state
-    applyTheme(newTheme);
-    setTheme(newTheme);
-  };
+  const options: Array<{ value: Theme; label: string; icon: typeof Sun }> = [
+    { value: "perfex", label: "Light", icon: Sun },
+    { value: "perfex-dark", label: "Dark", icon: Moon },
+    { value: "system", label: "System", icon: Monitor },
+  ];
 
-  const icon =
-    theme === "classic"
-      ? <Archive className="h-4 w-4" />
-      : theme === "perfex"
-        ? <Layers className="h-4 w-4" />
-        : theme === "system"
-          ? <Monitor className="h-4 w-4" />
-          : resolvedTheme === "dark"
-            ? <Moon className="h-4 w-4" />
-            : <Sun className="h-4 w-4" />;
-
-  const title =
-    theme === "light"
-      ? "Light mode"
-      : theme === "dark"
-        ? "Dark mode"
-        : theme === "classic"
-          ? "Classic theme"
-          : theme === "perfex"
-            ? "Perfex theme"
-            : "System theme";
+  const TriggerIcon = theme === "system"
+    ? Monitor
+    : resolvedTheme === "dark"
+      ? Moon
+      : Sun;
 
   return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      className="w-9 h-9 p-0"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        cycleTheme();
-      }}
-      title={title}
-      aria-label={title}
-    >
-      {icon}
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title="Theme"
+          aria-label="Theme"
+        >
+          <TriggerIcon className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36">
+        {options.map((option) => {
+          const Icon = option.icon;
+          const selected = theme === option.value;
+
+          return (
+            <DropdownMenuItem
+              key={option.value}
+              onSelect={() => setTheme(option.value)}
+              className="cursor-pointer"
+            >
+              <Icon className="mr-2 h-4 w-4" />
+              <span className="flex-1">{option.label}</span>
+              {selected && <Check className="h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

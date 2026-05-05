@@ -57,7 +57,7 @@ export default function SMSConsolePage() {
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const { theme: activeTheme } = useTheme();
-    const isPerfex = activeTheme === "perfex";
+    const isPerfex = activeTheme.startsWith("perfex");
     const [message, setMessage] = useState('');
     const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
     const [isSending, setIsSending] = useState(false);

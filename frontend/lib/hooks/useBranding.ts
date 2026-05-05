@@ -37,7 +37,7 @@ interface BrandingResult {
 export function useBranding(
     queryKeyVariant: "public" | "authenticated" = "public",
 ): BrandingResult {
-    const { theme, resolvedTheme } = useTheme();
+    const { resolvedTheme } = useTheme();
 
     const { data: brandingSettings } = useQuery<SystemSetting[]>({
         queryKey:
@@ -90,7 +90,7 @@ export function useBranding(
         const logoDarkUpdatedAt = getUpdatedAt("logo_dark_path");
 
         // Theme-aware logo resolution
-        const isDark = resolvedTheme === "dark" || theme === "dark";
+        const isDark = resolvedTheme === "dark";
         let logoSrc: string | null = null;
 
         if (isDark && logoDarkPath) {
@@ -115,7 +115,7 @@ export function useBranding(
             logoSrc,
             getMediaUrl,
         };
-    }, [brandingSettings, resolvedTheme, theme, getMediaUrl]);
+    }, [brandingSettings, resolvedTheme, getMediaUrl]);
 
     return branding;
 }

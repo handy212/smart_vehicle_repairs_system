@@ -53,7 +53,7 @@ export function VehicleStats({ stats, isLoading }: VehicleStatsProps) {
     },
   ];
 
-  if (activeTheme === "perfex") {
+  if (activeTheme.startsWith("perfex")) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {statItems.map((item, idx) => (

@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { QuickActionsMenu } from "@/components/layout/QuickActionsMenu";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import Link from "next/link";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -56,12 +57,17 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
   // Apply theme_mode from system settings
   useEffect(() => {
     if (brandingSettings && !brandingLoading) {
+      if (localStorage.getItem('theme_override') === 'true') return;
       const themeModeSetting = brandingSettings.find(s => s.key === 'theme_mode');
       if (themeModeSetting?.value) {
         const themeMode = themeModeSetting.value.toLowerCase().trim();
-        if (['light', 'dark', 'system', 'auto', 'perfex', 'classic'].includes(themeMode)) {
-          const themeValue = themeMode === 'auto' ? 'system' : themeMode;
-          setSystemThemeMode(themeValue as 'light' | 'dark' | 'system' | 'perfex' | 'classic');
+        const themeValue = themeMode === 'dark' || themeMode === 'perfex-dark'
+          ? 'perfex-dark'
+          : themeMode === 'auto' || themeMode === 'system'
+            ? 'system'
+            : 'perfex';
+        if (themeMode !== themeValue || ['perfex', 'perfex-dark', 'system'].includes(themeMode)) {
+          setSystemThemeMode(themeValue);
           window.dispatchEvent(new CustomEvent('systemThemeModeChanged', { detail: themeValue }));
         }
       }
@@ -218,9 +224,12 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
           </div>
 
           {/* Right Side Actions */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Notifications */}
             <NotificationDropdown />
+
+            {/* Theme Switcher */}
+            <ThemeToggle />
 
             {/* User Menu */}
             <UserMenu />
