@@ -21,6 +21,7 @@ import {
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const formSchema = z.object({
     supplier: z.string().min(1, "Supplier is required"),
@@ -66,10 +67,10 @@ export default function NewPurchaseOrderPage() {
             router.push(`/inventory/purchase-orders/${data.id}`);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to create purchase order",
+                description: getApiErrorMessage(error, "Failed to create purchase order"),
                 variant: "destructive",
             });
         },

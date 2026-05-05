@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Path, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,15 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { AlertCircle, Calendar, FileText, Wrench, CheckCircle2 } from "lucide-react";
+import { AlertCircle, FileText, Wrench, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useState, useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { inspectionsApi } from "@/lib/api/inspections";
-import { vehiclesApi } from "@/lib/api/vehicles";
+import { InspectionTemplate, inspectionsApi } from "@/lib/api/inspections";
+import { Vehicle, vehiclesApi } from "@/lib/api/vehicles";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 
@@ -25,7 +23,10 @@ export const inspectionSchema = z.object({
     template: z.number().min(1, "Template is required"),
     work_order: z.number().optional(),
     inspection_date: z.string().min(1, "Inspection date is required"),
-    odometer_reading: z.number().min(0, "Odometer reading is required"),
+    odometer_reading: z.preprocess(
+        (value) => (typeof value === "number" && Number.isNaN(value) ? undefined : value),
+        z.number().min(0, "Odometer reading cannot be negative").optional()
+    ),
     notes: z.string().optional(),
 });
 
@@ -41,7 +42,7 @@ interface InspectionFormProps {
     showActiveWorkOrderDialog?: boolean;
     setShowActiveWorkOrderDialog?: (show: boolean) => void;
 
-    workOrderData?: any;
+    workOrderData?: { id: number; work_order_number?: string; wo_number?: string };
     fieldErrors?: Record<string, string>;
 }
 
@@ -70,8 +71,8 @@ export function InspectionForm({
         queryFn: () => vehiclesApi.list({ page: 1, page_size: 100 }), // Get more vehicles
     });
 
-    const templates = templatesData || [];
-    const vehicles = vehiclesData?.results || [];
+    const templates = useMemo<InspectionTemplate[]>(() => templatesData || [], [templatesData]);
+    const vehicles = useMemo<Vehicle[]>(() => vehiclesData?.results || [], [vehiclesData]);
 
     const {
         register,
@@ -79,8 +80,7 @@ export function InspectionForm({
         formState: { errors },
         setValue,
         setError,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        watch,
+        control,
     } = useForm<InspectionFormData>({
         resolver: zodResolver(inspectionSchema),
         defaultValues: {
@@ -88,6 +88,9 @@ export function InspectionForm({
             ...initialData,
         },
     });
+    const selectedTemplateId = useWatch({ control, name: "template" });
+    const selectedTemplate = templates.find((template) => template.id === selectedTemplateId);
+    const requiresOdometer = selectedTemplate?.requires_odometer !== false;
 
     // Effect to set default template
     useEffect(() => {
@@ -103,7 +106,7 @@ export function InspectionForm({
     useEffect(() => {
         if (fieldErrors) {
             Object.entries(fieldErrors).forEach(([field, message]) => {
-                setError(field as any, { type: "server", message });
+                setError(field as Path<InspectionFormData>, { type: "server", message });
             });
         }
     }, [fieldErrors, setError]);
@@ -139,7 +142,18 @@ export function InspectionForm({
                 </Dialog>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form
+                onSubmit={handleSubmit((data) => {
+                    if (requiresOdometer && data.odometer_reading === undefined) {
+                        setError("odometer_reading", {
+                            type: "manual",
+                            message: "Odometer reading is required for this template",
+                        });
+                        return;
+                    }
+                    onSubmit(data);
+                })}
+            >
                 <Card>
                     <CardHeader className="pb-4 border-b border-border">
                         <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -164,7 +178,7 @@ export function InspectionForm({
                                 >
                                     <option value="">Select a vehicle</option>
 
-                                    {vehicles.map((vehicle: any) => (
+                                    {vehicles.map((vehicle) => (
                                         <option key={vehicle.id} value={vehicle.id}>
                                             {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate}
                                         </option>
@@ -187,7 +201,7 @@ export function InspectionForm({
                                 >
                                     <option value="">Select a template</option>
 
-                                    {templates.map((template: any) => (
+                                    {templates.map((template) => (
                                         <option key={template.id} value={template.id}>
                                             {template.name}
                                             {template.is_default && " (Default)"}
@@ -219,7 +233,7 @@ export function InspectionForm({
                                     <div className="flex items-center gap-2 mt-1 bg-primary/10 dark:bg-orange-900/20 px-2 py-1 rounded text-xs text-orange-700 dark:text-orange-300">
                                         <Wrench className="w-3 h-3" />
 
-                                        Linked to WO #{(workOrderData as any).wo_number || workOrderData.id}
+                                        Linked to WO #{workOrderData.work_order_number || workOrderData.wo_number || workOrderData.id}
                                     </div>
                                 )}
                             </div>
@@ -241,14 +255,17 @@ export function InspectionForm({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label htmlFor="odometer_reading">Odometer Reading <span className="text-destructive">*</span></Label>
+                                <Label htmlFor="odometer_reading">
+                                    Odometer Reading
+                                    {requiresOdometer && <span className="text-destructive"> *</span>}
+                                </Label>
                                 <Input
                                     id="odometer_reading"
                                     type="number"
                                     {...register("odometer_reading", { valueAsNumber: true })}
                                     placeholder="Current mileage"
                                     min={0}
-                                    required
+                                    required={requiresOdometer}
                                 />
                                 {errors.odometer_reading && (
                                     <p className="text-destructive text-xs mt-1">{errors.odometer_reading.message}</p>

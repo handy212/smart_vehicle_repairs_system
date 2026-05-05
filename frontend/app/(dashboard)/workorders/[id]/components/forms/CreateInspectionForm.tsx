@@ -7,11 +7,26 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Gauge, RotateCcw } from "lucide-react";
+import { VehicleInspection } from "@/lib/api/inspections";
+
+interface CreateInspectionWorkOrder {
+    id?: number;
+    vehicle?: number | {
+        id: number;
+        current_mileage?: number;
+    };
+}
+
+type InitialInspectionPayload = Pick<VehicleInspection, "vehicle" | "template" | "inspection_date"> &
+    Partial<Pick<
+        VehicleInspection,
+        "work_order" | "odometer_reading" | "odometer_unavailable" | "odometer_unavailable_reason"
+    >>;
 
 interface CreateInspectionFormProps {
-    workOrder?: any;
-    onSubmit: (data: any) => void;
+    workOrder?: CreateInspectionWorkOrder;
+    onSubmit: (data: InitialInspectionPayload) => void;
     onCancel: () => void;
     isSubmitting: boolean;
     fieldErrors?: Record<string, string>;
@@ -27,6 +42,7 @@ export function CreateInspectionForm({
     const [templateId, setTemplateId] = useState<number | "">("");
     const [inspectionDate] = useState(new Date().toISOString().slice(0, 16));
     const [odometerReading, setOdometerReading] = useState("");
+    const [skipOdometer, setSkipOdometer] = useState(false);
 
     const { data: templatesData } = useQuery({
         queryKey: ["inspection-templates", "active"],
@@ -34,6 +50,8 @@ export function CreateInspectionForm({
     });
 
     const templates = templatesData || [];
+    const selectedTemplate = templates.find((template) => template.id === templateId);
+    const requiresOdometer = selectedTemplate?.requires_odometer !== false;
     const vehicleId = workOrder?.vehicle
         ? (typeof workOrder.vehicle === "object" ? workOrder.vehicle.id : workOrder.vehicle)
         : null;
@@ -43,15 +61,18 @@ export function CreateInspectionForm({
 
         if (!templateId || !vehicleId) return;
 
-        const data: any = {
+        const data: InitialInspectionPayload = {
             vehicle: vehicleId,
             template: templateId,
             work_order: workOrder?.id,
             inspection_date: inspectionDate,
         };
 
-        if (odometerReading) {
-            data.odometer_reading = parseFloat(odometerReading);
+        if (skipOdometer) {
+            data.odometer_unavailable = true;
+            data.odometer_unavailable_reason = "Odometer reading skipped from work order initial inspection: vehicle condition prevents reading.";
+        } else if (odometerReading) {
+            data.odometer_reading = parseInt(odometerReading, 10);
         }
 
         onSubmit(data);
@@ -68,7 +89,10 @@ export function CreateInspectionForm({
                         <select
                             id="template"
                             value={templateId}
-                            onChange={(e) => setTemplateId(parseInt(e.target.value) || "")}
+                            onChange={(e) => {
+                                setTemplateId(parseInt(e.target.value) || "");
+                                setSkipOdometer(false);
+                            }}
                             required
                             className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-muted text-foreground"
                         >
@@ -101,20 +125,54 @@ export function CreateInspectionForm({
                         />
                     </div>
 
-                    <div>
-                        <Label htmlFor="inspection_odometer_reading" className="block mb-2 text-foreground">
-                            Odometer Reading <span className="text-destructive">*</span>
-                        </Label>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <Label htmlFor="inspection_odometer_reading" className="text-foreground">
+                                Odometer Reading
+                                {requiresOdometer && <span className="text-destructive"> *</span>}
+                            </Label>
+                            <Button
+                                type="button"
+                                variant={skipOdometer ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                    setSkipOdometer((current) => !current);
+                                    setOdometerReading("");
+                                }}
+                                className="h-8"
+                            >
+                                {skipOdometer ? (
+                                    <>
+                                        <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                                        Enter Reading
+                                    </>
+                                ) : (
+                                    <>
+                                        <Gauge className="w-3.5 h-3.5 mr-1.5" />
+                                        Skip Reading
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                         <Input
                             id="inspection_odometer_reading"
                             type="number"
                             value={odometerReading}
-                            onChange={(e) => setOdometerReading(e.target.value)}
-                            placeholder="Enter odometer reading"
+                            onChange={(e) => {
+                                setOdometerReading(e.target.value);
+                                setSkipOdometer(false);
+                            }}
+                            placeholder={skipOdometer ? "Skipped: odometer unavailable" : "Enter odometer reading"}
                             min={0}
-                            required
+                            required={requiresOdometer && !skipOdometer}
+                            disabled={skipOdometer}
                             className={`w-full bg-muted border-border text-foreground ${fieldErrors?.odometer_reading ? "border-destructive" : ""}`}
                         />
+                        {skipOdometer && (
+                            <p className="text-xs text-muted-foreground">
+                                Use this when the odometer cannot be read, such as accident vehicles, dead clusters, or electrical damage.
+                            </p>
+                        )}
                         {fieldErrors?.odometer_reading && (
                             <p className="mt-1 text-sm text-destructive dark:text-red-400">
                                 {fieldErrors.odometer_reading}
@@ -144,7 +202,7 @@ export function CreateInspectionForm({
                 <Button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !templateId || !vehicleId || !odometerReading || templates.length === 0}
+                    disabled={isSubmitting || !templateId || !vehicleId || (!odometerReading && !skipOdometer && requiresOdometer) || templates.length === 0}
                 >
                     {isSubmitting ? "Creating..." : "Create Inspection"}
                 </Button>

@@ -11,6 +11,12 @@ import { useState } from "react";
 import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
 import { InspectionForm, InspectionFormData } from "@/components/inspections/InspectionForm";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+type ApiValidationData = Record<string, unknown> & {
+  detail?: string;
+  non_field_errors?: string | string[];
+};
 
 export default function NewInspectionPage() {
   const router = useRouter();
@@ -42,17 +48,18 @@ export default function NewInspectionPage() {
       });
       router.push(`/inspections/${inspection.id}`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       if (process.env.NODE_ENV === 'development') {
+        const debugError = error as { message?: string; response?: { status?: number; data?: unknown } };
         console.error("New inspection creation onError caught:", {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data ? JSON.parse(JSON.stringify(error.response.data)) : null
+          message: debugError.message,
+          status: debugError.response?.status,
+          data: debugError.response?.data ? JSON.parse(JSON.stringify(debugError.response.data)) : null
         });
       }
 
       if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
+        const errorData = error.response.data as ApiValidationData;
 
         // Check for active work order at another branch error
         let errorMessage = '';
@@ -84,9 +91,9 @@ export default function NewInspectionPage() {
 
             if (Array.isArray(fieldData)) {
               const first = fieldData[0];
-              fieldError = typeof first === 'object' ? (first.message || JSON.stringify(first)) : String(first);
+              fieldError = typeof first === 'object' && first !== null ? JSON.stringify(first) : String(first);
             } else {
-              fieldError = typeof fieldData === 'object' ? (fieldData.message || JSON.stringify(fieldData)) : String(fieldData);
+              fieldError = typeof fieldData === 'object' && fieldData !== null ? JSON.stringify(fieldData) : String(fieldData);
             }
             newFieldErrors[field] = fieldError;
           }
@@ -101,7 +108,7 @@ export default function NewInspectionPage() {
           setServerError("An error occurred. Check the form for details.");
         }
       } else {
-        setServerError(error.message || "An unexpected error occurred. Please try again.");
+        setServerError(getApiErrorMessage(error, "An unexpected error occurred. Please try again."));
       }
     },
   });

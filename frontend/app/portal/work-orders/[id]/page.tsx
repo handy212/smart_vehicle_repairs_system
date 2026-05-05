@@ -641,11 +641,11 @@ export default function WorkOrderDetailPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Service Advisor */}
+                    {/* Service Coordinator */}
                     {workOrder.service_coordinator_name && (
                         <Card>
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">My Service Advisor</CardTitle>
+                                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">My Service Coordinator</CardTitle>
                             </CardHeader>
                             <CardContent className="pt-0">
                                 <p className="font-medium">{workOrder.service_coordinator_name}</p>

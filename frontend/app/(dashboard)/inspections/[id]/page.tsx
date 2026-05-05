@@ -2,14 +2,11 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { inspectionsApi, VehicleInspection } from "@/lib/api/inspections";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { InspectionResult, inspectionsApi } from "@/lib/api/inspections";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Send, Printer, FileText, Camera, Calendar, User, Wrench, Clock } from "lucide-react";
+import { ArrowLeft, CheckCircle, Send, Printer, FileText, Camera, Calendar, Wrench } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
@@ -17,20 +14,18 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { VehicleDamageMarker, DamageMark } from "@/components/inspections/VehicleDamageMarker";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { SignaturePad } from "@/components/inspections/SignaturePad";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
   completed: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 text-primary border-orange-200 dark:border-orange-800",
   approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
   rejected: "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 border-destructive/20 dark:border-red-800",
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const resultColors: Record<string, string> = {
-  pass: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
-  pass_with_advisory: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  fail: "bg-red-100 text-destructive dark:bg-red-900/30 dark:text-red-400 border-destructive/20 dark:border-red-800",
-  needs_attention: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800",
 };
 
 const itemResultColors: Record<string, string> = {
@@ -47,14 +42,16 @@ export default function InspectionDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { downloadPDF, openPrintWindow, isDownloading, isOpeningPrint } = usePrint();
+  const [showApproveOnBehalfDialog, setShowApproveOnBehalfDialog] = useState(false);
+  const [behalfSignature, setBehalfSignature] = useState<string | null>(null);
+  const [behalfReason, setBehalfReason] = useState("");
 
   const { data: inspection, isLoading } = useQuery({
     queryKey: ["inspection", inspectionId],
     queryFn: () => inspectionsApi.get(inspectionId),
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const completeMutation = useMutation({
+  useMutation({
     mutationFn: () => inspectionsApi.complete(inspectionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
@@ -63,10 +60,21 @@ export default function InspectionDetailPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: () => inspectionsApi.approve(inspectionId),
+    mutationFn: (data?: { customer_signature?: string; approve_on_behalf_reason?: string }) =>
+      inspectionsApi.approve(inspectionId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+      setShowApproveOnBehalfDialog(false);
+      setBehalfSignature(null);
+      setBehalfReason("");
       toast({ title: "Success", description: "Inspection approved", variant: "success" });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Approval Failed",
+        description: getApiErrorMessage(error, "Failed to approve inspection"),
+        variant: "destructive",
+      });
     },
   });
 
@@ -75,6 +83,13 @@ export default function InspectionDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
       toast({ title: "Success", description: "Inspection rejected", variant: "success" });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Rejection Failed",
+        description: getApiErrorMessage(error, "Failed to reject inspection"),
+        variant: "destructive",
+      });
     },
   });
 
@@ -90,9 +105,12 @@ export default function InspectionDetailPage() {
       });
     },
 
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || "Failed to send inspection";
-      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to send inspection"),
+        variant: "destructive",
+      });
     }
   });
 
@@ -102,9 +120,12 @@ export default function InspectionDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
       toast({ title: "AI Summary Generated", description: data.message, variant: "success" });
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || "Failed to generate AI summary";
-      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to generate AI summary"),
+        variant: "destructive",
+      });
     }
   });
 
@@ -127,9 +148,40 @@ export default function InspectionDetailPage() {
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const template = typeof inspection.template === 'object' ? inspection.template : null;
   const vehicle = typeof inspection.vehicle === 'object' ? inspection.vehicle : null;
+  const customerSignatureRequired =
+    typeof inspection.template === "object" && inspection.template.requires_customer_signature;
+  const needsCustomerSignature = customerSignatureRequired && !inspection.customer_signature;
+  const handleApproveClick = () => {
+    if (needsCustomerSignature) {
+      setShowApproveOnBehalfDialog(true);
+      return;
+    }
+    approveMutation.mutate();
+  };
+
+  const handleApproveOnBehalf = () => {
+    if (!behalfSignature) {
+      toast({
+        title: "Signature Required",
+        description: "Capture a customer authorization signature to approve on behalf.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!behalfReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Add why staff is signing on behalf of the customer.",
+        variant: "destructive",
+      });
+      return;
+    }
+    approveMutation.mutate({
+      customer_signature: behalfSignature,
+      approve_on_behalf_reason: behalfReason.trim(),
+    });
+  };
 
   // Group results by category
   const resultsByCategory: Record<string, NonNullable<typeof inspection.results>> = {};
@@ -210,8 +262,8 @@ export default function InspectionDetailPage() {
               <Button variant="outline" size="sm" onClick={() => rejectMutation.mutate()} disabled={rejectMutation.isPending} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                 Reject
               </Button>
-              <Button size="sm" onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending} className="bg-success hover:bg-green-700">
-                Approve
+              <Button size="sm" onClick={handleApproveClick} disabled={approveMutation.isPending} className="bg-success hover:bg-green-700">
+                {needsCustomerSignature ? "Approve on Behalf" : "Approve"}
               </Button>
             </>
           )}
@@ -233,6 +285,60 @@ export default function InspectionDetailPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={showApproveOnBehalfDialog} onOpenChange={setShowApproveOnBehalfDialog}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Approve on Behalf of Customer</DialogTitle>
+            <DialogDescription>
+              Use this when the customer cannot sign through the portal but has authorized the work to proceed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <SignaturePad
+              value={behalfSignature || undefined}
+              onChange={setBehalfSignature}
+              label="Customer Authorization Signature"
+              required
+              height={160}
+            />
+            <div className="space-y-2">
+              <Label htmlFor="behalf-reason">
+                Reason <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="behalf-reason"
+                value={behalfReason}
+                onChange={(event) => setBehalfReason(event.target.value)}
+                placeholder="Example: Customer authorized by phone; vehicle is disabled and customer cannot access portal."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowApproveOnBehalfDialog(false);
+                setBehalfSignature(null);
+                setBehalfReason("");
+              }}
+              disabled={approveMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApproveOnBehalf}
+              disabled={approveMutation.isPending || !behalfSignature || !behalfReason.trim()}
+              className="bg-success hover:bg-green-700"
+            >
+              {approveMutation.isPending ? "Approving..." : "Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Top Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -446,7 +552,7 @@ export default function InspectionDetailPage() {
 
               {/* Individual item notes */}
 
-              {inspection.results && inspection.results.filter((r: any) => r.notes && r.notes.trim()).length > 0 && (
+              {inspection.results && inspection.results.filter((r) => r.notes && r.notes.trim()).length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Item Notes</CardTitle>
@@ -457,9 +563,9 @@ export default function InspectionDetailPage() {
                   <CardContent className="space-y-4">
                     {inspection.results
 
-                      .filter((r: any) => r.notes && r.notes.trim())
+                      .filter((r) => r.notes && r.notes.trim())
 
-                      .map((result: any) => (
+                      .map((result: InspectionResult) => (
                         <div key={result.id} className="border-l-2 border-primary pl-4 py-2">
                           <div className="flex items-start justify-between mb-1">
                             <p className="font-medium text-sm text-foreground">
@@ -491,7 +597,7 @@ export default function InspectionDetailPage() {
               {/* Empty state */}
               {!inspection.notes &&
 
-                (!inspection.results || inspection.results.filter((r: any) => r.notes && r.notes.trim()).length === 0) &&
+                (!inspection.results || inspection.results.filter((r) => r.notes && r.notes.trim()).length === 0) &&
                 !inspection.recommendations && (
                   <div className="text-center py-8 text-muted-foreground">No notes recorded</div>
                 )}

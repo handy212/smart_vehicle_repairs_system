@@ -21,17 +21,20 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRef, useState } from "react";
 
+type InspectionResultUpdateValue = InspectionResult[keyof InspectionResult] | undefined | null;
+
 interface InspectionItemRowProps {
     item: InspectionItem;
     result: Partial<InspectionResult>;
 
-    onUpdate: (field: string, value: any) => void;
+    onUpdate: (field: string, value: InspectionResultUpdateValue) => void;
     onAddPhoto?: (itemId: number, file: File, resultId?: number) => void;
     onDeletePhoto?: (photoId: number) => void;
     showNotes: boolean;
     onToggleNotes: () => void;
     isCriticalRemaining: boolean;
     isLast?: boolean;
+    allowPhotos?: boolean;
 }
 
 export function InspectionItemRow({
@@ -44,6 +47,7 @@ export function InspectionItemRow({
     onToggleNotes,
     isCriticalRemaining,
     isLast = false,
+    allowPhotos = true,
 }: InspectionItemRowProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -215,22 +219,26 @@ export function InspectionItemRow({
                     >
                         <MessageSquare className="w-3.5 h-3.5" />
                     </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-muted-foreground"
-                        onClick={() => fileInputRef.current?.click()}
-                        title="Add Photo"
-                    >
-                        <Camera className="w-3.5 h-3.5" />
-                    </Button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                    />
+                    {allowPhotos && (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground"
+                                onClick={() => fileInputRef.current?.click()}
+                                title="Add Photo"
+                            >
+                                <Camera className="w-3.5 h-3.5" />
+                            </Button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
+                        </>
+                    )}
                     <Button
                         variant="ghost"
                         size="sm"
@@ -323,4 +331,3 @@ export function InspectionItemRow({
         </div>
     );
 }
-

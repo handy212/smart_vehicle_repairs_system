@@ -15,6 +15,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { useEffect } from "react";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
@@ -103,33 +104,10 @@ export default function EditTemplatePage() {
       router.push(`/inspections/templates/${updatedTemplate.id}`);
     },
 
-    onError: (error: any) => {
-      const errorData = error.response?.data;
-      let errorMessage = "Failed to update template";
-
-      if (errorData) {
-        if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } else if (typeof errorData === "string") {
-          errorMessage = errorData;
-        } else if (typeof errorData === "object") {
-          // Format all validation errors with user-friendly messages
-          const errors = Object.entries(errorData)
-
-            .map(([field, messages]: [string, any]) => {
-              const msg = Array.isArray(messages) ? messages.join(", ") : String(messages);
-              // Capitalize field name and format nicely
-              const fieldLabel = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, " ");
-              return `${fieldLabel}: ${msg}`;
-            })
-            .join("; ");
-          errorMessage = errors || errorMessage;
-        }
-      }
-
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: errorMessage,
+        description: getApiErrorMessage(error, "Failed to update template"),
         variant: "destructive",
       });
     },
@@ -339,4 +317,3 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-

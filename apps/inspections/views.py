@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from django.db import transaction
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -78,7 +79,7 @@ class InspectionTemplateViewSet(viewsets.ModelViewSet):
         """Return appropriate permissions based on action"""
         if self.action == 'list' or self.action == 'retrieve' or self.action == 'active':
             return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('view_inspection_templates')]
-        elif self.action == 'create' or self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy' or self.action == 'set_default':
+        elif self.action == 'create' or self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy' or self.action == 'set_default' or self.action == 'duplicate':
             return [IsAuthenticated(), IsModuleEnabled('inspections'), HasPermission('manage_inspection_templates')]
         return [IsAuthenticated(), IsModuleEnabled('inspections')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -122,46 +123,62 @@ class InspectionTemplateViewSet(viewsets.ModelViewSet):
             serializer.save(template=template)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def _build_duplicate_template_name(self, original_name):
+        """Return a unique copy name that still fits the model field."""
+        for copy_number in range(1, 1000):
+            suffix = " (Copy)" if copy_number == 1 else f" (Copy {copy_number})"
+            candidate = f"{original_name[:200 - len(suffix)]}{suffix}"
+            if not InspectionTemplate.objects.filter(name=candidate).exists():
+                return candidate
+        return None
     
     @action(detail=True, methods=['post'])
     def duplicate(self, request, pk=None):
         """Duplicate a template with all categories and items"""
         original = self.get_object()
-        
-        # Create new template
-        new_template = InspectionTemplate.objects.create(
-            name=f"{original.name} (Copy)",
-            description=original.description,
-            is_active=original.is_active,
-            requires_odometer=original.requires_odometer,
-            requires_technician_signature=original.requires_technician_signature,
-            requires_customer_signature=original.requires_customer_signature,
-            allows_photos=original.allows_photos,
-            allows_video=original.allows_video,
-            created_by=request.user
-        )
-        
-        # Copy categories and items
-        for category in original.categories.all():
-            new_category = InspectionCategory.objects.create(
-                template=new_template,
-                name=category.name,
-                description=category.description,
-                order=category.order
+        duplicate_name = self._build_duplicate_template_name(original.name)
+        if not duplicate_name:
+            return Response(
+                {'error': 'Unable to create a unique template copy name'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-            
-            for item in category.items.all():
-                InspectionItem.objects.create(
-                    category=new_category,
-                    name=item.name,
-                    description=item.description,
-                    item_type=item.item_type,
-                    measurement_unit=item.measurement_unit,
-                    min_acceptable=item.min_acceptable,
-                    max_acceptable=item.max_acceptable,
-                    order=item.order,
-                    is_critical=item.is_critical
+        
+        with transaction.atomic():
+            new_template = InspectionTemplate.objects.create(
+                name=duplicate_name,
+                description=original.description,
+                is_active=original.is_active,
+                requires_odometer=original.requires_odometer,
+                requires_technician_signature=original.requires_technician_signature,
+                requires_customer_signature=original.requires_customer_signature,
+                allows_photos=original.allows_photos,
+                allows_video=original.allows_video,
+                created_by=request.user
+            )
+
+            for category in original.categories.prefetch_related('items'):
+                new_category = InspectionCategory.objects.create(
+                    template=new_template,
+                    name=category.name,
+                    description=category.description,
+                    order=category.order
                 )
+
+                InspectionItem.objects.bulk_create([
+                    InspectionItem(
+                        category=new_category,
+                        name=item.name,
+                        description=item.description,
+                        item_type=item.item_type,
+                        measurement_unit=item.measurement_unit,
+                        min_acceptable=item.min_acceptable,
+                        max_acceptable=item.max_acceptable,
+                        order=item.order,
+                        is_critical=item.is_critical
+                    )
+                    for item in category.items.all()
+                ])
         
         return Response({
             'message': 'Template duplicated successfully',
@@ -442,6 +459,16 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 {'error': 'Inspection already completed'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        if (
+            inspection.template.requires_odometer
+            and inspection.odometer_reading is None
+            and not inspection.odometer_unavailable
+        ):
+            return Response(
+                {'error': 'Odometer reading is required for this inspection template, or mark it unavailable'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Check if technician signature is required
         if inspection.template.requires_technician_signature:
@@ -466,6 +493,26 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         if checked_results_count == 0:
             return Response(
                 {'error': 'Cannot complete inspection with only unchecked items. Please record actual inspection results for at least some items.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        unchecked_critical_items = InspectionItem.objects.filter(
+            category__template=inspection.template,
+            is_critical=True,
+        ).exclude(
+            results__inspection=inspection,
+            results__result__in=['pass', 'fail', 'advisory', 'not_applicable'],
+        )
+        if unchecked_critical_items.exists():
+            item_names = list(unchecked_critical_items.values_list('name', flat=True)[:5])
+            suffix = '...' if unchecked_critical_items.count() > len(item_names) else ''
+            return Response(
+                {
+                    'error': (
+                        'Cannot complete inspection until all critical items are checked: '
+                        f"{', '.join(item_names)}{suffix}"
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -523,10 +570,22 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             # Allow but warn - this is informational, not blocking
             pass
         
-        # Save customer signature if provided
         customer_signature = request.data.get('customer_signature')
+        if inspection.template.requires_customer_signature and not (customer_signature or inspection.customer_signature):
+            return Response(
+                {'error': 'Customer signature is required for this inspection template'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if customer_signature:
             inspection.customer_signature = customer_signature
+            behalf_reason = request.data.get('approve_on_behalf_reason')
+            if behalf_reason:
+                audit_note = (
+                    "\n\nCustomer approval signed on behalf by "
+                    f"{request.user.get_full_name() or request.user.username}: {behalf_reason}"
+                )
+                inspection.notes = f"{inspection.notes or ''}{audit_note}"
         
         inspection.status = 'approved'
         inspection.approved_by = request.user
@@ -606,7 +665,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        saved_results = []
+        serializers_to_save = []
         errors = []
         
         for idx, result_data in enumerate(results_data):
@@ -637,8 +696,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 serializer = InspectionResultCreateSerializer(data=result_data)
             
             if serializer.is_valid():
-                serializer.save()
-                saved_results.append(InspectionResultSerializer(serializer.instance).data)
+                serializers_to_save.append(serializer)
             else:
                 errors.append({
                     'index': idx,
@@ -648,19 +706,20 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         
         if errors:
             return Response({
-                'saved': saved_results,
+                'saved': [],
                 'errors': errors
-            }, status=status.HTTP_207_MULTI_STATUS)  # Multi-Status for partial success
-        
-        # Recalculate overall_result if inspection is completed
-        inspection.refresh_from_db()
-        if inspection.status == 'completed':
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            saved_instances = [serializer.save() for serializer in serializers_to_save]
+
+            inspection.refresh_from_db()
             inspection.recalculate_overall_result()
             inspection.save(update_fields=['overall_result'])
         
         return Response({
-            'message': f'Successfully saved {len(saved_results)} results',
-            'results': saved_results
+            'message': f'Successfully saved {len(saved_instances)} results',
+            'results': InspectionResultSerializer(saved_instances, many=True).data
         }, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['post'])
@@ -746,7 +805,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def by_vehicle(self, request):
         """Get inspections for a specific vehicle"""
-        vehicle_id = request.query_params.get('vehicle_id')
+        vehicle_id = request.query_params.get('vehicle_id') or request.query_params.get('vehicle')
         
         if not vehicle_id:
             return Response(
@@ -754,7 +813,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        inspections = self.queryset.filter(vehicle_id=vehicle_id)
+        inspections = self.get_queryset().filter(vehicle_id=vehicle_id)
         page = self.paginate_queryset(inspections)
         
         if page is not None:
@@ -768,7 +827,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     def recent(self, request):
         """Get recent inspections (last 30 days)"""
         thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
-        inspections = self.queryset.filter(
+        inspections = self.get_queryset().filter(
             inspection_date__gte=thirty_days_ago
         )
         
@@ -783,22 +842,23 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Get inspection statistics"""
-        total = self.queryset.count()
-        completed = self.queryset.filter(status='completed').count()
-        in_progress = self.queryset.filter(status='in_progress').count()
+        queryset = self.get_queryset()
+        total = queryset.count()
+        completed = queryset.filter(status='completed').count()
+        in_progress = queryset.filter(status='in_progress').count()
         
         # Calculate pass rate
-        completed_inspections = self.queryset.filter(status='completed')
+        completed_inspections = queryset.filter(status='completed')
         passed = completed_inspections.filter(overall_result='pass').count()
         pass_rate = (passed / completed * 100) if completed > 0 else 0
         
         # Inspections by template
-        by_template = self.queryset.values('template__name').annotate(
+        by_template = queryset.values('template__name').annotate(
             count=Count('id')
         ).order_by('-count')
         
         # Recent inspections
-        recent = self.queryset.order_by('-inspection_date')[:10]
+        recent = queryset.order_by('-inspection_date')[:10]
         
         data = {
             'total_inspections': total,
@@ -817,7 +877,7 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         inspection = self.get_object()
         
         # Get previous inspection for same vehicle
-        previous = VehicleInspection.objects.filter(
+        previous = self.get_queryset().filter(
             vehicle=inspection.vehicle,
             inspection_date__lt=inspection.inspection_date,
             status='completed'
@@ -889,6 +949,23 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
     filterset_fields = ['inspection', 'result', 'condition', 'needs_immediate_attention']
     ordering_fields = ['created_at']
     ordering = ['inspection_item__category__order', 'inspection_item__order']
+
+    def get_queryset(self):
+        """Filter results by customer ownership or active/accessible branch."""
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            return queryset.filter(inspection__vehicle__owner=user.customer_profile)
+
+        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+        return filter_queryset_for_user_branches(
+            queryset,
+            user,
+            request=self.request,
+            use_active_branch=not show_all,
+            branch_lookup='inspection__branch',
+        )
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -899,6 +976,11 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
     def add_photo(self, request, pk=None):
         """Add photo to result"""
         result = self.get_object()
+        if not result.inspection.template.allows_photos:
+            return Response(
+                {'error': 'Photos are not allowed for this inspection template'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         serializer = InspectionPhotoSerializer(data=request.data)
         if serializer.is_valid():
@@ -909,9 +991,9 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def critical(self, request):
         """Get results for critical items that failed"""
-        results = self.queryset.filter(
+        results = self.get_queryset().filter(
             inspection_item__is_critical=True,
-            result__in=['fail', 'critical']
+            result='fail'
         )
         
         serializer = self.get_serializer(results, many=True)
@@ -920,7 +1002,7 @@ class InspectionResultViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def needs_attention(self, request):
         """Get all results that need immediate attention"""
-        results = self.queryset.filter(needs_immediate_attention=True)
+        results = self.get_queryset().filter(needs_immediate_attention=True)
         
         serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)

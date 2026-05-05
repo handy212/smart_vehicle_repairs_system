@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { inspectionsApi, VehicleInspection } from "@/lib/api/inspections";
 import { useOfflineStore } from "@/store/offlineStore";
 import { inspectionsDB } from "@/lib/offline/db";
@@ -14,11 +14,7 @@ export default function MobileInspectionsPage() {
   const [inspections, setInspections] = useState<VehicleInspection[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadInspections();
-  }, []);
-
-  const loadInspections = async () => {
+  const loadInspections = useCallback(async () => {
     setLoading(true);
     try {
       if (isOnline) {
@@ -40,7 +36,11 @@ export default function MobileInspectionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isOnline]);
+
+  useEffect(() => {
+    loadInspections();
+  }, [loadInspections]);
 
   if (loading) {
     return (

@@ -53,6 +53,15 @@ export interface InspectionPhoto {
   created_at: string;
 }
 
+export interface VehicleDamageMark {
+  id: string;
+  x: number;
+  y: number;
+  type: string;
+  severity: string;
+  description?: string;
+}
+
 export interface InspectionResult {
   id: number;
   inspection_item: number;
@@ -88,6 +97,8 @@ export interface VehicleInspection {
   template_name?: string;
   inspection_date: string;
   odometer_reading?: number;
+  odometer_unavailable?: boolean;
+  odometer_unavailable_reason?: string;
   status: "in_progress" | "completed" | "approved" | "rejected";
   status_display?: string;
   overall_result?: "pass" | "pass_with_advisory" | "fail" | "needs_attention";
@@ -101,7 +112,7 @@ export interface VehicleInspection {
   notes?: string;
   recommendations?: string;
 
-  vehicle_damage?: any[];
+  vehicle_damage?: VehicleDamageMark[];
   completed_at?: string;
   sent_to_customer_at?: string;
   results?: InspectionResult[];
@@ -133,6 +144,17 @@ export interface TemplateListResponse {
   next: string | null;
   previous: string | null;
   results: InspectionTemplate[];
+}
+
+export type InspectionCategoryPayload = Pick<InspectionCategory, "name"> &
+  Partial<Pick<InspectionCategory, "description" | "order">>;
+
+export type InspectionItemPayload = Pick<InspectionItem, "name"> &
+  Partial<Omit<InspectionItem, "id" | "name" | "item_type_display">>;
+
+export interface SaveInspectionResultsResponse {
+  message: string;
+  results: InspectionResult[];
 }
 
 // ============================================================================
@@ -174,13 +196,17 @@ export const inspectionsApi = {
       const response = await apiClient.post(`/inspections/templates/${id}/set_default/`);
       return response.data.template;
     },
+    duplicate: async (id: number): Promise<InspectionTemplate> => {
+      const response = await apiClient.post(`/inspections/templates/${id}/duplicate/`);
+      return response.data.template;
+    },
 
-    addCategory: async (id: number, data: { name: string; description?: string; order?: number }): Promise<any> => {
+    addCategory: async (id: number, data: InspectionCategoryPayload): Promise<InspectionCategory> => {
       const response = await apiClient.post(`/inspections/templates/${id}/add_category/`, data);
       return response.data;
     },
 
-    updateCategory: async (templateId: number, categoryId: number, data: any): Promise<any> => {
+    updateCategory: async (templateId: number, categoryId: number, data: Partial<InspectionCategoryPayload>): Promise<InspectionCategory> => {
       const response = await apiClient.patch(
         `/inspections/templates/${templateId}/update_category/`,
         { ...data, category_id: categoryId }
@@ -193,7 +219,7 @@ export const inspectionsApi = {
       });
     },
 
-    addItem: async (templateId: number, categoryId: number, data: any): Promise<any> => {
+    addItem: async (templateId: number, categoryId: number, data: InspectionItemPayload): Promise<InspectionItem> => {
       const response = await apiClient.post(
         `/inspections/templates/${templateId}/add_item/`,
         { ...data, category_id: categoryId }
@@ -201,7 +227,7 @@ export const inspectionsApi = {
       return response.data;
     },
 
-    updateItem: async (templateId: number, itemId: number, data: any): Promise<any> => {
+    updateItem: async (templateId: number, itemId: number, data: Partial<InspectionItemPayload>): Promise<InspectionItem> => {
       const response = await apiClient.patch(
         `/inspections/templates/${templateId}/update_item/`,
         { ...data, item_id: itemId }
@@ -249,13 +275,13 @@ export const inspectionsApi = {
     const response = await apiClient.post(`/inspections/inspections/${id}/complete/`, data || {});
     return response.data.inspection;
   },
-  approve: async (id: number, data?: { customer_signature?: string }): Promise<VehicleInspection> => {
+  approve: async (id: number, data?: { customer_signature?: string; approve_on_behalf_reason?: string }): Promise<VehicleInspection> => {
     const response = await apiClient.post(`/inspections/inspections/${id}/approve/`, data || {});
-    return response.data;
+    return response.data.inspection || response.data;
   },
-  reject: async (id: number): Promise<VehicleInspection> => {
-    const response = await apiClient.post(`/inspections/inspections/${id}/reject/`);
-    return response.data;
+  reject: async (id: number, data?: { reason?: string }): Promise<VehicleInspection> => {
+    const response = await apiClient.post(`/inspections/inspections/${id}/reject/`, data || {});
+    return response.data.inspection || response.data;
   },
   sendToCustomer: async (id: number, data?: { customer_signature?: string }): Promise<VehicleInspection> => {
     const response = await apiClient.post(`/inspections/inspections/${id}/send_to_customer/`, data || {});
@@ -263,9 +289,9 @@ export const inspectionsApi = {
   },
   byVehicle: async (vehicleId: number): Promise<VehicleInspection[]> => {
     const response = await apiClient.get(`/inspections/inspections/by_vehicle/`, {
-      params: { vehicle: vehicleId },
+      params: { vehicle_id: vehicleId },
     });
-    return response.data;
+    return response.data.results || response.data;
   },
 
   generateSummary: async (id: number): Promise<{ message: string; notes: string; recommendations: string }> => {
@@ -273,7 +299,7 @@ export const inspectionsApi = {
     return response.data;
   },
 
-  saveResults: async (id: number, results: Partial<InspectionResult>[]): Promise<any> => {
+  saveResults: async (id: number, results: Partial<InspectionResult>[]): Promise<SaveInspectionResultsResponse> => {
     const response = await apiClient.post(`/inspections/inspections/${id}/save_results/`, {
       results,
     });
@@ -309,4 +335,3 @@ export const inspectionsApi = {
     },
   },
 };
-

@@ -2,12 +2,16 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { inspectionsApi } from "@/lib/api/inspections";
+import {
+  InspectionCategory,
+  InspectionItem,
+  InspectionItemPayload,
+  inspectionsApi,
+} from "@/lib/api/inspections";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, Edit, Plus, Trash2, Settings, Folder, List } from "lucide-react";
+import { ArrowLeft, Copy, Edit, Folder, ListChecks, Plus, Ruler, ShieldAlert, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
@@ -29,10 +33,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+type EditableItemType = "pass_fail" | "measurement" | "percentage" | "rating" | "condition" | "text";
 
 export default function TemplateDetailPage() {
   const params = useParams();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -46,14 +52,14 @@ export default function TemplateDetailPage() {
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
-  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<InspectionCategory | null>(null);
 
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<InspectionItem | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
   const [itemName, setItemName] = useState("");
   const [itemDescription, setItemDescription] = useState("");
-  const [itemType, setItemType] = useState<"pass_fail" | "measurement" | "percentage" | "rating" | "condition" | "text">("pass_fail");
+  const [itemType, setItemType] = useState<EditableItemType>("pass_fail");
   const [itemMeasurementUnit, setItemMeasurementUnit] = useState("");
   const [itemMinAcceptable, setItemMinAcceptable] = useState("");
   const [itemMaxAcceptable, setItemMaxAcceptable] = useState("");
@@ -68,16 +74,6 @@ export default function TemplateDetailPage() {
       return inspectionsApi.templates.get(templateId);
     },
     enabled: isValidId && !!templateIdParam,
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const updateTemplateMutation = useMutation({
-
-    mutationFn: (data: any) => inspectionsApi.templates.update(templateId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["template", templateId] });
-      toast({ title: "Success", description: "Template updated", variant: "success" });
-    },
   });
 
   const addCategoryMutation = useMutation({
@@ -100,10 +96,30 @@ export default function TemplateDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to save category",
+        description: getApiErrorMessage(error, "Failed to save category"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const duplicateTemplateMutation = useMutation({
+    mutationFn: () => inspectionsApi.templates.duplicate(templateId),
+    onSuccess: (duplicatedTemplate) => {
+      queryClient.invalidateQueries({ queryKey: ["inspection-templates"] });
+      toast({
+        title: "Success",
+        description: "Template duplicated",
+        variant: "success",
+      });
+      router.push(`/inspections/templates/${duplicatedTemplate.id}`);
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to duplicate template"),
         variant: "destructive",
       });
     },
@@ -121,7 +137,7 @@ export default function TemplateDetailPage() {
 
   const addItemMutation = useMutation({
 
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: InspectionItemPayload) => {
       if (editingItem) {
         return inspectionsApi.templates.updateItem(templateId, editingItem.id, data);
       }
@@ -142,10 +158,45 @@ export default function TemplateDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to save item",
+        description: getApiErrorMessage(error, "Failed to save item"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const copyItemMutation = useMutation({
+    mutationFn: async ({ category, item }: { category: InspectionCategory; item: InspectionItem }) => {
+      const copyData: InspectionItemPayload = {
+        name: `${item.name} (Copy)`,
+        description: item.description || "",
+        item_type: item.item_type === "yes_no" ? "pass_fail" : item.item_type,
+        is_critical: item.is_critical,
+        order: category.items?.length || category.item_count || 0,
+      };
+
+      if (item.item_type === "measurement") {
+        copyData.measurement_unit = item.measurement_unit || "";
+        copyData.min_acceptable = item.min_acceptable;
+        copyData.max_acceptable = item.max_acceptable;
+      }
+
+      return inspectionsApi.templates.addItem(templateId, category.id, copyData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["template", templateId] });
+      toast({
+        title: "Success",
+        description: "Item copied",
+        variant: "success",
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to copy item"),
         variant: "destructive",
       });
     },
@@ -167,8 +218,7 @@ export default function TemplateDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["template", templateId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-templates"] });
       toast({ title: "Success", description: "Template set as default", variant: "success" });
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to set default", variant: "destructive" });
     }
   };
@@ -195,6 +245,56 @@ export default function TemplateDetailPage() {
   }
 
   const categories = template.categories || [];
+  const totalItems = categories.reduce(
+    (total, category) => total + (category.items?.length || category.item_count || 0),
+    0
+  );
+  const criticalItemCount = categories.reduce(
+    (total, category) =>
+      total + (category.items || []).filter((item) => item.is_critical).length,
+    0
+  );
+  const measurementItemCount = categories.reduce(
+    (total, category) =>
+      total + (category.items || []).filter((item) => item.item_type === "measurement").length,
+    0
+  );
+
+  const openNewItemDialog = (categoryId: number) => {
+    setSelectedCategoryId(categoryId);
+    setItemName("");
+    setItemDescription("");
+    setItemType("pass_fail");
+    setItemMeasurementUnit("");
+    setItemMinAcceptable("");
+    setItemMaxAcceptable("");
+    setItemIsCritical(false);
+    setEditingItem(null);
+    setShowItemDialog(true);
+  };
+
+  const buildItemPayload = (): InspectionItemPayload => {
+    const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
+    const itemData: InspectionItemPayload = {
+      name: itemName.trim(),
+      description: itemDescription.trim(),
+      item_type: itemType,
+      is_critical: itemIsCritical,
+      order: editingItem?.order ?? selectedCategory?.items?.length ?? selectedCategory?.item_count ?? 0,
+    };
+
+    if (itemType === "measurement") {
+      itemData.measurement_unit = itemMeasurementUnit.trim();
+      if (itemMinAcceptable.trim()) {
+        itemData.min_acceptable = parseFloat(itemMinAcceptable);
+      }
+      if (itemMaxAcceptable.trim()) {
+        itemData.max_acceptable = parseFloat(itemMaxAcceptable);
+      }
+    }
+
+    return itemData;
+  };
 
   return (
     <div className="space-y-6">
@@ -232,6 +332,14 @@ export default function TemplateDetailPage() {
               Set as Default
             </Button>
           )}
+          <Button
+            variant="secondary"
+            onClick={() => duplicateTemplateMutation.mutate()}
+            disabled={duplicateTemplateMutation.isPending}
+          >
+            <Copy className="w-4 h-4 mr-2" />
+            {duplicateTemplateMutation.isPending ? "Duplicating..." : "Duplicate"}
+          </Button>
           <Link href={`/inspections/templates/${templateId}/edit`}>
             <Button variant="secondary">
               <Edit className="w-4 h-4 mr-2" />
@@ -241,10 +349,13 @@ export default function TemplateDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Categories</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <ListChecks className="h-4 w-4" />
+              Categories
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{categories.length}</p>
@@ -256,7 +367,22 @@ export default function TemplateDetailPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{template.total_items || 0}</p>
+            <p className="text-2xl font-bold">{template.total_items || totalItems}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Critical Items
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{criticalItemCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {measurementItemCount} measurement checks
+            </p>
           </CardContent>
         </Card>
 
@@ -299,7 +425,7 @@ export default function TemplateDetailPage() {
           ) : (
             <Accordion type="multiple" className="w-full">
 
-              {categories.map((category: any) => (
+              {categories.map((category) => (
                 <AccordionItem key={category.id} value={`category-${category.id}`}>
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center justify-between w-full mr-4">
@@ -312,16 +438,7 @@ export default function TemplateDetailPage() {
                           className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-muted hover:text-foreground h-8 px-3 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedCategoryId(category.id);
-                            setItemName("");
-                            setItemDescription("");
-                            setItemType("pass_fail");
-                            setItemMeasurementUnit("");
-                            setItemMinAcceptable("");
-                            setItemMaxAcceptable("");
-                            setItemIsCritical(false);
-                            setEditingItem(null);
-                            setShowItemDialog(true);
+                            openNewItemDialog(category.id);
                           }}
                         >
                           <Plus className="w-4 h-4 mr-1" />
@@ -357,7 +474,7 @@ export default function TemplateDetailPage() {
                     <div className="space-y-2 pt-2">
                       {category.items && category.items.length > 0 ? (
 
-                        category.items.map((item: any) => (
+                        category.items.map((item) => (
                           <div
                             key={item.id}
                             className="flex items-center justify-between p-3 bg-muted rounded border border-border"
@@ -377,8 +494,28 @@ export default function TemplateDetailPage() {
                               {item.description && (
                                 <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                               )}
+                              {item.item_type === "measurement" && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <Ruler className="h-3.5 w-3.5" />
+                                  <span>{item.measurement_unit || "value"}</span>
+                                  {item.min_acceptable !== undefined && item.min_acceptable !== null && (
+                                    <span>Min {item.min_acceptable}</span>
+                                  )}
+                                  {item.max_acceptable !== undefined && item.max_acceptable !== null && (
+                                    <span>Max {item.max_acceptable}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyItemMutation.mutate({ category, item })}
+                                disabled={copyItemMutation.isPending}
+                              >
+                                <Copy className="w-4 h-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -387,7 +524,7 @@ export default function TemplateDetailPage() {
                                   setSelectedCategoryId(category.id);
                                   setItemName(item.name);
                                   setItemDescription(item.description || "");
-                                  setItemType(item.item_type);
+                                  setItemType(item.item_type === "yes_no" ? "pass_fail" : item.item_type);
                                   setItemMeasurementUnit(item.measurement_unit || "");
                                   setItemMinAcceptable(item.min_acceptable?.toString() || "");
                                   setItemMaxAcceptable(item.max_acceptable?.toString() || "");
@@ -530,7 +667,7 @@ export default function TemplateDetailPage() {
                 id="item-type"
                 value={itemType}
 
-                onChange={(e) => setItemType(e.target.value as any)}
+                onChange={(e) => setItemType(e.target.value as EditableItemType)}
                 className="w-full rounded-md border border-border px-3 py-2 text-sm mt-1"
               >
                 <option value="pass_fail">Pass/Fail</option>
@@ -614,20 +751,7 @@ export default function TemplateDetailPage() {
                 }
 
 
-                const itemData: any = {
-                  name: itemName,
-                  description: itemDescription || "",
-                  item_type: itemType,
-                  is_critical: itemIsCritical,
-                };
-
-                if (itemType === "measurement") {
-                  itemData.measurement_unit = itemMeasurementUnit || "";
-                  if (itemMinAcceptable) itemData.min_acceptable = parseFloat(itemMinAcceptable);
-                  if (itemMaxAcceptable) itemData.max_acceptable = parseFloat(itemMaxAcceptable);
-                }
-
-                addItemMutation.mutate(itemData);
+                addItemMutation.mutate(buildItemPayload());
               }}
               disabled={addItemMutation.isPending}
             >
@@ -639,4 +763,3 @@ export default function TemplateDetailPage() {
     </div>
   );
 }
-

@@ -2,10 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { inspectionsApi } from "@/lib/api/inspections";
+import { InspectionResult, inspectionsApi } from "@/lib/api/inspections";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, Download, CheckCircle, XCircle, AlertTriangle, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle, XCircle, AlertTriangle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -19,6 +18,7 @@ import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { useState, useRef } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function InspectionDetailPage() {
   const params = useParams();
@@ -55,18 +55,17 @@ export default function InspectionDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Approval Failed",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve inspection. Please try again.",
+        description: getApiErrorMessage(error, "Failed to approve inspection. Please try again."),
         variant: "destructive",
       });
     },
   });
 
   const rejectMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    mutationFn: (data?: { reason?: string }) => inspectionsApi.reject(inspectionId),
+    mutationFn: (data?: { reason?: string }) => inspectionsApi.reject(inspectionId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal", "inspection", inspectionId] });
       queryClient.invalidateQueries({ queryKey: ["portal", "history"] });
@@ -79,17 +78,20 @@ export default function InspectionDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Rejection Failed",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to reject inspection. Please try again.",
+        description: getApiErrorMessage(error, "Failed to reject inspection. Please try again."),
         variant: "destructive",
       });
     },
   });
 
   const handleApprove = () => {
-    if (!customerSignature) {
+    const customerSignatureRequired =
+      typeof inspection?.template === "object" && inspection.template.requires_customer_signature;
+
+    if (customerSignatureRequired && !customerSignature) {
       toast({
         title: "Signature Required",
         description: "Please provide your signature to approve the inspection",
@@ -97,7 +99,7 @@ export default function InspectionDetailPage() {
       });
       return;
     }
-    approveMutation.mutate({ customer_signature: customerSignature });
+    approveMutation.mutate(customerSignature ? { customer_signature: customerSignature } : undefined);
   };
 
   const handleReject = () => {
@@ -129,13 +131,13 @@ export default function InspectionDetailPage() {
 
   const results = inspection.results || [];
 
-  const criticalIssues = results.filter((r: any) => r.needs_immediate_attention || r.is_critical);
+  const failedItems = results.filter((r) => r.result === "fail");
 
-  const failedItems = results.filter((r: any) => r.result === "fail");
+  const advisoryItems = results.filter((r) => r.result === "advisory");
 
-  const advisoryItems = results.filter((r: any) => r.result === "advisory");
-
-  const passedItems = results.filter((r: any) => r.result === "pass");
+  const passedItems = results.filter((r) => r.result === "pass");
+  const customerSignatureRequired =
+    typeof inspection.template === "object" && inspection.template.requires_customer_signature;
 
   const getResultIcon = (result?: string) => {
     switch (result) {
@@ -152,9 +154,9 @@ export default function InspectionDetailPage() {
 
   // Group results by category
 
-  const resultsByCategory: Record<string, any[]> = {};
+  const resultsByCategory: Record<string, InspectionResult[]> = {};
 
-  results.forEach((result: any) => {
+  results.forEach((result) => {
     const category = result.category_name || "Other";
     if (!resultsByCategory[category]) {
       resultsByCategory[category] = [];
@@ -321,7 +323,7 @@ export default function InspectionDetailPage() {
                   <CardContent className="px-4 pb-3 pt-0">
                     <div className="space-y-2">
 
-                      {categoryResults.map((result: any) => (
+                      {categoryResults.map((result) => (
                         <div
                           key={result.id}
                           className={cn(
@@ -435,7 +437,9 @@ export default function InspectionDetailPage() {
           <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
             <DialogTitle className="text-lg font-semibold">Approve Inspection</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Please review the inspection results and provide your signature to approve.
+              {customerSignatureRequired
+                ? "Please review the inspection results and provide your signature to approve."
+                : "Please review the inspection results before approving."}
             </DialogDescription>
           </DialogHeader>
           <div className="px-4 sm:px-6 pb-4 space-y-4">
@@ -444,7 +448,7 @@ export default function InspectionDetailPage() {
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">
                   Your Signature
-                  <span className="text-destructive ml-1">*</span>
+                  {customerSignatureRequired && <span className="text-destructive ml-1">*</span>}
                 </Label>
                 {customerSignature && (
                   <Badge variant="outline" className="text-xs">
@@ -491,7 +495,9 @@ export default function InspectionDetailPage() {
               </div>
               {!customerSignature && (
                 <p className="text-xs text-muted-foreground">
-                  Please provide your signature to approve the inspection
+                  {customerSignatureRequired
+                    ? "Please provide your signature to approve the inspection"
+                    : "Signature is optional for this inspection template"}
                 </p>
               )}
             </div>
@@ -515,7 +521,7 @@ export default function InspectionDetailPage() {
               <Button
                 className="flex-1 sm:flex-none bg-success hover:bg-green-700 text-white"
                 onClick={handleApprove}
-                disabled={!customerSignature || approveMutation.isPending}
+                disabled={(customerSignatureRequired && !customerSignature) || approveMutation.isPending}
               >
                 {approveMutation.isPending ? (
                   <>

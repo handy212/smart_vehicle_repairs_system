@@ -22,16 +22,19 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRef } from "react";
 
+type InspectionResultUpdateValue = InspectionResult[keyof InspectionResult] | undefined | null;
+
 interface InspectionItemCardProps {
     item: InspectionItem;
     result: Partial<InspectionResult>;
 
-    onUpdate: (field: string, value: any) => void;
+    onUpdate: (field: string, value: InspectionResultUpdateValue) => void;
     onAddPhoto?: (itemId: number, file: File, resultId?: number) => void;
     onDeletePhoto?: (photoId: number) => void;
     showNotes: boolean;
     onToggleNotes: () => void;
     isCriticalRemaining: boolean;
+    allowPhotos?: boolean;
 }
 
 export function InspectionItemCard({
@@ -43,6 +46,7 @@ export function InspectionItemCard({
     showNotes,
     onToggleNotes,
     isCriticalRemaining,
+    allowPhotos = true,
 }: InspectionItemCardProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,22 +105,26 @@ export function InspectionItemCard({
                             <MessageSquare className="w-3 h-3 mr-1" />
                             Notes
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Camera className="w-3 h-3 mr-1" />
-                            Photo
-                        </Button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                        />
+                        {allowPhotos && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <Camera className="w-3 h-3 mr-1" />
+                                    Photo
+                                </Button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                />
+                            </>
+                        )}
                     </div>
                 </div>
 

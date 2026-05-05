@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export interface DamageMark {
   id: string;
@@ -149,7 +150,10 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
         <div
           ref={canvasRef}
           onClick={handleCanvasClick}
-          className="relative w-full aspect-video md:aspect-[21/9] border-2 border-border rounded-lg bg-card cursor-crosshair overflow-hidden"
+          className={cn(
+            "relative w-full aspect-[4961/3508] border-2 border-border rounded-lg bg-card overflow-hidden",
+            disabled ? "cursor-default" : "cursor-crosshair"
+          )}
         >
           {/* Loading Skeleton */}
           {imageLoading && !imageError && (
@@ -511,4 +515,3 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
     </Card>
   );
 }
-

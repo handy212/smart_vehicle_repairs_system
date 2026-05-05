@@ -143,6 +143,11 @@ class VehicleInspection(models.Model):
     # Inspection details
     inspection_date = models.DateTimeField(default=timezone.now)
     odometer_reading = models.PositiveIntegerField(null=True, blank=True)
+    odometer_unavailable = models.BooleanField(
+        default=False,
+        help_text="Odometer could not be read, e.g. accident vehicle or electrical issue"
+    )
+    odometer_unavailable_reason = models.TextField(blank=True)
     
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
@@ -238,7 +243,7 @@ class VehicleInspection(models.Model):
         template_items = InspectionItem.objects.filter(category__template=self.template).count()
         if template_items == 0:
             return 0
-        completed_items = self.results.count()
+        completed_items = self.results.exclude(result='not_checked').count()
         return int((completed_items / template_items) * 100)
     
     @property

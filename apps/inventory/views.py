@@ -1771,7 +1771,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def pending(self, request):
         """Get all pending purchase orders (pending approval, approved, or confirmed)"""
-        orders = self.queryset.filter(status__in=['pending_approval', 'approved', 'confirmed'])
+        orders = self.get_queryset().filter(status__in=['pending_approval', 'approved', 'confirmed'])
         page = self.paginate_queryset(orders)
         if page is not None:
             serializer = PurchaseOrderListSerializer(page, many=True)
@@ -1783,7 +1783,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     def overdue(self, request):
         """Get overdue purchase orders"""
         today = date.today()
-        orders = self.queryset.filter(
+        orders = self.get_queryset().filter(
             status__in=['pending_approval', 'approved', 'confirmed'],
             expected_delivery_date__lt=today
         )

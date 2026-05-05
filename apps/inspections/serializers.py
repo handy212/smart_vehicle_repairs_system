@@ -184,6 +184,7 @@ class VehicleInspectionListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'inspection_number', 'vehicle', 'vehicle_info',
             'template_name', 'inspection_date', 'odometer_reading',
+            'odometer_unavailable', 'odometer_unavailable_reason',
             'status', 'status_display', 'overall_result', 'overall_result_display',
             'performed_by_name', 'result_counts', 'completion_percentage',
             'created_at'
@@ -246,6 +247,7 @@ class VehicleInspectionDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'inspection_number', 'vehicle', 'vehicle_info', 'work_order',
             'work_order_number', 'template', 'inspection_date', 'odometer_reading',
+            'odometer_unavailable', 'odometer_unavailable_reason',
             'status', 'status_display', 'overall_result', 'overall_result_display',
             'performed_by', 'performed_by_name', 'approved_by', 'approved_by_name',
             'technician_signature', 'customer_signature', 'notes', 'recommendations',
@@ -329,7 +331,8 @@ class VehicleInspectionCreateSerializer(serializers.ModelSerializer):
         model = VehicleInspection
         fields = [
             'vehicle', 'work_order', 'template', 'inspection_date',
-            'odometer_reading', 'notes'
+            'odometer_reading', 'odometer_unavailable',
+            'odometer_unavailable_reason', 'notes'
         ]
     
     def validate_vehicle(self, value):
@@ -413,6 +416,19 @@ class VehicleInspectionCreateSerializer(serializers.ModelSerializer):
         
         # Validate odometer reading
         odometer_reading = data.get('odometer_reading')
+        odometer_unavailable = data.get('odometer_unavailable', False)
+        template = data.get('template')
+        if odometer_reading is not None:
+            data['odometer_unavailable'] = False
+            data['odometer_unavailable_reason'] = ''
+        elif odometer_unavailable and not data.get('odometer_unavailable_reason'):
+            data['odometer_unavailable_reason'] = 'Odometer reading skipped: vehicle condition prevents reading.'
+
+        if template and template.requires_odometer and odometer_reading is None and not odometer_unavailable:
+            raise serializers.ValidationError({
+                'odometer_reading': 'Odometer reading is required for this inspection template, or mark it unavailable.'
+            })
+
         if vehicle and odometer_reading is not None:
             if vehicle.current_mileage and odometer_reading < vehicle.current_mileage:
                 raise serializers.ValidationError({
@@ -433,12 +449,20 @@ class VehicleInspectionUpdateSerializer(serializers.ModelSerializer):
         model = VehicleInspection
         fields = [
             'inspection_date', 'odometer_reading', 'status', 'overall_result',
+            'odometer_unavailable', 'odometer_unavailable_reason',
             'technician_signature', 'customer_signature', 'notes', 'recommendations',
             'vehicle_damage'
         ]
 
     def validate(self, data):
         odometer_reading = data.get('odometer_reading')
+        odometer_unavailable = data.get('odometer_unavailable')
+        if odometer_reading is not None:
+            data['odometer_unavailable'] = False
+            data['odometer_unavailable_reason'] = ''
+        elif odometer_unavailable and not data.get('odometer_unavailable_reason'):
+            data['odometer_unavailable_reason'] = 'Odometer reading skipped: vehicle condition prevents reading.'
+
         if odometer_reading is not None and self.instance and self.instance.vehicle:
             vehicle = self.instance.vehicle
             if vehicle.current_mileage and odometer_reading < vehicle.current_mileage:

@@ -14,8 +14,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useState } from "react";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
@@ -65,38 +64,11 @@ export default function NewTemplatePage() {
       router.push(`/inspections/templates/${template.id}`);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Template creation error:", error);
-      console.error("Error response data:", JSON.stringify(error.response?.data, null, 2));
-      console.error("Error response status:", error.response?.status);
-      console.error("Error response headers:", error.response?.headers);
-
-      const errorData = error.response?.data;
-      let errorMessage = "Failed to create template";
-
-      if (errorData) {
-        if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } else if (typeof errorData === "string") {
-          errorMessage = errorData;
-        } else if (typeof errorData === "object") {
-          // Format all validation errors with user-friendly messages
-          const errors = Object.entries(errorData)
-
-            .map(([field, messages]: [string, any]) => {
-              const msg = Array.isArray(messages) ? messages.join(", ") : String(messages);
-              // Capitalize field name and format nicely
-              const fieldLabel = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, " ");
-              return `${fieldLabel}: ${msg}`;
-            })
-            .join("; ");
-          errorMessage = errors || errorMessage;
-        }
-      }
-
       toast({
         title: "Error",
-        description: errorMessage,
+        description: getApiErrorMessage(error, "Failed to create template"),
         variant: "destructive",
       });
     },
@@ -272,4 +244,3 @@ export default function NewTemplatePage() {
     </div>
   );
 }
-

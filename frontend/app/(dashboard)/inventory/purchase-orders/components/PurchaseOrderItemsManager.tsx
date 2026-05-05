@@ -9,16 +9,26 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { Trash2, Plus, Search, DollarSign, Package, Pencil, CheckCircle, X } from "lucide-react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getApiErrorMessage } from "@/lib/api/errors";
 interface PurchaseOrderItemsManagerProps {
     purchaseOrder: PurchaseOrder;
 }
+
+type OrderablePart = {
+    id: number;
+    name: string;
+    part_number: string;
+    category_name?: string;
+    cost_price?: string;
+    quantity_in_stock: number;
+};
+
+type PurchaseOrderItemPayload = Pick<PurchaseOrderItem, "part" | "quantity"> &
+    Partial<Pick<PurchaseOrderItem, "unit_cost">>;
 
 export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrderItemsManagerProps) {
     const { formatCurrency } = useCurrency();
@@ -26,21 +36,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
     const queryClient = useQueryClient();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-
-    const [selectedPart, setSelectedPart] = useState<any>(null);
-    const [quantity, setQuantity] = useState(1);
-    const [unitCost, setUnitCost] = useState("");
-
-    // Component manages search state locally via handleSearch
-    // Fallback if hook not available, assume parent handles or we use raw api
-    // Actually, let's implement the search inside the dialog using basic fetch for now since we don't have a custom hook exposed in context here easily, 
-    // OR better: useQuery. But wait, we need to search parts.
-
-    // Let's defer part search logic to a simpler implementation or reuse existing components if available.
-    // For now, I will implement a simple search input that fetches parts.
-
-
-    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchResults, setSearchResults] = useState<OrderablePart[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [editingItemId, setEditingItemId] = useState<number | null>(null);
     const [editQuantity, setEditQuantity] = useState(1);
@@ -65,19 +61,19 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
     };
 
     const addItemMutation = useMutation({
-        mutationFn: (itemData: Partial<PurchaseOrderItem>) =>
+        mutationFn: (itemData: PurchaseOrderItemPayload) =>
             inventoryApi.addPurchaseOrderItem(purchaseOrder.id, itemData),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-order", purchaseOrder.id] });
             toast({ title: "Success", description: "Item added successfully" });
-            {/* Keep dialog open for multiple additions */ }
-            resetForm();
+            setSearchQuery("");
+            setSearchResults([]);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to add item",
+                description: getApiErrorMessage(error, "Failed to add item"),
                 variant: "destructive",
             });
         },
@@ -91,10 +87,10 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
             toast({ title: "Success", description: "Item removed successfully" });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to remove item",
+                description: getApiErrorMessage(error, "Failed to remove item"),
                 variant: "destructive",
             });
         },
@@ -109,33 +105,14 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
             setEditingItemId(null);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to update item",
+                description: getApiErrorMessage(error, "Failed to update item"),
                 variant: "destructive",
             });
         },
     });
-
-    const resetForm = () => {
-        setSelectedPart(null);
-        setQuantity(1);
-        setUnitCost("");
-        setSearchQuery("");
-        setSearchResults([]);
-    }
-
-
-    const handleAddItem = () => {
-        if (!selectedPart) return;
-        addItemMutation.mutate({
-            part: selectedPart.id,
-            quantity: quantity,
-            unit_cost: unitCost || selectedPart.cost_price,
-
-        } as any);
-    };
 
     return (
         <div className="space-y-4">
@@ -187,7 +164,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
 
                             {searchResults.length === 0 && !isSearching && searchQuery && (
                                 <div className="text-center py-12 text-muted-foreground">
-                                    No parts found matching "{searchQuery}"
+                                    No parts found matching &quot;{searchQuery}&quot;
                                 </div>
                             )}
 
@@ -247,10 +224,10 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                                         {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
                                                     </span>
 
-                                                    {typeof item.part === 'object' && (item.part as any).category_name && (
+                                                    {typeof item.part === 'object' && item.part.category_name && (
                                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-muted border-border">
 
-                                                            {(item.part as any).category_name}
+                                                            {item.part.category_name}
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -372,7 +349,15 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
 }
 
 
-function SearchResultItem({ part, onAdd, isAdding }: { part: any, onAdd: (data: any) => void, isAdding: boolean }) {
+function SearchResultItem({
+    part,
+    onAdd,
+    isAdding
+}: {
+    part: OrderablePart;
+    onAdd: (data: PurchaseOrderItemPayload) => void;
+    isAdding: boolean;
+}) {
     const { formatCurrency } = useCurrency();
     const [isExpanded, setIsExpanded] = useState(false);
     const [quantity, setQuantity] = useState(1);

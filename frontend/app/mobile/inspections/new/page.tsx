@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function NewInspectionPage() {
   const router = useRouter();
@@ -78,11 +79,11 @@ export default function NewInspectionPage() {
         router.push("/mobile/inspections");
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to create inspection:", error);
       toast({
         title: "Error",
-        description: error?.message || "Failed to create inspection",
+        description: getApiErrorMessage(error, "Failed to create inspection"),
         variant: "destructive",
       });
     } finally {

@@ -1,21 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi, PurchaseOrder, PurchaseOrderItem } from "@/lib/api/inventory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Package, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Package, CheckCircle, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 interface ReceiveItemsDialogProps {
     purchaseOrder: PurchaseOrder;
@@ -29,7 +27,6 @@ interface ItemReceiveState {
 
 export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Receive Items" }: ReceiveItemsDialogProps) {
 
-    const { formatCurrency } = useCurrency();
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const { activeBranch } = useBranchStore();
@@ -46,29 +43,18 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
 
     const unreceivedItems = purchaseOrder.items?.filter((item) => getRemainingQuantity(item) > 0) || [];
 
-    // Initialize item states when dialog opens
-    useEffect(() => {
-        if (isOpen && unreceivedItems && unreceivedItems.length > 0) {
-            setItemStates((prev) => {
-                const newStates: Record<number, ItemReceiveState> = {};
-                unreceivedItems.forEach((item) => {
-                    const remaining = getRemainingQuantity(item);
-                    // Preserve existing notes if actively editing, but otherwise reset/update quantity
-                    // actually, better to just reset to ensure fresh data after a receive action
-                    newStates[item.id] = {
-                        quantityToReceive: remaining,
-                        notes: prev[item.id]?.notes || "",
-                    };
-                });
-                return newStates;
-            });
-
-            // Only reset global notes if we are opening fresh, not on re-renders
-            // But we can't easily distinguish. 
-            // Let's rely on the user clearing it if they want, or just leave it.
-            // setGlobalNotes(""); 
-        }
-    }, [isOpen, purchaseOrder.items]);
+    const openDialog = () => {
+        const newStates: Record<number, ItemReceiveState> = {};
+        unreceivedItems.forEach((item) => {
+            newStates[item.id] = {
+                quantityToReceive: getRemainingQuantity(item),
+                notes: "",
+            };
+        });
+        setItemStates(newStates);
+        setGlobalNotes("");
+        setIsOpen(true);
+    };
 
     const updateItemQuantity = (itemId: number, quantity: number) => {
         const item = unreceivedItems.find((i) => i.id === itemId);
@@ -82,17 +68,6 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
             [itemId]: {
                 ...prev[itemId],
                 quantityToReceive: validQuantity,
-            },
-        }));
-    };
-
-
-    const updateItemNotes = (itemId: number, notes: string) => {
-        setItemStates((prev) => ({
-            ...prev,
-            [itemId]: {
-                ...prev[itemId],
-                notes,
             },
         }));
     };
@@ -117,23 +92,11 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
             });
         },
 
-        onError: (error: any) => {
-            const errorData = error.response?.data;
-            let errorMessage = "Failed to receive item";
+        onError: (error: unknown) => {
+            let errorMessage = getApiErrorMessage(error, "Failed to receive item");
 
-            if (errorData) {
-                if (errorData.error) {
-                    errorMessage = errorData.error;
-                    if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('branch')) {
-                        errorMessage = `⚠️ ${errorMessage} Please ensure the purchase order has a branch assigned.`;
-                    }
-                } else if (errorData.detail) {
-                    errorMessage = errorData.detail;
-                } else if (errorData.non_field_errors) {
-                    errorMessage = Array.isArray(errorData.non_field_errors)
-                        ? errorData.non_field_errors[0]
-                        : errorData.non_field_errors;
-                }
+            if (errorMessage.toLowerCase().includes('branch')) {
+                errorMessage = `${errorMessage} Please ensure the purchase order has a branch assigned.`;
             }
 
             toast({
@@ -207,7 +170,7 @@ export default function ReceiveItemsDialog({ purchaseOrder, triggerLabel = "Rece
 
     return (
         <>
-            <Button size="sm" className="h-9" onClick={() => setIsOpen(true)}>
+            <Button size="sm" className="h-9" onClick={openDialog}>
                 <Package className="w-4 h-4 mr-2" />
                 {triggerLabel}
             </Button>

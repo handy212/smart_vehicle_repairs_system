@@ -5,27 +5,21 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inspectionsApi, InspectionResult } from "@/lib/api/inspections";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Input } from "@/components/ui/input";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, CheckCircle, Save, AlertCircle, X } from "lucide-react";
+import { CheckCircle, Save, AlertCircle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { VehicleDamageMarker, DamageMark } from "@/components/inspections/VehicleDamageMarker";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { InspectionItemCard } from "@/components/inspections/InspectionItemCard";
 import { InspectionItemRow } from "@/components/inspections/InspectionItemRow";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+type InspectionResultUpdateValue = InspectionResult[keyof InspectionResult] | undefined | null;
 
 export default function PerformInspectionPage() {
   const params = useParams();
@@ -56,7 +50,8 @@ export default function PerformInspectionPage() {
     template ||
     (typeof inspection?.template === "object" ? inspection.template : null);
 
-  const categories = templateData?.categories || [];
+  const categories = useMemo(() => templateData?.categories || [], [templateData]);
+  const allowsPhotos = templateData?.allows_photos !== false;
 
   /* --------------------- Local State -------------------------- */
   const [results, setResults] = useState<Record<
@@ -72,26 +67,23 @@ export default function PerformInspectionPage() {
 
   useEffect(() => {
     if (categories.length && !activeTab) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(categories[0]?.id.toString());
     }
-  }, [categories]);
+  }, [categories, activeTab]);
 
   /* --------------------- Initialize Results -------------------- */
   useEffect(() => {
     if (!inspection?.results) return;
 
     const prefill: Record<number, Partial<InspectionResult>> = {};
-    const notesVisibility: Record<number, boolean> = {};
 
     inspection.results.forEach((r) => {
       if (!r.inspection_item) return;
       prefill[r.inspection_item] = { ...r };
-      // Show notes field if notes exist OR if we already have it shown in state
-      if (r.notes || showNotes[r.inspection_item]) {
-        notesVisibility[r.inspection_item] = true;
-      }
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResults((prev) => {
       // Merge with existing results to preserve unsaved changes
       const merged = { ...prefill };
@@ -109,13 +101,11 @@ export default function PerformInspectionPage() {
     // Only update showNotes if we're adding new ones, don't reset existing state
     setShowNotes((prev) => {
       const updated = { ...prev };
-      if (inspection?.results) {
-        inspection.results.forEach((r) => {
-          if (r.inspection_item && (r.notes || updated[r.inspection_item])) {
-            updated[r.inspection_item] = true;
-          }
-        });
-      }
+      inspection.results?.forEach((r) => {
+        if (r.inspection_item && (r.notes || updated[r.inspection_item])) {
+          updated[r.inspection_item] = true;
+        }
+      });
       return updated;
     });
   }, [inspection]);
@@ -123,6 +113,7 @@ export default function PerformInspectionPage() {
   /* --------------------- Initialize Vehicle Damage -------------------- */
   useEffect(() => {
     if (inspection?.vehicle_damage && Array.isArray(inspection.vehicle_damage)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVehicleDamage(inspection.vehicle_damage as DamageMark[]);
     }
   }, [inspection]);
@@ -135,10 +126,10 @@ export default function PerformInspectionPage() {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to save results",
+        description: getApiErrorMessage(error, "Failed to save results"),
         variant: "destructive",
       });
     },
@@ -169,10 +160,10 @@ export default function PerformInspectionPage() {
       router.push(`/inspections/${inspectionId}`);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to complete inspection",
+        description: getApiErrorMessage(error, "Failed to complete inspection"),
         variant: "destructive",
       });
     },
@@ -180,10 +171,14 @@ export default function PerformInspectionPage() {
 
   /* --------------------- Helpers ------------------------------- */
 
-  const updateResult = (itemId: number, field: string, value: any) => {
+  const updateResult = (itemId: number, field: string, value: InspectionResultUpdateValue) => {
     setResults((p) => ({
       ...p,
-      [itemId]: { ...p[itemId], inspection_item: itemId, [field]: value },
+      [itemId]: {
+        ...(p[itemId] as Record<string, InspectionResultUpdateValue>),
+        inspection_item: itemId,
+        [field]: value,
+      },
     }));
   };
 
@@ -210,10 +205,10 @@ export default function PerformInspectionPage() {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.vehicle_damage?.[0] || error.message || "Failed to save vehicle damage",
+        description: getApiErrorMessage(error, "Failed to save vehicle damage"),
         variant: "destructive",
       });
     },
@@ -227,12 +222,11 @@ export default function PerformInspectionPage() {
         // Create result first
         const response = await inspectionsApi.saveResults(inspectionId, [{
           inspection_item: itemId,
-
-          result: (results[itemId]?.result as any) || 'not_checked'
+          result: results[itemId]?.result || 'not_checked'
         }]);
 
 
-        targetResultId = response.results?.find((r: any) => r.inspection_item === itemId)?.id;
+        targetResultId = response.results?.find((result) => result.inspection_item === itemId)?.id;
       }
 
       if (!targetResultId) throw new Error("Could not prepare result for photo upload");
@@ -273,41 +267,11 @@ export default function PerformInspectionPage() {
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const hasDamageChanged = () => {
-    const currentDamage = inspection?.vehicle_damage || [];
-    if (currentDamage.length !== vehicleDamage.length) return true;
-
-    // Create maps for easier comparison
-    const currentMap = new Map((currentDamage as DamageMark[]).map(m => [m.id, m]));
-    const newMap = new Map(vehicleDamage.map(m => [m.id, m]));
-
-    // Check if any marks were added, removed, or changed
-    if (currentMap.size !== newMap.size) return true;
-
-    for (const [id, mark] of newMap) {
-      const currentMark = currentMap.get(id);
-      if (!currentMark) return true; // New mark added
-      // Compare mark properties
-      if (
-        currentMark.type !== mark.type ||
-        currentMark.severity !== mark.severity ||
-        currentMark.x !== mark.x ||
-        currentMark.y !== mark.y ||
-        (currentMark.description || '') !== (mark.description || '')
-      ) {
-        return true;
-      }
-    }
-
-    return false;
-  };
-
   const save = async () => {
     const payload = getFilledResults();
     let hasChanges = false;
 
-    const promises: Promise<any>[] = [];
+    const promises: Promise<unknown>[] = [];
 
     // Save inspection results if any
     if (payload.length > 0) {
@@ -347,24 +311,39 @@ export default function PerformInspectionPage() {
         variant: "success",
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Save error:", error);
       toast({
         title: "Error",
-        description: error?.response?.data?.error || error?.message || "Failed to save changes",
+        description: getApiErrorMessage(error, "Failed to save changes"),
         variant: "destructive",
       });
     }
   };
 
+  const isCheckedResult = (result?: Partial<InspectionResult>) => {
+    if (!result) return false;
+    if (result.result && result.result !== "not_checked") return true;
+    return (
+      result.measurement_value !== undefined ||
+      result.percentage_value !== undefined ||
+      result.rating_value !== undefined ||
+      !!result.condition ||
+      !!result.text_note
+    );
+  };
+
+  const checkedResultCount = () => {
+    const allItems = categories.flatMap((cat) => cat.items || []);
+    return allItems.filter((item) => isCheckedResult(results[item.id])).length;
+  };
+
   const validateCriticalItems = () => {
     const allItems = categories.flatMap((cat) => cat.items || []);
     const criticalItems = allItems.filter((item) => item.is_critical);
-    const filledResults = getFilledResults();
-    const filledItemIds = new Set(filledResults.map((r) => r.inspection_item));
 
     const uncheckedCriticalItems = criticalItems.filter(
-      (item) => !filledItemIds.has(item.id)
+      (item) => !isCheckedResult(results[item.id])
     );
 
     return uncheckedCriticalItems;
@@ -392,7 +371,7 @@ export default function PerformInspectionPage() {
     }
 
     // Save vehicle damage before completing
-    saveDamageMutation.mutate(vehicleDamage);
+    await saveDamageMutation.mutateAsync(vehicleDamage);
 
     // Check if signature is required
     if (templateData?.requires_technician_signature) {
@@ -482,7 +461,7 @@ export default function PerformInspectionPage() {
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Checks Done</span>
-                <span className="text-sm font-semibold text-foreground">{getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}</span>
+                <span className="text-sm font-semibold text-foreground">{checkedResultCount()} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}</span>
               </div>
             </div>
             <Progress value={inspection.completion_percentage} className="h-1.5 bg-muted" />
@@ -556,7 +535,7 @@ export default function PerformInspectionPage() {
                     item={item}
                     result={results[item.id] || {}}
 
-                    onUpdate={(field: string, value: any) => updateResult(item.id, field, value)}
+                    onUpdate={(field: string, value: InspectionResultUpdateValue) => updateResult(item.id, field, value)}
                     onAddPhoto={(itemId: number, file: File, resultId?: number) => {
                       addPhotoMutation.mutate({ itemId, file, resultId });
                     }}
@@ -565,6 +544,7 @@ export default function PerformInspectionPage() {
                     onToggleNotes={() => setShowNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
                     isCriticalRemaining={item.is_critical && !results[item.id]?.result}
                     isLast={index === (cat.items || []).length - 1}
+                    allowPhotos={allowsPhotos}
                   />
                 ))}
               </div>
@@ -661,7 +641,7 @@ export default function PerformInspectionPage() {
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Items Checked</p>
                 <p className="text-base font-semibold">
-                  {getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}
+                  {checkedResultCount()} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}
                 </p>
               </div>
             </div>

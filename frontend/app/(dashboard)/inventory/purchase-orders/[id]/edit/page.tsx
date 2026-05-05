@@ -1,14 +1,12 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { inventoryApi, PurchaseOrder, PurchaseOrderItem } from "@/lib/api/inventory";
+import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
 import PurchaseOrderItemsManager from "../../components/PurchaseOrderItemsManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +23,7 @@ import {
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const formSchema = z.object({
     supplier: z.string().min(1, "Supplier is required"),
@@ -81,7 +80,7 @@ export default function EditPurchaseOrderPage() {
     const updateMutation = useMutation({
         mutationFn: (data: Partial<PurchaseOrder>) => inventoryApi.updatePurchaseOrder(id, data),
 
-        onSuccess: (data) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
             queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
             toast({
@@ -91,10 +90,10 @@ export default function EditPurchaseOrderPage() {
             router.push(`/inventory/purchase-orders/${id}`);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to update purchase order",
+                description: getApiErrorMessage(error, "Failed to update purchase order"),
                 variant: "destructive",
             });
         },
