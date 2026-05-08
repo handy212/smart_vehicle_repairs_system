@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,7 +57,7 @@ export default function EditGatePassPage() {
         register,
         handleSubmit,
         formState: { errors, isSubmitting },
-        watch,
+        control,
         setValue,
         reset,
     } = useForm<GatePassFormData>({
@@ -118,7 +118,8 @@ export default function EditGatePassPage() {
         updateMutation.mutate(data);
     };
 
-    const pickedUpByCustomer = watch("picked_up_by_customer");
+    const pickedUpByCustomer = useWatch({ control, name: "picked_up_by_customer" });
+    const pickupPersonIdType = useWatch({ control, name: "pickup_person_id_type" });
 
     if (isLoading) {
         return (
@@ -153,8 +154,8 @@ export default function EditGatePassPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
-            <div className="flex items-center gap-4">
+        <div className="space-y-4">
+            <div className="flex items-center gap-3">
                 <Link href={`/gatepass/${gatePassId}`}>
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="w-4 h-4 mr-2" />
@@ -162,22 +163,22 @@ export default function EditGatePassPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                    <h1 className="text-xl font-semibold tracking-tight text-foreground">
                         Edit Gate Pass: {gatePass.gate_pass_number}
                     </h1>
                     <p className="text-sm text-muted-foreground">Update pickup details</p>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <Card className="border-t-4 border-t-primary shadow-md hover:shadow-lg transition-shadow duration-200">
-                    <CardHeader>
-                        <CardTitle>Pickup Information</CardTitle>
-                        <CardDescription>Who is picking up the vehicle?</CardDescription>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <Card className="border-border shadow-sm">
+                    <CardHeader className="px-4 py-3">
+                        <CardTitle className="text-sm font-semibold">Pickup Information</CardTitle>
+                        <CardDescription className="text-xs">Who is picking up the vehicle?</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-3 px-4 pb-4">
                         <div className="space-y-2">
-                            <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg border border-border">
+                            <div className="flex items-center space-x-2 rounded-md border border-border bg-muted/40 p-3">
                                 <input
                                     type="checkbox"
                                     id="picked_up_by_customer"
@@ -191,7 +192,7 @@ export default function EditGatePassPage() {
                             </div>
                         </div>
 
-                        <div className={`space-y-4 transition-all duration-300 ${pickedUpByCustomer ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
+                        <div className={`space-y-3 transition-opacity ${pickedUpByCustomer ? 'pointer-events-none opacity-50' : 'opacity-100'}`}>
                             <div className="space-y-2">
                                 <Label htmlFor="pickup_person_name">
                                     Pickup Person Name {pickedUpByCustomer ? "" : "*"}
@@ -218,11 +219,11 @@ export default function EditGatePassPage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="pickup_person_id_type">ID Type</Label>
                                     <Select
-                                        value={watch("pickup_person_id_type") || ""}
+                                        value={pickupPersonIdType || ""}
                                         onValueChange={(value) => setValue("pickup_person_id_type", value)}
                                         disabled={pickedUpByCustomer}
                                     >
@@ -273,7 +274,7 @@ export default function EditGatePassPage() {
                 </Card>
 
                 {serverError && (
-                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded flex items-start gap-2">
+                    <div className="flex items-start gap-2 rounded border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive">
                         <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                         <div>
                             <p className="font-medium">Error</p>
@@ -282,7 +283,7 @@ export default function EditGatePassPage() {
                     </div>
                 )}
 
-                <div className="flex justify-end gap-3">
+                <div className="flex justify-end gap-2">
                     <Link href={`/gatepass/${gatePassId}`}>
                         <Button type="button" variant="outline">
                             Cancel

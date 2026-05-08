@@ -4,7 +4,8 @@ import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Eye, EyeOff } from "lucide-react";
 import { SystemSetting } from "@/lib/api/admin";
 import { cn } from "@/lib/utils/cn";
 
@@ -23,6 +24,7 @@ interface IntegrationFieldProps {
   error?: string | null;
   prefix?: string;
   showKey?: boolean;
+  deferSave?: boolean;
 }
 
 export function IntegrationField({
@@ -40,6 +42,7 @@ export function IntegrationField({
   error,
   prefix = "",
   showKey = false,
+  deferSave = false,
 }: IntegrationFieldProps) {
   const pendingChanges = value !== (setting.value ?? "");
   const label = setting.display_name || humanizeKey(setting.key, prefix);
@@ -88,19 +91,15 @@ export function IntegrationField({
         <div className="flex-1 flex items-center gap-2">
           <div className="flex-1 min-w-0">
             {isEnabledToggle ? (
-              <div className="flex items-center gap-2 h-8">
-                <Checkbox
-                  checked={isTruthy(value)}
-                  onCheckedChange={(checked) =>
-                    onChange(checked ? "true" : "false")
-                  }
-                  disabled={!canManage}
-                  className="h-4 w-4"
-                />
-                <span className="text-xs text-muted-foreground font-semibold">
-                  {isTruthy(value) ? "Enabled" : "Disabled"}
-                </span>
-              </div>
+              <Select value={isTruthy(value) ? "true" : "false"} onValueChange={onChange} disabled={!canManage}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Yes</SelectItem>
+                  <SelectItem value="false">No</SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
               <div className="relative group/input">
                 <Input
@@ -149,14 +148,20 @@ export function IntegrationField({
                 >
                   Discard
                 </Button>
-                <Button
-                  size="sm"
-                  disabled={isPending || !!error}
-                  onClick={onSave}
-                  className="bg-primary hover:bg-primary/90 text-white h-7 text-[10px] px-2 font-bold uppercase tracking-tight shadow-sm"
-                >
-                  Save
-                </Button>
+                {deferSave ? (
+                  <div className="h-7 px-2 text-[10px] font-bold uppercase tracking-tight text-primary flex items-center">
+                    Edited
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    disabled={isPending || !!error}
+                    onClick={onSave}
+                    className="bg-primary hover:bg-primary/90 text-white h-7 text-[10px] px-2 font-bold uppercase tracking-tight shadow-sm"
+                  >
+                    Save
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground/40 font-bold uppercase tracking-widest px-2">

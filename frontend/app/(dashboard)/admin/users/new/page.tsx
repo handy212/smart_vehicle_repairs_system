@@ -35,6 +35,7 @@ const userSchema = z
       "receptionist",
       "parts_manager",
       "accountant",
+      "hr_manager",
     ]),
     branch: z.number().nullable().optional(),
     managed_branches: z.array(z.number()).optional(),
@@ -66,7 +67,7 @@ const userSchema = z
       // Staff should have branch, not managed_branches
       if (
         data.role &&
-        ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(
+        ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant", "hr_manager"].includes(
           data.role
         )
       ) {
@@ -97,7 +98,7 @@ const userSchema = z
       // Staff must have a branch assigned
       if (
         data.role &&
-        ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(
+        ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant", "hr_manager"].includes(
           data.role
         )
       ) {
@@ -112,6 +113,7 @@ const userSchema = z
   );
 
 type UserFormData = z.infer<typeof userSchema>;
+type UserRole = UserFormData["role"];
 
 const ROLE_OPTIONS = [
   { value: "receptionist", label: "Receptionist" },
@@ -119,6 +121,7 @@ const ROLE_OPTIONS = [
   { value: "parts_manager", label: "Parts Manager" },
   { value: "service_coordinator", label: "Service Coordinator" },
   { value: "accountant", label: "Accountant" },
+  { value: "hr_manager", label: "HR Manager" },
   { value: "manager", label: "Manager" },
   { value: "admin", label: "Admin" },
 ];
@@ -182,7 +185,7 @@ export default function NewUserPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
   const isManager = selectedRole === "manager";
-  const isStaff = ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(
+  const isStaff = ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant", "hr_manager"].includes(
     selectedRole || ""
   );
 
@@ -283,23 +286,21 @@ export default function NewUserPage() {
       router.push("/admin/users");
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
+        const errorData = error.response.data as Record<string, unknown> | string;
 
         if (typeof errorData === "object") {
           Object.keys(errorData).forEach((key) => {
             if (Array.isArray(errorData[key])) {
               setError(key as keyof UserFormData, {
                 type: "server",
-                message: errorData[key][0],
+                message: String(errorData[key][0]),
               });
             }
           });
         } else if (typeof errorData === "string") {
           setServerError(errorData);
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
         }
       } else {
         setServerError("Failed to create user. Please try again.");
@@ -449,7 +450,7 @@ export default function NewUserPage() {
                   <Select
                     value={watch("role")}
 
-                    onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
+                    onValueChange={(val) => setValue("role", val as UserRole, { shouldValidate: true })}
                   >
                     <SelectTrigger className={errors.role ? "border-destructive dark:border-destructive" : "bg-muted border-border text-foreground"}>
                       <SelectValue placeholder="Select a role" />

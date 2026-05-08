@@ -1,18 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Search, User, Phone, Plus, Check, Loader2, X } from 'lucide-react';
+import { Search, User, Plus, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Badge } from '@/components/ui/badge';
+
+interface CustomerOption {
+    id: number;
+    user_id?: number;
+    company_name?: string | null;
+    full_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+}
 
 interface RecipientSelectorProps {
-
-    customers: any[]; // Using any[] to accept the customers list from parent
+    customers: CustomerOption[];
     onSelect: (recipient: { type: 'user' | 'phone'; value: string; name: string }) => void;
     placeholder?: string;
     className?: string;
@@ -58,14 +65,14 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
     }, []);
 
 
-    const getCustomerName = (c: any) => {
+    const getCustomerName = (c: CustomerOption) => {
         if (c.company_name) return c.company_name;
         if (c.full_name) return c.full_name;
         return `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
     };
 
 
-    const handleSelectCustomer = (customer: any) => {
+    const handleSelectCustomer = (customer: CustomerOption) => {
         const name = getCustomerName(customer);
         if (customer.phone) {
             onSelect({
@@ -149,7 +156,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
                                         <Plus className="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <p className="font-medium">Add "{search}"</p>
+                                        <p className="font-medium">Add &quot;{search}&quot;</p>
                                         <p className="text-xs text-muted-foreground">as manual phone number</p>
                                     </div>
                                 </button>

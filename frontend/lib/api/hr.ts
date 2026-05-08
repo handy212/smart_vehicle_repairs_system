@@ -88,6 +88,8 @@ export interface StaffListItem {
     full_name: string;
     email: string;
     phone: string;
+    role?: string;
+    is_account_active?: boolean;
     profile_picture: string | null;
     department_name: string | null;
     position_title: string | null;
@@ -488,6 +490,7 @@ export const hrApi = {
             department?: number;
             employment_status?: string;
             employment_type?: string;
+            branch?: number;
         }) =>
             apiClient.get<PaginatedResponse<StaffListItem>>(`${BASE}/staff/`, { params }),
         get: (id: number) =>

@@ -1,14 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { inventoryApi, Supplier } from "@/lib/api/inventory";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { inventoryApi, type SupplierStats } from "@/lib/api/inventory";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Plus, Search, Eye, Edit, Building2, MoreVertical, Trash2, X, Download, Upload, ChevronDown, CheckCircle, Store, Factory, Truck } from "lucide-react";
+import { Plus, Search, Eye, Edit, Building2, MoreVertical, X, Download, ChevronDown, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,16 +17,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
-// Stats Grid Component
-// Stats Grid Component
-
-const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
+const StatsGrid = ({ stats, loading }: { stats?: SupplierStats, loading: boolean }) => {
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -53,14 +47,26 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
     { label: "Preferred", value: stats.preferred_suppliers, color: "text-warning" },
   ];
 
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {items.map((item) => (
+        <Card key={item.label} className="shadow-sm border bg-card">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{item.label}</p>
+            <p className={`text-2xl font-bold ${item.color}`}>{item.value}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 };
 
 export default function SuppliersPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["supplier-stats"],
@@ -79,6 +85,28 @@ export default function SuppliersPage() {
   });
 
   const suppliers = Array.isArray(data) ? data : data?.results || [];
+
+  const deleteSupplierMutation = useMutation({
+    mutationFn: (supplierId: number) => inventoryApi.deleteSupplier(supplierId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-stats"] });
+      toast({ title: "Deleted", description: "Supplier deleted successfully." });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to delete supplier"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteSupplier = (supplierId: number, supplierName: string) => {
+    if (confirm(`Delete supplier "${supplierName}"?`)) {
+      deleteSupplierMutation.mutate(supplierId);
+    }
+  };
 
   const handleExport = () => {
     toast({ title: "Export", description: "Export functionality coming soon" });
@@ -262,7 +290,7 @@ export default function SuppliersPage() {
                   {suppliers.map((supplier) => (
                     <TableRow
                       key={supplier.id}
-                      className="group hover:bg-muted/50 hover:bg-muted/50 border-b border-border cursor-pointer transition-colors"
+                      className="group hover:bg-muted/50 border-b border-border cursor-pointer transition-colors"
                     >
                       <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                         {supplier.supplier_code}
@@ -327,6 +355,13 @@ export default function SuppliersPage() {
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit Supplier
                               </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Supplier
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

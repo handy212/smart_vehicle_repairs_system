@@ -1,6 +1,9 @@
 from django.test import TestCase
+from django.urls import reverse
 from django.contrib.auth import get_user_model
-from apps.inventory.models import Part, PartCategory, StockItem, Transfer, InventoryTransaction
+from rest_framework import status
+from rest_framework.test import APIClient
+from apps.inventory.models import Part, PartCategory, StockItem, Transfer, TransferApproval, InventoryTransaction
 from apps.branches.models import Branch
 from apps.inventory.services import InventoryService
 
@@ -9,8 +12,9 @@ User = get_user_model()
 class TransferServiceTests(TestCase):
     def setUp(self):
         # Create User
-        self.user = User.objects.create_user(username='testuser', email='testuser@example.com', password='password')
+        self.user = User.objects.create_user(username='testuser', email='testuser@example.com', password='password', role='admin')
         self.approver = User.objects.create_user(username='approver', email='approver@example.com', password='password', role='manager')
+        self.second_approver = User.objects.create_user(username='approver2', email='approver2@example.com', password='password', role='manager')
         
         # Create Branches
         self.branch_a = Branch.objects.create(name='Branch A', code='BRA', address='123 Main St', created_by=self.user)
@@ -39,6 +43,8 @@ class TransferServiceTests(TestCase):
         # Verify initial stock
         self.stock_a = StockItem.objects.get(part=self.part, branch=self.branch_a)
         self.assertEqual(self.stock_a.quantity_in_stock, 100)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
 
     def test_full_transfer_lifecycle(self):
         """Test the full lifecycle of a transfer: Draft -> Submit -> Approve -> Ship -> Receive"""
@@ -124,3 +130,94 @@ class TransferServiceTests(TestCase):
         # Verify no stock was reserved
         self.stock_a.refresh_from_db()
         self.assertEqual(self.stock_a.quantity_reserved, 0)
+
+    def test_submit_transfer_requires_valid_distinct_approver(self):
+        transfer = InventoryService.initiate_transfer(
+            source_branch=self.branch_a,
+            destination_branch=self.branch_b,
+            items=[{'part_id': self.part.id, 'quantity': 5}],
+            user=self.user
+        )
+
+        with self.assertRaisesMessage(ValueError, "Select an approver before submitting this transfer"):
+            InventoryService.submit_transfer_for_approval(transfer, approver=None, user=self.user)
+
+        with self.assertRaisesMessage(ValueError, "Transfers must be approved by someone other than the submitter"):
+            InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.user)
+
+        self.user.role = 'technician'
+        with self.assertRaisesMessage(ValueError, "Selected approver must be a manager, admin, or parts manager"):
+            InventoryService.submit_transfer_for_approval(transfer, approver=self.user, user=self.approver)
+
+    def test_transfer_requires_all_selected_approvers_before_reserving_stock(self):
+        transfer = InventoryService.initiate_transfer(
+            source_branch=self.branch_a,
+            destination_branch=self.branch_b,
+            items=[{'part_id': self.part.id, 'quantity': 7}],
+            user=self.user
+        )
+
+        InventoryService.submit_transfer_for_approval(
+            transfer,
+            approvers=[self.approver, self.second_approver],
+            user=self.user,
+        )
+        transfer.refresh_from_db()
+        self.assertEqual(transfer.status, 'pending_approval')
+        self.assertEqual(transfer.assigned_approver, self.approver)
+        self.assertEqual(TransferApproval.objects.filter(transfer=transfer).count(), 2)
+
+        InventoryService.approve_transfer(transfer, user=self.approver)
+        transfer.refresh_from_db()
+        self.stock_a.refresh_from_db()
+        self.assertEqual(transfer.status, 'pending_approval')
+        self.assertEqual(self.stock_a.quantity_reserved, 0)
+        self.assertEqual(transfer.approvals.get(approver=self.approver).status, 'approved')
+
+        InventoryService.approve_transfer(transfer, user=self.second_approver)
+        transfer.refresh_from_db()
+        self.stock_a.refresh_from_db()
+        self.assertEqual(transfer.status, 'approved')
+        self.assertEqual(self.stock_a.quantity_reserved, 7)
+        self.assertEqual(transfer.approvals.filter(status='approved').count(), 2)
+
+    def test_transfer_api_crud_for_draft_transfer(self):
+        response = self.client.post(reverse('api_inventory:transfer-list'), {
+            'source_branch': self.branch_a.id,
+            'destination_branch': self.branch_b.id,
+            'notes': 'Move fasteners',
+            'items': [{'part_id': self.part.id, 'quantity': 3}],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        transfer_id = response.data['id']
+
+        response = self.client.get(reverse('api_inventory:transfer-detail', kwargs={'pk': transfer_id}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['notes'], 'Move fasteners')
+        self.assertEqual(len(response.data['items']), 1)
+
+        response = self.client.patch(
+            reverse('api_inventory:transfer-detail', kwargs={'pk': transfer_id}),
+            {'notes': 'Move fasteners urgently'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['notes'], 'Move fasteners urgently')
+
+        response = self.client.delete(reverse('api_inventory:transfer-detail', kwargs={'pk': transfer_id}))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Transfer.objects.filter(id=transfer_id).exists())
+
+    def test_transfer_delete_rejects_inventory_impacting_statuses(self):
+        transfer = InventoryService.initiate_transfer(
+            source_branch=self.branch_a,
+            destination_branch=self.branch_b,
+            items=[{'part_id': self.part.id, 'quantity': 3}],
+            user=self.user
+        )
+        InventoryService.submit_transfer_for_approval(transfer, approver=self.approver, user=self.user)
+        InventoryService.approve_transfer(transfer, user=self.approver)
+
+        response = self.client.delete(reverse('api_inventory:transfer-detail', kwargs={'pk': transfer.id}))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(Transfer.objects.filter(id=transfer.id).exists())

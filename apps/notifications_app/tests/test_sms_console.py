@@ -3,12 +3,29 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch
+from apps.accounts.admin_models import SystemModule
+from apps.accounts.permission_models import Permission, Role
 
 User = get_user_model()
 
 class SMSConsoleViewSetTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        SystemModule.objects.update_or_create(
+            slug='sms',
+            defaults={'name': 'SMS', 'is_enabled': True}
+        )
+        send_notifications = Permission.objects.create(
+            code='send_notifications',
+            name='Send Notifications',
+            category='notifications',
+        )
+        manager_role = Role.objects.create(
+            code='manager',
+            name='Manager',
+            is_active=True,
+        )
+        manager_role.permissions.add(send_notifications)
         self.user = User.objects.create_user(
             username='staff_user',
             email='staff@example.com',
@@ -29,9 +46,7 @@ class SMSConsoleViewSetTest(TestCase):
         )
 
     @patch('apps.notifications_app.views.send_sms')
-    @patch('apps.accounts.permissions.user_has_permission')
-    def test_send_single_manual(self, mock_has_perm, mock_send_sms):
-        mock_has_perm.return_value = True
+    def test_send_single_manual(self, mock_send_sms):
         mock_send_sms.return_value = (True, {'message_id': '123'})
         
         data = {
@@ -45,9 +60,7 @@ class SMSConsoleViewSetTest(TestCase):
         mock_send_sms.assert_called() 
         self.assertEqual(response.data['status'], 'success')
 
-    @patch('apps.accounts.permissions.user_has_permission')
-    def test_send_single_user(self, mock_has_perm):
-        mock_has_perm.return_value = True
+    def test_send_single_user(self):
         # This will create a pending notification instead of immediate send if Hubtel not configured,
         # but the ViewSet logic will try to send via service.
         # We should patch NotificationService.send_notification to avoid actual calls.
@@ -65,9 +78,7 @@ class SMSConsoleViewSetTest(TestCase):
             mock_send_notification.assert_called()
 
     @patch('apps.notifications_app.tasks.send_bulk_sms_async')
-    @patch('apps.accounts.permissions.user_has_permission')
-    def test_send_bulk(self, mock_has_perm, mock_send_bulk_async):
-        mock_has_perm.return_value = True
+    def test_send_bulk(self, mock_send_bulk_async):
         mock_send_bulk_async.delay.return_value = None
         
         with patch('apps.notifications_app.services.NotificationService.send_notification') as mock_send_notif:
@@ -98,10 +109,7 @@ class SMSConsoleViewSetTest(TestCase):
         response = self.client.post(self.url_single, {})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch('apps.accounts.permissions.user_has_permission')
-    def test_schedule_sms(self, mock_has_perm):
-        mock_has_perm.return_value = True
-        
+    def test_schedule_sms(self):
         # Scheduling works best with User recipients as it uses Notification model
         scheduled_time = '2026-12-25T10:00:00Z'
         data = {
@@ -124,16 +132,14 @@ class SMSConsoleViewSetTest(TestCase):
             self.assertEqual(notif.status, 'pending')
             self.assertIsNotNone(notif.scheduled_for)
 
-    @patch('apps.accounts.permissions.user_has_permission')
-    def test_history(self, mock_has_perm):
-        mock_has_perm.return_value = True
-        
+    def test_history(self):
         # Create some history
         from apps.notifications_app.models import Notification
         Notification.objects.create(
             recipient=self.recipient,
             notification_type='custom',
             channel='sms',
+            title='History SMS',
             message='History 1',
             status='sent'
         )

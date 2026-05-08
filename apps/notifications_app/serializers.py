@@ -12,6 +12,7 @@ class NotificationTemplateSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'template_type', 'channel', 'subject', 'body',
             'html_body', 'sms_body', 'push_title', 'push_body', 'is_active',
+            'whatsapp_template_name', 'whatsapp_template_variables',
             'variables', 'created_at', 'updated_at', 'created_by', 'created_by_name'
         ]
         read_only_fields = ['created_at', 'updated_at', 'created_by']
@@ -28,7 +29,8 @@ class NotificationTemplateListSerializer(serializers.ModelSerializer):
         model = NotificationTemplate
         fields = [
             'id', 'name', 'template_type', 'channel', 'subject', 'body', 'html_body',
-            'sms_body', 'is_active', 'created_at', 'updated_at'
+            'sms_body', 'push_title', 'push_body', 'whatsapp_template_name',
+            'whatsapp_template_variables', 'is_active', 'created_at', 'updated_at'
         ]
 
 
@@ -55,7 +57,9 @@ class NotificationSerializer(serializers.ModelSerializer):
         ]
     
     def get_recipient_name(self, obj):
-        return f"{obj.recipient.first_name} {obj.recipient.last_name}"
+        if not obj.recipient:
+            return obj.data.get('phone_number') or 'Direct recipient'
+        return obj.recipient.get_full_name() or obj.recipient.email or obj.recipient.username
     
     def get_is_expired(self, obj):
         if obj.expires_at:
@@ -78,7 +82,9 @@ class NotificationListSerializer(serializers.ModelSerializer):
         ]
     
     def get_recipient_name(self, obj):
-        return f"{obj.recipient.first_name} {obj.recipient.last_name}"
+        if not obj.recipient:
+            return obj.data.get('phone_number') or 'Direct recipient'
+        return obj.recipient.get_full_name() or obj.recipient.email or obj.recipient.username
     
     def get_is_expired(self, obj):
         if obj.expires_at:
@@ -107,10 +113,15 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'user_email', 'user_name',
             'email_enabled', 'sms_enabled', 'push_enabled', 'in_app_enabled',
+            'whatsapp_manual_enabled', 'whatsapp_enabled', 'sound_enabled',
             'appointment_notifications', 'work_order_notifications',
             'invoice_notifications', 'payment_notifications',
             'inspection_notifications', 'inventory_notifications',
             'vehicle_notifications', 'system_notifications',
+            'roadside_requested_email', 'roadside_requested_sms',
+            'roadside_dispatched_email', 'roadside_dispatched_sms',
+            'roadside_arrived_email', 'roadside_arrived_sms',
+            'roadside_completed_email', 'roadside_completed_sms',
             'quiet_hours_enabled', 'quiet_hours_start', 'quiet_hours_end',
             'digest_enabled', 'digest_frequency',
             'phone_number', 'push_token',
@@ -119,7 +130,7 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at', 'updated_at']
     
     def get_user_name(self, obj):
-        return f"{obj.user.first_name} {obj.user.last_name}"
+        return obj.user.get_full_name() or obj.user.email or obj.user.username
 
 
 class NotificationLogSerializer(serializers.ModelSerializer):

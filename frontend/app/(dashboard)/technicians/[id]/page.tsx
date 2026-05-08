@@ -95,9 +95,9 @@ function TechnicianProfileContent() {
             </div>
 
             {/* Header */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="flex items-start gap-3">
-                    <Avatar className="h-14 w-14">
+                    <Avatar className="h-12 w-12">
                         <AvatarImage src={technician.user_details?.profile_picture} />
                         <AvatarFallback className="text-sm">
                             {technician.user_details?.first_name?.[0]}{technician.user_details?.last_name?.[0]}
@@ -153,12 +153,12 @@ function TechnicianProfileContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {/* Left Column: Info Card */}
-                <div className="space-y-4 md:col-span-1">
+                <div className="space-y-3 md:col-span-1">
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Profile</CardTitle>
+                        <CardHeader className="px-4 py-3">
+                            <CardTitle className="text-sm font-semibold">Profile</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
+                        <CardContent className="space-y-3 px-4 pb-4 text-sm">
                             <div className="flex items-center justify-between">
                                 <span className="text-muted-foreground">Experience</span>
                                 <span className="font-medium">{technician.years_of_experience} Years</span>
@@ -182,13 +182,13 @@ function TechnicianProfileContent() {
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
+                        <CardHeader className="px-4 py-3">
+                            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                                 <Award className="h-4 w-4 text-primary" />
                                 Skills & Expertise
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-4 pb-4">
                             {technician.skills.length > 0 ? (
                                 <div className="flex flex-wrap gap-1.5">
                                     {technician.skills.map(skill => (
@@ -204,13 +204,13 @@ function TechnicianProfileContent() {
                     </Card>
 
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
+                        <CardHeader className="px-4 py-3">
+                            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                                 <Briefcase className="h-4 w-4 text-primary" />
                                 Work Summary
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="space-y-3 px-4 pb-4">
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-muted-foreground">Staff Linked</span>
                                 <span className="font-medium">{technician.staff_id ? "Yes" : "No"}</span>
@@ -228,8 +228,8 @@ function TechnicianProfileContent() {
 
                 {/* Right Column: Main Content */}
                 <div className="md:col-span-2">
-                    <Tabs defaultValue="overview" className="space-y-4">
-                        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
+                    <Tabs defaultValue="overview" className="space-y-3">
+                        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
                             <TabsTrigger value="overview" className={technicianTabClass}>Overview</TabsTrigger>
                             <PermissionGuard permission="view_technician_performance">
                                 <TabsTrigger value="performance" className={technicianTabClass}>Performance</TabsTrigger>
@@ -244,26 +244,26 @@ function TechnicianProfileContent() {
                             <TabsTrigger value="location" className={technicianTabClass}>Live Location</TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="overview" className="space-y-4">
+                        <TabsContent value="overview" className="space-y-3">
                             {/* Active Jobs Card (Placeholder) */}
                             <Card>
-                                <CardHeader className="pb-3">
-                                    <CardTitle>Current Status</CardTitle>
-                                    <CardDescription>Real-time activity overview</CardDescription>
+                                <CardHeader className="px-4 py-3">
+                                    <CardTitle className="text-sm font-semibold">Current Status</CardTitle>
+                                    <CardDescription className="text-xs">Real-time activity overview</CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-4">
                                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                        <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
-                                            <div className="text-xl font-bold text-primary">0</div>
-                                            <div className="text-sm text-primary">Active Jobs</div>
+                                        <div className="rounded-lg border border-primary/15 bg-primary/5 p-3">
+                                            <div className="text-lg font-semibold text-primary">0</div>
+                                            <div className="text-xs text-primary">Active Jobs</div>
                                         </div>
-                                        <div className="rounded-xl border border-success/20 bg-success/10 p-4">
-                                            <div className="text-xl font-bold text-success">0</div>
-                                            <div className="text-sm text-success">Completed This Week</div>
+                                        <div className="rounded-lg border border-success/20 bg-success/10 p-3">
+                                            <div className="text-lg font-semibold text-success">0</div>
+                                            <div className="text-xs text-success">Completed This Week</div>
                                         </div>
-                                        <div className="rounded-xl border border-info/20 bg-info/10 p-4">
-                                            <div className="text-xl font-bold text-info">0%</div>
-                                            <div className="text-sm text-info">Utilization Rate</div>
+                                        <div className="rounded-lg border border-info/20 bg-info/10 p-3">
+                                            <div className="text-lg font-semibold text-info">0%</div>
+                                            <div className="text-xs text-info">Utilization Rate</div>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -272,10 +272,10 @@ function TechnicianProfileContent() {
                             {/* Bio */}
                             {technician.bio && (
                                 <Card>
-                                    <CardHeader className="pb-3">
-                                        <CardTitle>Biography</CardTitle>
+                                    <CardHeader className="px-4 py-3">
+                                        <CardTitle className="text-sm font-semibold">Biography</CardTitle>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="px-4 pb-4">
                                         <p className="text-sm text-muted-foreground leading-relaxed">
                                             {technician.bio}
                                         </p>
@@ -294,15 +294,15 @@ function TechnicianProfileContent() {
 
                         <TabsContent value="schedule">
                             <Card>
-                                <CardHeader className="pb-3">
+                                <CardHeader className="px-4 py-3">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <CardTitle>Schedule</CardTitle>
-                                            <CardDescription>Upcoming shifts and time off</CardDescription>
+                                            <CardTitle className="text-sm font-semibold">Schedule</CardTitle>
+                                            <CardDescription className="text-xs">Upcoming shifts and time off</CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-4">
                                     <ShiftScheduleWrapper technicianId={id} />
                                 </CardContent>
                             </Card>
@@ -310,11 +310,11 @@ function TechnicianProfileContent() {
 
                         <TabsContent value="history">
                             <Card>
-                                <CardHeader className="pb-3">
-                                    <CardTitle>Job History</CardTitle>
-                                    <CardDescription>Past completed work orders and repairs</CardDescription>
+                                <CardHeader className="px-4 py-3">
+                                    <CardTitle className="text-sm font-semibold">Job History</CardTitle>
+                                    <CardDescription className="text-xs">Past completed work orders and repairs</CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-4">
                                     <JobHistoryWrapper technicianId={id} />
                                 </CardContent>
                             </Card>
@@ -322,25 +322,25 @@ function TechnicianProfileContent() {
 
                         <TabsContent value="location">
                             <Card>
-                                <CardHeader className="pb-3">
-                                    <CardTitle>Last Known Location</CardTitle>
-                                    <CardDescription>
+                                <CardHeader className="px-4 py-3">
+                                    <CardTitle className="text-sm font-semibold">Last Known Location</CardTitle>
+                                    <CardDescription className="text-xs">
                                         Updated: {technician.last_location_update ? format(new Date(technician.last_location_update), "Pp") : "Never"}
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-4">
                                     {technician.last_latitude && technician.last_longitude ? (
-                                        <div className="flex h-64 items-center justify-center rounded-lg border border-border bg-muted/40">
+                                        <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-muted/40">
                                             <div className="text-center">
                                                 <MapIcon className="mx-auto mb-2 h-8 w-8 opacity-50" />
                                                 <p className="text-sm font-mono">{technician.last_latitude}, {technician.last_longitude}</p>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                                            <MapPin className="h-12 w-12 mb-4 opacity-20" />
-                                            <h3 className="text-lg font-semibold mb-1 text-foreground">Location Unavailable</h3>
-                                            <p>No location data available for this technician.</p>
+                                        <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                                            <MapPin className="mb-3 h-8 w-8 opacity-30" />
+                                            <h3 className="mb-1 text-sm font-semibold text-foreground">Location Unavailable</h3>
+                                            <p className="text-sm">No location data available for this technician.</p>
                                         </div>
                                     )}
                                 </CardContent>

@@ -119,7 +119,7 @@ export default function EditSupplierPage() {
       router.push(`/inventory/suppliers/${id}`);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Error updating supplier:", error);
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
@@ -410,5 +410,4 @@ export default function EditSupplierPage() {
     </div>
   );
 }
-
 

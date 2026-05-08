@@ -49,6 +49,12 @@ export interface Supplier {
   updated_at?: string;
 }
 
+export interface SupplierStats {
+  total_suppliers: number;
+  active_suppliers: number;
+  preferred_suppliers: number;
+}
+
 export interface PurchaseOrder {
   id: number;
   po_number: string;
@@ -89,8 +95,28 @@ export interface PurchaseOrder {
   items?: PurchaseOrderItem[];
   assigned_approver?: number;
   assigned_approver_name?: string;
+  approvals?: PurchaseOrderApproval[];
+  approval_progress?: {
+    total: number;
+    approved: number;
+    pending: number;
+    rejected: number;
+  };
   qbo_sync_status?: string;
   qbo_sync_error?: string;
+}
+
+export interface PurchaseOrderApproval {
+  id: number;
+  approver: number;
+  approver_name?: string;
+  approver_email?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_at?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PurchaseOrderItem {
@@ -264,6 +290,13 @@ export interface Transfer {
   submitted_at?: string;
   assigned_approver?: number;
   assigned_approver_name?: string;
+  approvals?: TransferApproval[];
+  approval_progress?: {
+    total: number;
+    approved: number;
+    pending: number;
+    rejected: number;
+  };
   approved_by?: number;
   approved_by_name?: string;
   rejected_by?: number;
@@ -272,6 +305,29 @@ export interface Transfer {
   items: TransferItem[];
   created_at: string;
   updated_at: string;
+}
+
+export interface TransferApproval {
+  id: number;
+  approver: number;
+  approver_name?: string;
+  approver_email?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_at?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TransferCreatePayload {
+  source_branch: number;
+  destination_branch: number;
+  notes?: string;
+  items: Array<{
+    part_id: number;
+    quantity: number;
+  }>;
 }
 
 export interface ServiceBundleItem {
@@ -440,7 +496,7 @@ export const inventoryApi = {
     return response.data;
   },
 
-  suppliersDashboardStats: async () => {
+  suppliersDashboardStats: async (): Promise<SupplierStats> => {
     const response = await apiClient.get("/inventory/suppliers/dashboard_stats/");
     return response.data;
   },
@@ -506,10 +562,11 @@ export const inventoryApi = {
   },
 
 
-  submitPurchaseOrderForApproval: async (id: number, approverId?: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/purchase-orders/${id}/submit-for-approval/`, {
-      approver_id: approverId
-    });
+  submitPurchaseOrderForApproval: async (id: number, approverIds?: number | number[]): Promise<any> => {
+    const payload = Array.isArray(approverIds)
+      ? { approver_ids: approverIds }
+      : { approver_id: approverIds };
+    const response = await apiClient.post(`/inventory/purchase-orders/${id}/submit-for-approval/`, payload);
     return response.data;
   },
 
@@ -612,7 +669,7 @@ export const inventoryApi = {
     return response.data;
   },
 
-  createTransfer: async (data: Partial<Transfer>): Promise<Transfer> => {
+  createTransfer: async (data: TransferCreatePayload): Promise<Transfer> => {
     const response = await apiClient.post("/inventory/transfers/", data);
     return response.data;
   },
@@ -622,11 +679,16 @@ export const inventoryApi = {
     return response.data;
   },
 
+  deleteTransfer: async (id: number): Promise<void> => {
+    await apiClient.delete(`/inventory/transfers/${id}/`);
+  },
 
-  submitTransferForApproval: async (id: number, approverId?: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/transfers/${id}/submit-for-approval/`, {
-      approver_id: approverId
-    });
+
+  submitTransferForApproval: async (id: number, approverIds?: number | number[]): Promise<any> => {
+    const payload = Array.isArray(approverIds)
+      ? { approver_ids: approverIds }
+      : { approver_id: approverIds };
+    const response = await apiClient.post(`/inventory/transfers/${id}/submit-for-approval/`, payload);
     return response.data;
   },
 

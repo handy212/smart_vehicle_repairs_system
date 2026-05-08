@@ -1,12 +1,36 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from django.core.management import call_command
 from rolepermissions.roles import assign_role
 from apps.inventory.models import PartCategory
+from apps.accounts.permission_models import Permission, Role, UserPermissionOverride
+from apps.accounts.admin_models import SystemBackup, SystemModule, SystemSettings
+import tempfile
+from pathlib import Path
 
 User = get_user_model()
+
+
+class SystemSettingsInitializationTests(TestCase):
+    def test_supported_settings_hide_deprecated_and_include_paystack(self):
+        deprecated_keys = [
+            'customer_login_background',
+            'staff_login_background',
+            'stripe_public_key',
+            'paypal_client_id',
+        ]
+        for key in deprecated_keys:
+            SystemSettings.objects.create(category='branding', key=key, value='old', is_active=True)
+
+        call_command('init_settings', verbosity=0)
+
+        self.assertFalse(SystemSettings.objects.filter(key__in=deprecated_keys, is_active=True).exists())
+        self.assertTrue(SystemSettings.objects.filter(key='paystack_public_key', category='payment', is_active=True).exists())
+        self.assertTrue(SystemSettings.objects.filter(key='paystack_secret_key', category='payment', is_active=True).exists())
+        self.assertFalse(SystemSettings.objects.filter(key='stripe_secret_key', is_active=True).exists())
+
 
 class PermissionAuditTests(TestCase):
     def setUp(self):
@@ -121,3 +145,235 @@ class PermissionAuditTests(TestCase):
         if response.status_code != 201:
              print(f"Manager create vehicle failed: {response.data}")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
+class UserAndRolePermissionBoundaryTests(TestCase):
+    def setUp(self):
+        call_command('init_permissions', verbosity=0)
+
+        self.admin_user = User.objects.create_user(
+            username='admin_boundary',
+            email='admin_boundary@example.com',
+            password='password123',
+            role='admin',
+        )
+        self.technician_user = User.objects.create_user(
+            username='tech_boundary',
+            email='tech_boundary@example.com',
+            password='password123',
+            role='technician',
+        )
+        self.super_admin_user = User.objects.create_user(
+            username='super_admin_boundary',
+            email='super_admin_boundary@example.com',
+            password='password123',
+            role='super-admin',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.admin_client = APIClient()
+        self.admin_client.force_authenticate(user=self.admin_user)
+        self.tech_client = APIClient()
+        self.tech_client.force_authenticate(user=self.technician_user)
+        self.super_admin_client = APIClient()
+        self.super_admin_client.force_authenticate(user=self.super_admin_user)
+
+    def _staff_payload(self, email='new_staff@example.com'):
+        return {
+            'email': email,
+            'username': email.split('@')[0],
+            'password': 'StrongPass123!',
+            'password2': 'StrongPass123!',
+            'first_name': 'New',
+            'last_name': 'Staff',
+            'role': 'admin',
+            'is_active': True,
+        }
+
+    def test_user_create_requires_create_users_permission(self):
+        unauthenticated = APIClient()
+        response = unauthenticated.post('/api/accounts/users/', self._staff_payload('public_staff@example.com'))
+        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+        response = self.tech_client.post('/api/accounts/users/', self._staff_payload('tech_staff@example.com'))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.admin_client.post('/api/accounts/users/', self._staff_payload('admin_staff@example.com'))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_user_permission_override_can_revoke_admin_action(self):
+        create_users = Permission.objects.get(code='create_users')
+        UserPermissionOverride.objects.create(
+            user=self.admin_user,
+            permission=create_users,
+            granted=False,
+            reason='Boundary test revoke',
+            granted_by=self.admin_user,
+        )
+
+        response = self.admin_client.get('/api/accounts/users/permissions/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('create_users', response.data['permissions'])
+
+        response = self.admin_client.post('/api/accounts/users/', self._staff_payload('revoked_staff@example.com'))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_role_permission_endpoints_require_dynamic_permissions(self):
+        manage_permissions = Permission.objects.get(code='manage_permissions')
+        UserPermissionOverride.objects.create(
+            user=self.admin_user,
+            permission=manage_permissions,
+            granted=False,
+            reason='Boundary test revoke',
+            granted_by=self.admin_user,
+        )
+
+        response = self.admin_client.get('/api/accounts/admin/permissions/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        role = Role.objects.get(code='technician')
+        view_inventory = Permission.objects.get(code='view_inventory')
+        response = self.admin_client.post(
+            f'/api/accounts/admin/roles/{role.id}/assign_permissions/',
+            {'permission_ids': [view_inventory.id]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_module_management_is_super_admin_controlled(self):
+        module = SystemModule.objects.filter(slug='inventory').first()
+        self.assertIsNotNone(module)
+
+        response = self.admin_client.get('/api/accounts/admin/modules/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.admin_client.patch(
+            f'/api/accounts/admin/modules/{module.id}/',
+            {'is_enabled': module.is_enabled},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.super_admin_client.get('/api/accounts/admin/modules/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.super_admin_client.patch(
+            f'/api/accounts/admin/modules/{module.id}/',
+            {'is_enabled': module.is_enabled},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_super_admin_account_and_role_are_hidden_from_admin_surfaces(self):
+        Role.objects.update_or_create(
+            code='super-admin',
+            defaults={
+                'name': 'Super Admin',
+                'description': 'Owner account',
+                'is_system': True,
+                'is_active': True,
+                'priority': 1000,
+            },
+        )
+
+        for client in (self.admin_client, self.super_admin_client):
+            response = client.get('/api/accounts/users/')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            emails = {user['email'] for user in response.data['results']}
+            self.assertNotIn(self.super_admin_user.email, emails)
+
+            response = client.get(f'/api/accounts/users/{self.super_admin_user.id}/')
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+            response = client.get('/api/accounts/admin/roles/')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            role_codes = {role['code'] for role in response.data['results']}
+            self.assertNotIn('super-admin', role_codes)
+
+            response = client.get('/api/accounts/admin/dashboard-stats/')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            stats_roles = {role['role'] for role in response.data['user_by_role']}
+            self.assertNotIn('super-admin', stats_roles)
+
+        response = self.super_admin_client.get('/api/accounts/users/me/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], self.super_admin_user.email)
+
+    def test_profile_update_cannot_change_role_or_status(self):
+        response = self.super_admin_client.patch(
+            '/api/accounts/users/me/',
+            {
+                'first_name': 'Owner',
+                'role': 'admin',
+                'is_active': False,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.super_admin_user.refresh_from_db()
+        self.assertEqual(self.super_admin_user.first_name, 'Owner')
+        self.assertEqual(self.super_admin_user.role, 'super-admin')
+        self.assertTrue(self.super_admin_user.is_active)
+
+
+class BackupPermissionAndDownloadTests(TestCase):
+    def setUp(self):
+        call_command('init_permissions', verbosity=0)
+        self.admin_user = User.objects.create_user(
+            username='backup_admin',
+            email='backup_admin@example.com',
+            password='password123',
+            role='admin',
+            is_staff=True,
+        )
+        self.technician_user = User.objects.create_user(
+            username='backup_tech',
+            email='backup_tech@example.com',
+            password='password123',
+            role='technician',
+            is_staff=True,
+        )
+        self.admin_client = APIClient()
+        self.admin_client.force_authenticate(self.admin_user)
+        self.tech_client = APIClient()
+        self.tech_client.force_authenticate(self.technician_user)
+
+    def test_backup_endpoints_require_manage_backups(self):
+        response = self.tech_client.get('/api/accounts/admin/backups/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.admin_client.get('/api/accounts/admin/backups/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_completed_backup_download_streams_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            backup_path = Path(temp_dir) / 'backup.zip'
+            backup_path.write_bytes(b'backup-bytes')
+            backup = SystemBackup.objects.create(
+                backup_type='database',
+                status='completed',
+                file_path=str(backup_path),
+                file_size=backup_path.stat().st_size,
+                created_by=self.admin_user,
+            )
+
+            response = self.admin_client.post(f'/api/accounts/admin/backups/{backup.id}/download/')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(b''.join(response.streaming_content), b'backup-bytes')
+
+    def test_backup_create_runs_background_task_and_creates_archive(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                response = self.admin_client.post(
+                    '/api/accounts/admin/backups/',
+                    {'backup_type': 'database', 'notes': 'test backup'},
+                    format='json',
+                )
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                backup = SystemBackup.objects.get(id=response.data['id'])
+                from apps.accounts.tasks import create_system_backup
+                create_system_backup(backup.id)
+                backup.refresh_from_db()
+                self.assertEqual(backup.status, 'completed')
+                self.assertTrue(Path(backup.file_path).exists())

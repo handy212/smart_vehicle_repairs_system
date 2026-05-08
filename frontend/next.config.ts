@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+import withPWAInit from "@ducanh2912/next-pwa";
 
 // Get API URL from environment or use default
 const getApiHost = () => {
@@ -87,8 +88,9 @@ const nextConfig: NextConfig = {
 
 
 
-const withPWA = require("@ducanh2912/next-pwa").default({
+const withPWA = withPWAInit({
   dest: "public",
+  customWorkerSrc: "worker",
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",

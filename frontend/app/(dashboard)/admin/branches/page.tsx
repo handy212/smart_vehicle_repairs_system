@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -47,6 +46,16 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  const fieldErrors = Object.values(data)
+    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .filter((value): value is string => typeof value === "string");
+  return fieldErrors.join(", ") || fallback;
+}
 
 const branchSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -109,38 +118,22 @@ export default function BranchesPage() {
     return true;
   });
 
-  const deleteMutation = useMutation({
+  const archiveMutation = useMutation({
     mutationFn: (id: number) => branchesApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["branches"] });
-      toast({ title: "Success", description: "Branch deleted successfully" });
-    },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to delete branch",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const forceDeleteMutation = useMutation({
-    mutationFn: (id: number) => branchesApi.forceDelete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branches"] });
       toast({
         title: "Success",
-        description: "Branch and all associated data permanently deleted",
+        description: "Branch archived successfully",
       });
       setDeleteDialogOpen(false);
       setBranchToDelete(null);
       setDeleteConfirmationName("");
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete branch",
+        description: getApiErrorMessage(error, "Failed to archive branch"),
         variant: "destructive",
       });
     },
@@ -196,52 +189,18 @@ export default function BranchesPage() {
         </PermissionGuard>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mx-4">
-        <Card className="shadow-sm">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total Branches</p>
-              <p className="text-xl font-bold text-foreground">
-                {totalBranches}
-              </p>
-            </div>
-            <Building2 className="w-5 h-5 text-muted-foreground opacity-80" />
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Active</p>
-              <p className="text-xl font-bold text-success">
-                {activeBranches}
-              </p>
-            </div>
-            <Building2 className="w-5 h-5 text-success opacity-80" />
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">HQ</p>
-              <p className="text-xl font-bold text-primary">
-                {headquarters}
-              </p>
-            </div>
-            <Building2 className="w-5 h-5 text-primary opacity-80" />
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Total Staff</p>
-              <p className="text-xl font-bold text-foreground">
-                {totalStaff}
-              </p>
-            </div>
-            <Users className="w-5 h-5 text-purple-500 opacity-80" />
-          </CardContent>
-        </Card>
+      <div className="mx-4 flex flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs">
+        <span className="font-semibold text-foreground">{totalBranches}</span>
+        <span className="text-muted-foreground">branches</span>
+        <span className="mx-1 h-4 w-px bg-border" />
+        <span className="font-semibold text-success">{activeBranches}</span>
+        <span className="text-muted-foreground">active</span>
+        <span className="mx-1 h-4 w-px bg-border" />
+        <span className="font-semibold text-primary">{headquarters}</span>
+        <span className="text-muted-foreground">HQ</span>
+        <span className="mx-1 h-4 w-px bg-border" />
+        <span className="font-semibold text-foreground">{totalStaff}</span>
+        <span className="text-muted-foreground">staff</span>
       </div>
 
       {/* Search and Filter Bar */}
@@ -451,22 +410,18 @@ export default function BranchesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
-              Permanently Delete Branch?
+              Archive Branch?
             </AlertDialogTitle>
             <AlertDialogDescription asChild className="text-base text-foreground mt-4">
               <div>
                 <p className="font-semibold mb-2">
-                  This action cannot be undone. This will permanently delete:
+                  This will deactivate the branch and preserve all history.
                 </p>
                 <ul className="list-disc pl-6 space-y-1 mb-4 text-muted-foreground">
-                  <li>The <strong className="text-foreground">{branchToDelete?.name}</strong> branch itself</li>
-                  <li>All <strong className="text-foreground">Work Orders, Estimates, and Invoices</strong> created under this branch</li>
-                  <li>All <strong className="text-foreground">Inventory and Stock</strong> associated with this branch</li>
-                  <li>All <strong className="text-foreground">Appointments and Inspections</strong></li>
+                  <li><strong className="text-foreground">{branchToDelete?.name}</strong> will no longer be available for new documents.</li>
+                  <li>Existing work orders, invoices, inspections, inventory history, and reports stay intact.</li>
+                  <li>Assigned staff remain linked for audit/reporting until you reassign them.</li>
                 </ul>
-                <p className="mb-2">
-                  Users assigned to this branch will <span className="underline">not</span> be deleted, but they will be unassigned.
-                </p>
               </div>
             </AlertDialogDescription>
 
@@ -483,17 +438,17 @@ export default function BranchesPage() {
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6">
-            <AlertDialogCancel disabled={forceDeleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={archiveMutation.isPending}>Cancel</AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={() => {
                 if (branchToDelete) {
-                  forceDeleteMutation.mutate(branchToDelete.id);
+                  archiveMutation.mutate(branchToDelete.id);
                 }
               }}
-              disabled={deleteConfirmationName !== branchToDelete?.name || forceDeleteMutation.isPending}
+              disabled={deleteConfirmationName !== branchToDelete?.name || archiveMutation.isPending}
             >
-              {forceDeleteMutation.isPending ? "Deleting..." : "Permanently Delete Branch"}
+              {archiveMutation.isPending ? "Archiving..." : "Archive Branch"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -587,13 +542,10 @@ function BranchDialog({
       reset();
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description:
-          error.response?.data?.detail ||
-          Object.values(error.response?.data || {}).flat().join(", ") ||
-          "Failed to create branch",
+        description: getApiErrorMessage(error, "Failed to create branch"),
         variant: "destructive",
       });
     },
@@ -606,13 +558,10 @@ function BranchDialog({
       onSuccess();
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description:
-          error.response?.data?.detail ||
-          Object.values(error.response?.data || {}).flat().join(", ") ||
-          "Failed to update branch",
+        description: getApiErrorMessage(error, "Failed to update branch"),
         variant: "destructive",
       });
     },
@@ -620,7 +569,7 @@ function BranchDialog({
 
   const onSubmit = async (data: BranchFormData) => {
 
-    const cleanedData: any = { ...data };
+    const cleanedData: Partial<BranchFormData> = { ...data };
 
     if (cleanedData.description === "") delete cleanedData.description;
     if (cleanedData.email === "") delete cleanedData.email;

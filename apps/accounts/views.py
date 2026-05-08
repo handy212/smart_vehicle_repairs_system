@@ -5,7 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from apps.accounts.permissions import HasPermission, user_has_permission
+from apps.accounts.permissions import HasPermission, HasAnyPermission, user_has_permission
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
@@ -36,14 +36,15 @@ class UserViewSet(viewsets.ModelViewSet):
         For list action, exclude customers (they should be managed via Customer module).
         """
         queryset = super().get_queryset()
-        # Exclude customers, technicians and service coordinators from list view 
-        # as they should be managed via their respective modules.
+        # Exclude customers from operational access management; customers are
+        # managed in the Customer module. Staff and technicians stay visible
+        # here because this is where login/access controls are managed.
         if self.action == 'list':
-            queryset = queryset.exclude(role__in=['customer', 'technician', 'service_coordinator'])
+            queryset = queryset.exclude(role='customer')
         
-        # Filter out super-admins if the requester is not a super-admin
-        if self.request.user and self.request.user.role != 'super-admin':
-            queryset = queryset.exclude(role='super-admin')
+        # The owner/system account is intentionally kept out of operational
+        # user-management surfaces. It remains available through /me only.
+        queryset = queryset.exclude(role='super-admin')
             
         # Support branch filtering via query params
         branch_id = self.request.query_params.get('branch')
@@ -60,16 +61,6 @@ class UserViewSet(viewsets.ModelViewSet):
         
         return queryset
 
-    def get_object(self):
-        """
-        Ensure non-super-admins cannot access super-admin objects even if they know the ID.
-        """
-        obj = super().get_object()
-        if self.request.user and self.request.user.role != 'super-admin' and obj.role == 'super-admin':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have permission to access super-admin accounts.")
-        return obj
-    
     def get_serializer_class(self):
         if self.action == 'create':
             return UserCreateSerializer
@@ -82,44 +73,39 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action == 'create':
-            return [AllowAny()]  # Allow user registration
+            return [IsAuthenticated(), HasPermission('create_users')]
         elif self.action == 'forgot_password':
             return [AllowAny()]  # Allow public password reset request
         elif self.action == 'confirm_reset_password':
             return [AllowAny()]  # Allow public password reset confirmation
         
-        # For other actions, require authentication and appropriate permissions
+        # For other actions, require authentication and appropriate permissions.
+        # Public customer registration is handled by /api/auth/register/*.
         if self.action == 'list' or self.action == 'retrieve':
             return [IsAuthenticated(), HasPermission('view_users')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), HasPermission('edit_users')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('delete_users')]
+        elif self.action in ['reset_password', 'send_password_reset_link', 'reset_2fa']:
+            return [IsAuthenticated(), HasPermission('reset_user_passwords')]
+        elif self.action == 'staff_list':
+            return [IsAuthenticated(), HasPermission('view_users')]
+        elif self.action == 'technicians':
+            return [IsAuthenticated(), HasAnyPermission(['view_technicians', 'assign_workorders', 'manage_workorders'])]
+        elif self.action == 'service_coordinators':
+            return [IsAuthenticated(), HasAnyPermission(['view_users', 'assign_workorders', 'manage_workorders'])]
         
         # Default to authenticated for custom actions
         return [IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
         """
-        Override create to add reCAPTCHA verification for public registration.
-        Prevents automated account creation / abuse.
+        Create staff/admin-managed users.
+
+        Public customer self-registration lives under /api/auth/register/*, so
+        this endpoint must stay authenticated and permission-protected.
         """
-        from apps.accounts.recaptcha_views import _get_recaptcha_config, RecaptchaTokenObtainPairSerializer
-
-        is_enabled, secret_key = _get_recaptcha_config()
-        if is_enabled and secret_key:
-            recaptcha_token = request.data.get('recaptcha_token')
-            if not recaptcha_token:
-                return Response(
-                    {'recaptcha_token': ['reCAPTCHA verification is required.']},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            if not RecaptchaTokenObtainPairSerializer._verify_recaptcha(recaptcha_token, secret_key):
-                return Response(
-                    {'recaptcha_token': ['reCAPTCHA verification failed. Please try again.']},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
         return super().create(request, *args, **kwargs)
     
     @action(detail=False, methods=['post'])
@@ -193,7 +179,22 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(request.user)
             return Response(serializer.data)
         else:
-            serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
+            profile_fields = {
+                'first_name', 'last_name', 'phone', 'profile_picture', 'gender',
+                'date_of_birth', 'address', 'city', 'state', 'zip_code', 'country',
+                'email_notifications', 'sms_notifications',
+            }
+            data = {
+                key: value
+                for key, value in request.data.items()
+                if key in profile_fields
+            }
+            serializer = UserUpdateSerializer(
+                request.user,
+                data=data,
+                partial=True,
+                context={'request': request},
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
@@ -220,7 +221,9 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, HasPermission('view_users')])
     def staff_list(self, request):
         """Get list of all staff members"""
-        staff = User.objects.filter(role__in=['admin', 'manager', 'service_coordinator', 'receptionist', 'technician', 'parts_manager', 'accountant', 'hr_manager'])
+        staff = User.objects.filter(
+            role__in=['admin', 'manager', 'service_coordinator', 'receptionist', 'technician', 'parts_manager', 'accountant', 'hr_manager']
+        ).exclude(role='super-admin')
         serializer = StaffUserSerializer(staff, many=True)
         return Response(serializer.data)
     
@@ -264,7 +267,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         
         # Check permissions using project's permission system
-        if not user_has_permission(request.user, 'edit_users') and not request.user.is_superuser:
+        if not user_has_permission(request.user, 'reset_user_passwords'):
              return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
         
         new_password = request.data.get('new_password')
@@ -312,8 +315,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         user = self.get_object()
         
-        # Check permissions
-        if not request.user.has_perm('accounts.edit_users') and not request.user.is_superuser:
+        # Check permissions using project's permission system
+        if not user_has_permission(request.user, 'reset_user_passwords'):
              return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
         
         try:
@@ -338,8 +341,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         user = self.get_object()
         
-        # Check permissions
-        if not request.user.has_perm('accounts.edit_users') and not request.user.is_superuser:
+        # Check permissions using project's permission system
+        if not user_has_permission(request.user, 'reset_user_passwords'):
              return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
         
         user.two_factor_enabled = False

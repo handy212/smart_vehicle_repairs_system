@@ -2,7 +2,6 @@
 
 import { ReactNode } from "react";
 import { usePermissions } from "@/lib/hooks/usePermissions";
-import { useAuthStore } from "@/store/authStore";
 
 interface PermissionGuardProps {
   permission?: string;
@@ -33,17 +32,6 @@ export function PermissionGuard({
   children,
 }: PermissionGuardProps) {
   const { hasPermission, hasAnyPermission, hasAllPermissions, isLoading } = usePermissions();
-  const { user } = useAuthStore();
-
-  // Check if user is admin or superuser - admins have all permissions
-
-  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin' || (user as any)?.is_superuser;
-
-  // If user is admin/superuser, always allow (backend will verify)
-  // This prevents UI blocking when permissions array is empty or not yet loaded
-  if (isAdmin) {
-    return <>{children}</>;
-  }
 
   // Single permission check
   if (permission) {

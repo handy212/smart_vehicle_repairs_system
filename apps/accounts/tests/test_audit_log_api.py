@@ -245,12 +245,61 @@ class AuditLogArchiveTest(AuditLogAPISetup):
 
 
 class AuditLogImportHistoryTest(AuditLogAPISetup):
-    """Test the import_history stub endpoint."""
+    """Test the import_history endpoint."""
 
-    def test_import_history_returns_501(self):
-        """import_history should return 501 Not Implemented (Bug 3 fix)."""
-        response = self.admin_client.get(f"{AUDIT_LOGS_URL}import_history/")
-        self.assertEqual(response.status_code, status.HTTP_501_NOT_IMPLEMENTED)
+    def setUp(self):
+        super().setUp()
+        self.customer_ct = ContentType.objects.get(app_label="customers", model="customer")
+        self.vehicle_ct = ContentType.objects.get(app_label="vehicles", model="vehicle")
+
+        self.customer_import_log = LogEntry.objects.create(
+            content_type=self.customer_ct,
+            object_pk="customers.csv",
+            object_repr="CSV Import: customers.csv",
+            action=LogEntry.Action.UPDATE,
+            actor=self.admin_user,
+            remote_addr="127.0.0.1",
+            changes={
+                "filename": "customers.csv",
+                "imported": 12,
+                "skipped": 1,
+                "total_errors": 0,
+            },
+        )
+        self.vehicle_import_log = LogEntry.objects.create(
+            content_type=self.vehicle_ct,
+            object_pk="vehicles.csv",
+            object_repr="CSV Import Failed: vehicles.csv",
+            action=LogEntry.Action.UPDATE,
+            actor=self.admin_user,
+            remote_addr="127.0.0.1",
+            changes={
+                "filename": "vehicles.csv",
+                "imported": 0,
+                "skipped": 0,
+                "total_errors": 1,
+                "error": "Invalid CSV header",
+            },
+        )
+
+    def test_import_history_returns_import_audit_logs(self):
+        response = self.admin_client.get(f"{AUDIT_LOGS_URL}import_history/", {"page_size": 100})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {item["id"] for item in response.data["results"]}
+        self.assertIn(self.customer_import_log.id, ids)
+        self.assertIn(self.vehicle_import_log.id, ids)
+        self.assertNotIn(self.log_create.id, ids)
+
+    def test_import_history_supports_model_filter(self):
+        response = self.admin_client.get(
+            f"{AUDIT_LOGS_URL}import_history/",
+            {"model_name": "customer", "page_size": 100},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        model_names = {item["model_name"] for item in response.data["results"]}
+        self.assertEqual(model_names, {"customer"})
 
 
 class AuditLogSerializerTest(AuditLogAPISetup):

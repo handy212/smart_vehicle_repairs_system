@@ -6,9 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import HasAnyPermission, HasPermission, IsModuleEnabled
 import logging
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +47,7 @@ class NotificationTemplateViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve', 'by_type']:
-            return [IsAuthenticated(), HasPermission('manage_notification_templates')]
+            return [IsAuthenticated(), HasAnyPermission(['view_notifications', 'manage_notification_templates', 'send_notifications'])]
         elif self.action in ['create', 'update', 'partial_update', 'destroy', 'test_send']:
             return [IsAuthenticated(), HasPermission('manage_notification_templates')]
         return [IsAuthenticated()]
@@ -125,9 +127,13 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['create', 'bulk_send', 'resend']:
+        if self.action in ['list', 'retrieve', 'my_notifications', 'stats', 'unread_count', 'mark_read', 'mark_all_read', 'clear_read']:
+            return [IsAuthenticated(), HasPermission('view_notifications')]
+        if self.action == 'admin_stats':
+            return [IsAuthenticated(), HasPermission('manage_notifications')]
+        if self.action in ['create', 'bulk_send']:
             return [IsAuthenticated(), HasPermission('send_notifications')]
-        elif self.action in ['update', 'partial_update', 'destroy']:
+        elif self.action in ['update', 'partial_update', 'destroy', 'resend']:
             return [IsAuthenticated(), HasPermission('manage_notifications')]
         return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -214,7 +220,8 @@ class NotificationViewSet(viewsets.ModelViewSet):
             is_read=False
         )
         
-        count = notifications.count()
+        notifications_to_log = list(notifications)
+        count = len(notifications_to_log)
         now = timezone.now()
         
         notifications.update(
@@ -222,6 +229,10 @@ class NotificationViewSet(viewsets.ModelViewSet):
             read_at=now,
             status='read'
         )
+        NotificationLog.objects.bulk_create([
+            NotificationLog(notification=notification, action='read', details='Marked read in bulk')
+            for notification in notifications_to_log
+        ])
         
         return Response({
             'status': 'success',
@@ -289,6 +300,47 @@ class NotificationViewSet(viewsets.ModelViewSet):
         }
         
         return Response(stats_data)
+
+    @action(detail=False, methods=['get'])
+    def admin_stats(self, request):
+        """
+        Compact system-wide notification analytics for managers/admins.
+        """
+        days = int(request.query_params.get('days', 30))
+        days = max(1, min(days, 365))
+        since = timezone.now() - timedelta(days=days)
+        notifications = Notification.objects.filter(created_at__gte=since)
+
+        total = notifications.count()
+        unread = notifications.filter(is_read=False).count()
+        failed = notifications.filter(status='failed').count()
+        pending = notifications.filter(status='pending').count()
+        delivered = notifications.filter(status__in=['sent', 'delivered', 'read']).count()
+
+        def counts(field):
+            return {
+                item[field]: item['count']
+                for item in notifications.values(field).annotate(count=Count('id')).order_by('-count')
+            }
+
+        failed_recent = NotificationListSerializer(
+            notifications.filter(status='failed').order_by('-updated_at')[:10],
+            many=True,
+        ).data
+
+        return Response({
+            'days': days,
+            'total': total,
+            'unread': unread,
+            'failed': failed,
+            'pending': pending,
+            'delivered': delivered,
+            'success_rate': round((delivered / total) * 100, 1) if total else 0,
+            'by_type': counts('notification_type'),
+            'by_channel': counts('channel'),
+            'by_status': counts('status'),
+            'failed_recent': failed_recent,
+        })
     
     @action(detail=False, methods=['post'])
     def bulk_send(self, request):
@@ -382,7 +434,7 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         
-        if user.role in ['admin', 'manager']:
+        if user.role in ['admin', 'manager'] and self.request.query_params.get('all', 'false') == 'true':
             return self.queryset
         
         return self.queryset.filter(user=user)
@@ -449,6 +501,11 @@ class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = NotificationLog.objects.select_related('notification')
     serializer_class = NotificationLogSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'by_notification']:
+            return [IsAuthenticated(), HasPermission('view_notifications')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['notification', 'action']
     ordering_fields = ['timestamp']
@@ -460,7 +517,7 @@ class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
         """
         user = self.request.user
         
-        if user.role in ['admin', 'manager']:
+        if user.role in ['admin', 'manager'] and self.request.query_params.get('all', 'false') == 'true':
             return self.queryset
         
         # Users can only see logs for their own notifications
@@ -663,6 +720,25 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         # Case 2: Send to Raw Phone - Direct Hubtel Call
         if phone:
             rendered_message = NotificationService()._render_template(message, _build_sms_context(None))
+
+            if scheduled_for:
+                notification = Notification.objects.create(
+                    recipient=None,
+                    notification_type='custom',
+                    channel='sms',
+                    priority='normal',
+                    title='Scheduled Direct SMS',
+                    message=rendered_message,
+                    status='pending',
+                    scheduled_for=scheduled_for,
+                    data={'phone_number': phone, 'direct_send': True},
+                )
+                return Response({
+                    'status': 'success',
+                    'message': 'SMS scheduled',
+                    'notification_id': notification.id,
+                })
+
             success, response = send_sms(phone, rendered_message)
 
             # Log the direct phone SMS so it appears in history
@@ -709,6 +785,15 @@ class SMSConsoleViewSet(viewsets.ViewSet):
         if not recipients:
              return Response(
                 {'error': 'Recipients list is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not isinstance(recipients, list) or any(
+            not isinstance(item, dict) or item.get('type') not in ['user', 'phone'] or not item.get('value')
+            for item in recipients
+        ):
+            return Response(
+                {'error': 'Recipients must be a list of user or phone entries.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
             
@@ -1089,6 +1174,17 @@ class WebPushSubscriptionViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = WebPushSubscriptionSerializer
     queryset = WebPushSubscription.objects.all()
+
+    @action(detail=False, methods=['get'])
+    def public_key(self, request):
+        """
+        Return the public VAPID key used by browser push subscriptions.
+        """
+        public_key = getattr(settings, 'VAPID_PUBLIC_KEY', '')
+        return Response({
+            'public_key': public_key,
+            'configured': bool(public_key),
+        })
     
     @action(detail=False, methods=['post'])
     def subscribe(self, request):

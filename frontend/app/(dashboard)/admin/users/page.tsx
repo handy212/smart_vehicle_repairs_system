@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, User, branchesApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ArrowLeft, Plus, Edit, Trash2, UserCheck, UserX, Building2, Users, Filter, MoreVertical, Eye, ShieldCheck, ShieldAlert, ShieldOff } from "lucide-react";
@@ -27,6 +27,11 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { cn } from "@/lib/utils/cn";
 import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
+
+function getErrorDetail(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: { detail?: string } } })?.response?.data;
+  return data?.detail || fallback;
+}
 
 export default function UsersManagementPage() {
   const router = useRouter();
@@ -66,10 +71,10 @@ export default function UsersManagementPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete user",
+        description: getErrorDetail(error, "Failed to delete user"),
         variant: "destructive",
       });
     },
@@ -86,10 +91,10 @@ export default function UsersManagementPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update user",
+        description: getErrorDetail(error, "Failed to update user"),
         variant: "destructive",
       });
     },
@@ -104,10 +109,10 @@ export default function UsersManagementPage() {
         description: "2FA has been disabled for the user",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to reset 2FA",
+        description: getErrorDetail(error, "Failed to reset 2FA"),
         variant: "destructive",
       });
     },
@@ -115,8 +120,8 @@ export default function UsersManagementPage() {
 
   const users = usersData?.results || [];
 
-  const getRoleVariant = (role: string) => {
-    const roleMap: Record<string, "default" | "secondary" | "outline" | "danger"> = {
+  const getRoleVariant = (role: string): BadgeProps["variant"] => {
+    const roleMap: Record<string, BadgeProps["variant"]> = {
       admin: "danger",
       manager: "default",
       service_coordinator: "secondary",
@@ -124,6 +129,7 @@ export default function UsersManagementPage() {
       receptionist: "secondary",
       parts_manager: "outline",
       accountant: "outline",
+      hr_manager: "outline",
       customer: "outline",
     };
     return roleMap[role] || "outline";
@@ -138,6 +144,7 @@ export default function UsersManagementPage() {
       receptionist: "Receptionist",
       parts_manager: "Parts Manager",
       accountant: "Accountant",
+      hr_manager: "HR Manager",
       customer: "Customer",
     };
     return roleMap[role] || role;
@@ -221,6 +228,7 @@ export default function UsersManagementPage() {
                   <SelectItem value="technician">Technician</SelectItem>
                   <SelectItem value="parts_manager">Parts Manager</SelectItem>
                   <SelectItem value="accountant">Accountant</SelectItem>
+                  <SelectItem value="hr_manager">HR Manager</SelectItem>
                 </SelectContent>
               </Select>
               <Select
@@ -303,7 +311,7 @@ export default function UsersManagementPage() {
                       </TableCell>
                       <TableCell className="px-4 py-2 whitespace-nowrap">
 
-                        <Badge variant={getRoleVariant(user.role) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
+                        <Badge variant={getRoleVariant(user.role)} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {getRoleLabel(user.role)}
                         </Badge>
                       </TableCell>

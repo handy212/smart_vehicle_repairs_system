@@ -9,17 +9,15 @@ from django.conf import settings
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_employee_profile(sender, instance, created, **kwargs):
     """
-    Auto-create an EmployeeProfile for new non-customer users.
-    This mirrors the pattern used in technicians app.
+    Ensure operational staff accounts always have an EmployeeProfile.
     """
-    if created and hasattr(instance, 'role') and instance.role != 'customer':
+    from .serializers import STAFF_PROFILE_ROLES
+    if hasattr(instance, 'role') and instance.role in STAFF_PROFILE_ROLES:
         from .models import EmployeeProfile
-        # Only create if profile doesn't already exist
-        if not hasattr(instance, 'employee_profile'):
-            EmployeeProfile.objects.create(
-                user=instance,
-                start_date=instance.hire_date,
-            )
+        EmployeeProfile.objects.get_or_create(
+            user=instance,
+            defaults={'start_date': instance.hire_date},
+        )
 
 
 @receiver(post_save, sender='hr.EmployeeProfile')

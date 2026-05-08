@@ -123,11 +123,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         branch = attrs.get('branch')
         managed_branches = attrs.get('managed_branches', [])
 
-        # Prevent non-super-admins from creating super-admin users
-        request = self.context.get('request')
         if role == 'super-admin':
-            if not request or not request.user or request.user.role != 'super-admin':
-                raise serializers.ValidationError({"role": "Only super-admins can create other super-admin accounts."})
+            raise serializers.ValidationError({"role": "Invalid role selection."})
         
         # Validate branch assignment based on role
         if role == 'manager':
@@ -136,12 +133,20 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     "branch": "Managers should be assigned via managed_branches, not branch field."
                 })
-        elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+        elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
             # Staff should use branch, not managed_branches
             if managed_branches:
                 raise serializers.ValidationError({
                     "managed_branches": f"{role} role should be assigned to a single branch, not multiple branches."
                 })
+            if not branch:
+                raise serializers.ValidationError({
+                    "branch": f"{role} role must be assigned to a branch."
+                })
+        if role == 'manager' and not managed_branches:
+            raise serializers.ValidationError({
+                "managed_branches": "Managers must be assigned to at least one branch."
+            })
         
         return attrs
     
@@ -163,7 +168,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         # Assign branch based on role
         if role == 'manager' and managed_branches:
             user.managed_branches.set(managed_branches)
-        elif branch and role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+        elif branch and role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
             user.branch = branch
             user.save()
         
@@ -379,15 +384,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         branch = attrs.get('branch')
         managed_branches = attrs.get('managed_branches')
 
-        # Prevent non-super-admins from editing super-admin users or assigning the super-admin role
+        # Keep the owner/system account out of operational user-management flows.
         request = self.context.get('request')
         if self.instance and self.instance.role == 'super-admin':
             if not request or not request.user or request.user.role != 'super-admin':
-                raise serializers.ValidationError("Only super-admins can modify super-admin accounts.")
+                raise serializers.ValidationError("You do not have permission to perform this action.")
         
         if role == 'super-admin' and (not self.instance or self.instance.role != 'super-admin'):
-             if not request or not request.user or request.user.role != 'super-admin':
-                raise serializers.ValidationError({"role": "Only super-admins can assign the super-admin role."})
+            raise serializers.ValidationError({"role": "Invalid role selection."})
         
         # If role is being changed, validate branch assignment
         if role:
@@ -397,14 +401,28 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({
                         "branch": "Managers should be assigned via managed_branches, not branch field."
                     })
+                effective_managed_branches = (
+                    managed_branches
+                    if managed_branches is not None
+                    else list(self.instance.managed_branches.all()) if self.instance else []
+                )
+                if not effective_managed_branches:
+                    raise serializers.ValidationError({
+                        "managed_branches": "Managers must be assigned to at least one branch."
+                    })
                 # Clear branch if switching to manager
                 if self.instance and self.instance.branch:
                     attrs['branch'] = None
-            elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+            elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
                 # Staff should use branch, not managed_branches
                 if managed_branches is not None and len(managed_branches) > 0:
                     raise serializers.ValidationError({
                         "managed_branches": f"{role} role should be assigned to a single branch, not multiple branches."
+                    })
+                effective_branch = attrs.get('branch', self.instance.branch if self.instance else None)
+                if not effective_branch:
+                    raise serializers.ValidationError({
+                        "branch": f"{role} role must be assigned to a branch."
                     })
                 # Clear managed_branches if switching to staff role
                 if self.instance:

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { gatepassApi } from "@/lib/api/gatepass";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import type { ComponentProps } from "react";
 
-function getStatusVariant(status: string) {
+function getStatusVariant(status: string): ComponentProps<typeof Badge>["variant"] {
   switch (status) {
     case "pending":
       return "secondary";
@@ -34,8 +36,6 @@ function getStatusVariant(status: string) {
 
 export default function GatePassDetailPage() {
   const params = useParams();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const router = useRouter();
   const gatePassId = parseInt(params.id as string);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -60,10 +60,10 @@ export default function GatePassDetailPage() {
       setShowIssueDialog(false);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to issue gate pass",
+        description: getApiErrorMessage(error, "Failed to issue gate pass"),
         variant: "destructive",
       });
     },
@@ -78,10 +78,10 @@ export default function GatePassDetailPage() {
       setShowCompleteDialog(false);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to complete gate pass",
+        description: getApiErrorMessage(error, "Failed to complete gate pass"),
         variant: "destructive",
       });
     },
@@ -96,10 +96,10 @@ export default function GatePassDetailPage() {
       setShowCancelDialog(false);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to cancel gate pass",
+        description: getApiErrorMessage(error, "Failed to cancel gate pass"),
         variant: "destructive",
       });
     },
@@ -107,17 +107,17 @@ export default function GatePassDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <div className="space-y-2">
             <Skeleton className="h-8 w-64" />
             <Skeleton className="h-4 w-32" />
           </div>
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Skeleton className="h-40 rounded-lg" />
+          <Skeleton className="h-40 rounded-lg" />
         </div>
       </div>
     );
@@ -138,10 +138,10 @@ export default function GatePassDetailPage() {
     "N/A";
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 print:hidden md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
           <Link href="/gatepass">
             <Button variant="ghost" size="sm" className="hidden md:flex">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -150,11 +150,11 @@ export default function GatePassDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
                 {gatePass.gate_pass_number}
               </h1>
 
-              <Badge variant={getStatusVariant(gatePass.status) as any} className="text-sm px-2.5 py-0.5 capitalize shadow-sm">
+              <Badge variant={getStatusVariant(gatePass.status)} className="px-2 py-0.5 text-xs capitalize">
                 {gatePass.status?.replace(/_/g, " ") || gatePass.status}
               </Badge>
             </div>
@@ -187,40 +187,40 @@ export default function GatePassDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
+      <div className="grid grid-cols-1 gap-4 print:hidden lg:grid-cols-3">
         {/* Main Content (Left 2 columns) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-4 lg:col-span-2">
 
           {/* Work Order & Vehicle Info */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-t-4 border-t-primary">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="w-5 h-5 text-primary" />
+          <Card className="border-border shadow-sm">
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <FileText className="h-4 w-4 text-muted-foreground" />
                 Details
               </CardTitle>
-              <CardDescription>Associated work order and vehicle information</CardDescription>
+              <CardDescription className="text-xs">Associated work order and vehicle information</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <CardContent className="grid grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-2">
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Work Order</p>
-                <Link href={`/workorders/${workOrderId}`} className="text-lg font-semibold text-primary hover:underline flex items-center gap-2">
+                <Link href={`/workorders/${workOrderId}`} className="flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
                   {workOrderNumber}
                   <ArrowLeft className="w-3 h-3 rotate-135" />
                 </Link>
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Customer</p>
-                <p className="text-base font-medium">{gatePass.customer_name || "N/A"}</p>
+                <p className="text-sm font-medium">{gatePass.customer_name || "N/A"}</p>
               </div>
               <div className="sm:col-span-2">
-                <Separator className="my-2" />
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 mt-3">Vehicle</p>
-                <div className="flex items-start gap-3 mt-1">
-                  <div className="p-2 bg-border rounded-lg">
-                    <Car className="w-5 h-5 text-muted-foreground" />
+                <Separator className="my-1" />
+                <p className="mb-1 mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Vehicle</p>
+                <div className="mt-1 flex items-start gap-2">
+                  <div className="rounded-md border bg-muted/50 p-1.5">
+                    <Car className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-base font-medium">{gatePass.vehicle_info || "N/A"}</p>
+                    <p className="text-sm font-medium">{gatePass.vehicle_info || "N/A"}</p>
                     {/* We could add VIN here if we had it easily available */}
                   </div>
                 </div>
@@ -229,19 +229,19 @@ export default function GatePassDetailPage() {
           </Card>
 
           {/* Pickup Information */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow duration-200 border-t-4 border-t-muted-foreground/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="w-5 h-5 text-muted-foreground" />
+          <Card className="border-border shadow-sm">
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <User className="h-4 w-4 text-muted-foreground" />
                 Pickup Information
               </CardTitle>
               {/* <CardDescription>Details about who picked up the vehicle</CardDescription> */}
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <CardContent className="space-y-3 px-4 pb-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Picked Up By</p>
-                  <p className="text-lg font-medium text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {gatePass.pickup_person_display || "N/A"}
                   </p>
                   {gatePass.picked_up_by_customer && (
@@ -256,25 +256,25 @@ export default function GatePassDetailPage() {
                     {gatePass.pickup_person_relationship && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Relationship</p>
-                        <p className="text-base font-medium">{gatePass.pickup_person_relationship}</p>
+                        <p className="text-sm font-medium">{gatePass.pickup_person_relationship}</p>
                       </div>
                     )}
                     {gatePass.pickup_person_id_type && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">ID Type</p>
-                        <p className="text-base font-medium capitalize">{gatePass.pickup_person_id_type.replace(/_/g, " ")}</p>
+                        <p className="text-sm font-medium capitalize">{gatePass.pickup_person_id_type.replace(/_/g, " ")}</p>
                       </div>
                     )}
                     {gatePass.pickup_person_id_number && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">ID Number</p>
-                        <p className="text-base font-medium font-mono">{gatePass.pickup_person_id_number}</p>
+                        <p className="font-mono text-sm font-medium">{gatePass.pickup_person_id_number}</p>
                       </div>
                     )}
                     {gatePass.pickup_person_phone && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Phone</p>
-                        <p className="text-base font-medium">{gatePass.pickup_person_phone}</p>
+                        <p className="text-sm font-medium">{gatePass.pickup_person_phone}</p>
                       </div>
                     )}
                   </>
@@ -282,11 +282,11 @@ export default function GatePassDetailPage() {
               </div>
 
               {gatePass.pickup_notes && (
-                <div className="mt-4 bg-muted/50 p-4 rounded-lg border border-border">
+                <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 flex items-center gap-1">
                     <FileText className="w-3 h-3" /> Notes
                   </p>
-                  <p className="text-sm text-card-foreground italic">"{gatePass.pickup_notes}"</p>
+                  <p className="text-sm text-card-foreground italic">&quot;{gatePass.pickup_notes}&quot;</p>
                 </div>
               )}
             </CardContent>
@@ -295,21 +295,21 @@ export default function GatePassDetailPage() {
         </div>
 
         {/* Sidebar (Right column) */}
-        <div className="space-y-6">
+        <div className="space-y-4">
 
           {/* Status & Timeline */}
-          <Card className="shadow-sm h-fit">
-            <CardHeader className="bg-muted/50 pb-4">
-              <CardTitle className="flex items-center gap-2 text-base">
+          <Card className="h-fit shadow-sm">
+            <CardHeader className="border-b bg-muted/30 px-4 py-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <Clock className="w-4 h-4" />
                 Timeline
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 relative">
-              <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-border"></div>
-              <div className="space-y-6 relative">
-                <div className="flex items-start gap-4">
-                  <div className="w-3 h-3 rounded-full bg-primary mt-1.5 ring-4 ring-background z-10"></div>
+            <CardContent className="relative px-4 py-4">
+              <div className="absolute bottom-4 left-[21px] top-4 w-px bg-border"></div>
+              <div className="relative space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="z-10 mt-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-background"></div>
                   <div>
                     <p className="text-sm font-medium text-foreground">Created</p>
                     <p className="text-xs text-muted-foreground">
@@ -320,8 +320,8 @@ export default function GatePassDetailPage() {
                 </div>
 
                 {gatePass.issued_at && (
-                  <div className="flex items-start gap-4">
-                    <div className="w-3 h-3 rounded-full bg-primary/80 mt-1.5 ring-4 ring-background z-10"></div>
+                  <div className="flex items-start gap-3">
+                    <div className="z-10 mt-1.5 h-2.5 w-2.5 rounded-full bg-primary/80 ring-4 ring-background"></div>
                     <div>
                       <p className="text-sm font-medium text-foreground">Issued</p>
                       <p className="text-xs text-muted-foreground">
@@ -335,8 +335,8 @@ export default function GatePassDetailPage() {
                 )}
 
                 {gatePass.completed_at && (
-                  <div className="flex items-start gap-4">
-                    <div className="w-3 h-3 rounded-full bg-success mt-1.5 ring-4 ring-background z-10"></div>
+                  <div className="flex items-start gap-3">
+                    <div className="z-10 mt-1.5 h-2.5 w-2.5 rounded-full bg-success ring-4 ring-background"></div>
                     <div>
                       <p className="text-sm font-medium text-foreground">Completed</p>
                       <p className="text-xs text-muted-foreground">
@@ -350,17 +350,17 @@ export default function GatePassDetailPage() {
           </Card>
 
           {/* Actions Panel */}
-          <Card className="shadow-lg border-primary/20 ring-1 ring-primary/5">
-            <CardHeader>
-              <CardTitle className="text-lg">Actions</CardTitle>
+          <Card className="border-border shadow-sm">
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="text-sm font-semibold">Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 px-4 pb-4">
               {gatePass.status === "pending" && (
                 <PermissionGuard permission="issue_gatepass">
                   <Button
                     onClick={() => setShowIssueDialog(true)}
                     className="w-full"
-                    size="lg"
+                    size="sm"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Issue Gate Pass
@@ -373,7 +373,7 @@ export default function GatePassDetailPage() {
                   <Button
                     onClick={() => setShowCompleteDialog(true)}
                     className="w-full bg-success hover:bg-success/90"
-                    size="lg"
+                    size="sm"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Complete (Picked Up)
@@ -395,8 +395,8 @@ export default function GatePassDetailPage() {
               )}
 
               {gatePass.status === "completed" && (
-                <div className="text-center p-4 bg-success/10 rounded-lg text-success text-sm font-medium">
-                  <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <div className="rounded-md bg-success/10 p-3 text-center text-sm font-medium text-success">
+                  <CheckCircle className="mx-auto mb-2 h-5 w-5 opacity-60" />
                   Gate pass completed. Vehicle has been picked up.
                 </div>
               )}

@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Sum, Count, F, Q, Avg
 from django.utils import timezone
-from django.db import connection, models
+from django.db import connection, models, transaction
 from django.db.models import Sum, Count, F, Q, Avg, Subquery, OuterRef, Value
 from django.db.models.functions import Coalesce
 from datetime import date, datetime, timedelta
@@ -17,8 +17,8 @@ from apps.branches.utils import filter_queryset_for_user_branches
 
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
-    PurchaseOrderItem, InventoryTransaction,
-    ServicePackage, StockItem, Transfer, TransferItem, StockAlert,
+    PurchaseOrderApproval, PurchaseOrderItem, InventoryTransaction,
+    ServicePackage, StockItem, Transfer, TransferApproval, TransferItem, StockAlert,
     PhysicalCountSession, PhysicalCountItem, ServiceBundle, ServiceBundleItem
 )
 from .serializers import (
@@ -151,7 +151,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def preferred(self, request):
         """Get list of preferred suppliers"""
-        suppliers = self.queryset.filter(is_preferred=True, is_active=True)
+        suppliers = self.get_queryset().filter(is_preferred=True, is_active=True)
         serializer = SupplierListSerializer(suppliers, many=True)
         return Response(serializer.data)
 
@@ -168,7 +168,11 @@ class SupplierViewSet(viewsets.ModelViewSet):
     def purchase_orders_list(self, request, pk=None):
         """Get all purchase orders for this supplier"""
         supplier = self.get_object()
-        orders = supplier.purchase_orders.all()
+        orders = filter_queryset_for_user_branches(
+            supplier.purchase_orders.all(),
+            request.user,
+            request,
+        )
         serializer = PurchaseOrderListSerializer(orders, many=True)
         return Response(serializer.data)
 
@@ -1318,8 +1322,9 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     ViewSet for purchase orders with workflow management
     """
     queryset = PurchaseOrder.objects.select_related(
-        'supplier', 'created_by', 'submitted_by', 'received_by'
-    ).prefetch_related('items__part')
+        'supplier', 'created_by', 'submitted_by', 'received_by',
+        'assigned_approver', 'approved_by', 'rejected_by'
+    ).prefetch_related('items__part', 'approvals__approver')
     permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
     
     def get_permissions(self):
@@ -1381,7 +1386,54 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     def _can_approve_purchase_order(user, po):
         if getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in {'admin', 'super-admin'}:
             return True
+        if po.approvals.exists():
+            return po.approvals.filter(approver=user, status='pending').exists()
         return po.assigned_approver_id == getattr(user, 'id', None)
+
+    @staticmethod
+    def _is_admin_approver(user):
+        return getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in {'admin', 'super-admin'}
+
+    @staticmethod
+    def _requested_approver_ids(request):
+        if hasattr(request.data, 'getlist'):
+            approver_ids = request.data.getlist('approver_ids')
+            if not approver_ids:
+                approver_id = request.data.get('approver_id')
+                approver_ids = [approver_id] if approver_id else []
+        else:
+            approver_ids = request.data.get('approver_ids')
+            if approver_ids is None:
+                approver_id = request.data.get('approver_id')
+                approver_ids = [approver_id] if approver_id else []
+            elif not isinstance(approver_ids, list):
+                approver_ids = [approver_ids]
+
+        cleaned = []
+        seen = set()
+        for approver_id in approver_ids:
+            try:
+                cleaned_id = int(approver_id)
+            except (TypeError, ValueError):
+                continue
+            if cleaned_id not in seen:
+                cleaned.append(cleaned_id)
+                seen.add(cleaned_id)
+        return cleaned
+
+    @staticmethod
+    def _approval_summary(po):
+        approvals = list(po.approvals.all())
+        total = len(approvals)
+        approved = sum(1 for approval in approvals if approval.status == 'approved')
+        rejected = sum(1 for approval in approvals if approval.status == 'rejected')
+        pending = sum(1 for approval in approvals if approval.status == 'pending')
+        return {
+            'total': total,
+            'approved': approved,
+            'pending': pending,
+            'rejected': rejected,
+        }
 
     @staticmethod
     def _recalculate_quantity_on_order(po):
@@ -1466,6 +1518,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 wo_part.save(update_fields=['status', 'updated_at'])
 
     @action(detail=True, methods=['post'], url_path='submit-for-approval')
+    @transaction.atomic
     def submit_for_approval(self, request, pk=None):
         """Submit purchase order for approval"""
         po = self.get_object()
@@ -1490,53 +1543,67 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                  status=status.HTTP_400_BAD_REQUEST
              )
         
-        approver_id = request.data.get('approver_id')
-        if not approver_id:
+        approver_ids = self._requested_approver_ids(request)
+        if not approver_ids:
             return Response(
-                {'error': 'Select an approver before submitting this purchase order.'},
+                {'error': 'Select at least one approver before submitting this purchase order.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         from apps.accounts.models import User
-        try:
-            approver = User.objects.get(id=approver_id, is_active=True)
-        except User.DoesNotExist:
+        approvers = list(User.objects.filter(id__in=approver_ids, is_active=True))
+        approvers_by_id = {approver.id: approver for approver in approvers}
+        missing_ids = [approver_id for approver_id in approver_ids if approver_id not in approvers_by_id]
+        if missing_ids:
             return Response(
-                {'error': 'Selected approver not found'},
+                {'error': 'One or more selected approvers were not found.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if approver.id == request.user.id:
+        if request.user.id in approver_ids:
             return Response(
                 {'error': 'Purchase orders must be approved by someone other than the submitter.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if getattr(approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'}:
+        invalid_approvers = [
+            approver for approver in approvers
+            if getattr(approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'}
+        ]
+        if invalid_approvers:
             return Response(
-                {'error': 'Selected approver must be a manager, admin, or parts manager.'},
+                {'error': 'Selected approvers must be managers, admins, or parts managers.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        po.assigned_approver = approver
+        ordered_approvers = [approvers_by_id[approver_id] for approver_id in approver_ids]
+        po.assigned_approver = ordered_approvers[0]
 
         po.status = 'pending_approval'
         po.submitted_by = request.user
         po.submitted_at = timezone.now()
         po.save()
+        po.approvals.all().delete()
+        PurchaseOrderApproval.objects.bulk_create([
+            PurchaseOrderApproval(purchase_order=po, approver=approver)
+            for approver in ordered_approvers
+        ])
         self._recalculate_quantity_on_order(po)
 
-        # Send notification to assigned approver
-        if po.assigned_approver:
+        # Send notification to every assigned approver.
+        for approver in ordered_approvers:
             try:
                 from apps.notifications_app.triggers import NotificationTriggers
                 triggers = NotificationTriggers()
-                triggers.purchase_order_approval_request(po, po.assigned_approver)
+                triggers.purchase_order_approval_request(po, approver)
             except Exception as e:
                 # specific validation error logging could go here
                 pass
 
-        return Response({'status': 'Purchase order submitted for approval'})
+        return Response({
+            'status': 'Purchase order submitted for approval',
+            'approver_count': len(ordered_approvers),
+        })
     
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -1561,13 +1628,40 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        approvals = po.approvals.select_related('approver')
+        if approvals.exists():
+            now = timezone.now()
+            user_approval = approvals.filter(approver=request.user, status='pending').first()
+
+            if user_approval:
+                user_approval.status = 'approved'
+                user_approval.approved_at = now
+                user_approval.save(update_fields=['status', 'approved_at', 'updated_at'])
+            elif self._is_admin_approver(request.user):
+                approvals.filter(status='pending').update(status='approved', approved_at=now, updated_at=now)
+            else:
+                return Response(
+                    {'error': 'This purchase order is waiting on a different approver.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if not approvals.filter(status='pending').exists():
+                po.status = 'approved'
+                po.approved_by = request.user
+                po.approved_at = now
+                po.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+                self._recalculate_quantity_on_order(po)
+                return Response({'status': 'Purchase order approved', 'approval_progress': self._approval_summary(po)})
+
+            return Response({'status': 'Approval recorded', 'approval_progress': self._approval_summary(po)})
+
         po.status = 'approved'
         po.approved_by = request.user
         po.approved_at = timezone.now()
         po.save()
         self._recalculate_quantity_on_order(po)
-        
-        return Response({'status': 'Purchase order approved'})
+
+        return Response({'status': 'Purchase order approved', 'approval_progress': self._approval_summary(po)})
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
@@ -1592,6 +1686,23 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 {'error': 'A rejection reason is required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        approvals = po.approvals.select_related('approver')
+        if approvals.exists():
+            now = timezone.now()
+            user_approval = approvals.filter(approver=request.user, status='pending').first()
+            if user_approval:
+                user_approval.status = 'rejected'
+                user_approval.rejected_at = now
+                user_approval.rejection_reason = reason
+                user_approval.save(update_fields=['status', 'rejected_at', 'rejection_reason', 'updated_at'])
+            elif self._is_admin_approver(request.user):
+                approvals.filter(status='pending').update(
+                    status='rejected',
+                    rejected_at=now,
+                    rejection_reason=reason,
+                    updated_at=now,
+                )
 
         po.status = 'rejected'
         po.rejected_by = request.user
@@ -2046,8 +2157,8 @@ class TransferViewSet(viewsets.ModelViewSet):
     """
     queryset = Transfer.objects.all().select_related(
         'source_branch', 'destination_branch', 
-        'created_by', 'approved_by', 'received_by'
-    ).prefetch_related('items__part')
+        'created_by', 'submitted_by', 'assigned_approver', 'approved_by', 'rejected_by', 'received_by'
+    ).prefetch_related('items__part', 'approvals__approver')
     
     permission_classes = [IsAuthenticated, IsModuleEnabled('inventory')]
 
@@ -2074,7 +2185,7 @@ class TransferViewSet(viewsets.ModelViewSet):
         if not user or not user.is_authenticated:
             return queryset.none()
             
-        if user.role == 'admin':
+        if getattr(user, 'is_superuser', False) or user.role in {'admin', 'super-admin'}:
             return queryset
             
         # For transfers, we want to see items where source OR destination is in our accessible branches
@@ -2105,32 +2216,70 @@ class TransferViewSet(viewsets.ModelViewSet):
         # Assign the created transfer to serializer.instance so it's returned
         serializer.instance = transfer
 
+    @staticmethod
+    def _requested_approver_ids(request):
+        if hasattr(request.data, 'getlist'):
+            approver_ids = request.data.getlist('approver_ids')
+            if not approver_ids:
+                approver_id = request.data.get('approver_id')
+                approver_ids = [approver_id] if approver_id else []
+        else:
+            approver_ids = request.data.get('approver_ids')
+            if approver_ids is None:
+                approver_id = request.data.get('approver_id')
+                approver_ids = [approver_id] if approver_id else []
+            elif not isinstance(approver_ids, list):
+                approver_ids = [approver_ids]
+
+        cleaned = []
+        seen = set()
+        for approver_id in approver_ids:
+            try:
+                cleaned_id = int(approver_id)
+            except (TypeError, ValueError):
+                continue
+            if cleaned_id not in seen:
+                cleaned.append(cleaned_id)
+                seen.add(cleaned_id)
+        return cleaned
+
+    def destroy(self, request, *args, **kwargs):
+        transfer = self.get_object()
+        if transfer.status not in {'draft', 'rejected', 'cancelled'}:
+            return Response(
+                {'error': 'Only draft, rejected, or cancelled transfers can be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'], url_path='submit-for-approval')
     def submit_for_approval(self, request, pk=None):
         transfer = self.get_object()
-        approver_id = request.data.get('approver_id')
-        approver = None
-        if approver_id:
-            from apps.accounts.models import User
-            try:
-                approver = User.objects.get(id=approver_id)
-            except User.DoesNotExist:
-                return Response({'error': 'Approver not found'}, status=status.HTTP_400_BAD_REQUEST)
+        approver_ids = self._requested_approver_ids(request)
+        if not approver_ids:
+            return Response({'error': 'Select at least one approver before submitting this transfer'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.accounts.models import User
+        approvers = list(User.objects.filter(id__in=approver_ids, is_active=True))
+        approvers_by_id = {approver.id: approver for approver in approvers}
+        if any(approver_id not in approvers_by_id for approver_id in approver_ids):
+            return Response({'error': 'One or more selected approvers were not found.'}, status=status.HTTP_400_BAD_REQUEST)
+        ordered_approvers = [approvers_by_id[approver_id] for approver_id in approver_ids]
         
         try:
-            InventoryService.submit_transfer_for_approval(transfer, approver=approver, user=request.user)
+            InventoryService.submit_transfer_for_approval(transfer, approvers=ordered_approvers, user=request.user)
             
-            # Send notification to assigned approver if exists
-            if transfer.assigned_approver:
+            # Send notification to every assigned approver.
+            for approver in ordered_approvers:
                 try:
                     from apps.notifications_app.triggers import NotificationTriggers
                     triggers = NotificationTriggers()
-                    triggers.stock_transfer_approval_request(transfer, transfer.assigned_approver)
+                    triggers.stock_transfer_approval_request(transfer, approver)
                 except Exception as e:
                     # Log but don't fail
                     logger.warning(f"Failed to send transfer approval notification: {e}")
             
-            return Response({'status': 'Transfer submitted for approval'})
+            return Response({'status': 'Transfer submitted for approval', 'approver_count': len(ordered_approvers)})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

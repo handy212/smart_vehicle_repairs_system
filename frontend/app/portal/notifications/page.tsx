@@ -13,17 +13,14 @@ import {
   Wrench,
   Receipt,
   CreditCard,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   FileText,
   Car,
   ArrowRight,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  Settings
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,6 +86,10 @@ export default function NotificationsPage() {
         return CreditCard;
       case "vehicle":
         return Car;
+      case "inspection":
+        return FileText;
+      case "inventory":
+        return Package;
       default:
         return Bell;
     }
@@ -96,15 +97,56 @@ export default function NotificationsPage() {
 
   const getNotificationLink = (notification: Notification): string | null => {
     const data = notification.data || {};
-    if (data.appointment_id) return `/portal/appointments/${data.appointment_id}`;
-    if (data.invoice_id) return `/portal/invoices/${data.invoice_id}`;
-    if (data.estimate_id) return `/portal/estimates/${data.estimate_id}`;
-    if (data.vehicle_id) return `/portal/vehicles/${data.vehicle_id}`;
-    if (data.payment_id) return `/portal/payments`;
+    const getNumericData = (key: string) => {
+      const value = data[key];
+      if (typeof value === "number") return value;
+      if (typeof value === "string" && value.trim()) return Number(value);
+      return undefined;
+    };
+
+    const relatedType = notification.related_object_type?.toLowerCase();
+    const relatedId = notification.related_object_id;
+    if (relatedType && relatedId) {
+      switch (relatedType) {
+        case "appointment":
+          return `/portal/appointments/${relatedId}`;
+        case "work_order":
+        case "workorder":
+          return `/portal/work-orders/${relatedId}`;
+        case "invoice":
+          return `/portal/invoices/${relatedId}`;
+        case "estimate":
+          return `/portal/estimates/${relatedId}`;
+        case "vehicle":
+          return `/portal/vehicles/${relatedId}`;
+        case "inspection":
+          return `/portal/inspections/${relatedId}`;
+        case "payment":
+          return `/portal/payments`;
+        case "roadside":
+        case "roadside_request":
+        case "roadsideassistancerequest":
+          return `/portal/roadside/${relatedId}`;
+        default:
+          break;
+      }
+    }
+
+    const appointmentId = getNumericData("appointment_id");
+    const invoiceId = getNumericData("invoice_id");
+    const estimateId = getNumericData("estimate_id");
+    const vehicleId = getNumericData("vehicle_id");
+    const inspectionId = getNumericData("inspection_id");
+    if (appointmentId) return `/portal/appointments/${appointmentId}`;
+    if (invoiceId) return `/portal/invoices/${invoiceId}`;
+    if (estimateId) return `/portal/estimates/${estimateId}`;
+    if (vehicleId) return `/portal/vehicles/${vehicleId}`;
+    if (inspectionId) return `/portal/inspections/${inspectionId}`;
+    if (getNumericData("payment_id")) return `/portal/payments`;
     return null;
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string): "danger" | "warning" | "info" | "secondary" => {
     switch (priority) {
       case "urgent":
         return "danger";
@@ -290,7 +332,7 @@ export default function NotificationsPage() {
                             )}
                             {notification.priority && notification.priority !== "normal" && (
 
-                              < Badge variant={getPriorityColor(notification.priority) as any}>
+                              <Badge variant={getPriorityColor(notification.priority)}>
                                 {notification.priority}
                               </Badge>
                             )}
@@ -351,4 +393,3 @@ export default function NotificationsPage() {
     </div >
   );
 }
-

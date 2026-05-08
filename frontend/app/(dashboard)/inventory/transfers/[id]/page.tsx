@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
-import { adminApi } from "@/lib/api/admin";
+import { adminApi, type User } from "@/lib/api/admin";
 import { authApi } from "@/lib/api/auth";
 import { useBranchStore } from "@/store/branchStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/lib/hooks/useToast";
@@ -20,34 +21,22 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-
-    DialogFooter,
-
-    DialogHeader,
     DialogTitle,
-
-    DialogClose,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { cn } from "@/lib/utils";
 
 export default function TransferDetailPage() {
     const params = useParams();
     const id = parseInt(params.id as string);
 
-    const router = useRouter();
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [receiveQuantities, setReceiveQuantities] = useState<Record<number, number>>({});
     const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-    const [selectedApprover, setSelectedApprover] = useState<string>("");
+    const [selectedApproverIds, setSelectedApproverIds] = useState<number[]>([]);
     const [rejectionReason, setRejectionReason] = useState("");
 
     const { data: transfer, isLoading, error } = useQuery({
@@ -63,10 +52,15 @@ export default function TransferDetailPage() {
 
     const { activeBranchId } = useBranchStore();
     const isSubmitter = currentUser?.id === transfer?.created_by;
-    const isApprover = currentUser?.id === transfer?.assigned_approver || currentUser?.role === "admin" || currentUser?.role === "super-admin";
-    const canApprove = isApprover && !isSubmitter;
-    const isSourceBranch = activeBranchId === transfer?.source_branch;
-    const isDestinationBranch = activeBranchId === transfer?.destination_branch;
+    const isAdminApprover = currentUser?.role === "admin" || currentUser?.role === "super-admin";
+    const currentUserPendingApproval = transfer?.approvals?.some(
+        (approval) => approval.approver === currentUser?.id && approval.status === "pending"
+    );
+    const isLegacyApprover = currentUser?.id === transfer?.assigned_approver;
+    const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isAdminApprover);
+    const canApprove = isApprover && (!isSubmitter || isAdminApprover);
+    const isSourceBranch = !activeBranchId || activeBranchId === transfer?.source_branch || isAdminApprover;
+    const isDestinationBranch = !activeBranchId || activeBranchId === transfer?.destination_branch || isAdminApprover;
 
     const { data: usersResponse } = useQuery({
         queryKey: ["users", "approvers", transfer?.source_branch, transfer?.destination_branch],
@@ -81,7 +75,7 @@ export default function TransferDetailPage() {
 
             // Fetch users from destination branch if different
 
-            let destUsers: any = { results: [] };
+            let destUsers: { results?: User[] } = { results: [] };
             if (transfer.destination_branch !== transfer.source_branch) {
                 destUsers = await adminApi.users.list({
                     is_active: true,
@@ -107,14 +101,15 @@ export default function TransferDetailPage() {
     const approvers = usersResponse?.results || [];
 
     const submitForApprovalMutation = useMutation({
-        mutationFn: (approverId?: number) => inventoryApi.submitTransferForApproval(id, approverId),
+        mutationFn: (approverIds: number[]) => inventoryApi.submitTransferForApproval(id, approverIds),
         onSuccess: () => {
             toast({ title: "Submitted", description: "Transfer has been submitted for approval." });
             queryClient.invalidateQueries({ queryKey: ["transfer", id] });
             setIsSubmitDialogOpen(false);
+            setSelectedApproverIds([]);
         },
 
-        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to submit transfer"), variant: "destructive" }),
     });
 
     const approveMutation = useMutation({
@@ -124,7 +119,7 @@ export default function TransferDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["transfer", id] });
         },
 
-        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to approve transfer"), variant: "destructive" }),
     });
 
     const rejectMutation = useMutation({
@@ -135,7 +130,7 @@ export default function TransferDetailPage() {
             setIsRejectDialogOpen(false);
         },
 
-        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to reject transfer"), variant: "destructive" }),
     });
 
     const shipMutation = useMutation({
@@ -145,7 +140,7 @@ export default function TransferDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["transfer", id] });
         },
 
-        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to ship transfer"), variant: "destructive" }),
     });
 
     const receiveMutation = useMutation({
@@ -155,7 +150,7 @@ export default function TransferDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["transfer", id] });
         },
 
-        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+        onError: (err: unknown) => toast({ title: "Error", description: getApiErrorMessage(err, "Failed to receive transfer"), variant: "destructive" }),
     });
 
     if (isLoading) return <div className="p-8"><Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" /></div>;
@@ -189,8 +184,16 @@ export default function TransferDetailPage() {
     };
 
     const handleSubmitForApproval = () => {
-        const approverId = selectedApprover ? parseInt(selectedApprover) : undefined;
-        submitForApprovalMutation.mutate(approverId);
+        submitForApprovalMutation.mutate(selectedApproverIds);
+    };
+
+    const toggleApprover = (approverId: number, checked: boolean | string) => {
+        setSelectedApproverIds((current) => {
+            if (checked) {
+                return current.includes(approverId) ? current : [...current, approverId];
+            }
+            return current.filter((idToKeep) => idToKeep !== approverId);
+        });
     };
 
     return (
@@ -208,26 +211,40 @@ export default function TransferDetailPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-0.5">Select Approver</label>
-                                <Select value={selectedApprover} onValueChange={setSelectedApprover}>
-                                    <SelectTrigger className="h-11 bg-background border-border rounded-lg shadow-sm focus:ring-1 focus:ring-ring transition-all">
-                                        <SelectValue placeholder="Search or select manager..." />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-lg shadow-xl">
+                        <div className="max-h-[320px] space-y-2 overflow-y-auto">
+                            {approvers.map((user: User) => {
+                                const isCurrentUser = user.id === currentUser?.id;
+                                const isChecked = selectedApproverIds.includes(user.id);
+                                const displayName = user.full_name || user.username || user.email;
 
-                                        {approvers.map((user: any) => (
-                                            <SelectItem key={user.id} value={user.id.toString()} className="py-3 cursor-pointer">
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className="font-medium text-sm">{user.full_name || user.username}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{user.role.replace('_', ' ').toUpperCase()} • {user.email}</span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                return (
+                                    <label
+                                        key={user.id}
+                                        className={cn(
+                                            "flex items-center gap-3 rounded border p-3 text-sm",
+                                            isCurrentUser ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-muted/40"
+                                        )}
+                                    >
+                                        <Checkbox
+                                            checked={isChecked}
+                                            disabled={isCurrentUser}
+                                            onCheckedChange={(checked) => toggleApprover(user.id, checked)}
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate font-medium">{displayName}</span>
+                                            <span className="block truncate text-[10px] text-muted-foreground">
+                                                {(user.role || "").replace("_", " ").toUpperCase()} • {user.email}
+                                            </span>
+                                        </span>
+                                        {isCurrentUser && <Badge variant="secondary">Submitter</Badge>}
+                                    </label>
+                                );
+                            })}
+                            {approvers.length === 0 && (
+                                <p className="rounded border border-dashed p-4 text-sm text-muted-foreground">
+                                    No active approvers found for these branches.
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -241,7 +258,7 @@ export default function TransferDetailPage() {
                         </Button>
                         <Button
                             onClick={handleSubmitForApproval}
-                            disabled={submitForApprovalMutation.isPending || !selectedApprover}
+                            disabled={submitForApprovalMutation.isPending || selectedApproverIds.length === 0}
                             className="h-10 px-6 font-bold rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/10 transition-all active:scale-[0.98]"
                         >
                             {submitForApprovalMutation.isPending ? (
@@ -459,7 +476,7 @@ export default function TransferDetailPage() {
                         <Card className="bg-muted/30 border-border">
                             <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase">Internal Notes</CardTitle></CardHeader>
                             <CardContent>
-                                <p className="text-sm text-foreground italic">"{transfer.notes}"</p>
+                                <p className="text-sm text-foreground italic">&quot;{transfer.notes}&quot;</p>
                             </CardContent>
                         </Card>
                     )}
@@ -493,8 +510,37 @@ export default function TransferDetailPage() {
                                         <div className="pb-4">
                                             <p className="text-xs font-bold">Submitted for Approval</p>
                                             <p className="text-[10px] text-muted-foreground">By {transfer.submitted_by_name}</p>
-                                            {transfer.assigned_approver_name && <p className="text-[10px] text-primary">Assignee: {transfer.assigned_approver_name}</p>}
+                                            {transfer.approval_progress?.total ? (
+                                                <p className="text-[10px] text-primary">
+                                                    Approvals: {transfer.approval_progress.approved}/{transfer.approval_progress.total}
+                                                </p>
+                                            ) : transfer.assigned_approver_name && (
+                                                <p className="text-[10px] text-primary">Assignee: {transfer.assigned_approver_name}</p>
+                                            )}
                                             <p className="text-[10px] text-muted-foreground/60">{format(new Date(transfer.submitted_at), "MMM d, HH:mm")}</p>
+                                            {transfer.approvals && transfer.approvals.length > 0 && (
+                                                <div className="mt-2 space-y-1">
+                                                    {transfer.approvals.map((approval) => (
+                                                        <div key={approval.id} className="flex items-center gap-2 text-[10px]">
+                                                            <Badge
+                                                                variant={
+                                                                    approval.status === "approved"
+                                                                        ? "success"
+                                                                        : approval.status === "rejected"
+                                                                            ? "danger"
+                                                                            : "warning"
+                                                                }
+                                                                className="h-4 px-1 text-[8px] uppercase"
+                                                            >
+                                                                {approval.status}
+                                                            </Badge>
+                                                            <span className="text-muted-foreground">
+                                                                {approval.approver_name || approval.approver_email || `User ${approval.approver}`}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}

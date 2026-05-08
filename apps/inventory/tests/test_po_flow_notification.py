@@ -5,7 +5,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.utils import timezone
 from apps.accounts.models import User
-from apps.inventory.models import PurchaseOrder, PurchaseOrderItem, Part, Supplier, PartCategory, StockItem
+from apps.inventory.models import PurchaseOrder, PurchaseOrderApproval, PurchaseOrderItem, Part, Supplier, PartCategory, StockItem
 from apps.notifications_app.models import Notification
 from apps.branches.models import Branch
 
@@ -19,6 +19,9 @@ class PurchaseOrderFlowTest(TestCase):
         )
         self.approver = User.objects.create_superuser(
             username='approver', email='approver@example.com', password='password123', role='admin'
+        )
+        self.second_approver = User.objects.create_superuser(
+            username='approver2', email='approver2@example.com', password='password123', role='admin'
         )
         
         # Create branch
@@ -193,3 +196,49 @@ class PurchaseOrderFlowTest(TestCase):
         self.assertEqual(po.rejected_by, self.approver)
         self.assertEqual(po.rejection_reason, 'Supplier price is too high.')
         self.assertEqual(stock_item.quantity_on_order, 0)
+
+    def test_purchase_order_requires_all_selected_approvers(self):
+        po = PurchaseOrder.objects.create(
+            supplier=self.supplier,
+            branch=self.branch,
+            created_by=self.creator,
+            status='draft',
+        )
+        PurchaseOrderItem.objects.create(
+            purchase_order=po,
+            part=self.part,
+            quantity=6,
+            unit_cost=Decimal('10.00'),
+        )
+
+        response = self.client.post(
+            reverse('api_inventory:purchaseorder-submit-for-approval', kwargs={'pk': po.id}),
+            {'approver_ids': [self.approver.id, self.second_approver.id]},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        po.refresh_from_db()
+        self.assertEqual(po.status, 'pending_approval')
+        self.assertEqual(po.assigned_approver, self.approver)
+        self.assertEqual(PurchaseOrderApproval.objects.filter(purchase_order=po).count(), 2)
+        self.assertEqual(Notification.objects.filter(recipient=self.approver, channel='in_app').count(), 1)
+        self.assertEqual(Notification.objects.filter(recipient=self.second_approver, channel='in_app').count(), 1)
+        self.assertEqual(StockItem.objects.get(part=self.part, branch=self.branch).quantity_on_order, 6)
+
+        self.client.force_authenticate(user=self.approver)
+        response = self.client.post(reverse('api_inventory:purchaseorder-approve', kwargs={'pk': po.id}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        po.refresh_from_db()
+        self.assertEqual(po.status, 'pending_approval')
+        self.assertEqual(po.approvals.get(approver=self.approver).status, 'approved')
+        self.assertEqual(po.approvals.get(approver=self.second_approver).status, 'pending')
+
+        self.client.force_authenticate(user=self.second_approver)
+        response = self.client.post(reverse('api_inventory:purchaseorder-approve', kwargs={'pk': po.id}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        po.refresh_from_db()
+        self.assertEqual(po.status, 'approved')
+        self.assertEqual(po.approvals.filter(status='approved').count(), 2)
+        self.assertEqual(StockItem.objects.get(part=self.part, branch=self.branch).quantity_on_order, 6)

@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from decimal import Decimal
 from django.utils import timezone
 from apps.inventory.models import Part, PartCategory, StockAlert, StockItem, InventoryTransaction
+from apps.inventory.models import Supplier
 from apps.inventory.services import InventoryService
 from apps.accounts.models import User
 from apps.branches.models import Branch
@@ -207,3 +208,33 @@ class TestInventoryAPI:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data['inventory_summary']['total_quantity'] == 10
+
+    def test_supplier_crud(self, api_client, user):
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(reverse('api_inventory:supplier-list'), {
+            'name': 'Acme Parts',
+            'supplier_code': 'ACME',
+            'supplier_type': 'distributor',
+            'email': 'parts@example.com',
+            'is_active': True,
+            'is_preferred': False,
+        })
+        assert response.status_code == status.HTTP_201_CREATED
+        supplier_id = response.data['id']
+
+        response = api_client.get(reverse('api_inventory:supplier-detail', kwargs={'pk': supplier_id}))
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['name'] == 'Acme Parts'
+
+        response = api_client.patch(
+            reverse('api_inventory:supplier-detail', kwargs={'pk': supplier_id}),
+            {'is_preferred': True, 'contact_person': 'Pat Buyer'},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['is_preferred'] is True
+        assert response.data['contact_person'] == 'Pat Buyer'
+
+        response = api_client.delete(reverse('api_inventory:supplier-detail', kwargs={'pk': supplier_id}))
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not Supplier.objects.filter(id=supplier_id).exists()

@@ -1,13 +1,11 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fixedAssetsApi } from "@/lib/api/fixed-assets";
+import { fixedAssetsApi, type FixedAssetCategory, type FixedAssetCreateData } from "@/lib/api/fixed-assets";
 import { branchesApi } from "@/lib/api/branches";
 import { hrApi } from "@/lib/api/hr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -28,6 +25,17 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+type BranchOption = {
+    id: number;
+    name: string;
+};
+
+type StaffOption = {
+    id: number;
+    full_name: string;
+};
 
 const formSchema = z.object({
     asset_number: z.string().min(1, "Asset number is required"),
@@ -109,8 +117,7 @@ function NewFixedAssetContent() {
         : staffResponse?.results || [];
 
     const createMutation = useMutation({
-
-        mutationFn: (data: any) => fixedAssetsApi.create(data),
+        mutationFn: (data: FixedAssetCreateData) => fixedAssetsApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["fixed-assets"] });
             toast({
@@ -120,32 +127,10 @@ function NewFixedAssetContent() {
             router.push("/fixed-assets");
         },
 
-        onError: (error: any) => {
-            console.error("Creation Error:", error);
-
-            // Extract validation errors from backend response
-            const backendErrors = error.response?.data;
-            let errorMessage = "Failed to create fixed asset";
-
-            if (backendErrors && typeof backendErrors === 'object') {
-                // Format backend validation errors
-                const errors = Object.entries(backendErrors)
-                    .map(([field, messages]) => {
-                        const messageArray = Array.isArray(messages) ? messages : [messages];
-                        return `${field}: ${messageArray.join(', ')}`;
-                    })
-                    .join('\n');
-
-                if (errors) {
-                    errorMessage = errors;
-                }
-            } else if (error.response?.data?.detail) {
-                errorMessage = error.response.data.detail;
-            }
-
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: errorMessage,
+                description: getApiErrorMessage(error, "Failed to create fixed asset"),
                 variant: "destructive",
             });
         },
@@ -162,16 +147,16 @@ function NewFixedAssetContent() {
     }
 
     return (
-        <div className="space-y-6 p-6 max-w-4xl mx-auto">
-            <div className="flex items-center space-x-4">
+        <div className="space-y-4">
+            <div className="flex items-center gap-3">
                 <Link href="/fixed-assets">
-                    <Button variant="secondary" size="sm">
+                    <Button variant="ghost" size="sm">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-black tracking-tight text-foreground">
+                    <h1 className="text-xl font-semibold tracking-tight text-foreground">
                         New Fixed Asset
                     </h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -181,10 +166,10 @@ function NewFixedAssetContent() {
             </div>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Asset Details</CardTitle>
+                <CardHeader className="px-4 py-3">
+                    <CardTitle className="text-sm font-semibold">Asset Details</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4 pb-4">
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit, () => {
                             toast({
@@ -192,8 +177,8 @@ function NewFixedAssetContent() {
                                 description: "Please check the form for errors.",
                                 variant: "destructive",
                             });
-                        })} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        })} className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="asset_number"
@@ -222,7 +207,7 @@ function NewFixedAssetContent() {
                                     )}
                                 />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="category"
@@ -237,7 +222,7 @@ function NewFixedAssetContent() {
                                                 </FormControl>
                                                 <SelectContent>
 
-                                                    {categories?.map((c: any) => (
+                                                    {categories?.map((c: FixedAssetCategory) => (
                                                         <SelectItem key={c.id} value={c.id.toString()}>
                                                             {c.name}
                                                         </SelectItem>
@@ -246,9 +231,9 @@ function NewFixedAssetContent() {
                                             </Select>
                                             {categories && categories.length === 0 && (
                                                 <div className="text-[0.8rem] font-medium text-destructive mt-2 p-3 bg-destructive/10 rounded-md border border-destructive/20">
-                                                    <p className="mb-1">⚠️ No asset categories available</p>
+                                                    <p className="mb-1">No asset categories available</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        Please <Link href="/admin/settings/asset-categories" className="underline text-primary font-semibold">create a category</Link> first to continue.
+                                                        Please <Link href="/fixed-assets/categories" className="underline text-primary font-semibold">create a category</Link> first to continue.
                                                     </p>
                                                 </div>
                                             )}
@@ -271,7 +256,7 @@ function NewFixedAssetContent() {
                                                 </FormControl>
                                                 <SelectContent>
 
-                                                    {branches.map((b: any) => (
+                                                    {branches.map((b: BranchOption) => (
                                                         <SelectItem key={b.id} value={b.id.toString()}>
                                                             {b.name}
                                                         </SelectItem>
@@ -307,7 +292,7 @@ function NewFixedAssetContent() {
                                 )}
                             />
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <FormField
                                     control={form.control}
                                     name="acquisition_cost"
@@ -369,7 +354,7 @@ function NewFixedAssetContent() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="useful_life_years"
@@ -387,10 +372,7 @@ function NewFixedAssetContent() {
                                                     }}
                                                 />
                                             </FormControl>
-                                            <FormDescription>
-                                                Expected number of years the asset will be useful
-                                            </FormDescription>
-                                            <FormMessage />
+                                                    <FormMessage />
                                         </FormItem>
                                     )}
                                 />
@@ -410,8 +392,8 @@ function NewFixedAssetContent() {
                                                 <SelectContent>
                                                     <SelectItem value="straight_line">Straight Line</SelectItem>
                                                     <SelectItem value="declining_balance">Declining Balance</SelectItem>
-                                                    <SelectItem value="double_declining">Double Declining</SelectItem>
-                                                    <SelectItem value="sum_of_years_digits">Sum of Years Digits</SelectItem>
+                                                    <SelectItem value="units_of_production">Units of Production</SelectItem>
+                                                    <SelectItem value="none">No Depreciation</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -420,7 +402,7 @@ function NewFixedAssetContent() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="manufacturer"
@@ -491,7 +473,7 @@ function NewFixedAssetContent() {
                                                 </FormControl>
                                                 <SelectContent>
                                                     <SelectItem value="none">Unassigned</SelectItem>
-                                                    {staffMembers.map((s: any) => (
+                                                    {staffMembers.map((s: StaffOption) => (
                                                         <SelectItem key={s.id} value={s.id.toString()}>
                                                             {s.full_name}
                                                         </SelectItem>

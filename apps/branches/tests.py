@@ -3,6 +3,9 @@ Tests for branches app
 """
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from rest_framework import status
+from rest_framework.test import APIClient
 from apps.branches.models import Branch
 
 User = get_user_model()
@@ -80,3 +83,94 @@ class BranchModelTest(TestCase):
         self.branch.refresh_from_db()
         self.assertFalse(self.branch.is_headquarters)
         self.assertTrue(branch2.is_headquarters)
+
+
+class BranchApiPermissionTest(TestCase):
+    def setUp(self):
+        call_command('init_permissions', verbosity=0)
+        self.admin = User.objects.create_user(
+            email='branch_admin@test.com',
+            username='branch_admin',
+            password='testpass123',
+            role='admin',
+            is_staff=True,
+        )
+        self.super_admin = User.objects.create_user(
+            email='branch_owner@test.com',
+            username='branch_owner',
+            password='testpass123',
+            role='super-admin',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.technician = User.objects.create_user(
+            email='branch_tech@test.com',
+            username='branch_tech',
+            password='testpass123',
+            role='technician',
+            is_staff=True,
+        )
+        self.branch = Branch.objects.create(
+            name='API Main Branch',
+            code='APIMAIN',
+            phone='555-0100',
+            address='123 Main St',
+            city='Springfield',
+            state='IL',
+            zip_code='62701',
+            created_by=self.admin,
+        )
+
+    def test_manage_branches_permission_controls_branch_create(self):
+        payload = {
+            'name': 'Second Branch',
+            'code': 'SECOND',
+            'phone': '555-0200',
+            'address': '456 Second St',
+            'city': 'Springfield',
+            'state': 'IL',
+            'zip_code': '62702',
+            'country': 'USA',
+            'is_active': True,
+        }
+
+        tech_client = APIClient()
+        tech_client.force_authenticate(self.technician)
+        response = tech_client.post('/api/branches/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        owner_client = APIClient()
+        owner_client.force_authenticate(self.super_admin)
+        response = owner_client.post('/api/branches/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_super_admin_can_view_branch_detail_without_role_specific_bypass(self):
+        client = APIClient()
+        client.force_authenticate(self.super_admin)
+        response = client.get(f'/api/branches/{self.branch.id}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.branch.id)
+
+    def test_branch_delete_archives_without_removing_staff_assignment(self):
+        second_branch = Branch.objects.create(
+            name='Archive Target',
+            code='ARCHIVE',
+            phone='555-0300',
+            address='789 Archive St',
+            city='Springfield',
+            state='IL',
+            zip_code='62703',
+            created_by=self.admin,
+        )
+        self.technician.branch = second_branch
+        self.technician.save(update_fields=['branch'])
+
+        client = APIClient()
+        client.force_authenticate(self.admin)
+        response = client.delete(f'/api/branches/{second_branch.id}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        second_branch.refresh_from_db()
+        self.technician.refresh_from_db()
+        self.assertFalse(second_branch.is_active)
+        self.assertEqual(self.technician.branch_id, second_branch.id)

@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { hrApi, StaffListItem } from "@/lib/api/hr";
+import { branchesApi } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -49,15 +50,23 @@ function StaffContent() {
     const [viewMode, setViewMode] = useState<"grid" | "list">("list");
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+    const [branchFilter, setBranchFilter] = useState<string>("all");
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+    const { data: branchesData } = useQuery({
+        queryKey: ["branches", "active"],
+        queryFn: () => branchesApi.list({ is_active: true }),
+    });
+    const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+
     const { data, isLoading } = useQuery({
-        queryKey: ["hr", "staff", searchQuery, statusFilter],
+        queryKey: ["hr", "staff", searchQuery, statusFilter, branchFilter],
         queryFn: async () => {
             const res = await hrApi.staff.list({
                 search: searchQuery,
                 employment_status: statusFilter,
+                branch: branchFilter !== "all" ? Number(branchFilter) : undefined,
             });
             return res.data;
         },
@@ -96,7 +105,12 @@ function StaffContent() {
         }
     };
 
-    const staff = data?.results ?? [];
+    const getRoleLabel = (role?: string) => {
+        if (!role) return "Staff";
+        return role.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+    };
+
+    const staff: StaffListItem[] = data?.results ?? [];
     const activeCount = staff.filter(e => e.employment_status === "active").length;
     const probationCount = staff.filter(e => e.employment_status === "probation").length;
 
@@ -211,6 +225,33 @@ function StaffContent() {
                                 <DropdownMenuItem onClick={() => setStatusFilter("resigned")}>Resigned</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        <Select value={branchFilter} onValueChange={setBranchFilter}>
+                            <SelectTrigger className="h-8 w-[180px] bg-card text-sm">
+                                <SelectValue placeholder="All Branches" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Branches</SelectItem>
+                                {branches.map((branch) => (
+                                    <SelectItem key={branch.id} value={String(branch.id)}>
+                                        {branch.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {(searchQuery || statusFilter || branchFilter !== "all") && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-xs text-muted-foreground"
+                                onClick={() => {
+                                    setSearchQuery("");
+                                    setStatusFilter(undefined);
+                                    setBranchFilter("all");
+                                }}
+                            >
+                                Clear
+                            </Button>
+                        )}
                         <div className="ml-auto flex items-center gap-1 border rounded-md p-0.5">
                             <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" className="h-7 px-2" onClick={() => setViewMode("grid")}>
                                 <Grid className="h-4 w-4" />
@@ -294,7 +335,9 @@ function StaffContent() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="text-sm font-semibold text-foreground truncate">{emp.full_name}</h3>
-                                            <p className="text-xs text-muted-foreground truncate">{emp.position_title || "No Position"}</p>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {getRoleLabel(emp.role)}{emp.position_title ? ` / ${emp.position_title}` : ""}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="flex gap-1.5 flex-wrap justify-end">
@@ -306,6 +349,11 @@ function StaffContent() {
                                         <Badge variant="outline" className={cn("capitalize text-[10px] px-2 py-0.5 border shadow-none", getStatusColor(emp.employment_status))}>
                                             {emp.employment_status}
                                         </Badge>
+                                        {emp.is_account_active === false && (
+                                            <Badge variant="danger" className="text-[9px] px-1.5 py-0">
+                                                Login Off
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 pt-2 border-t">
@@ -357,9 +405,9 @@ function StaffContent() {
                                     </TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Staff Member</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Department</TableHead>
+                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Role</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branch</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Position</TableHead>
-                                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Type</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
                                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground text-right">Actions</TableHead>
                                 </TableRow>
@@ -395,9 +443,9 @@ function StaffContent() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-sm">{emp.department_name || "—"}</TableCell>
+                                        <TableCell className="px-4 py-2 text-sm">{getRoleLabel(emp.role)}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm">{emp.branch_name || "—"}</TableCell>
                                         <TableCell className="px-4 py-2 text-sm">{emp.position_title || "—"}</TableCell>
-                                        <TableCell className="px-4 py-2 text-sm capitalize">{emp.employment_type?.replace("_", " ")}</TableCell>
                                         <TableCell className="px-4 py-2">
                                             <div className="flex gap-2">
                                                 {emp.technician_id && (
@@ -408,6 +456,11 @@ function StaffContent() {
                                                 <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 capitalize border shadow-none", getStatusColor(emp.employment_status))}>
                                                     {emp.employment_status}
                                                 </Badge>
+                                                {emp.is_account_active === false && (
+                                                    <Badge variant="danger" className="text-[10px] px-2 py-0.5">
+                                                        Login Off
+                                                    </Badge>
+                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-right">
@@ -418,7 +471,7 @@ function StaffContent() {
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-32 text-center">
+                                        <TableCell colSpan={8} className="h-32 text-center">
                                             <div className="flex flex-col items-center justify-center text-muted-foreground">
                                                 <Users className="h-8 w-8 mb-2 opacity-50" />
                                                 <p className="text-sm">No staff found</p>

@@ -1,9 +1,8 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { branchesApi, Branch } from "@/lib/api/branches";
+import { useQuery } from "@tanstack/react-query";
+import { branchesApi } from "@/lib/api/branches";
+import type { User } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,15 +15,12 @@ import {
   Mail,
   Clock,
   Users,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  TrendingUp,
   FileText,
   Calendar,
   Package,
   DollarSign,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { useToast } from "@/lib/hooks/useToast";
 import Link from "next/link";
 import { format } from "date-fns";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -34,10 +30,6 @@ export default function BranchDetailPage() {
   const router = useRouter();
   const params = useParams();
   const branchId = parseInt(params.id as string);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { toast } = useToast();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const queryClient = useQueryClient();
 
   const { data: branch, isLoading: isLoadingBranch } = useQuery({
     queryKey: ["branch", branchId],
@@ -45,8 +37,7 @@ export default function BranchDetailPage() {
     enabled: !!branchId,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
+  const { data: stats } = useQuery({
     queryKey: ["branch-stats", branchId],
     queryFn: () => branchesApi.getStats(branchId),
     enabled: !!branchId,
@@ -101,17 +92,17 @@ export default function BranchDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-4 pt-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.back()}>
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="h-8">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-foreground">{branch.name}</h1>
+              <h1 className="text-xl font-bold text-foreground">{branch.name}</h1>
               {branch.is_headquarters && (
                 <Badge variant="default" className="bg-primary">
                   Headquarters
@@ -128,7 +119,7 @@ export default function BranchDetailPage() {
         </div>
         <PermissionGuard permission="manage_branches">
           <Link href={`/admin/branches/${branchId}/edit`}>
-            <Button>
+            <Button size="sm" className="h-8">
               <Edit className="w-4 h-4 mr-2" />
               Edit Branch
             </Button>
@@ -138,16 +129,16 @@ export default function BranchDetailPage() {
 
       {/* Statistics Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="p-3 pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Work Orders
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
+            <CardContent className="p-3 pt-0">
+              <div className="text-lg font-bold text-foreground">
                 {stats.work_orders.total}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -156,14 +147,14 @@ export default function BranchDetailPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="p-3 pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
                 Total Revenue
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">
+            <CardContent className="p-3 pt-0">
+              <div className="text-lg font-bold text-success">
                 ${stats.work_orders.total_revenue.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
@@ -175,14 +166,14 @@ export default function BranchDetailPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="p-3 pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 Appointments
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
+            <CardContent className="p-3 pt-0">
+              <div className="text-lg font-bold text-foreground">
                 {stats.appointments.total}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -191,14 +182,14 @@ export default function BranchDetailPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="p-3 pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Staff
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
+            <CardContent className="p-3 pt-0">
+              <div className="text-lg font-bold text-foreground">
                 {stats.staff.total_staff}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -209,9 +200,9 @@ export default function BranchDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Branch Information */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Branch Information</CardTitle>
@@ -298,7 +289,7 @@ export default function BranchDetailPage() {
               ) : staff && staff.length > 0 ? (
                 <div className="space-y-2">
 
-                  {staff.map((member: any) => (
+                  {staff.map((member: User) => (
                     <div
                       key={member.id}
                       className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted hover:bg-muted/50"
@@ -341,7 +332,7 @@ export default function BranchDetailPage() {
               ) : managers && managers.length > 0 ? (
                 <div className="space-y-2">
 
-                  {managers.map((manager: any) => (
+                  {managers.map((manager: User) => (
                     <div
                       key={manager.id}
                       className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted hover:bg-muted/50"
@@ -415,4 +406,3 @@ export default function BranchDetailPage() {
     </div >
   );
 }
-

@@ -67,7 +67,7 @@ export default function NewSupplierPage() {
       router.push("/inventory/suppliers");
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Error creating supplier:", error);
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
@@ -104,7 +104,7 @@ export default function NewSupplierPage() {
     try {
       await createMutation.mutateAsync(data);
 
-    } catch (error) {
+    } catch {
       // Error handling is done in onError
     }
   };
@@ -407,4 +407,3 @@ export default function NewSupplierPage() {
     </div>
   );
 }
-

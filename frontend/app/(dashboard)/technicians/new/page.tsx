@@ -5,16 +5,14 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -22,11 +20,13 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/lib/hooks/useToast";
 import { techniciansApi, CreateTechnicianData, skillsApi } from "@/lib/api/technicians";
+import { branchesApi } from "@/lib/api/admin";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formSchema = z.object({
     first_name: z.string().min(2, "First name is required"),
@@ -34,6 +34,10 @@ const formSchema = z.object({
     email: z.string().email("Invalid email address"),
     phone: z.string().optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
+    branch: z.coerce.number().min(1, "Branch is required"),
+    employee_id: z.string().optional(),
+    hire_date: z.string().optional(),
+    hourly_rate: z.string().optional(),
     role: z.enum(["technician", "service_coordinator"]).default("technician"),
     years_of_experience: z.coerce.number().min(0).default(0),
     bio: z.string().optional(),
@@ -50,14 +54,25 @@ export default function NewTechnicianPage() {
         queryFn: () => skillsApi.list(),
     });
 
-    const form = useForm({
+    const { data: branchesData } = useQuery({
+        queryKey: ["branches", "active"],
+        queryFn: () => branchesApi.list({ is_active: true }),
+    });
+
+    const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+
+    const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             first_name: "",
             last_name: "",
             email: "",
             phone: "",
-            password: "", // In a real app, might want to generate this or send invite
+            password: "",
+            branch: 0,
+            employee_id: "",
+            hire_date: "",
+            hourly_rate: "",
             role: "technician",
             years_of_experience: 0,
             bio: "",
@@ -68,7 +83,15 @@ export default function NewTechnicianPage() {
     async function onSubmit(data: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
         try {
-            await techniciansApi.create(data as CreateTechnicianData);
+            const payload: CreateTechnicianData = {
+                ...data,
+                employee_id: data.employee_id || undefined,
+                hire_date: data.hire_date || undefined,
+                hourly_rate: data.hourly_rate || undefined,
+                phone: data.phone || undefined,
+                bio: data.bio || undefined,
+            };
+            await techniciansApi.create(payload);
             toast({
                 title: "Success",
                 description: "Technician created successfully",
@@ -76,10 +99,9 @@ export default function NewTechnicianPage() {
             });
             router.push("/technicians");
         } catch (error) {
-            console.error(error);
             toast({
                 title: "Error",
-                description: "Failed to create technician. Email might be taken.",
+                description: getApiErrorMessage(error, "Failed to create technician"),
                 variant: "destructive",
             });
         } finally {
@@ -88,28 +110,27 @@ export default function NewTechnicianPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
-            <div className="flex items-center gap-4">
+        <div className="space-y-4">
+            <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" asChild>
                     <Link href="/technicians">
                         <ArrowLeft className="h-4 w-4" />
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Add New Technician</h1>
-                    <p className="text-muted-foreground">Create a new technician account and profile</p>
+                    <h1 className="text-xl font-semibold tracking-tight">Add Technician</h1>
+                    <p className="text-xs text-muted-foreground">Create the user account, HR staff record, and technician profile together</p>
                 </div>
             </div>
 
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <div className="grid gap-6 md:grid-cols-2">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="grid gap-4 lg:grid-cols-2">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Account Information</CardTitle>
-                                <CardDescription>Basic user details for login</CardDescription>
+                            <CardHeader className="px-4 py-3">
+                                <CardTitle className="text-sm font-semibold">Account</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-3 px-4 pb-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                         control={form.control}
@@ -173,15 +194,42 @@ export default function NewTechnicianPage() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Role</FormLabel>
-                                            <FormControl>
-                                                <Select {...field} value={field.value || "technician"}>
-                                                    <option value="technician">Technician</option>
-                                                    <option value="service_coordinator">Service Coordinator</option>
-                                                </Select>
-                                            </FormControl>
-                                            <FormDescription>
-                                                Coordinators can manage technicians and dispatch requests.
-                                            </FormDescription>
+                                            <Select value={field.value} onValueChange={field.onChange}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select role" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="technician">Technician</SelectItem>
+                                                    <SelectItem value="service_coordinator">Service Coordinator</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="branch"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Branch</FormLabel>
+                                            <Select value={field.value ? String(field.value) : ""} onValueChange={(value) => field.onChange(Number(value))}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select branch" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {branches.map((branch) => (
+                                                        <SelectItem key={branch.id} value={String(branch.id)}>
+                                                            {branch.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -196,7 +244,6 @@ export default function NewTechnicianPage() {
                                             <FormControl>
                                                 <Input type="password" placeholder="••••••••" {...field} />
                                             </FormControl>
-                                            <FormDescription>Min. 8 characters</FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -204,13 +251,54 @@ export default function NewTechnicianPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Professional Profile</CardTitle>
-                                    <CardDescription>Skills and experience</CardDescription>
+                                <CardHeader className="px-4 py-3">
+                                    <CardTitle className="text-sm font-semibold">Employment</CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-3 px-4 pb-4">
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                        <FormField
+                                            control={form.control}
+                                            name="employee_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Employee ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="EMP-001" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="hire_date"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Hire Date</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="date" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="hourly_rate"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Hourly Rate</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" min="0" step="0.01" placeholder="0.00" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
                                     <FormField
                                         control={form.control}
                                         name="years_of_experience"
@@ -252,21 +340,15 @@ export default function NewTechnicianPage() {
                             </Card>
 
                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Skills & Certifications</CardTitle>
+                                <CardHeader className="px-4 py-3">
+                                    <CardTitle className="text-sm font-semibold">Skills</CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="px-4 pb-4">
                                     <FormField
                                         control={form.control}
                                         name="skill_ids"
                                         render={() => (
                                             <FormItem>
-                                                <div className="mb-4">
-                                                    <FormLabel className="text-base">Select Skills</FormLabel>
-                                                    <FormDescription>
-                                                        Select all relevant skills for this technician
-                                                    </FormDescription>
-                                                </div>
                                                 {skills && skills.length > 0 ? (
                                                     <div className="grid grid-cols-2 gap-2">
                                                         {skills.map((skill) => (
@@ -305,7 +387,7 @@ export default function NewTechnicianPage() {
                                                     </div>
                                                 ) : (
                                                     <p className="text-sm text-muted-foreground italic">
-                                                        No skills defined yet. You can add them in admin settings.
+                                                        No skills defined yet. Add them under Technicians / Skills.
                                                     </p>
                                                 )}
                                                 <FormMessage />
@@ -323,6 +405,7 @@ export default function NewTechnicianPage() {
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {!isSubmitting && <Save className="mr-2 h-4 w-4" />}
                             Create Technician
                         </Button>
                     </div>

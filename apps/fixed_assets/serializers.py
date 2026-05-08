@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Sum
 from .models import AssetCategory, FixedAsset, DepreciationSchedule, AssetMaintenance
 from apps.branches.serializers import BranchListSerializer
 from apps.inventory.serializers import SupplierListSerializer
@@ -24,9 +25,8 @@ class AssetCategorySerializer(serializers.ModelSerializer):
         return obj.assets.filter(status='active').count()
     
     def get_total_value(self, obj):
-        from decimal import Decimal
         total = obj.assets.filter(status='active').aggregate(
-            total=serializers.models.Sum('net_book_value')
+            total=Sum('net_book_value')
         )['total']
         return float(total) if total else 0.0
 
@@ -158,19 +158,48 @@ class FixedAssetUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = FixedAsset
         fields = [
-            'name', 'description', 'status', 'location', 'assigned_to',
+            'name', 'description', 'category',
+            'acquisition_cost', 'acquisition_date', 'salvage_value',
+            'depreciation_method', 'useful_life_years', 'depreciation_start_date',
+            'declining_balance_rate', 'total_units',
+            'gl_asset_account_code', 'gl_depreciation_expense_account_code',
+            'gl_accumulated_depreciation_account_code',
+            'status', 'branch', 'location', 'assigned_to',
             'manufacturer', 'model_number', 'serial_number',
-            'warranty_expiration', 'notes',
+            'purchase_order', 'supplier', 'warranty_expiration', 'notes',
             'disposal_date', 'disposal_method', 'disposal_proceeds', 'disposal_notes'
         ]
     
     def validate(self, data):
-        """Validate disposal fields"""
-        if data.get('status') in ['disposed', 'sold']:
-            if not data.get('disposal_date'):
+        acquisition_cost = data.get('acquisition_cost', getattr(self.instance, 'acquisition_cost', 0))
+        salvage_value = data.get('salvage_value', getattr(self.instance, 'salvage_value', 0))
+        acquisition_date = data.get('acquisition_date', getattr(self.instance, 'acquisition_date', None))
+        depreciation_start_date = data.get(
+            'depreciation_start_date',
+            getattr(self.instance, 'depreciation_start_date', None)
+        )
+
+        if salvage_value >= acquisition_cost:
+            raise serializers.ValidationError({
+                'salvage_value': 'Salvage value must be less than acquisition cost'
+            })
+
+        if depreciation_start_date and acquisition_date and depreciation_start_date < acquisition_date:
+            raise serializers.ValidationError({
+                'depreciation_start_date': 'Depreciation start date cannot be before acquisition date'
+            })
+
+        status = data.get('status', getattr(self.instance, 'status', None))
+        if status in ['disposed', 'sold']:
+            if not data.get('disposal_date') and not getattr(self.instance, 'disposal_date', None):
                 raise serializers.ValidationError({
                     'disposal_date': 'Disposal date is required when status is disposed or sold'
                 })
+        elif status in ['active', 'inactive', 'retired']:
+            data.setdefault('disposal_date', None)
+            data.setdefault('disposal_method', None)
+            data.setdefault('disposal_proceeds', None)
+            data.setdefault('disposal_notes', '')
         
         return data
 

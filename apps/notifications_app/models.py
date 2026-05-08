@@ -112,6 +112,8 @@ class Notification(models.Model):
         ('system', 'System'),
         ('roadside', 'Roadside Assistance'),
         ('gatepass', 'Gate Pass'),
+        ('estimate', 'Estimate'),
+        ('subscription', 'Subscription'),
         ('custom', 'Custom'),
     ]
     
@@ -199,14 +201,15 @@ class Notification(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.get_notification_type_display()} to {self.recipient.email}"
+        recipient = self.recipient.email if self.recipient else self.data.get('phone_number', 'unassigned')
+        return f"{self.get_notification_type_display()} to {recipient}"
     
     def mark_as_read(self):
         """Mark notification as read"""
         if not self.is_read:
             self.is_read = True
             self.read_at = timezone.now()
-            if self.status == 'delivered':
+            if self.status in ['sent', 'delivered']:
                 self.status = 'read'
             self.save(update_fields=['is_read', 'read_at', 'status', 'updated_at'])
     
@@ -321,10 +324,14 @@ class NotificationPreference(models.Model):
             'appointment': self.appointment_notifications,
             'work_order': self.work_order_notifications,
             'invoice': self.invoice_notifications,
+            'estimate': self.invoice_notifications,
             'payment': self.payment_notifications,
             'inspection': self.inspection_notifications,
             'inventory': self.inventory_notifications,
             'vehicle': self.vehicle_notifications,
+            'gatepass': self.work_order_notifications,
+            'roadside': self.work_order_notifications,
+            'subscription': self.system_notifications,
             'system': self.system_notifications,
         }.get(notification_type, True)
         
@@ -334,8 +341,9 @@ class NotificationPreference(models.Model):
         # Check quiet hours
         if self.quiet_hours_enabled and self.quiet_hours_start and self.quiet_hours_end:
             current_time = timezone.now().time()
-            if self.quiet_hours_start <= current_time <= self.quiet_hours_end:
-                return False
+            if self.quiet_hours_start <= self.quiet_hours_end:
+                return not (self.quiet_hours_start <= current_time <= self.quiet_hours_end)
+            return not (current_time >= self.quiet_hours_start or current_time <= self.quiet_hours_end)
         
         return True
 

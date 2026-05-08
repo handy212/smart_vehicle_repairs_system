@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fixedAssetsApi } from "@/lib/api/fixed-assets";
+import { fixedAssetsApi, type FixedAssetCategory, type FixedAssetUpdateData } from "@/lib/api/fixed-assets";
 import { branchesApi } from "@/lib/api/branches";
 import { hrApi } from "@/lib/api/hr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -27,6 +26,17 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+type BranchOption = {
+    id: number;
+    name: string;
+};
+
+type StaffOption = {
+    id: number;
+    full_name: string;
+};
 
 const formSchema = z.object({
     asset_number: z.string().min(1, "Asset number is required"),
@@ -66,7 +76,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
 
     const form = useForm<FormValues>({
 
-        resolver: zodResolver(formSchema) as any,
+        resolver: zodResolver(formSchema),
         defaultValues: {
             asset_number: "",
             name: "",
@@ -143,8 +153,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
     }, [asset, form]);
 
     const updateMutation = useMutation({
-
-        mutationFn: (data: any) => fixedAssetsApi.update(assetId, data),
+        mutationFn: (data: FixedAssetUpdateData) => fixedAssetsApi.update(assetId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["fixed-assets"] });
             queryClient.invalidateQueries({ queryKey: ["fixed-asset", assetId] });
@@ -155,10 +164,10 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
             router.push("/fixed-assets");
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to update fixed asset",
+                description: getApiErrorMessage(error, "Failed to update fixed asset"),
                 variant: "destructive",
             });
         },
@@ -174,20 +183,20 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
     }
 
     if (isLoadingAsset) {
-        return <div className="p-6">Loading asset details...</div>;
+        return <div className="text-sm text-muted-foreground">Loading asset details...</div>;
     }
 
     return (
-        <div className="space-y-6 p-6 max-w-4xl mx-auto">
-            <div className="flex items-center space-x-4">
+        <div className="space-y-4">
+            <div className="flex items-center gap-3">
                 <Link href="/fixed-assets">
-                    <Button variant="secondary" size="sm">
+                    <Button variant="ghost" size="sm">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-2xl font-black tracking-tight text-foreground">
+                    <h1 className="text-xl font-semibold tracking-tight text-foreground">
                         Edit Fixed Asset
                     </h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -197,13 +206,13 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
             </div>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Asset Details</CardTitle>
+                <CardHeader className="px-4 py-3">
+                    <CardTitle className="text-sm font-semibold">Asset Details</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4 pb-4">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="asset_number"
@@ -213,10 +222,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                             <FormControl>
                                                 <Input {...field} disabled />
                                             </FormControl>
-                                            <FormDescription>
-                                                Asset number cannot be changed
-                                            </FormDescription>
-                                            <FormMessage />
+                                                <FormMessage />
                                         </FormItem>
                                     )}
                                 />
@@ -235,7 +241,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                     )}
                                 />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="category"
@@ -249,7 +255,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {categories?.map((c) => (
+                                                    {categories?.map((c: FixedAssetCategory) => (
                                                         <SelectItem key={c.id} value={c.id.toString()}>
                                                             {c.name}
                                                         </SelectItem>
@@ -274,7 +280,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {branches.map((b) => (
+                                                    {branches.map((b: BranchOption) => (
                                                         <SelectItem key={b.id} value={b.id.toString()}>
                                                             {b.name}
                                                         </SelectItem>
@@ -305,7 +311,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                 )}
                             />
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <FormField
                                     control={form.control}
                                     name="acquisition_cost"
@@ -361,7 +367,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="useful_life_years"
@@ -376,9 +382,6 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                                     onChange={(e) => field.onChange(e.target.valueAsNumber)}
                                                 />
                                             </FormControl>
-                                            <FormDescription>
-                                                Expected number of years the asset will be useful
-                                            </FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -399,8 +402,8 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                                 <SelectContent>
                                                     <SelectItem value="straight_line">Straight Line</SelectItem>
                                                     <SelectItem value="declining_balance">Declining Balance</SelectItem>
-                                                    <SelectItem value="double_declining">Double Declining</SelectItem>
-                                                    <SelectItem value="sum_of_years_digits">Sum of Years Digits</SelectItem>
+                                                    <SelectItem value="units_of_production">Units of Production</SelectItem>
+                                                    <SelectItem value="none">No Depreciation</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -409,7 +412,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="status"
@@ -436,7 +439,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <FormField
                                     control={form.control}
                                     name="manufacturer"
@@ -507,7 +510,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
                                                 </FormControl>
                                                 <SelectContent>
                                                     <SelectItem value="none">Unassigned</SelectItem>
-                                                    {staffMembers.map((s: any) => (
+                                                    {staffMembers.map((s: StaffOption) => (
                                                         <SelectItem key={s.id} value={s.id.toString()}>
                                                             {s.full_name}
                                                         </SelectItem>

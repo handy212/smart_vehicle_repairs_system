@@ -16,7 +16,7 @@ import {
     CheckCircle2, History
 } from 'lucide-react';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
-import smsApi, { SMSRecipient, SMSHistoryItem } from '@/services/sms';
+import smsApi, { SMSRecipient, SMSHistoryItem, SMSTemplate } from '@/services/sms';
 import { AIAssistDialog } from '@/components/sms/AIAssistDialog';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -32,7 +32,7 @@ import {
     DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils/cn';
-import { useTheme } from '@/lib/hooks/useTheme';
+import { getApiErrorMessage } from '@/lib/api/errors';
 
 
 interface Customer {
@@ -47,7 +47,7 @@ interface Customer {
 }
 
 const customersApi = {
-    getAll: async (params: any) => {
+    getAll: async (params: { limit?: number; search?: string }) => {
         const response = await api.get('/customers/customers/', { params });
         return response.data;
     }
@@ -56,8 +56,6 @@ const customersApi = {
 export default function SMSConsolePage() {
     const { toast } = useToast();
     const searchParams = useSearchParams();
-    const { theme: activeTheme } = useTheme();
-    const isPerfex = activeTheme.startsWith("perfex");
     const [message, setMessage] = useState('');
     const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
     const [isSending, setIsSending] = useState(false);
@@ -160,10 +158,10 @@ export default function SMSConsolePage() {
             setRecipients([]);
             setScheduledFor('');
             refetchHistory();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: 'Error',
-                description: error.response?.data?.error || error.message || 'Failed to send SMS.',
+                description: getApiErrorMessage(error, 'Failed to send SMS.'),
                 variant: 'destructive'
             });
         } finally {
@@ -176,7 +174,7 @@ export default function SMSConsolePage() {
         if (length === 0) return { count: 0, chars: 0, cost: 0 };
         const singleSMSLimit = 160;
         const multiSMSLimit = 153;
-        let count = length > singleSMSLimit ? Math.ceil(length / multiSMSLimit) : 1;
+        const count = length > singleSMSLimit ? Math.ceil(length / multiSMSLimit) : 1;
         const costPerSMS = 0.05;
         const cost = count * costPerSMS * recipients.length;
         return { count, chars: length, cost };
@@ -243,37 +241,18 @@ export default function SMSConsolePage() {
 
     return (
         <PermissionGuard permission="send_notifications">
-            <div className={isPerfex ? "space-y-4 p-4 max-w-[1600px] mx-auto" : "space-y-6 max-w-[1600px] mx-auto px-4 py-4 lg:px-8"}>
+            <div className="space-y-4">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
                     <div>
-                        <h1 className={isPerfex ? "text-base font-semibold text-foreground" : "text-2xl font-bold text-foreground tracking-tight flex items-center gap-2"}>
+                        <h1 className="text-xl font-semibold tracking-tight text-foreground">
                             SMS Console
                         </h1>
                         <p className="text-sm text-muted-foreground mt-0.5">Manage customer communications and messaging stats</p>
                     </div>
                 </div>
 
-                {/* Stats Cards */}
-                {isPerfex ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        {[
-                            { label: "Sent Today", value: stats?.sent_today || 0, icon: <TrendingUp className="w-4 h-4" />, color: "bg-success/10 text-success" },
-                            { label: "Scheduled", value: stats?.scheduled || 0, icon: <Clock className="w-4 h-4" />, color: "bg-info/10 text-primary" },
-                            { label: "Failed Today", value: stats?.failed_today || 0, icon: <AlertCircle className="w-4 h-4" />, color: "bg-destructive/10 text-destructive" },
-                            { label: "SMS Balance", value: balance?.success ? balance.balance.toLocaleString() : 'N/A', icon: <DollarSign className="w-4 h-4" />, color: "bg-warning/10 text-warning" },
-                        ].map((s) => (
-                            <div key={s.label} className="border border-border bg-card rounded-md shadow-[0px_1px_15px_1px_rgba(90,90,90,0.08)] p-3 flex items-center gap-3">
-                                <div className={`h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0 ${s.color}`}>{s.icon}</div>
-                                <div className="min-w-0">
-                                    <p className="text-lg font-bold text-foreground leading-tight">{s.value}</p>
-                                    <p className="text-[11px] text-muted-foreground">{s.label}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <StatCard
                         label="SENT TODAY"
                         value={stats?.sent_today || 0}
@@ -302,12 +281,11 @@ export default function SMSConsolePage() {
                         symbol={balance?.currency || ""}
                     />
                 </div>
-                )}
 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                     {/* Left Column: Composer */}
-                    <Card className="xl:col-span-2 shadow-sm border-muted/60 rounded-xl overflow-hidden glass-card">
-                        <div className="p-4 lg:p-6 space-y-6">
+                    <Card className="overflow-hidden border-border shadow-sm xl:col-span-2">
+                        <div className="space-y-4 p-4">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 font-semibold text-foreground">
                                     <Send className="h-4 w-4 text-primary" />
@@ -316,7 +294,7 @@ export default function SMSConsolePage() {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-primary h-8 hover:bg-primary/10 transition-colors"
+                                    className="h-8 text-primary hover:bg-primary/10"
                                     onClick={() => setIsAIDialogOpen(true)}
                                 >
                                     <Sparkles className="h-4 w-4 mr-2" />
@@ -332,22 +310,22 @@ export default function SMSConsolePage() {
                                 <Textarea
                                     id="message"
                                     placeholder="Type your message here..."
-                                    className="min-h-[160px] text-sm resize-none bg-muted/20 border-muted focus:ring-primary/20 rounded-xl transition-all"
+                                    className="min-h-[120px] resize-none rounded-md border-muted bg-muted/20 text-sm focus:ring-primary/20"
                                     value={message}
                                     onChange={(e) => setMessage(e.target.value)}
                                     maxLength={612}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-1">Use Template</Label>
                                     <Select value="" onValueChange={(val) => setMessage(val)}>
-                                        <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-muted">
+                                        <SelectTrigger className="h-9 rounded-md border-muted bg-muted/20">
                                             <SelectValue placeholder="Select a template..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {(templates as any[])?.map((t: any) => (
+                                            {templates?.map((t: SMSTemplate) => (
                                                 <SelectItem key={t.id} value={t.sms_body}>{t.name}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -361,14 +339,14 @@ export default function SMSConsolePage() {
                                             value={scheduledFor}
                                             onChange={(e) => setScheduledFor(e.target.value)}
                                             min={new Date().toISOString().slice(0, 16)}
-                                            className="h-11 rounded-xl bg-muted/20 border-muted pr-10"
+                                            className="h-9 rounded-md border-muted bg-muted/20 pr-10"
                                         />
                                         <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex flex-col items-center justify-between gap-3 pt-1 sm:flex-row">
                                 <Button 
                                     variant="ghost" 
                                     size="sm" 
@@ -381,7 +359,7 @@ export default function SMSConsolePage() {
                                 <Button 
                                     onClick={handleSend} 
                                     disabled={isSending || recipients.length === 0 || !message} 
-                                    className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all shadow-md active:scale-95 w-full sm:w-auto"
+                                    className="h-9 w-full px-5 font-semibold sm:w-auto"
                                 >
                                     {isSending ? (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -395,8 +373,8 @@ export default function SMSConsolePage() {
                     </Card>
 
                     {/* Right Column: Recipients Sidebar */}
-                    <Card className="shadow-sm border-muted/60 rounded-xl glass-card">
-                        <div className="p-4 lg:p-6 space-y-4 h-full flex flex-col">
+                    <Card className="border-border shadow-sm">
+                        <div className="flex h-full flex-col space-y-4 p-4">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 font-semibold text-foreground">
                                     <Users className="h-4 w-4 text-primary" />
@@ -415,11 +393,11 @@ export default function SMSConsolePage() {
                                 />
                             </div>
 
-                            <ScrollArea className="flex-1 min-h-[350px] pr-2">
+                            <ScrollArea className="min-h-[260px] flex-1 pr-2">
                                 {recipients.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-3 opacity-60">
-                                        <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center">
-                                            <Users className="h-8 w-8 text-muted-foreground" />
+                                        <div className="flex h-full flex-col items-center justify-center space-y-2 py-10 text-center opacity-60">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted/50">
+                                                <Users className="h-5 w-5 text-muted-foreground" />
                                         </div>
                                         <div>
                                             <p className="font-semibold text-sm">No recipients added</p>
@@ -433,7 +411,7 @@ export default function SMSConsolePage() {
                                         {recipients.map((r, i) => (
                                             <div 
                                                 key={i} 
-                                                className="group flex items-center gap-3 bg-muted/20 p-2.5 rounded-xl border border-transparent hover:border-muted/50 hover:bg-muted/40 transition-all"
+                                                className="group flex items-center gap-3 rounded-md border border-transparent bg-muted/20 p-2 hover:border-muted/50 hover:bg-muted/40"
                                             >
                                                 <Avatar className="h-9 w-9 rounded-lg border">
                                                     <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold rounded-lg uppercase">
@@ -472,15 +450,15 @@ export default function SMSConsolePage() {
                             <div className="mt-auto pt-2">
                                 <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button variant="outline" className="w-full h-11 rounded-xl border-dashed border-2 hover:border-primary/50 transition-all font-medium text-sm">
+                                        <Button variant="outline" className="h-9 w-full border-dashed text-sm font-medium">
                                             <UserPlus className="mr-2 h-4 w-4" /> Select from Contacts
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="max-w-3xl h-[80vh] flex flex-col rounded-2xl overflow-hidden p-0">
-                                        <DialogHeader className="p-6 pb-2">
+                                    <DialogContent className="flex h-[80vh] max-w-3xl flex-col overflow-hidden p-0">
+                                        <DialogHeader className="p-4 pb-2">
                                             <DialogTitle>Select Customers</DialogTitle>
                                         </DialogHeader>
-                                        <div className="px-6 pb-4 flex items-center gap-3">
+                                        <div className="flex items-center gap-3 px-4 pb-3">
                                             <div className="relative flex-1">
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                                                 <Input
@@ -488,25 +466,25 @@ export default function SMSConsolePage() {
                                                     placeholder="Search by name, email, or phone..."
                                                     value={customerSearch}
                                                     onChange={(e) => setCustomerSearch(e.target.value)}
-                                                    className="pl-10 h-11 rounded-xl bg-muted/20 border-muted"
+                                                    className="h-9 rounded-md border-muted bg-muted/20 pl-10"
                                                 />
                                             </div>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-11 px-4 rounded-xl whitespace-nowrap flex-shrink-0"
+                                                className="h-9 shrink-0 whitespace-nowrap px-3"
                                                 onClick={handleSelectAll}
                                                 disabled={filteredCustomersWithPhone.length === 0}
                                             >
                                                 {allFilteredSelected ? 'Deselect All' : `Select All (${filteredCustomersWithPhone.length})`}
                                             </Button>
                                         </div>
-                                        <ScrollArea className="flex-1 px-6">
+                                        <ScrollArea className="flex-1 px-4">
                                             <div className="space-y-2">
                                                 {filteredCustomers.map((c: Customer) => (
                                                     <div 
                                                         key={c.id} 
-                                                        className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 border border-transparent hover:border-muted-foreground/10 transition-all cursor-pointer"
+                                                        className="flex cursor-pointer items-center justify-between rounded-md border border-transparent p-2.5 hover:border-muted-foreground/10 hover:bg-muted/30"
                                                         onClick={() => handleToggleCustomerSelection(c.id)}
                                                     >
                                                         <div className="flex items-center gap-3">
@@ -546,14 +524,14 @@ export default function SMSConsolePage() {
                                                 ))}
                                             </div>
                                         </ScrollArea>
-                                        <DialogFooter className="p-6 bg-muted/20 border-t items-center justify-between">
+                                        <DialogFooter className="items-center justify-between border-t bg-muted/20 p-4">
                                             <div className="text-sm font-medium text-foreground">
                                                 {selectedCustomerIds.length > 0 && `${selectedCustomerIds.length} selected`}
                                             </div>
                                             <div className="flex gap-2">
                                                 <Button onClick={() => { setIsCustomerDialogOpen(false); setSelectedCustomerIds([]); }} variant="ghost">Cancel</Button>
                                                 {selectedCustomerIds.length > 0 && (
-                                                    <Button onClick={handleAddSelectedCustomers} variant="default" className="rounded-xl px-6">
+                                                    <Button onClick={handleAddSelectedCustomers} variant="default" className="px-5">
                                                         Add {selectedCustomerIds.length} Selected
                                                     </Button>
                                                 )}
@@ -567,8 +545,8 @@ export default function SMSConsolePage() {
                 </div>
 
                 
-                <Card className="shadow-sm border-muted/60 rounded-xl overflow-hidden glass-card">
-                    <div className="p-4 lg:p-6 border-b border-muted flex items-center justify-between bg-muted/10">
+                <Card className="overflow-hidden border-border shadow-sm">
+                    <div className="flex items-center justify-between border-b border-muted bg-muted/10 p-4">
                         <div className="flex items-center gap-2 font-semibold text-foreground">
                             <History className="h-4 w-4 text-primary" />
                             <span>Recent History</span>
@@ -683,22 +661,22 @@ function StatCard({ label, value, icon, iconBg, symbol = "", variant = "default"
     variant?: "default" | "primary" | "danger"
 }) {
     return (
-        <Card className="shadow-sm border-muted/60 hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden glass-card">
-            <CardContent className="p-4 lg:p-6">
+        <Card className="overflow-hidden border-border shadow-sm">
+            <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-2">{label}</p>
                         <div className="flex items-baseline gap-1">
                             {symbol && <span className="text-sm font-semibold text-muted-foreground">{symbol}</span>}
                             <p className={cn(
-                                "text-2xl lg:text-3xl font-black tracking-tight",
+                                "text-lg font-semibold tracking-tight",
                                 variant === "primary" && "text-primary",
                                 variant === "danger" && "text-destructive",
                                 variant === "default" && "text-foreground"
                             )}>{value}</p>
                         </div>
                     </div>
-                    <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner", iconBg)}>
+                    <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md border", iconBg)}>
                         {icon}
                     </div>
                 </div>

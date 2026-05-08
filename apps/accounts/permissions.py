@@ -173,8 +173,10 @@ def user_has_permission(user, permission_code):
     if not user or not user.is_authenticated:
         return False
     
-    # Admins and superusers have all permissions
-    if user.role in ('admin', 'super-admin') or getattr(user, 'is_superuser', False):
+    # Super-admins and Django superusers have unrestricted system access.
+    # Regular admins get their access from the dynamic Role model so explicit
+    # user overrides can still revoke sensitive permissions.
+    if user.role == 'super-admin' or getattr(user, 'is_superuser', False):
         return True
     
     # Check user-specific permission overrides first
@@ -193,12 +195,16 @@ def user_has_permission(user, permission_code):
             # Override takes precedence
             return override.granted
     
-    # Check role permissions
+    # Check role permissions. The admin role normally carries all permissions,
+    # but it is still resolved here so the override above can deny individual
+    # permissions for a specific admin account.
     try:
-        from apps.accounts.permission_models import Role
+        from apps.accounts.permission_models import Permission, Role
         role = Role.objects.get(code=user.role, is_active=True)
         return role.has_permission(permission_code)
     except (Role.DoesNotExist, AttributeError):
+        if user.role == 'admin':
+            return Permission.objects.filter(code=permission_code, is_active=True).exists()
         # Role not found or user has no role - deny access
         return False
 
@@ -216,28 +222,25 @@ def get_user_permissions(user):
     if not user or not user.is_authenticated:
         return []
     
-    # Admins and superusers have all permissions
-    if user.role in ('admin', 'super-admin') or getattr(user, 'is_superuser', False):
-        from apps.accounts.permission_models import Role, Permission
-        try:
-            # Try to get permissions from admin role
-            admin_role = Role.objects.get(code='admin', is_active=True)
-            role_permissions = admin_role.get_permission_codes()
-            # If admin role has permissions, return them
-            if role_permissions:
-                return role_permissions
-        except Role.DoesNotExist:
-            pass
-        
-        # Fallback: If admin role doesn't exist or has no permissions,
-        # return all active permissions
+    # Super-admins and Django superusers have all active permissions.
+    if user.role == 'super-admin' or getattr(user, 'is_superuser', False):
+        from apps.accounts.permission_models import Permission
         return list(Permission.objects.filter(is_active=True).values_list('code', flat=True))
     
     # Get role permissions
     try:
-        from apps.accounts.permission_models import Role
+        from apps.accounts.permission_models import Permission, Role
         role = Role.objects.get(code=user.role, is_active=True)
         permissions = role.get_permission_codes()
+        if user.role == 'admin' and not permissions:
+            permissions = list(Permission.objects.filter(is_active=True).values_list('code', flat=True))
+    except (Role.DoesNotExist, AttributeError):
+        if user.role == 'admin':
+            permissions = list(Permission.objects.filter(is_active=True).values_list('code', flat=True))
+        else:
+            return []
+
+    try:
         
         # Apply user-specific overrides
         from apps.accounts.permission_models import UserPermissionOverride
@@ -259,7 +262,7 @@ def get_user_permissions(user):
                     permissions.remove(perm_code)
         
         return permissions
-    except (Role.DoesNotExist, AttributeError):
+    except AttributeError:
         return []
 
 

@@ -103,7 +103,7 @@ export interface AuditLog {
   object_id: string;
   object_repr: string;
 
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
   changes_display?: string;
   ip_address?: string;
   user_agent?: string;
@@ -242,7 +242,7 @@ export interface BranchCreate {
   timezone?: string;
 }
 
-export interface BranchUpdate extends Partial<BranchCreate> { }
+export type BranchUpdate = Partial<BranchCreate>;
 
 export interface SystemBackupListResponse {
   count: number;
@@ -370,7 +370,7 @@ export const adminApi = {
     },
 
     delete: async (id: number): Promise<void> => {
-      await apiClient.delete(`/branches/branches/${id}/`);
+      await apiClient.delete(`/accounts/admin/settings/${id}/`);
     },
     byCategory: async (category?: string): Promise<SystemSetting[]> => {
       const response = await apiClient.get("/accounts/admin/settings/by_category/", {
@@ -500,14 +500,15 @@ export const adminApi = {
 
         return response.data;
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If it's already an Error, rethrow it
         if (error instanceof Error) {
           throw error;
         }
         // If it's an axios error with blob response, try to parse it
-        if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
-          const text = await error.response.data.text();
+        const axiosLikeError = error as { response?: { data?: unknown } };
+        if (axiosLikeError.response?.data instanceof Blob && axiosLikeError.response.data.type === 'application/json') {
+          const text = await axiosLikeError.response.data.text();
           const errorData = JSON.parse(text);
           throw new Error(errorData.error || errorData.detail || 'Failed to download logs');
         }
@@ -541,8 +542,10 @@ export const adminApi = {
       return response.data;
     },
 
-    download: async (id: number): Promise<{ file_path: string; file_size: number; download_url: string }> => {
-      const response = await apiClient.post(`/accounts/admin/backups/${id}/download/`);
+    download: async (id: number): Promise<Blob> => {
+      const response = await apiClient.post(`/accounts/admin/backups/${id}/download/`, undefined, {
+        responseType: "blob",
+      });
       return response.data;
     },
 

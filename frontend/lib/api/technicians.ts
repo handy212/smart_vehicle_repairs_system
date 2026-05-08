@@ -40,6 +40,10 @@ export interface CreateTechnicianData {
     last_name: string;
     password?: string;
     phone?: string;
+    branch?: number;
+    employee_id?: string;
+    hire_date?: string;
+    hourly_rate?: string;
     role?: "technician" | "service_coordinator";
     bio?: string;
     skill_ids?: number[];
@@ -58,6 +62,7 @@ export const techniciansApi = {
         page?: number;
         search?: string;
         status?: string;
+        branch?: number;
         skills?: string; // Comma separated IDs
     }): Promise<TechnicianListResponse> => {
         const response = await apiClient.get("/technicians/technicians/", { params });
@@ -74,7 +79,7 @@ export const techniciansApi = {
         return response.data;
     },
 
-    update: async (id: number, data: Partial<Technician>): Promise<Technician> => {
+    update: async (id: number, data: Partial<Technician> | FormData): Promise<Technician> => {
         const response = await apiClient.patch(`/technicians/technicians/${id}/`, data);
         return response.data;
     },
@@ -203,7 +208,8 @@ export interface Certification {
 export const certificationsApi = {
     list: async (params?: { technician?: number; status?: string }): Promise<Certification[]> => {
         const response = await apiClient.get("/technicians/certifications/", { params });
-        return response.data;
+        const data = response.data as Certification[] | { results?: Certification[] };
+        return Array.isArray(data) ? data : data.results ?? [];
     },
 
     get: async (id: number): Promise<Certification> => {
@@ -211,12 +217,12 @@ export const certificationsApi = {
         return response.data;
     },
 
-    create: async (data: Partial<Certification>): Promise<Certification> => {
+    create: async (data: Partial<Certification> | FormData): Promise<Certification> => {
         const response = await apiClient.post("/technicians/certifications/", data);
         return response.data;
     },
 
-    update: async (id: number, data: Partial<Certification>): Promise<Certification> => {
+    update: async (id: number, data: Partial<Certification> | FormData): Promise<Certification> => {
         const response = await apiClient.patch(`/technicians/certifications/${id}/`, data);
         return response.data;
     },

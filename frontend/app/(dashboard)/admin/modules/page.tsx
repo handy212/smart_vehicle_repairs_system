@@ -11,11 +11,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+
+type PremiumIconName = keyof typeof PremiumIcons;
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Something went wrong.";
+}
+
+function isPremiumIconName(icon: string): icon is PremiumIconName {
+  return icon in PremiumIcons;
+}
 
 export default function ModuleControlPage() {
   const { modules, isLoading, error, refetch } = useModules();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canManageModules = hasPermission("manage_modules");
 
   const mutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<SystemModule> }) =>
@@ -27,10 +41,10 @@ export default function ModuleControlPage() {
         description: `${data.name} is now ${data.is_enabled ? "enabled" : "disabled"}.`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error updating module",
-        description: error.message || "Something went wrong.",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     },
@@ -58,7 +72,7 @@ export default function ModuleControlPage() {
         <AlertTriangle className="h-8 w-8 text-destructive" />
         <p className="text-muted-foreground text-center">
           Failed to load modules<br />
-          {(error as any).message}
+          {getErrorMessage(error)}
         </p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="mr-2 h-4 w-4" />
@@ -76,7 +90,7 @@ export default function ModuleControlPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {modules.map((module) => {
-          const Icon = (PremiumIcons as any)[module.icon] || PremiumIcons.Settings;
+          const Icon = isPremiumIconName(module.icon) ? PremiumIcons[module.icon] : PremiumIcons.Settings;
           return (
             <Card key={module.id} className={cn("overflow-hidden transition-all duration-300", !module.is_enabled && "opacity-60 grayscale-[50%]")}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -92,11 +106,13 @@ export default function ModuleControlPage() {
                     <CardDescription className="text-xs">{module.slug}</CardDescription>
                   </div>
                 </div>
-                <Switch
-                  checked={module.is_enabled}
-                  onCheckedChange={() => handleToggle(module)}
-                  disabled={mutation.isPending && mutation.variables?.id === module.id}
-                />
+                <PermissionGuard permission="manage_modules">
+                  <Switch
+                    checked={module.is_enabled}
+                    onCheckedChange={() => handleToggle(module)}
+                    disabled={!canManageModules || (mutation.isPending && mutation.variables?.id === module.id)}
+                  />
+                </PermissionGuard>
               </CardHeader>
               <CardContent className="pt-2">
                 <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">

@@ -46,6 +46,10 @@ app.conf.beat_schedule = {
         'task': 'apps.vehicles.tasks.calculate_fleet_health_scores',
         'schedule': crontab(hour=0, minute=0),  # Run daily at midnight
     },
+    'cleanup-expired-system-backups': {
+        'task': 'apps.accounts.tasks.cleanup_expired_system_backups',
+        'schedule': crontab(hour=2, minute=30),  # Run daily at 2:30 AM
+    },
 }
 
 @app.task(bind=True)

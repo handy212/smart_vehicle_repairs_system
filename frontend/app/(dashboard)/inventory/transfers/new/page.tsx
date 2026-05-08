@@ -15,6 +15,7 @@ import { Loader2, Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Combobox } from "@/components/ui/combobox";
 import { PartSelector } from "@/components/inventory/PartSelector";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function NewTransferPage() {
     const router = useRouter();
@@ -94,14 +95,13 @@ export default function NewTransferPage() {
                     part_id: i.partId!,
                     quantity: i.quantity
                 }))
-
-            } as any);
+            });
 
             toast({ title: "Success", description: "Transfer created successfully" });
             router.push(`/inventory/transfers/${transfer.id}`);
 
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to create transfer", variant: "destructive" });
+        } catch (error: unknown) {
+            toast({ title: "Error", description: getApiErrorMessage(error, "Failed to create transfer"), variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -169,7 +169,7 @@ export default function NewTransferPage() {
 
                             {items.length === 0 && (
                                 <p className="text-sm text-muted-foreground text-center py-4 bg-muted rounded border border-dashed">
-                                    No items added. Click "Add Part" to begin.
+                                    No items added. Click &quot;Add Part&quot; to begin.
                                 </p>
                             )}
 

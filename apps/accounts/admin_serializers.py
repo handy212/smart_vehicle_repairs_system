@@ -27,6 +27,8 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
     
     def get_updated_by_name(self, obj):
         if obj.updated_by:
+            if getattr(obj.updated_by, 'role', None) == 'super-admin':
+                return "System"
             return obj.updated_by.get_full_name() or f"{obj.updated_by.first_name} {obj.updated_by.last_name}".strip()
         return None
     
@@ -68,13 +70,19 @@ class AuditLogSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'timestamp']
     
     def get_user(self, obj):
+        if getattr(obj.actor, 'role', None) == 'super-admin':
+            return None
         return obj.actor.id if obj.actor else None
 
     def get_user_email(self, obj):
+        if getattr(obj.actor, 'role', None) == 'super-admin':
+            return "system@system.local"
         return obj.actor.email if obj.actor else "system@system.local"
     
     def get_user_name(self, obj):
         if not obj.actor:
+            return "System"
+        if getattr(obj.actor, 'role', None) == 'super-admin':
             return "System"
         # Compose name directly rather than using get_full_name() which on this
         # custom User model returns email as a fallback (masking the username fallback).
@@ -126,15 +134,28 @@ class SystemBackupSerializer(serializers.ModelSerializer):
             'created_by', 'created_by_name', 'notes', 'error_message',
             'started_at', 'completed_at'
         ]
-        read_only_fields = ['id', 'started_at', 'completed_at', 'created_by_name', 'file_size_display']
+        read_only_fields = [
+            'id', 'status', 'file_path', 'file_size', 'created_by',
+            'started_at', 'completed_at', 'created_by_name',
+            'file_size_display', 'error_message',
+        ]
     
     def get_created_by_name(self, obj):
         if obj.created_by:
+            if getattr(obj.created_by, 'role', None) == 'super-admin':
+                return "System"
             return obj.created_by.get_full_name() or f"{obj.created_by.first_name} {obj.created_by.last_name}".strip()
         return None
     
     def get_file_size_display(self, obj):
         return obj.get_file_size_display() if hasattr(obj, 'get_file_size_display') else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if getattr(instance.created_by, 'role', None) == 'super-admin':
+            data['created_by'] = None
+            data['created_by_name'] = 'System'
+        return data
 
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
@@ -151,6 +172,8 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
     
     def get_updated_by_name(self, obj):
         if obj.updated_by:
+            if getattr(obj.updated_by, 'role', None) == 'super-admin':
+                return "System"
             return obj.updated_by.get_full_name() or f"{obj.updated_by.first_name} {obj.updated_by.last_name}".strip()
         return None
 
@@ -212,6 +235,33 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'code', 'name', 'description', 'is_active', 'priority', 'permission_ids'
         ]
+
+    def validate_code(self, value):
+        normalized = value.strip().lower().replace(' ', '_')
+        if normalized == 'super-admin':
+            raise serializers.ValidationError("Invalid role code.")
+        return normalized
+
+    def validate_permission_ids(self, value):
+        permission_ids = list(dict.fromkeys(value))
+        found = set(Permission.objects.filter(id__in=permission_ids, is_active=True).values_list('id', flat=True))
+        missing = [permission_id for permission_id in permission_ids if permission_id not in found]
+        if missing:
+            raise serializers.ValidationError(f"Invalid or inactive permission ids: {missing}")
+        return permission_ids
+
+    def validate(self, attrs):
+        if self.instance and self.instance.is_system:
+            protected_fields = {'code', 'priority'}
+            changed = {
+                field for field in protected_fields
+                if field in attrs and getattr(self.instance, field) != attrs[field]
+            }
+            if changed:
+                raise serializers.ValidationError(
+                    {field: "This field cannot be changed for system roles." for field in changed}
+                )
+        return attrs
     
     def create(self, validated_data):
         permission_ids = validated_data.pop('permission_ids', [])

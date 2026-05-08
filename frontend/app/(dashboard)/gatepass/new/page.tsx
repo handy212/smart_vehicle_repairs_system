@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gatepassApi } from "@/lib/api/gatepass";
-import { workordersApi } from "@/lib/api/workorders";
+import { workordersApi, type WorkOrder } from "@/lib/api/workorders";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,31 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import type { GatePassCreateData } from "@/lib/api/gatepass";
+
+type GatePassWorkOrder = WorkOrder & {
+  customer_name?: string;
+  vehicle_info?: string;
+  customer?: number | {
+    id: number;
+    full_name?: string;
+    user?: {
+      first_name?: string;
+      last_name?: string;
+      email?: string;
+    };
+  };
+  vehicle?: number | {
+    id: number;
+    year?: number;
+    make?: string;
+    model?: string;
+    license_plate?: string;
+  };
+  branch?: number | { id: number };
+};
 
 const gatePassSchema = z.object({
   work_order: z.number().min(1, "Work order is required"),
@@ -51,14 +74,13 @@ export default function NewGatePassPage() {
     workOrderId ? parseInt(workOrderId) : null
   );
 
-  const [workOrderData, setWorkOrderData] = useState<any>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    watch,
+    control,
     setValue,
   } = useForm<GatePassFormData>({
     resolver: zodResolver(gatePassSchema),
@@ -87,22 +109,25 @@ export default function NewGatePassPage() {
     queryFn: () => workordersApi.get(workOrderToFetch!),
     enabled: !!workOrderToFetch,
   });
+  const workOrderData = selectedWorkOrderData as GatePassWorkOrder | undefined;
+  const selectedWorkOrderId = workOrderData?.id ?? workOrderToFetch ?? undefined;
+
+  const { data: existingGatePass, isFetching: isCheckingGatePass } = useQuery({
+    queryKey: ["gatepass", "workorder", selectedWorkOrderId],
+    queryFn: () => gatepassApi.getByWorkOrder(selectedWorkOrderId!),
+    enabled: !!selectedWorkOrderId,
+  });
 
   useEffect(() => {
     if (selectedWorkOrderData) {
-      setWorkOrderData(selectedWorkOrderData);
       // Auto-populate form with work order data
       setValue("work_order", selectedWorkOrderData.id);
-      // Also update selectedWorkOrder state if it was from URL
-      if (!selectedWorkOrder && selectedWorkOrderData.id) {
-        setSelectedWorkOrder(selectedWorkOrderData.id);
-      }
     }
-  }, [selectedWorkOrderData, setValue, selectedWorkOrder]);
+  }, [selectedWorkOrderData, setValue]);
 
   // Helper function to get customer name from work order data
 
-  const getCustomerName = (workOrder: any): string => {
+  const getCustomerName = (workOrder: GatePassWorkOrder | null): string => {
     if (!workOrder) return "N/A";
     // Check if customer_name exists (from list serializer)
     if (workOrder.customer_name) return workOrder.customer_name;
@@ -122,7 +147,7 @@ export default function NewGatePassPage() {
 
   // Helper function to get vehicle info from work order data
 
-  const getVehicleInfo = (workOrder: any): string => {
+  const getVehicleInfo = (workOrder: GatePassWorkOrder | null): string => {
     if (!workOrder) return "N/A";
     // Check if vehicle_info exists (from list serializer)
     if (workOrder.vehicle_info) return workOrder.vehicle_info;
@@ -139,8 +164,9 @@ export default function NewGatePassPage() {
     return "N/A";
   };
 
-  const pickedUpByCustomer = watch("picked_up_by_customer");
-  const workOrder = watch("work_order");
+  const pickedUpByCustomer = useWatch({ control, name: "picked_up_by_customer" });
+  const workOrder = useWatch({ control, name: "work_order" });
+  const pickupPersonIdType = useWatch({ control, name: "pickup_person_id_type" });
 
   const createMutation = useMutation({
     mutationFn: (data: GatePassFormData) => gatepassApi.create(data),
@@ -153,43 +179,25 @@ export default function NewGatePassPage() {
       });
       router.push(`/gatepass/${gatePass.id}`);
     },
-    onError: (error) => {
-      console.error("Error creating gate pass:", error);
-      if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
-        console.error("Error response data:", errorData);
-
-        // Handle field-level errors
-        const fieldErrors: string[] = [];
-        Object.keys(errorData).forEach((field) => {
-          if (field !== 'non_field_errors' && field !== 'detail') {
-            const fieldError = Array.isArray(errorData[field])
-              ? errorData[field][0]
-              : errorData[field];
-            fieldErrors.push(`${field}: ${fieldError}`);
-          }
-        });
-
-        if (fieldErrors.length > 0) {
-          setServerError(fieldErrors.join(', '));
-        } else if (errorData.detail) {
-          setServerError(typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail));
-        } else if (errorData.non_field_errors) {
-          setServerError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
-        } else {
-          setServerError("An error occurred. Please check the form details.");
-        }
+    onError: (error: unknown) => {
+      const message = getApiErrorMessage(error, "Could not create gate pass.");
+      if (message.toLowerCase().includes("gate pass already exists")) {
+        setServerError("This work order already has a gate pass. Open the existing gate pass instead.");
       } else {
-        setServerError("An unexpected error occurred. Please try again.");
+        setServerError(message);
       }
     },
   });
 
   const onSubmit = async (data: GatePassFormData) => {
     setServerError(null);
+    if (existingGatePass) {
+      setServerError(`This work order already has gate pass ${existingGatePass.gate_pass_number}. Open the existing gate pass instead.`);
+      return;
+    }
     // Ensure customer, vehicle, and branch are included from work order
 
-    const submitData: any = {
+    const submitData: GatePassCreateData = {
       ...data,
     };
 
@@ -207,8 +215,8 @@ export default function NewGatePassPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
         <Link href="/gatepass">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -216,18 +224,18 @@ export default function NewGatePassPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Create Gate Pass</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Create Gate Pass</h1>
           <p className="text-sm text-muted-foreground">Create a gate pass for vehicle pickup</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Work Order Selection</CardTitle>
-            <CardDescription>Select the closed work order for this gate pass</CardDescription>
+          <CardHeader className="px-4 py-3">
+            <CardTitle className="text-sm font-semibold">Work Order Selection</CardTitle>
+            <CardDescription className="text-xs">Select the closed work order for this gate pass</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 px-4 pb-4">
             <div className="space-y-2">
               <Label htmlFor="work_order">Work Order *</Label>
               <Select
@@ -255,9 +263,9 @@ export default function NewGatePassPage() {
             </div>
 
             {workOrderData && (
-              <div className="bg-muted p-4 rounded-lg space-y-2 border border-border">
-                <p className="text-sm font-semibold text-foreground mb-2">Work Order Details:</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+                <p className="text-sm font-semibold text-foreground">Work Order Details</p>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Work Order Number</p>
                     <p className="text-sm font-medium text-foreground">{workOrderData.work_order_number || "N/A"}</p>
@@ -271,17 +279,27 @@ export default function NewGatePassPage() {
                     <p className="text-sm font-medium text-foreground">{getVehicleInfo(workOrderData)}</p>
                   </div>
                 </div>
+                {existingGatePass && (
+                  <div className="flex flex-col gap-2 rounded-md border border-warning/25 bg-warning/10 p-3 text-sm text-warning-foreground sm:flex-row sm:items-center sm:justify-between">
+                    <span>
+                      Gate pass {existingGatePass.gate_pass_number} already exists for this work order.
+                    </span>
+                    <Button asChild variant="outline" size="sm" className="h-8 shrink-0">
+                      <Link href={`/gatepass/${existingGatePass.id}`}>Open Gate Pass</Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Pickup Information</CardTitle>
-            <CardDescription>Who is picking up the vehicle?</CardDescription>
+          <CardHeader className="px-4 py-3">
+            <CardTitle className="text-sm font-semibold">Pickup Information</CardTitle>
+            <CardDescription className="text-xs">Who is picking up the vehicle?</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 px-4 pb-4">
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <input
@@ -298,7 +316,7 @@ export default function NewGatePassPage() {
             </div>
 
             {!pickedUpByCustomer && (
-              <div className="space-y-4 border-t pt-4">
+              <div className="space-y-3 border-t pt-3">
                 <div className="space-y-2">
                   <Label htmlFor="pickup_person_name">
                     Pickup Person Name *
@@ -323,11 +341,11 @@ export default function NewGatePassPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="pickup_person_id_type">ID Type</Label>
                     <Select
-                      value={watch("pickup_person_id_type") || ""}
+                      value={pickupPersonIdType || ""}
                       onValueChange={(value) => setValue("pickup_person_id_type", value)}
                     >
                       <SelectTrigger id="pickup_person_id_type">
@@ -376,7 +394,7 @@ export default function NewGatePassPage() {
         </Card>
 
         {serverError && (
-          <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-400 px-4 py-3 rounded flex items-start gap-2">
+          <div className="flex items-start gap-2 rounded border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
             <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Error</p>
@@ -385,13 +403,13 @@ export default function NewGatePassPage() {
           </div>
         )}
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-2">
           <Link href="/gatepass">
             <Button type="button" variant="outline">
               Cancel
             </Button>
           </Link>
-          <Button type="submit" disabled={isSubmitting || createMutation.isPending}>
+          <Button type="submit" disabled={isSubmitting || createMutation.isPending || isCheckingGatePass || !!existingGatePass}>
             {isSubmitting || createMutation.isPending ? "Creating..." : "Create Gate Pass"}
           </Button>
         </div>

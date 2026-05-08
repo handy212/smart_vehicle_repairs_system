@@ -19,8 +19,6 @@ import {
     User
 } from "lucide-react";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/shared/DataTable";
 import { format } from "date-fns";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -189,7 +187,7 @@ function FixedAssetsContent() {
 
     return (
         <div className="flex-1 overflow-auto">
-            <div className="p-4 sm:p-6 lg:p-6 max-w-[1800px] mx-auto space-y-4">
+            <div className="space-y-4">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-center gap-3">
@@ -199,7 +197,7 @@ function FixedAssetsContent() {
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-black tracking-tight text-foreground">
+                            <h1 className="text-xl font-semibold tracking-tight text-foreground">
                                 Fixed Assets
                             </h1>
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -233,7 +231,7 @@ function FixedAssetsContent() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Total Assets
                                         </p>
-                                        <p className="text-2xl font-black text-foreground mt-1">
+                                        <p className="mt-1 text-lg font-semibold text-foreground">
                                             {stats.total_assets}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -241,7 +239,7 @@ function FixedAssetsContent() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-md border bg-muted/40">
                                             <Package className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>
@@ -256,7 +254,7 @@ function FixedAssetsContent() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Net Book Value
                                         </p>
-                                        <p className="text-2xl font-black text-primary mt-1">
+                                        <p className="mt-1 text-lg font-semibold text-primary">
                                             {formatCurrency(stats.total_net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -264,7 +262,7 @@ function FixedAssetsContent() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-md border bg-muted/40">
                                             <TrendingDown className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>
@@ -279,7 +277,7 @@ function FixedAssetsContent() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Depreciation
                                         </p>
-                                        <p className="text-2xl font-black text-primary mt-1">
+                                        <p className="mt-1 text-lg font-semibold text-primary">
                                             {formatCurrency(stats.total_accumulated_depreciation, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -287,7 +285,7 @@ function FixedAssetsContent() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-warning/10 dark:bg-orange-900/20 flex items-center justify-center">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-md border bg-muted/40">
                                             <TrendingDown className="w-5 h-5 text-primary" />
                                         </div>
                                     </div>
@@ -302,7 +300,7 @@ function FixedAssetsContent() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                             Total Investment
                                         </p>
-                                        <p className="text-2xl font-black text-success mt-1">
+                                        <p className="mt-1 text-lg font-semibold text-success">
                                             {formatCurrency(stats.total_acquisition_cost, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
                                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -310,7 +308,7 @@ function FixedAssetsContent() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-success/10 dark:bg-green-900/20 flex items-center justify-center">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-md border bg-muted/40">
                                             <DollarSign className="w-5 h-5 text-success" />
                                         </div>
                                     </div>
@@ -337,7 +335,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 rounded-md border border-border bg-background px-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="active">Active</option>
                                     <option value="">All Statuses</option>
@@ -349,7 +347,7 @@ function FixedAssetsContent() {
                                 <select
                                     value={categoryFilter}
                                     onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-border bg-card bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="h-9 rounded-md border border-border bg-background px-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="">All Categories</option>
                                     {categories?.map((cat) => (

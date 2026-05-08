@@ -2,19 +2,16 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi, NotificationTemplate as NotificationTemplateType } from "@/lib/api/notifications";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ArrowLeft, Save, Search, Mail, Edit2, Eye, X, Code2, Info, FileText, Monitor, Copy, Sparkles, Plus, Trash2 } from "lucide-react";
+import { Search, Mail, Edit2, Eye, X, Copy, Sparkles, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,15 +20,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: { detail?: string; error?: string; name?: string[]; subject?: string[]; body?: string[] } } })?.response?.data;
+  return data?.detail || data?.error || data?.name?.[0] || data?.subject?.[0] || data?.body?.[0] || fallback;
+}
+
 export default function EmailTemplatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const canManage = hasPermission("manage_settings");
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [channelFilter, setChannelFilter] = useState<string>("email");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [channelFilter] = useState<string>("email");
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplateType | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<NotificationTemplateType | null>(null);
   const [deletingTemplate, setDeletingTemplate] = useState<NotificationTemplateType | null>(null);
@@ -44,7 +45,7 @@ export default function EmailTemplatesPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["notification-templates", typeFilter, channelFilter],
     queryFn: () => notificationsApi.templates.list({
-      template_type: typeFilter || undefined,
+      template_type: typeFilter !== "all" ? typeFilter : undefined,
       channel: channelFilter || undefined,
     }),
   });
@@ -62,10 +63,10 @@ export default function EmailTemplatesPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to create template",
+        description: getApiErrorMessage(error, "Failed to create template"),
         variant: "destructive",
       });
     },
@@ -84,10 +85,10 @@ export default function EmailTemplatesPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update template",
+        description: getApiErrorMessage(error, "Failed to update template"),
         variant: "destructive",
       });
     },
@@ -104,10 +105,10 @@ export default function EmailTemplatesPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update template",
+        description: getApiErrorMessage(error, "Failed to update template"),
         variant: "destructive",
       });
     },
@@ -124,10 +125,10 @@ export default function EmailTemplatesPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete template",
+        description: getApiErrorMessage(error, "Failed to delete template"),
         variant: "destructive",
       });
     },
@@ -189,7 +190,7 @@ export default function EmailTemplatesPage() {
   };
 
 
-  const templates = (data as any)?.results || (Array.isArray(data) ? data : []) || [];
+  const templates: NotificationTemplateType[] = data && "results" in data ? data.results : Array.isArray(data) ? data : [];
   const filteredTemplates = templates.filter((template: NotificationTemplateType) => {
     if (search) {
       const searchLower = search.toLowerCase();
@@ -312,13 +313,13 @@ export default function EmailTemplatesPage() {
               </SelectContent>
             </Select>
 
-            {(search || typeFilter) && (
+            {(search || typeFilter !== "all") && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSearch("");
-                  setTypeFilter("");
+                  setTypeFilter("all");
                 }}
                 className="h-8 px-2 text-xs"
               >
@@ -330,86 +331,55 @@ export default function EmailTemplatesPage() {
         </CardContent>
       </Card>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4 pb-8">
+      {/* Templates */}
+      <div className="px-4 pb-8">
+        <div className="overflow-hidden rounded-md border border-border bg-card">
+          <div className="grid grid-cols-[1fr_190px_86px_120px_96px] border-b border-border bg-muted/60 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            <div>Template</div>
+            <div>Type</div>
+            <div>Status</div>
+            <div>Updated</div>
+            <div className="text-right">Actions</div>
+          </div>
+          <div className="divide-y divide-border">
         {filteredTemplates.map((template: NotificationTemplateType) => (
-          <Card
-            key={template.id}
-            className="hover:shadow-md transition-all duration-200 group border border-border"
-          >
-            <CardHeader className="p-3 pb-0">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-sm font-semibold text-foreground truncate max-w-[200px]" title={template.name}>
-                    {template.name || "Unnamed Template"}
-                  </CardTitle>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-border bg-muted text-muted-foreground">
-                      {template.template_type.replace(/_/g, " ")}
-                    </Badge>
-                    {template.channel === 'email' && <Mail className="w-3 h-3 text-muted-foreground" />}
-                  </div>
-                </div>
-                <Switch
-                  checked={template.is_active}
-                  onCheckedChange={() => handleToggleActive(template)}
-                  disabled={toggleActiveMutation.isPending || !canManage}
-                  className="scale-75 data-[state=checked]:bg-success/100"
-                />
+          <div key={template.id} className="grid grid-cols-[1fr_190px_86px_120px_96px] items-center gap-3 px-3 py-2">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-foreground" title={template.name}>
+                {template.name || "Unnamed Template"}
               </div>
-            </CardHeader>
-            <CardContent className="p-3 pt-2">
-              <div className="space-y-2">
-                <div>
-                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Subject</div>
-                  <p className="text-xs text-card-foreground truncate font-medium">
-                    {template.subject || <span className="text-muted-foreground italic">No subject</span>}
-                  </p>
-                </div>
-                <div>
-                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Preview</div>
-                  <p className="text-[10px] text-muted-foreground line-clamp-2 min-h-[2.5em]">
-                    {template.body || <span className="text-muted-foreground italic">No content</span>}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 mt-1 border-t border-border">
-                  <span className="text-[10px] text-muted-foreground">
-                    {format(new Date(template.updated_at), "MMM d, yyyy")}
-                  </span>
-                  <div className="flex items-center gap-1 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handlePreview(template)}
-                      className="h-6 w-6 p-0 hover:text-primary"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </Button>
-                    <PermissionGuard permission="manage_settings">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(template)}
-                        className="h-6 w-6 p-0 hover:text-primary"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(template)}
-                        className="h-6 w-6 p-0 hover:text-destructive"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </PermissionGuard>
-                  </div>
-                </div>
+              <div className="truncate text-xs text-muted-foreground">
+                {template.subject || "No subject"}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="truncate text-xs text-muted-foreground">{template.template_type.replace(/_/g, " ")}</div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={template.is_active}
+                onCheckedChange={() => handleToggleActive(template)}
+                disabled={toggleActiveMutation.isPending || !canManage}
+                className="scale-75 data-[state=checked]:bg-success/100"
+              />
+              <span className="text-xs text-muted-foreground">{template.is_active ? "Active" : "Off"}</span>
+            </div>
+            <div className="text-xs text-muted-foreground">{format(new Date(template.updated_at), "MMM d, yyyy")}</div>
+            <div className="flex items-center justify-end gap-1">
+              <Button variant="ghost" size="icon" onClick={() => handlePreview(template)} className="h-7 w-7" title="Preview">
+                <Eye className="w-3.5 h-3.5" />
+              </Button>
+              <PermissionGuard permission="manage_settings">
+                <Button variant="ghost" size="icon" onClick={() => handleEdit(template)} className="h-7 w-7" title="Edit">
+                  <Edit2 className="w-3.5 h-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(template)} className="h-7 w-7 hover:text-destructive" title="Delete">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </PermissionGuard>
+            </div>
+          </div>
         ))}
+          </div>
+        </div>
       </div>
 
       {filteredTemplates.length === 0 && (
@@ -419,7 +389,7 @@ export default function EmailTemplatesPage() {
           </div>
           <h3 className="text-sm font-semibold text-foreground">No templates found</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            {search || typeFilter ? "Try adjusting your filters" : "Create a new template to get started"}
+            {search || typeFilter !== "all" ? "Try adjusting your filters" : "Create a new template to get started"}
           </p>
         </div>
       )}
@@ -668,7 +638,7 @@ export default function EmailTemplatesPage() {
                 Delete Template
               </DialogTitle>
               <DialogDescription className="pt-2">
-                Are you sure you want to delete the template <strong>"{deletingTemplate.name}"</strong>? This action cannot be undone.
+                Are you sure you want to delete the template <strong>{deletingTemplate.name}</strong>? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

@@ -2,16 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { auditLogsApi, AuditLog } from "@/lib/api/audit-logs";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { BadgeProps } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Search, Download, RefreshCw, FileText, CheckCircle2, AlertOctagon, XCircle } from "lucide-react";
 import { useState } from "react";
 import { exportToCSV } from "@/lib/utils/export";
@@ -19,8 +18,25 @@ import { useToast } from "@/lib/hooks/useToast";
 import { Label } from "@/components/ui/label";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
+type BadgeVariant = NonNullable<BadgeProps["variant"]>;
+
+const modelOptions = [
+  { value: "all", label: "All Models" },
+  { value: "customer", label: "Customers" },
+  { value: "vehicle", label: "Vehicles" },
+  { value: "part", label: "Parts" },
+];
+
+function asNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
 export default function ImportHistoryPage() {
-  const [modelFilter, setModelFilter] = useState<string>("");
+  const [modelFilter, setModelFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -31,7 +47,8 @@ export default function ImportHistoryPage() {
     queryKey: ["import-history", modelFilter, search, startDate, endDate, page],
     queryFn: () =>
       auditLogsApi.importHistory({
-        model_name: modelFilter || undefined,
+        model_name: modelFilter !== "all" ? modelFilter : undefined,
+        search: search.trim() || undefined,
         date_from: startDate || undefined,
         date_to: endDate || undefined,
         page,
@@ -48,28 +65,48 @@ export default function ImportHistoryPage() {
       return;
     }
 
+    const rows = data.results.map((log) => {
+      const changes = log.changes || {};
+
+      return {
+        timestamp: log.timestamp,
+        user_name: log.user_name || log.user_email || "Unknown",
+        model_name: log.model_name || "N/A",
+        filename: asString(changes.filename, "Unknown"),
+        status: changes.error ? "Failed" : asNumber(changes.imported) > 0 ? "Success" : "No imports",
+        imported: asNumber(changes.imported),
+        skipped: asNumber(changes.skipped),
+        errors: asNumber(changes.total_errors),
+        error_detail: asString(changes.error),
+      };
+    });
+
     exportToCSV(
-      data.results,
+      rows,
       "import_history",
       [
         { key: "timestamp", label: "Date" },
         { key: "user_name", label: "User" },
         { key: "model_name", label: "Model" },
-        { key: "object_repr", label: "Description" },
-        { key: "changes", label: "Details" },
+        { key: "filename", label: "File" },
+        { key: "status", label: "Status" },
+        { key: "imported", label: "Imported" },
+        { key: "skipped", label: "Skipped" },
+        { key: "errors", label: "Errors" },
+        { key: "error_detail", label: "Error Detail" },
       ]
     );
 
     toast({ title: "Success", description: "Import history exported successfully" });
   };
 
-  const getModelBadgeVariant = (modelName?: string) => {
+  const getModelBadgeVariant = (modelName?: string): BadgeVariant => {
     switch (modelName) {
-      case "Customer":
+      case "customer":
         return "default";
-      case "Vehicle":
+      case "vehicle":
         return "secondary";
-      case "Part":
+      case "part":
         return "outline";
       default:
         return "secondary";
@@ -85,7 +122,7 @@ export default function ImportHistoryPage() {
         </Badge>
       );
     }
-    if (changes.imported > 0) {
+    if (asNumber(changes.imported) > 0) {
       return (
         <Badge variant="success" className="h-5 px-1.5 gap-1">
           <CheckCircle2 className="w-3 h-3" /> Success
@@ -119,6 +156,22 @@ export default function ImportHistoryPage() {
           <CardContent className="p-3">
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
+                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="File, user, IP..."
+                    className="h-8 w-[180px] pl-8 text-xs bg-card"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
                 <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Model</Label>
                 <Select
                   value={modelFilter}
@@ -131,10 +184,11 @@ export default function ImportHistoryPage() {
                     <SelectValue placeholder="All Models" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Models</SelectItem>
-                    <SelectItem value="Customer">Customers</SelectItem>
-                    <SelectItem value="Vehicle">Vehicles</SelectItem>
-                    <SelectItem value="Part">Parts</SelectItem>
+                    {modelOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -165,12 +219,12 @@ export default function ImportHistoryPage() {
                 />
               </div>
 
-              {(modelFilter || startDate || endDate) && (
+              {(modelFilter !== "all" || search || startDate || endDate) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setModelFilter("");
+                    setModelFilter("all");
                     setStartDate("");
                     setEndDate("");
                     setSearch("");
@@ -221,10 +275,10 @@ export default function ImportHistoryPage() {
                       <TableBody>
                         {data.results.map((log) => {
                           const changes = log.changes || {};
-                          const filename = changes.filename || "Unknown";
-                          const imported = changes.imported || 0;
-                          const skipped = changes.skipped || 0;
-                          const errorCount = changes.total_errors || 0;
+                          const filename = asString(changes.filename, "Unknown");
+                          const imported = asNumber(changes.imported);
+                          const skipped = asNumber(changes.skipped);
+                          const errorCount = asNumber(changes.total_errors);
 
                           return (
                             <TableRow key={log.id} className="hover:bg-muted/50 transition-colors">
@@ -236,7 +290,7 @@ export default function ImportHistoryPage() {
                               </TableCell>
                               <TableCell className="px-4 py-2.5">
 
-                                <Badge variant={getModelBadgeVariant(log.model_name) as any} className="text-[10px] h-5 px-2 font-medium border-border">
+                                <Badge variant={getModelBadgeVariant(log.model_name)} className="text-[10px] h-5 px-2 font-medium border-border">
                                   {log.model_name || "N/A"}
                                 </Badge>
                               </TableCell>
@@ -271,7 +325,7 @@ export default function ImportHistoryPage() {
                     </Table>
                   </div>
 
-                  // Pagination
+                  {/* Pagination */}
                   {data.count > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/50">
                       <p className="text-xs text-muted-foreground">

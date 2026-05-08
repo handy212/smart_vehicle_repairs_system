@@ -5,12 +5,13 @@ import { useForm } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { techniciansApi, skillsApi, Skill } from "@/lib/api/technicians";
+import { branchesApi } from "@/lib/api/admin";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -26,6 +27,7 @@ import Link from "next/link";
 import * as z from "zod";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formSchema = z.object({
     first_name: z.string().min(2, "First name is required"),
@@ -33,6 +35,7 @@ const formSchema = z.object({
     email: z.string().email("Invalid email address"),
     phone: z.string().optional(),
     password: z.string().optional(),
+    branch: z.coerce.number().min(1, "Branch is required"),
     role: z.enum(["technician", "service_coordinator"]).default("technician"),
     years_of_experience: z.coerce.number().min(0).default(0),
     bio: z.string().optional(),
@@ -60,7 +63,14 @@ export default function EditTechnicianPage() {
         queryFn: () => skillsApi.list(),
     });
 
-    const form = useForm({
+    const { data: branchesData } = useQuery({
+        queryKey: ["branches", "active"],
+        queryFn: () => branchesApi.list({ is_active: true }),
+    });
+
+    const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
+
+    const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             first_name: "",
@@ -68,6 +78,7 @@ export default function EditTechnicianPage() {
             email: "",
             phone: "",
             password: "",
+            branch: 0,
             role: "technician" as "technician" | "service_coordinator",
             years_of_experience: 0,
             bio: "",
@@ -83,6 +94,7 @@ export default function EditTechnicianPage() {
                 email: technician.user_details?.email || "",
                 phone: technician.user_details?.phone || "",
                 password: "", // Don't pre-fill password
+                branch: technician.user_details?.branch || 0,
                 // role might come as string from backend, need to cast or map
                 role: (technician.user_details?.role === "service_coordinator" ? "service_coordinator" : "technician"),
                 years_of_experience: technician.years_of_experience,
@@ -98,7 +110,11 @@ export default function EditTechnicianPage() {
         try {
             // Remove password if empty to avoid updating it
 
-            const updateData: any = { ...values };
+            const updateData: Partial<z.infer<typeof formSchema>> = {
+                ...values,
+                phone: values.phone || undefined,
+                bio: values.bio || undefined,
+            };
             if (!updateData.password) {
                 delete updateData.password;
             }
@@ -126,7 +142,7 @@ export default function EditTechnicianPage() {
                 formData.append('profile_picture', profilePictureFile);
 
 
-                await techniciansApi.update(id, formData as any);
+                await techniciansApi.update(id, formData);
             } else {
                 await techniciansApi.update(id, updateData);
             }
@@ -141,10 +157,9 @@ export default function EditTechnicianPage() {
             });
             router.push(`/technicians/${id}`);
         } catch (error) {
-            console.error("Error updating technician:", error);
             toast({
                 title: "Error updating technician",
-                description: "There was a problem updating the technician. Please try again.",
+                description: getApiErrorMessage(error, "There was a problem updating the technician."),
                 variant: "destructive",
             });
         } finally {
@@ -172,7 +187,7 @@ export default function EditTechnicianPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
+        <div className="space-y-4">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" asChild>
                     <Link href={`/technicians/${id}`}>
@@ -180,13 +195,13 @@ export default function EditTechnicianPage() {
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Edit Technician</h1>
-                    <p className="text-muted-foreground">Update technician details</p>
+                    <h1 className="text-xl font-semibold tracking-tight">Edit Technician</h1>
+                    <p className="text-xs text-muted-foreground">Keep account, HR staff, and technician details aligned</p>
                 </div>
             </div>
 
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 bg-card p-6 rounded-lg border shadow-sm">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 bg-card p-4 rounded-lg border shadow-sm">
                     {/* Profile Picture Upload */}
                     <div className="flex items-center gap-6 p-4 border rounded-lg bg-muted/30">
                         <div className="flex-shrink-0">
@@ -229,7 +244,7 @@ export default function EditTechnicianPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
                             name="first_name"
@@ -289,19 +304,42 @@ export default function EditTechnicianPage() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Role</FormLabel>
-                                    <FormControl>
-                                        <select
-                                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            {...field}
-                                            value={field.value}
-                                        >
-                                            <option value="technician">Technician</option>
-                                            <option value="service_coordinator">Service Coordinator</option>
-                                        </select>
-                                    </FormControl>
-                                    <FormDescription>
-                                        Coordinators can manage technicians and dispatch requests.
-                                    </FormDescription>
+                                    <Select value={field.value} onValueChange={field.onChange}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select role" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="technician">Technician</SelectItem>
+                                            <SelectItem value="service_coordinator">Service Coordinator</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="branch"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Branch</FormLabel>
+                                    <Select value={field.value ? String(field.value) : ""} onValueChange={(value) => field.onChange(Number(value))}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select branch" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {branches.map((branch) => (
+                                                <SelectItem key={branch.id} value={String(branch.id)}>
+                                                    {branch.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -316,7 +354,6 @@ export default function EditTechnicianPage() {
                                     <FormControl>
                                         <Input type="password" placeholder="Leave blank to keep current" {...field} />
                                     </FormControl>
-                                    <FormDescription>Min. 8 characters if changing</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}

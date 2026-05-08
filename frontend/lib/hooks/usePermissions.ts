@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useAuthStore } from "@/store/authStore";
 
 /**
@@ -8,7 +7,7 @@ import { useAuthStore } from "@/store/authStore";
  */
 export function usePermissions() {
   const { user } = useAuthStore();
-  const permissions = user?.permissions || [];
+  const permissions = useMemo(() => user?.permissions || [], [user?.permissions]);
 
   /**
    * Check if user has a specific permission
@@ -75,4 +74,3 @@ export function usePermissions() {
 }
 
 // Note: HOC pattern - use PermissionGuard component instead for better TypeScript support
-

@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import { PremiumIcons } from "@/components/ui/icons";
 import {
   HelpCircle,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -63,7 +61,7 @@ const navigationGroups = [
   {
     name: "System",
     items: [
-      { name: "Configurations", href: "/admin", icon: PremiumIcons.Settings, permission: "view_settings" },
+      { name: "Configurations", href: "/admin/settings", icon: PremiumIcons.Settings, permission: "view_settings" },
     ],
   },
 ];
@@ -75,7 +73,7 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ isOpen = true, onClose, isCollapsed = false }: SidebarProps) {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
 

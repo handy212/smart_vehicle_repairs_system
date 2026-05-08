@@ -1,4 +1,5 @@
 import apiClient from "./client";
+import type { User } from "./admin";
 
 export interface Branch {
   id: number;
@@ -102,13 +103,13 @@ export const branchesApi = {
   },
 
 
-  getStaff: async (id: number): Promise<any[]> => {
+  getStaff: async (id: number): Promise<User[]> => {
     const response = await apiClient.get(`/branches/${id}/staff/`);
     return response.data;
   },
 
 
-  getManagers: async (id: number): Promise<any[]> => {
+  getManagers: async (id: number): Promise<User[]> => {
     const response = await apiClient.get(`/branches/${id}/managers/`);
     return response.data;
   },
@@ -159,4 +160,3 @@ export const branchesApi = {
     }
   },
 };
-

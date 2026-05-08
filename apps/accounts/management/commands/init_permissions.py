@@ -234,6 +234,8 @@ class Command(BaseCommand):
                 'manage_backups': ('system', 'Manage Backups', 'Create and restore system backups'),
                 'view_system_status': ('system', 'View System Status', 'View system health and status'),
                 'manage_api_keys': ('system', 'Manage API Keys', 'Manage API keys and integrations'),
+                'view_modules': ('system', 'View Modules', 'View module enablement status'),
+                'manage_modules': ('system', 'Manage Modules', 'Enable and disable system modules'),
                 
                 # ==================== ACCOUNTING ====================
                 'view_accounting': ('accounting', 'View Accounting', 'View accounting dashboard and reports'),

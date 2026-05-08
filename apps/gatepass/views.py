@@ -8,9 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 
-from apps.accounts.permissions import IsModuleEnabled
 from .models import GatePass
 from .serializers import (
     GatePassListSerializer,
@@ -78,6 +76,14 @@ class GatePassViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('change_gatepass')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('delete_gatepass')]
+        elif self.action == 'issue':
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('issue_gatepass')]
+        elif self.action == 'complete':
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('complete_gatepass')]
+        elif self.action in ['cancel']:
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('change_gatepass')]
+        elif self.action in ['from_workorder', 'pdf', 'print']:
+            return [IsAuthenticated(), IsModuleEnabled('gatepass'), HasPermission('view_gatepass')]
         return [IsAuthenticated(), IsModuleEnabled('gatepass')]
 
     def get_queryset(self):
@@ -141,6 +147,13 @@ class GatePassViewSet(viewsets.ModelViewSet):
             logger = logging.getLogger(__name__)
             logger.error(f"Error creating gate pass: {str(e)}", exc_info=True)
             raise DRFValidationError(f"Error creating gate pass: {str(e)}")
+
+    def perform_destroy(self, instance):
+        if instance.status not in ['pending', 'cancelled']:
+            raise DRFValidationError(
+                'Only pending or cancelled gate passes can be deleted. Cancel the gate pass first.'
+            )
+        return super().perform_destroy(instance)
 
     @action(detail=True, methods=['post'])
     def issue(self, request, pk=None):

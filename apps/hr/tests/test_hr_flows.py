@@ -29,6 +29,9 @@ from apps.hr.models import (
     TaxRule,
 )
 from apps.hr.services import PayrollService, TaxService
+from apps.hr.serializers import EmployeeProfileSerializer
+from apps.technicians.models import Technician
+from apps.technicians.serializers import TechnicianSerializer
 
 
 @pytest.fixture
@@ -262,6 +265,67 @@ def test_hr_manager_branch_access_includes_assigned_branch(branch):
 
     assert list(user.get_accessible_branches()) == [branch]
     assert user.has_branch_access(branch)
+
+
+@pytest.mark.django_db
+def test_role_change_to_technician_creates_staff_and_technician_profiles(branch):
+    user = User.objects.create_user(
+        username="counter",
+        email="counter@example.com",
+        password="password",
+        role="customer",
+        first_name="Counter",
+        last_name="Person",
+    )
+
+    user.role = "technician"
+    user.branch = branch
+    user.save()
+
+    assert EmployeeProfile.objects.filter(user=user).exists()
+    assert Technician.objects.filter(user=user).exists()
+
+
+@pytest.mark.django_db
+def test_technician_serializer_creates_linked_user_staff_and_technician(branch):
+    serializer = TechnicianSerializer(data={
+        "email": "linked.tech@example.com",
+        "first_name": "Linked",
+        "last_name": "Tech",
+        "password": "StrongPass123",
+        "branch": branch.id,
+        "employee_id": "TECH-100",
+        "hire_date": "2026-05-08",
+        "hourly_rate": "45.50",
+        "years_of_experience": 4,
+    })
+
+    assert serializer.is_valid(), serializer.errors
+    technician = serializer.save()
+
+    user = technician.user
+    profile = user.employee_profile
+    assert user.role == "technician"
+    assert user.branch == branch
+    assert user.employee_id == "TECH-100"
+    assert user.is_staff is True
+    assert profile.start_date == date(2026, 5, 8)
+    assert profile.salary_type == "hourly"
+    assert profile.base_salary == Decimal("45.50")
+
+
+@pytest.mark.django_db
+def test_staff_employment_status_controls_user_login(employee):
+    serializer = EmployeeProfileSerializer(
+        employee,
+        data={"employment_status": "suspended"},
+        partial=True,
+    )
+
+    assert serializer.is_valid(), serializer.errors
+    serializer.save()
+    employee.user.refresh_from_db()
+    assert employee.user.is_active is False
 
 
 @pytest.mark.django_db

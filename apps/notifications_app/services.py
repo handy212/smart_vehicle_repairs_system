@@ -1,6 +1,7 @@
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings as django_settings
 from django.utils import timezone
+from django.db.models import Count
 from decimal import Decimal
 import json
 from string import Formatter
@@ -34,6 +35,7 @@ class NotificationService:
             # Check if scheduled
             if notification.scheduled_for and notification.scheduled_for > timezone.now():
                 logger.info(f"Notification {notification.id} scheduled for {notification.scheduled_for}")
+                self._log_action(notification, 'scheduled', f'Scheduled for {notification.scheduled_for}')
                 return True
             
             # Check if expired
@@ -122,7 +124,16 @@ class NotificationService:
         Send email notification with HTML support
         """
         try:
+            if not notification.recipient:
+                notification.mark_as_failed("No recipient configured for email notification")
+                self._log_action(notification, 'failed', 'No email recipient')
+                return False
+
             recipient_email = notification.recipient.email
+            if not recipient_email:
+                notification.mark_as_failed("Recipient has no email address")
+                self._log_action(notification, 'failed', 'No recipient email')
+                return False
             
             # Use template if available
             if notification.template and notification.template.subject:
@@ -181,10 +192,18 @@ class NotificationService:
         Send SMS notification via Hubtel (Ghana) or Twilio
         """
         try:
+            if not notification.recipient:
+                notification.mark_as_failed("No recipient configured for voice call")
+                self._log_action(notification, 'failed', 'No call recipient')
+                return False
+
             phone_number = None
+
+            if notification.data.get('direct_send'):
+                phone_number = notification.data.get('phone_number')
             
             # 1. Try to get phone from preferences
-            if hasattr(notification.recipient, 'notification_preferences'):
+            if not phone_number and hasattr(notification.recipient, 'notification_preferences'):
                 phone_number = notification.recipient.notification_preferences.phone_number
             
             # 2. Fallback to user account phone
@@ -349,6 +368,11 @@ class NotificationService:
         Send push notification via Web Push or Firebase Cloud Messaging
         """
         try:
+            if not notification.recipient:
+                notification.mark_as_failed("No recipient configured for push notification")
+                self._log_action(notification, 'failed', 'No push recipient')
+                return False
+
             # Try Web Push first (PWA)
             webpush_result = self._send_web_push(notification)
             if webpush_result:
@@ -428,6 +452,11 @@ class NotificationService:
         Send WhatsApp notification
         """
         try:
+            if not notification.recipient:
+                notification.mark_as_failed("No recipient configured for WhatsApp notification")
+                self._log_action(notification, 'failed', 'No WhatsApp recipient')
+                return False
+
             # 1. Check if WhatsApp service is available
             whatsapp_service = get_whatsapp_service()
             if not whatsapp_service.is_available():
@@ -620,6 +649,11 @@ class NotificationService:
         Send in-app notification (just marks as delivered, already in database)
         """
         try:
+            if not notification.recipient:
+                notification.mark_as_failed("No recipient configured for in-app notification")
+                self._log_action(notification, 'failed', 'No in-app recipient')
+                return False
+
             notification.mark_as_sent()
             notification.mark_as_delivered()
             self._log_action(notification, 'delivered', 'In-app notification ready')
@@ -739,6 +773,111 @@ class NotificationService:
             'successful': sum(1 for r in results if r['success']),
             'failed': sum(1 for r in results if not r['success']),
             'results': results
+        }
+
+    def send_digest_notifications(self, frequency='daily'):
+        """
+        Send daily or weekly email digests to users who opted in.
+        """
+        from datetime import timedelta
+        from django.contrib.auth import get_user_model
+        from .models import NotificationPreference
+
+        now = timezone.now()
+        if frequency == 'weekly':
+            period_start = now - timedelta(days=7)
+            period_label = 'Weekly'
+        else:
+            frequency = 'daily'
+            period_start = now - timedelta(days=1)
+            period_label = 'Daily'
+
+        User = get_user_model()
+        preferences = NotificationPreference.objects.select_related('user').filter(
+            digest_enabled=True,
+            digest_frequency=frequency,
+            email_enabled=True,
+            user__email__gt='',
+        )
+
+        results = []
+        for preference in preferences:
+            user = preference.user
+            digest_key = now.strftime('%Y-%m-%d') if frequency == 'daily' else now.strftime('%G-W%V')
+            already_sent = Notification.objects.filter(
+                recipient=user,
+                notification_type='system',
+                channel='email',
+                related_object_type='notification_digest',
+                data__digest_frequency=frequency,
+                data__digest_key=digest_key,
+            ).exists()
+            if already_sent:
+                results.append({'user_id': user.id, 'success': True, 'skipped': 'already_sent'})
+                continue
+
+            notifications = Notification.objects.filter(
+                recipient=user,
+                created_at__gte=period_start,
+            ).exclude(
+                related_object_type='notification_digest'
+            ).order_by('-created_at')
+
+            total = notifications.count()
+            if total == 0:
+                results.append({'user_id': user.id, 'success': True, 'skipped': 'empty'})
+                continue
+
+            unread = notifications.filter(is_read=False).count()
+            by_type = notifications.values('notification_type').annotate(count=Count('id')).order_by('-count')
+            recent = list(notifications[:8])
+
+            type_summary = ', '.join(
+                f"{item['notification_type'].replace('_', ' ').title()}: {item['count']}"
+                for item in by_type
+            )
+            recent_lines = '\n'.join(
+                f"- {item.title}: {item.message[:120]}"
+                for item in recent
+            )
+
+            message = (
+                f"{period_label} notification digest\n\n"
+                f"Total notifications: {total}\n"
+                f"Unread: {unread}\n"
+                f"By type: {type_summary or 'None'}\n\n"
+                f"Recent notifications:\n{recent_lines}"
+            )
+
+            digest_notification = Notification.objects.create(
+                recipient=user,
+                notification_type='system',
+                channel='email',
+                priority='normal',
+                title=f'{period_label} Notification Digest',
+                message=message,
+                data={
+                    'digest_frequency': frequency,
+                    'digest_key': digest_key,
+                    'total': total,
+                    'unread': unread,
+                },
+                related_object_type='notification_digest',
+            )
+            success = self.send_notification(digest_notification)
+            results.append({
+                'user_id': user.id,
+                'notification_id': digest_notification.id,
+                'success': success,
+                'status': digest_notification.status,
+            })
+
+        return {
+            'frequency': frequency,
+            'total': len(results),
+            'successful': sum(1 for item in results if item.get('success')),
+            'failed': sum(1 for item in results if not item.get('success')),
+            'results': results,
         }
 
 

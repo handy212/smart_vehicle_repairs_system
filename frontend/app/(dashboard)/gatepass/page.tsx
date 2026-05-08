@@ -1,18 +1,16 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { gatepassApi } from "@/lib/api/gatepass";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { gatepassApi, type GatePass } from "@/lib/api/gatepass";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, FileText, X, MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { ComponentProps } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
@@ -30,8 +28,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
-function getStatusVariant(status: string) {
+function getStatusVariant(status: string): ComponentProps<typeof Badge>["variant"] {
   switch (status) {
     case "pending":
       return "secondary";
@@ -50,8 +49,7 @@ export default function GatePassPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
-  // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   const queryClient = useQueryClient();
@@ -77,30 +75,35 @@ export default function GatePassPage() {
     },
   ];
 
-  const quickFilters: QuickFilter[] = [
-    {
-      label: "Last 7 Days",
-      value: "last_7_days",
-      filters: {
-        created_at_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        created_at_to: new Date().toISOString().split("T")[0],
+  const quickFilters: QuickFilter[] = useMemo(() => {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    return [
+      {
+        label: "Last 7 Days",
+        value: "last_7_days",
+        filters: {
+          created_at_from: sevenDaysAgo.toISOString().split("T")[0],
+          created_at_to: today.toISOString().split("T")[0],
+        },
       },
-    },
-    {
-      label: "Pending",
-      value: "pending",
-      filters: {
-        status: "pending",
+      {
+        label: "Pending",
+        value: "pending",
+        filters: {
+          status: "pending",
+        },
       },
-    },
-    {
-      label: "Completed",
-      value: "completed",
-      filters: {
-        status: "completed",
+      {
+        label: "Completed",
+        value: "completed",
+        filters: {
+          status: "completed",
+        },
       },
-    },
-  ];
+    ];
+  }, []);
 
   const handleSort = (field: string) => {
     setSortConfig((current) => {
@@ -133,7 +136,6 @@ export default function GatePassPage() {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const gatePasses = data?.results || [];
 
   const deleteMutation = useMutation({
@@ -143,17 +145,17 @@ export default function GatePassPage() {
       toast({ title: "Success", description: "Gate pass deleted successfully" });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete gate pass",
+        description: getApiErrorMessage(error, "Failed to delete gate pass"),
         variant: "destructive",
       });
     },
   });
 
 
-  const handleDelete = (gatePass: any) => {
+  const handleDelete = (gatePass: GatePass) => {
     if (confirm(`Are you sure you want to delete gate pass "${gatePass.gate_pass_number}"? This action cannot be undone.`)) {
       deleteMutation.mutate(gatePass.id);
     }
@@ -247,7 +249,7 @@ export default function GatePassPage() {
             <div className="p-4">
               <TableSkeleton rows={8} columns={8} />
             </div>
-          ) : data?.results && data.results.length > 0 ? (
+          ) : gatePasses.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -291,7 +293,7 @@ export default function GatePassPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.results.map((gatePass) => (
+                  {gatePasses.map((gatePass) => (
                     <TableRow
                       key={gatePass.id}
                       className="group hover:bg-muted/80 transition-colors border-b border-border cursor-pointer"
@@ -312,7 +314,7 @@ export default function GatePassPage() {
                       </TableCell>
                       <TableCell className="px-3 py-1.5">
 
-                        <Badge variant={getStatusVariant(gatePass.status) as any} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
+                        <Badge variant={getStatusVariant(gatePass.status)} className="text-[9px] px-1.5 py-0 h-4 capitalize font-bold border shadow-none bg-transparent">
                           {gatePass.status?.replace(/_/g, " ") || gatePass.status || "-"}
                         </Badge>
                       </TableCell>

@@ -10,7 +10,7 @@ export interface AuditLog {
   object_id?: string;
   object_repr?: string;
 
-  changes?: Record<string, any>;
+  changes?: Record<string, unknown>;
   changes_display?: string;
   ip_address?: string;
   user_agent?: string;
@@ -42,6 +42,7 @@ export const auditLogsApi = {
     page?: number;
     model_name?: string;
     user?: number;
+    search?: string;
     date_from?: string;
     date_to?: string;
   }): Promise<AuditLogListResponse> => {
@@ -62,4 +63,3 @@ export const auditLogsApi = {
     return response.data;
   },
 };
-

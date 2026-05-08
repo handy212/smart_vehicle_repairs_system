@@ -50,10 +50,6 @@ def get_setting(key, default='', use_cache=True):
         'quickbooks_client_id': 'QUICKBOOKS_CLIENT_ID',
         'quickbooks_client_secret': 'QUICKBOOKS_CLIENT_SECRET',
         'quickbooks_sandbox_enabled': 'QUICKBOOKS_SANDBOX_ENABLED',
-        'stripe_public_key': 'STRIPE_PUBLIC_KEY',
-        'stripe_secret_key': 'STRIPE_SECRET_KEY',
-        'paypal_client_id': 'PAYPAL_CLIENT_ID',
-        'paypal_secret': 'PAYPAL_SECRET',
     }
     
     if key in env_mapping:
@@ -282,10 +278,9 @@ def get_payment_settings():
         'late_fee_amount',
         'late_fee_type',
         'payment_gateway',
-        'stripe_public_key',
-        'stripe_secret_key',
-        'paypal_client_id',
-        'paypal_secret',
+        'payment_gateway_enabled',
+        'paystack_public_key',
+        'paystack_secret_key',
     ]
     
     defaults = {
@@ -296,6 +291,8 @@ def get_payment_settings():
         'payment_terms': '30',
         'late_fee_enabled': 'false',
         'late_fee_type': 'percentage',
+        'payment_gateway': 'paystack',
+        'payment_gateway_enabled': 'false',
     }
     
     return get_settings(keys, defaults)

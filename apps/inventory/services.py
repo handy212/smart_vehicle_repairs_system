@@ -213,24 +213,32 @@ class InventoryService:
             return transfer
 
     @staticmethod
-    def submit_transfer_for_approval(transfer, approver, user):
+    def submit_transfer_for_approval(transfer, approver=None, user=None, approvers=None):
         """Submit transfer for approval"""
+        from .models import TransferApproval
+
         if transfer.status != 'draft':
             raise ValueError("Only draft transfers can be submitted for approval")
         if not transfer.items.exists():
             raise ValueError("Cannot submit a transfer with no items")
-        if not approver:
+        selected_approvers = list(approvers) if approvers is not None else ([approver] if approver else [])
+        if not selected_approvers:
             raise ValueError("Select an approver before submitting this transfer")
-        if approver.id == user.id:
+        if any(selected_approver.id == user.id for selected_approver in selected_approvers):
             raise ValueError("Transfers must be approved by someone other than the submitter")
-        if getattr(approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'}:
+        if any(getattr(selected_approver, 'role', None) not in {'manager', 'admin', 'super-admin', 'parts_manager'} for selected_approver in selected_approvers):
             raise ValueError("Selected approver must be a manager, admin, or parts manager")
 
         transfer.status = 'pending_approval'
-        transfer.assigned_approver = approver
+        transfer.assigned_approver = selected_approvers[0]
         transfer.submitted_by = user
         transfer.submitted_at = timezone.now()
         transfer.save()
+        transfer.approvals.all().delete()
+        TransferApproval.objects.bulk_create([
+            TransferApproval(transfer=transfer, approver=selected_approver)
+            for selected_approver in selected_approvers
+        ])
 
     @staticmethod
     def approve_transfer(transfer, user):
@@ -239,12 +247,31 @@ class InventoryService:
 
         if transfer.status != 'pending_approval':
             raise ValueError("Only transfers pending approval can be approved")
-        if transfer.assigned_approver_id and transfer.assigned_approver_id != user.id and getattr(user, 'role', None) not in {'admin', 'super-admin'} and not getattr(user, 'is_superuser', False):
+        is_admin_approver = getattr(user, 'role', None) in {'admin', 'super-admin'} or getattr(user, 'is_superuser', False)
+        approvals = transfer.approvals.select_related('approver')
+        if approvals.exists():
+            user_approval = approvals.filter(approver=user, status='pending').first()
+            if not user_approval and not is_admin_approver:
+                raise ValueError("Only the assigned approver, admin, or super admin can approve this transfer")
+        elif transfer.assigned_approver_id and transfer.assigned_approver_id != user.id and not is_admin_approver:
             raise ValueError("Only the assigned approver, admin, or super admin can approve this transfer")
-        if transfer.submitted_by_id == user.id and getattr(user, 'role', None) not in {'admin', 'super-admin'}:
+        if transfer.submitted_by_id == user.id and not is_admin_approver:
             raise ValueError("Transfers cannot be approved by the same user who submitted them")
         
         with db_transaction.atomic():
+            if approvals.exists():
+                now = timezone.now()
+                user_approval = approvals.filter(approver=user, status='pending').first()
+                if user_approval:
+                    user_approval.status = 'approved'
+                    user_approval.approved_at = now
+                    user_approval.save(update_fields=['status', 'approved_at', 'updated_at'])
+                elif is_admin_approver:
+                    approvals.filter(status='pending').update(status='approved', approved_at=now, updated_at=now)
+
+                if approvals.filter(status='pending').exists():
+                    return
+
             transfer.status = 'approved'
             transfer.approved_by = user
             transfer.approved_date = timezone.now()
@@ -267,10 +294,32 @@ class InventoryService:
         """Reject transfer"""
         if transfer.status != 'pending_approval':
             raise ValueError("Only transfers pending approval can be rejected")
-        if transfer.assigned_approver_id and transfer.assigned_approver_id != user.id and getattr(user, 'role', None) not in {'admin', 'super-admin'} and not getattr(user, 'is_superuser', False):
+        is_admin_approver = getattr(user, 'role', None) in {'admin', 'super-admin'} or getattr(user, 'is_superuser', False)
+        approvals = transfer.approvals.select_related('approver')
+        if approvals.exists():
+            user_approval = approvals.filter(approver=user, status='pending').first()
+            if not user_approval and not is_admin_approver:
+                raise ValueError("Only the assigned approver, admin, or super admin can reject this transfer")
+        elif transfer.assigned_approver_id and transfer.assigned_approver_id != user.id and not is_admin_approver:
             raise ValueError("Only the assigned approver, admin, or super admin can reject this transfer")
         if not (reason or '').strip():
             raise ValueError("A rejection reason is required")
+
+        if approvals.exists():
+            now = timezone.now()
+            user_approval = approvals.filter(approver=user, status='pending').first()
+            if user_approval:
+                user_approval.status = 'rejected'
+                user_approval.rejected_at = now
+                user_approval.rejection_reason = reason
+                user_approval.save(update_fields=['status', 'rejected_at', 'rejection_reason', 'updated_at'])
+            elif is_admin_approver:
+                approvals.filter(status='pending').update(
+                    status='rejected',
+                    rejected_at=now,
+                    rejection_reason=reason,
+                    updated_at=now,
+                )
 
         transfer.status = 'rejected'
         transfer.rejected_by = user

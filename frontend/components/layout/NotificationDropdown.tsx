@@ -53,6 +53,13 @@ export function NotificationDropdown() {
         refetchIntervalInBackground: false,
     });
 
+    const { data: preferences } = useQuery({
+        queryKey: ["notification-preferences"],
+        queryFn: () => notificationsApi.getPreferences(),
+        enabled: hasAccessToken,
+        staleTime: 1000 * 60 * 5,
+    });
+
     const markAsReadMutation = useMutation({
         mutationFn: (id: number) => notificationsApi.markAsRead(id),
         onSuccess: () => {
@@ -74,7 +81,7 @@ export function NotificationDropdown() {
 
     // Enable notification sounds
     useNotificationSound({
-        enabled: hasAccessToken,
+        enabled: hasAccessToken && (preferences?.sound_enabled ?? true),
         unreadCount,
     });
 
@@ -168,7 +175,7 @@ export function NotificationDropdown() {
                 case "inventory":
                     return `/inventory/${id}`;
                 case "subscription":
-                    return `/subscriptions/${id}`;
+                    return `/billing/subscriptions/${id}`;
                 case "roadside":
                 case "roadside_request":
                 case "roadsideassistancerequest":

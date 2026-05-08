@@ -27,6 +27,8 @@ from .models import (
 from .serializers import (
     DepartmentSerializer, PositionSerializer,
     EmployeeProfileSerializer, EmployeeProfileListSerializer,
+    STAFF_PROFILE_ROLES,
+    account_is_active_for_employment_status,
     LeaveTypeSerializer, LeaveBalanceSerializer, LeaveRequestSerializer,
     AttendancePolicySerializer, AttendanceSerializer,
     SalaryComponentSerializer, EmployeeSalaryComponentSerializer, PayrollPeriodSerializer, PaySlipSerializer,
@@ -46,6 +48,22 @@ def filter_queryset_for_user_branches(queryset, user, branch_field='branch'):
         return queryset
     accessible_branches = user.get_accessible_branches()
     return queryset.filter(**{f'{branch_field}__in': accessible_branches})
+
+
+def ensure_employee_profiles_for_staff_accounts():
+    """
+    Older data can have staff User accounts without HR EmployeeProfile rows.
+    Keep HR Staff aligned with Admin Users by healing those missing profiles.
+    """
+    missing_users = User.objects.filter(
+        role__in=STAFF_PROFILE_ROLES,
+        employee_profile__isnull=True,
+    )
+    for user in missing_users.iterator():
+        EmployeeProfile.objects.get_or_create(
+            user=user,
+            defaults={'start_date': user.hire_date},
+        )
 
 
 # =============================================================================
@@ -178,12 +196,34 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
         return EmployeeProfileSerializer
 
     def get_queryset(self):
+        if self.action in ['list', 'retrieve', 'summary', 'org_chart']:
+            ensure_employee_profiles_for_staff_accounts()
+
         qs = EmployeeProfile.objects.select_related(
             'user', 'department', 'position', 'reporting_to', 'user__technician_profile',
+        ).filter(
+            user__role__in=STAFF_PROFILE_ROLES,
         )
-        return filter_queryset_for_user_branches(
-            qs, self.request.user, branch_field='user__branch',
-        )
+        user = self.request.user
+        if user.role not in ['admin', 'super-admin']:
+            accessible_branches = user.get_accessible_branches()
+            qs = qs.filter(
+                Q(user__branch__in=accessible_branches) |
+                Q(user__managed_branches__in=accessible_branches)
+            ).distinct()
+
+        branch_id = self.request.query_params.get('branch')
+        if branch_id:
+            try:
+                branch_id = int(branch_id)
+                qs = qs.filter(
+                    Q(user__branch_id=branch_id) |
+                    Q(user__managed_branches__id=branch_id)
+                ).distinct()
+            except (TypeError, ValueError):
+                pass
+
+        return qs
 
     @action(detail=False, methods=['get'])
     def my_profile(self, request):
@@ -257,6 +297,9 @@ class EmployeeProfileViewSet(viewsets.ModelViewSet):
             return Response({'detail': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}, status=status.HTTP_400_BAD_REQUEST)
         qs = self.get_queryset().filter(id__in=ids)
         updated = qs.update(employment_status=new_status)
+        User.objects.filter(employee_profile__in=qs).update(
+            is_active=account_is_active_for_employment_status(new_status)
+        )
         return Response({'detail': f'Updated {updated} staff member(s) to {new_status}.', 'updated': updated})
 
     @action(detail=False, methods=['post'])

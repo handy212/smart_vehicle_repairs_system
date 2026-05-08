@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Plus, Edit, Trash2, Award, AlertTriangle, CheckCircle, Clock, FileText, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, Award, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,11 +19,9 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogClose,
 } from "@/components/ui/dialog";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { cn } from "@/lib/utils/cn";
 import { format, parseISO } from "date-fns";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 interface CertificationsProps {
     technicianId: number;
@@ -60,7 +57,12 @@ export function Certifications({ technicianId }: CertificationsProps) {
     });
 
     const createMutation = useMutation({
-        mutationFn: (data: Partial<Certification>) => certificationsApi.create({ ...data, technician: technicianId }),
+        mutationFn: (data: Partial<Certification> | FormData) => {
+            if (data instanceof FormData) {
+                return certificationsApi.create(data);
+            }
+            return certificationsApi.create({ ...data, technician: technicianId });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["certifications", technicianId] });
             toast({
@@ -70,17 +72,17 @@ export function Certifications({ technicianId }: CertificationsProps) {
             handleCloseDialog();
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to add certification",
+                description: getApiErrorMessage(error, "Failed to add certification"),
                 variant: "destructive",
             });
         },
     });
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: number; data: Partial<Certification> }) =>
+        mutationFn: ({ id, data }: { id: number; data: Partial<Certification> | FormData }) =>
             certificationsApi.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["certifications", technicianId] });
@@ -91,10 +93,10 @@ export function Certifications({ technicianId }: CertificationsProps) {
             handleCloseDialog();
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to update certification",
+                description: getApiErrorMessage(error, "Failed to update certification"),
                 variant: "destructive",
             });
         },
@@ -110,10 +112,10 @@ export function Certifications({ technicianId }: CertificationsProps) {
             });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.detail || "Failed to delete certification",
+                description: getApiErrorMessage(error, "Failed to delete certification"),
                 variant: "destructive",
             });
         },
@@ -183,10 +185,10 @@ export function Certifications({ technicianId }: CertificationsProps) {
 
             if (editingCert) {
 
-                updateMutation.mutate({ id: editingCert.id, data: formDataToSend as any });
+                updateMutation.mutate({ id: editingCert.id, data: formDataToSend });
             } else {
 
-                createMutation.mutate(formDataToSend as any);
+                createMutation.mutate(formDataToSend);
             }
         } else {
             if (editingCert) {
@@ -226,11 +228,11 @@ export function Certifications({ technicianId }: CertificationsProps) {
 
 
 
-    const activeCerts = (Array.isArray(certifications) ? certifications : (certifications as any)?.results || []).filter((c: Certification) => c.status === 'active');
+    const allCerts = certifications ?? [];
 
-    const expiringSoon = (Array.isArray(certifications) ? certifications : (certifications as any)?.results || []).filter((c: Certification) => c.is_expiring_soon);
+    const activeCerts = allCerts.filter((c) => c.status === 'active');
 
-    const allCerts: Certification[] = Array.isArray(certifications) ? certifications : (certifications as any)?.results || [];
+    const expiringSoon = allCerts.filter((c) => c.is_expiring_soon);
 
     return (
         <div className="space-y-4">
@@ -351,7 +353,6 @@ export function Certifications({ technicianId }: CertificationsProps) {
             {/* Add/Edit Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-2xl">
-                    <DialogClose onOpenChange={setIsDialogOpen} />
                     <form onSubmit={handleSubmit}>
                         <DialogHeader>
                             <DialogTitle>{editingCert ? "Edit Certification" : "Add New Certification"}</DialogTitle>

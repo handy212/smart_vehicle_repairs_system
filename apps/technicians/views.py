@@ -6,7 +6,7 @@ from .models import Technician, Skill, TimeOffRequest, Shift, Certification
 from .serializers import TechnicianSerializer, SkillSerializer, TimeOffRequestSerializer, ShiftSerializer, TechnicianJobHistorySerializer, CertificationSerializer
 from django.db import models
 from apps.branches.utils import filter_queryset_for_user_branches
-from apps.accounts.permissions import HasPermission, IsModuleEnabled
+from apps.accounts.permissions import HasPermission, IsModuleEnabled, user_has_permission
 
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.filter(is_active=True)
@@ -24,14 +24,17 @@ class TechnicianViewSet(viewsets.ModelViewSet):
             # Allow technicians to view their own profile/stats
             return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
         elif self.action in ['list', 'retrieve']:
-            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_users')]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_technicians')]
         elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_branch_staff')]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_technicians')]
         return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
+    def _can_manage_other_technicians(self):
+        return user_has_permission(self.request.user, 'manage_technicians')
+
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('user').filter(user__role='technician')
         
         # Filter by branch
         queryset = filter_queryset_for_user_branches(
@@ -49,6 +52,11 @@ class TechnicianViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='update-location')
     def update_location(self, request, pk=None):
         technician = self.get_object()
+        if technician.user_id != request.user.id and not self._can_manage_other_technicians():
+            return Response(
+                {'error': 'You can only update your own location.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         lat = request.data.get('latitude')
         lng = request.data.get('longitude')
         
@@ -227,7 +235,7 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
             branch_lookup='technician__user__branch'
         )
         
-        if user.is_technician:
+        if getattr(user, 'is_technician', False):
             return queryset.filter(technician__user=user)
         return queryset
 
@@ -247,7 +255,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
         if action in ['clock_in', 'clock_out', 'add_break']:
             return [permissions.IsAuthenticated(), IsModuleEnabled('technicians')]
         if action in ['list', 'retrieve']:
-            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_users')]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_technicians')]
         return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_technicians')]
 
     def get_queryset(self):
@@ -274,6 +282,9 @@ class ShiftViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(end_time__lte=end)
             
         return queryset
+
+    def _can_manage_other_technicians(self):
+        return user_has_permission(self.request.user, 'manage_technicians')
     
     @action(detail=True, methods=['post'])
     def clock_in(self, request, pk=None):
@@ -281,6 +292,11 @@ class ShiftViewSet(viewsets.ModelViewSet):
         Clock in to start a shift - sets actual_start_time
         """
         shift = self.get_object()
+        if shift.technician.user_id != request.user.id and not self._can_manage_other_technicians():
+            return Response(
+                {'error': 'You can only clock in to your own shift.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         if shift.actual_start_time:
             return Response(
@@ -301,6 +317,11 @@ class ShiftViewSet(viewsets.ModelViewSet):
         Clock out to end a shift - sets actual_end_time and calculates hours
         """
         shift = self.get_object()
+        if shift.technician.user_id != request.user.id and not self._can_manage_other_technicians():
+            return Response(
+                {'error': 'You can only clock out from your own shift.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         if not shift.actual_start_time:
             return Response(
@@ -327,6 +348,11 @@ class ShiftViewSet(viewsets.ModelViewSet):
         Add break duration to shift (in minutes)
         """
         shift = self.get_object()
+        if shift.technician.user_id != request.user.id and not self._can_manage_other_technicians():
+            return Response(
+                {'error': 'You can only update breaks for your own shift.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         duration_minutes = request.data.get('duration', 0)
         
         if not isinstance(duration_minutes, (int, float)) or duration_minutes < 0:
@@ -354,7 +380,7 @@ class CertificationViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'expiring_soon']:
-            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_users')]
+            return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('view_technicians')]
         return [permissions.IsAuthenticated(), IsModuleEnabled('technicians'), HasPermission('manage_technicians')]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 

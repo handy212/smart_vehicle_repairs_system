@@ -41,6 +41,33 @@ export interface FixedAsset {
     updated_at: string;
 }
 
+export type FixedAssetCreateData = {
+    asset_number: string;
+    name: string;
+    description?: string;
+    category: number;
+    branch: number;
+    acquisition_cost: number;
+    acquisition_date: string;
+    salvage_value: number;
+    depreciation_method: string;
+    useful_life_years: number;
+    depreciation_start_date: string;
+    status: FixedAsset['status'];
+    location?: string;
+    assigned_to?: number | null;
+    manufacturer?: string;
+    model_number?: string;
+    serial_number?: string;
+}
+
+export type FixedAssetUpdateData = Partial<Omit<FixedAssetCreateData, 'asset_number'>> & {
+    disposal_date?: string | null;
+    disposal_method?: string | null;
+    disposal_proceeds?: number | null;
+    disposal_notes?: string;
+};
+
 export interface FixedAssetStats {
     total_assets: number;
     active_assets: number;
@@ -71,12 +98,12 @@ export const fixedAssetsApi = {
         return response.data;
     },
 
-    create: async (data: Partial<FixedAsset>) => {
+    create: async (data: FixedAssetCreateData) => {
         const response = await apiClient.post('/fixed-assets/assets/', data);
         return response.data;
     },
 
-    update: async (id: number, data: Partial<FixedAsset>) => {
+    update: async (id: number, data: FixedAssetUpdateData) => {
         const response = await apiClient.patch(`/fixed-assets/assets/${id}/`, data);
         return response.data;
     },

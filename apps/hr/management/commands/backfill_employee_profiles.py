@@ -23,12 +23,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from apps.hr.models import EmployeeProfile
+        from apps.hr.serializers import STAFF_PROFILE_ROLES
 
         dry_run = options['dry_run']
 
-        # Find non-customer users without an EmployeeProfile
-        users_without_profile = User.objects.exclude(
-            role='customer'
+        users_without_profile = User.objects.filter(
+            role__in=STAFF_PROFILE_ROLES,
         ).exclude(
             employee_profile__isnull=False
         )

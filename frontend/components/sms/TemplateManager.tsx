@@ -22,6 +22,7 @@ import { AIAssistDialog } from "./AIAssistDialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { cn } from "@/lib/utils/cn";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import {
   Dialog,
   DialogContent,
@@ -73,7 +74,7 @@ export function TemplateManager() {
       return (res.data.results ?? res.data) as Template[];
     },
   });
-  const templates = raw ?? [];
+  const templates = useMemo(() => raw ?? [], [raw]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -100,10 +101,10 @@ export function TemplateManager() {
       setSelected(res.data);
       setForm({ name: res.data.name, sms_body: res.data.sms_body });
     },
-    onError: (err: any) =>
+    onError: (err: unknown) =>
       toast({
         title: "Error",
-        description: err.response?.data?.detail || err.response?.data?.name?.[0] || "Failed to create",
+        description: getApiErrorMessage(err, "Failed to create"),
         variant: "destructive",
       }),
   });
@@ -120,10 +121,10 @@ export function TemplateManager() {
       toast({ title: "Template saved" });
       setSelected(res.data);
     },
-    onError: (err: any) =>
+    onError: (err: unknown) =>
       toast({
         title: "Error",
-        description: err.response?.data?.detail || "Failed to save",
+        description: getApiErrorMessage(err, "Failed to save"),
         variant: "destructive",
       }),
   });
@@ -140,10 +141,10 @@ export function TemplateManager() {
       setForm(EMPTY_FORM);
       setIsNew(false);
     },
-    onError: (err: any) =>
+    onError: (err: unknown) =>
       toast({
         title: "Error",
-        description: err.response?.data?.detail || "Failed to delete",
+        description: getApiErrorMessage(err, "Failed to delete"),
         variant: "destructive",
       }),
   });

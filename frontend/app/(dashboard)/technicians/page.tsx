@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { techniciansApi, Technician } from "@/lib/api/technicians";
+import { branchesApi } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Filter, Grid, List as ListIcon, Users, CheckCircle2, Clock3, WifiOff } from "lucide-react";
@@ -26,6 +27,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     Table,
     TableBody,
@@ -59,10 +61,21 @@ function TechniciansContent() {
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+    const [branchFilter, setBranchFilter] = useState<string>("all");
+
+    const { data: branchesData } = useQuery({
+        queryKey: ["branches", "active"],
+        queryFn: () => branchesApi.list({ is_active: true }),
+    });
+    const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
 
     const { data, isLoading } = useQuery({
-        queryKey: ["technicians", searchQuery, statusFilter],
-        queryFn: () => techniciansApi.list({ search: searchQuery, status: statusFilter }),
+        queryKey: ["technicians", searchQuery, statusFilter, branchFilter],
+        queryFn: () => techniciansApi.list({
+            search: searchQuery,
+            status: statusFilter,
+            branch: branchFilter !== "all" ? Number(branchFilter) : undefined,
+        }),
     });
 
     const technicians = data?.results ?? [];
@@ -189,8 +202,22 @@ function TechniciansContent() {
                             </DropdownMenuContent>
                         </DropdownMenu>
 
+                        <Select value={branchFilter} onValueChange={setBranchFilter}>
+                            <SelectTrigger className="h-9 w-[180px] bg-background text-sm">
+                                <SelectValue placeholder="All Branches" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Branches</SelectItem>
+                                {branches.map((branch) => (
+                                    <SelectItem key={branch.id} value={String(branch.id)}>
+                                        {branch.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
                         <div className="flex flex-wrap items-center gap-2 lg:ml-auto lg:justify-end">
-                            {(searchQuery || statusFilter) && (
+                            {(searchQuery || statusFilter || branchFilter !== "all") && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -198,6 +225,7 @@ function TechniciansContent() {
                                     onClick={() => {
                                         setSearchQuery("");
                                         setStatusFilter(undefined);
+                                        setBranchFilter("all");
                                     }}
                                 >
                                     Clear filters
@@ -230,9 +258,9 @@ function TechniciansContent() {
             </Card>
 
             {isLoading ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-52 animate-pulse rounded-xl bg-border" />
+                        <div key={i} className="h-40 animate-pulse rounded-lg bg-border" />
                     ))}
                 </div>
             ) : (
@@ -269,7 +297,7 @@ function TechniciansContent() {
                                             </div>
 
                                             <div className="space-y-3">
-                                                <div className="rounded-lg border bg-muted/20 px-3 py-2">
+                                                <div className="rounded-md border bg-muted/20 px-3 py-2">
                                                     <p className="truncate text-xs text-muted-foreground">
                                                         {tech.user_details?.email || "No email provided"}
                                                     </p>
@@ -305,9 +333,9 @@ function TechniciansContent() {
                                     </Card>
                                 ))
                             ) : (
-                                <div className="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30 p-10 text-center">
-                                    <div className="mb-4 rounded-full border bg-background p-3">
-                                        <Search className="h-6 w-6 text-muted-foreground" />
+                                <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 p-6 text-center">
+                                    <div className="mb-3 rounded-md border bg-background p-2">
+                                        <Search className="h-5 w-5 text-muted-foreground" />
                                     </div>
                                     <h3 className="text-base font-semibold">No technicians found</h3>
                                     <p className="mt-2 mb-6 max-w-sm text-sm text-muted-foreground">

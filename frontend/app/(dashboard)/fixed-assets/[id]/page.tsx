@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { fixedAssetsApi } from "@/lib/api/fixed-assets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +22,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 }
 
 function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const router = useRouter();
     const { id } = use(params);
     const assetId = parseInt(id);
     const { formatCurrency } = useCurrency();
@@ -36,43 +33,43 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
     });
 
     if (isLoading) {
-        return <div className="p-6">Loading asset details...</div>;
+        return <div className="text-sm text-muted-foreground">Loading asset details...</div>;
     }
 
     if (!asset) {
-        return <div className="p-6">Asset not found</div>;
+        return <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">Asset not found</div>;
     }
 
     const getStatusColor = (status: string) => {
         switch (status) {
             case "active":
-                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+                return "border-success/25 bg-success/10 text-success";
             case "inactive":
-                return "bg-muted text-foreground bg-muted text-foreground";
+                return "border-border bg-muted text-muted-foreground";
             case "disposed":
             case "sold":
-                return "bg-red-100 text-destructive dark:bg-red-900 dark:text-red-300";
+                return "border-destructive/20 bg-destructive/10 text-destructive";
             case "retired":
-                return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+                return "border-warning/25 bg-warning/10 text-warning-foreground";
             default:
-                return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+                return "border-border bg-muted text-muted-foreground";
         }
     };
 
     return (
-        <div className="space-y-6 p-6 max-w-6xl mx-auto">
+        <div className="space-y-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3">
                     <Link href="/fixed-assets">
-                        <Button variant="secondary" size="sm">
+                        <Button variant="ghost" size="sm">
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Back
                         </Button>
                     </Link>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-black tracking-tight text-foreground">
+                            <h1 className="text-xl font-semibold tracking-tight text-foreground">
                                 {asset.name}
                             </h1>
                             <Badge className={getStatusColor(asset.status)} variant="outline">
@@ -92,46 +89,46 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                 </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {/* Main Info Card */}
                 <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="text-lg font-semibold flex items-center">
-                            <Activity className="w-5 h-5 mr-2" />
+                    <CardHeader className="px-4 py-3">
+                        <CardTitle className="flex items-center text-sm font-semibold">
+                            <Activity className="mr-2 h-4 w-4" />
                             General Information
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <CardContent className="grid grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-2">
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-muted-foreground">Asset Number</span>
+                            <span className="text-xs font-medium text-muted-foreground">Asset Number</span>
                             <div className="flex items-center gap-2">
-                                <Hash className="w-4 h-4 text-muted-foreground" />
-                                <span className="font-mono">{asset.asset_number}</span>
+                                <Hash className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-mono text-sm">{asset.asset_number}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-muted-foreground">Category</span>
+                            <span className="text-xs font-medium text-muted-foreground">Category</span>
                             <div className="flex items-center gap-2">
                                 <Tag className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.category_name || "N/A"}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-muted-foreground">Branch</span>
+                            <span className="text-xs font-medium text-muted-foreground">Branch</span>
                             <div className="flex items-center gap-2">
                                 <Building2 className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.branch_name || "N/A"}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-muted-foreground">Location</span>
+                            <span className="text-xs font-medium text-muted-foreground">Location</span>
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.location || "Not specified"}</span>
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <span className="text-sm font-medium text-muted-foreground">Assigned To</span>
+                            <span className="text-xs font-medium text-muted-foreground">Assigned To</span>
                             <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-muted-foreground" />
                                 <span>{asset.assigned_to_name || "Unassigned"}</span>
@@ -139,7 +136,7 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
                         </div>
                         {asset.description && (
                             <div className="col-span-1 sm:col-span-2 space-y-1 pt-2 border-t">
-                                <span className="text-sm font-medium text-muted-foreground">Description</span>
+                                <span className="text-xs font-medium text-muted-foreground">Description</span>
                                 <p className="text-sm text-card-foreground">
                                     {asset.description}
                                 </p>
@@ -150,14 +147,14 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
 
                 {/* Financials Card */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg font-semibold flex items-center">
-                            <DollarSign className="w-5 h-5 mr-2" />
+                    <CardHeader className="px-4 py-3">
+                        <CardTitle className="flex items-center text-sm font-semibold">
+                            <DollarSign className="mr-2 h-4 w-4" />
                             Financial Details
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex justify-between items-center py-2 border-b">
+                    <CardContent className="space-y-3 px-4 pb-4">
+                        <div className="flex items-center justify-between border-b py-2">
                             <span className="text-sm text-muted-foreground">Acquisition Cost</span>
                             <span className="font-semibold">{formatCurrency(asset.acquisition_cost)}</span>
                         </div>
@@ -187,13 +184,13 @@ function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
 
                 {/* Technical Details Card */}
                 <Card className="md:col-span-3">
-                    <CardHeader>
-                        <CardTitle className="text-lg font-semibold flex items-center">
-                            <Factory className="w-5 h-5 mr-2" />
+                    <CardHeader className="px-4 py-3">
+                        <CardTitle className="flex items-center text-sm font-semibold">
+                            <Factory className="mr-2 h-4 w-4" />
                             Technical Specifications
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <CardContent className="grid grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-3">
                         <div className="space-y-1">
                             <span className="text-sm font-medium text-muted-foreground">Manufacturer</span>
                             <p>{asset.manufacturer || "N/A"}</p>

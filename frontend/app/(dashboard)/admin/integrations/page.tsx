@@ -2,21 +2,16 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   ArrowLeft, 
-  Puzzle, 
   ShieldCheck, 
-  BarChart3, 
   MessageSquare, 
   Calculator,
-  LayoutGrid,
   Search,
-  Settings2,
-  Plus
+  Save
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useMemo } from "react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -30,9 +25,12 @@ const CATEGORIES = [
   { id: "accounting", label: "Accounting", icon: Calculator },
   { id: "communication", label: "Communication", icon: MessageSquare },
   { id: "security", label: "Security", icon: ShieldCheck },
-  { id: "analytics", label: "Analytics & Marketing", icon: BarChart3 },
-  { id: "advanced", label: "Advanced Props", icon: Settings2 },
 ];
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: { detail?: string; error?: string } } })?.response?.data;
+  return data?.detail || data?.error || fallback;
+}
 
 export default function IntegrationsPage() {
   const router = useRouter();
@@ -72,16 +70,31 @@ export default function IntegrationsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "settings", "integrations-multi"] });
       toast({ title: "Success", description: "Integration updated" });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Update failed",
+        description: getApiErrorMessage(error, "Update failed"),
+        variant: "destructive",
+      });
+    },
+  });
+  const bulkUpdateMutation = useMutation({
+    mutationFn: (payload: Array<{ id: number; value: string }>) => adminApi.settings.bulkUpdate(payload),
+    onSuccess: () => {
+      setRowEdits({});
+      queryClient.invalidateQueries({ queryKey: ["admin", "settings", "integrations-multi"] });
+      toast({ title: "Saved", description: "Integration settings updated" });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to update integrations"),
         variant: "destructive",
       });
     },
   });
 
-  const settings = settingsData?.results || [];
+  const settings = useMemo(() => settingsData?.results || [], [settingsData?.results]);
 
   const filteredSettings = useMemo(() => {
     let base = settings.filter(s => {
@@ -93,19 +106,6 @@ export default function IntegrationsPage() {
       }
       if (activeCategory === "security") {
         return s.key.startsWith("recaptcha_");
-      }
-      if (activeCategory === "analytics") {
-        return /(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key);
-      }
-      if (activeCategory === "advanced") {
-        return (
-          !s.key.startsWith("recaptcha_") && 
-          !s.key.startsWith("firebase_") && 
-          !/(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key) &&
-          !s.key.startsWith("quickbooks_") &&
-          s.category !== "sms" &&
-          !s.key.includes("twilio")
-        );
       }
       return s.category === activeCategory;
     });
@@ -160,17 +160,11 @@ export default function IntegrationsPage() {
     return groups;
   }, [filteredSettings]);
 
-  const handleSave = async (setting: SystemSetting) => {
-    const value = rowEdits[setting.id];
-    if (value === undefined) return;
-    try {
-      await updateMutation.mutateAsync({ id: setting.id, data: { value } });
-      setRowEdits(prev => {
-        const next = { ...prev };
-        delete next[setting.id];
-        return next;
-      });
-    } catch (e) { /* handled */ }
+  const dirtyCount = Object.keys(rowEdits).length;
+
+  const handleSaveAll = () => {
+    const payload = Object.entries(rowEdits).map(([id, value]) => ({ id: Number(id), value }));
+    bulkUpdateMutation.mutate(payload);
   };
 
   if (isLoading) {
@@ -184,30 +178,38 @@ export default function IntegrationsPage() {
   return (
     <div className="flex flex-col h-full bg-background min-h-screen">
       {/* Header Area */}
-      <div className="border-b bg-card pt-6 pb-2 px-4 sm:px-8">
+      <div className="border-b bg-card px-4 py-3">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0 -ml-2">
-                <ArrowLeft className="h-5 w-5" />
+              <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8 shrink-0 -ml-2">
+                <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
-                <div className="flex items-center gap-2 text-primary font-bold mb-1">
-                  <Puzzle className="h-4 w-4" />
-                  <span className="text-xs uppercase tracking-widest">Integrations Dashboard</span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">Connected Services</h1>
+                <h1 className="text-lg font-semibold tracking-tight text-foreground">Integrations</h1>
+                <p className="text-xs text-muted-foreground">Connected service credentials and toggles</p>
               </div>
             </div>
             
-            <div className="relative w-full md:w-80">
+            <div className="flex items-center gap-2">
+              <div className="relative w-full md:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                     placeholder="Search integrations..." 
-                    className="pl-9 h-10 bg-muted/50 border-border focus:bg-card transition-all text-xs"
+                    className="pl-9 h-8 bg-muted/50 border-border focus:bg-card transition-all text-xs"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
+              </div>
+              <Button
+                size="sm"
+                className="h-8"
+                disabled={!canManage || dirtyCount === 0 || bulkUpdateMutation.isPending}
+                onClick={handleSaveAll}
+              >
+                <Save className="mr-1.5 h-3.5 w-3.5" />
+                Save Changes{dirtyCount ? ` (${dirtyCount})` : ""}
+              </Button>
             </div>
           </div>
 
@@ -220,7 +222,7 @@ export default function IntegrationsPage() {
                 size="sm"
                 onClick={() => handleCategoryChange(cat.id)}
                 className={cn(
-                  "h-8 rounded-full px-4 text-xs font-bold transition-all whitespace-nowrap",
+                  "h-8 rounded-md px-3 text-xs font-medium transition-all whitespace-nowrap",
                   activeCategory === cat.id 
                     ? "bg-primary text-white shadow-sm" 
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -234,66 +236,32 @@ export default function IntegrationsPage() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
+      <div className="flex-1 max-w-7xl mx-auto w-full p-4">
         {/* Content Area */}
-        <main className="space-y-8">
+        <main className="space-y-4">
           {/* Featured/Special Cards */}
           {activeCategory === "accounting" && !searchQuery && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
                   <QuickBooksOnlineCard />
                 </div>
-                
-                {/* Platform Previews */}
-                <Card className="border border-border/40 bg-muted/5 group overflow-hidden relative grayscale opacity-70">
-                    <div className="absolute top-3 right-3">
-                      <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground/30 px-2 py-0.5 border border-border/20 rounded">Planned</span>
-                    </div>
-                    <CardHeader className="py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-[#13B5EA]/10 text-[#13B5EA]">
-                          <LayoutGrid className="h-5 w-5" />
-                        </div>
-                        <CardTitle className="text-sm font-bold">Xero Accounting</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-6 pb-6">
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        Upcoming support for Xero cloud accounting to sync transactions and tax data.
-                      </p>
-                    </CardContent>
-                </Card>
-
-                {/* Request Integration Feature */}
-                <Card className="border-2 border-dashed border-primary/20 bg-primary/5 group hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-8 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Plus className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-sm font-bold text-foreground mb-1">Request Service</h3>
-                    <p className="text-[11px] text-muted-foreground max-w-[180px]">
-                      Need a specific platform? Let us know what to build next.
-                    </p>
-                    <Button variant="link" size="sm" className="mt-4 text-primary font-bold text-[10px] uppercase tracking-widest">
-                       Submit Feedback
-                    </Button>
-                </Card>
               </div>
           )}
 
           {/* Grouped Settings Sections */}
           {Object.keys(groupedSettings).length > 0 ? (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {Object.entries(groupedSettings).map(([provider, group]) => (
                 <div key={provider} className="space-y-3">
                   <div className="flex items-center gap-3 px-1">
-                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">{group.label}</h2>
-                    <div className="h-px flex-1 bg-gradient-to-r from-border/50 to-transparent" />
+                    <h2 className="text-xs font-semibold text-muted-foreground">{group.label}</h2>
+                    <div className="h-px flex-1 bg-border" />
                   </div>
                   
                   <Card className="border border-border/60 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
                     <CardContent className="p-0 divide-y divide-border/30">
                       {group.settings.map(s => (
-                        <div key={s.id} className="px-6">
+                        <div key={s.id} className="px-3">
                           <IntegrationField 
                             setting={s}
                             value={rowEdits[s.id] ?? (s.value || "")}
@@ -301,7 +269,7 @@ export default function IntegrationsPage() {
                             showSecret={!!showSecret[s.id]}
                             onToggleSecret={() => setShowSecret(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
                             onChange={(val) => setRowEdits(prev => ({ ...prev, [s.id]: val }))}
-                            onSave={() => handleSave(s)}
+                            onSave={() => undefined}
                             onDiscard={() => setRowEdits(prev => {
                               const next = { ...prev };
                               delete next[s.id];
@@ -311,6 +279,7 @@ export default function IntegrationsPage() {
                             canManage={canManage}
                             isPending={updateMutation.isPending}
                             prefix={group.prefix}
+                            deferSave
                           />
                         </div>
                       ))}
@@ -320,10 +289,7 @@ export default function IntegrationsPage() {
               ))}
             </div>
           ) : (activeCategory !== "accounting") && (
-            <div className="flex flex-col items-center justify-center py-24 bg-muted/10 rounded-[2rem] border-2 border-dashed border-border/40">
-                <div className="p-4 rounded-full bg-muted/20 mb-4">
-                  <Puzzle className="h-8 w-8 text-muted-foreground/20" />
-                </div>
+            <div className="flex flex-col items-center justify-center py-16 bg-muted/10 rounded-md border border-dashed border-border">
                 <p className="text-muted-foreground font-bold text-sm">No connected services found in this category.</p>
                 <p className="text-muted-foreground/60 text-xs mt-1">Try adjusting your filters or search query.</p>
             </div>

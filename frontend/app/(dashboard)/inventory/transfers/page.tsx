@@ -1,14 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { inventoryApi } from "@/lib/api/inventory";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { inventoryApi, type Transfer } from "@/lib/api/inventory";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, MoreVertical, ArrowRightLeft, MapPin, Calendar, Truck, X, Download, ChevronDown } from "lucide-react";
+import { Plus, Search, Eye, MoreVertical, ArrowRightLeft, MapPin, Calendar, Truck, X, Download, ChevronDown, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import type { ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -23,14 +24,15 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function TransfersPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+    const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
     const [page, setPage] = useState(1);
     const { toast } = useToast();
+    const queryClient = useQueryClient();
 
     const { data, isLoading } = useQuery({
         queryKey: ["transfers", page, searchQuery, advancedFilters],
@@ -45,12 +47,34 @@ export default function TransfersPage() {
     });
 
     const transfers = Array.isArray(data) ? data : data?.results || [];
+    const deleteableStatuses = new Set(["draft", "rejected", "cancelled"]);
+
+    const deleteTransferMutation = useMutation({
+        mutationFn: (transferId: number) => inventoryApi.deleteTransfer(transferId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["transfers"] });
+            toast({ title: "Deleted", description: "Transfer deleted successfully." });
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Error",
+                description: getApiErrorMessage(error, "Failed to delete transfer"),
+                variant: "destructive",
+            });
+        },
+    });
+
+    const handleDeleteTransfer = (transfer: Transfer) => {
+        if (confirm(`Delete transfer "${transfer.transfer_number}"?`)) {
+            deleteTransferMutation.mutate(transfer.id);
+        }
+    };
 
     const handleExport = () => {
         toast({ title: "Export", description: "Export functionality coming soon" });
     };
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): ComponentProps<typeof Badge>["variant"] => {
         switch (status) {
             case "draft": return "secondary";
             case "pending_approval": return "warning";
@@ -235,7 +259,7 @@ export default function TransfersPage() {
                                 </TableHeader>
                                 <TableBody>
 
-                                    {transfers.map((transfer: any) => (
+                                    {transfers.map((transfer: Transfer) => (
                                         <TableRow
                                             key={transfer.id}
                                             className="group hover:bg-muted/50 hover:bg-muted/50 border-b border-border cursor-pointer transition-colors"
@@ -266,7 +290,7 @@ export default function TransfersPage() {
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
 
-                                                <Badge variant={getStatusVariant(transfer.status) as any} className="text-[10px] px-2 py-0 border shadow-none bg-transparent capitalize">
+                                                <Badge variant={getStatusVariant(transfer.status)} className="text-[10px] px-2 py-0 border shadow-none bg-transparent capitalize">
                                                     {getStatusLabel(transfer.status)}
                                                 </Badge>
                                             </TableCell>
@@ -292,6 +316,15 @@ export default function TransfersPage() {
                                                             <Eye className="w-4 h-4 mr-2" />
                                                             View Details
                                                         </DropdownMenuItem>
+                                                        {deleteableStatuses.has(transfer.status) && (
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive"
+                                                                onClick={() => handleDeleteTransfer(transfer)}
+                                                            >
+                                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                                Delete Transfer
+                                                            </DropdownMenuItem>
+                                                        )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>

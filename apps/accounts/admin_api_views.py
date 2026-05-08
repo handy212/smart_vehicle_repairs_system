@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q, Count
+from django.http import FileResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
@@ -25,7 +26,7 @@ from .serializers import UserSerializer
 User = get_user_model()
 
 
-from .permissions import IsAdmin, IsSuperAdmin, IsModuleEnabled
+from .permissions import HasPermission, IsAdmin, IsModuleEnabled
 
 def is_admin_user(user):
     """Check if user is admin or super-admin (utility for this file)"""
@@ -47,7 +48,8 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     ordering = ['category', 'key']
     
     def get_queryset(self):
-        return SystemSettings.objects.all()
+        from .settings_init import supported_setting_keys
+        return SystemSettings.objects.filter(key__in=supported_setting_keys())
     
     def get_serializer_class(self):
         from .admin_serializers import SystemSettingsSerializer
@@ -64,8 +66,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         category = request.query_params.get('category')
         # Auto-initialize settings for the category if none exist
         if category:
-            from .settings_init import initialize_category_settings
-            settings_count = SystemSettings.objects.filter(category=category).count()
+            from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+            cleanup_deprecated_settings(category)
+            settings_count = SystemSettings.objects.filter(
+                category=category,
+                key__in=supported_setting_keys(category),
+            ).count()
             if settings_count == 0:
                 initialize_category_settings(category)
             # Also ensure tax settings if tax category
@@ -111,8 +117,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
 
         # Auto-initialize settings for the category if none exist
         if category:
-            from .settings_init import initialize_category_settings
-            settings_count = SystemSettings.objects.filter(category=category).count()
+            from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+            cleanup_deprecated_settings(category)
+            settings_count = SystemSettings.objects.filter(
+                category=category,
+                key__in=supported_setting_keys(category),
+            ).count()
             if settings_count == 0:
                 initialize_category_settings(category)
             # Also ensure tax settings if tax category
@@ -143,8 +153,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         Does not require authentication.
         """
         # Auto-initialize branding settings if none exist
-        from .settings_init import initialize_category_settings
-        settings_count = SystemSettings.objects.filter(category='branding').count()
+        from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+        cleanup_deprecated_settings('branding')
+        settings_count = SystemSettings.objects.filter(
+            category='branding',
+            key__in=supported_setting_keys('branding'),
+        ).count()
         if settings_count == 0:
             initialize_category_settings('branding')
         
@@ -174,8 +188,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         Returns only public Firebase config (not secret keys).
         """
         # Auto-initialize integration settings if none exist
-        from .settings_init import initialize_category_settings
-        settings_count = SystemSettings.objects.filter(category='integration').count()
+        from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+        cleanup_deprecated_settings('integration')
+        settings_count = SystemSettings.objects.filter(
+            category='integration',
+            key__in=supported_setting_keys('integration'),
+        ).count()
         if settings_count == 0:
             initialize_category_settings('integration')
         
@@ -212,8 +230,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         Returns only non-secret integration settings.
         """
         # Auto-initialize integration settings if none exist
-        from .settings_init import initialize_category_settings
-        settings_count = SystemSettings.objects.filter(category='integration').count()
+        from .settings_init import cleanup_deprecated_settings, initialize_category_settings, supported_setting_keys
+        cleanup_deprecated_settings('integration')
+        settings_count = SystemSettings.objects.filter(
+            category='integration',
+            key__in=supported_setting_keys('integration'),
+        ).count()
         if settings_count == 0:
             initialize_category_settings('integration')
         
@@ -275,8 +297,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             )
         
         # Check if setting key is for a file path
-        file_path_keys = ['logo_path', 'logo_dark_path', 'favicon_path', 'login_background', 
-                         'customer_login_background', 'staff_login_background']
+        file_path_keys = ['logo_path', 'logo_dark_path', 'favicon_path', 'login_background']
         if setting.key not in file_path_keys:
             return Response(
                 {'error': f'File uploads are not allowed for setting key: {setting.key}'},
@@ -450,13 +471,17 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def import_history(self, request):
         """Get import history (filtered audit logs for import actions)"""
-        # TODO: django-auditlog only has action types 0/1/2 (create/update/delete).
-        # Custom import action tracking requires extending LogEntry or a dedicated model.
-        # Returning 501 until this is implemented.
-        return Response(
-            {'detail': 'Import history tracking is not yet implemented.'},
-            status=status.HTTP_501_NOT_IMPLEMENTED
+        queryset = self.filter_queryset(self.get_queryset()).filter(
+            object_repr__icontains='CSV Import'
         )
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
     
     @action(detail=False, methods=['post'])
     def archive(self, request):
@@ -588,7 +613,7 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing system backups
     """
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated, HasPermission('manage_backups')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['backup_type', 'status']
     ordering_fields = ['started_at', 'completed_at']
@@ -602,8 +627,16 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
         return SystemBackupSerializer
     
     def perform_create(self, serializer):
-        instance = serializer.save(created_by=self.request.user)
-        # Auditlog handles creation logging
+        backup = serializer.save(created_by=self.request.user, status='pending')
+        from .tasks import create_system_backup
+        async_enabled = str(
+            getattr(settings, 'SYSTEM_BACKUP_ASYNC', os.environ.get('SYSTEM_BACKUP_ASYNC', 'false'))
+        ).lower() in ('1', 'true', 'yes', 'on')
+        if async_enabled:
+            create_system_backup.delay(backup.id)
+        else:
+            create_system_backup(backup.id)
+            backup.refresh_from_db()
         
     def perform_destroy(self, instance):
         # Delete file
@@ -617,18 +650,19 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
     def download(self, request, pk=None):
         """Download backup file"""
         backup = self.get_object()
-        if backup.status != 'completed' or not backup.file_path:
+        if backup.status != 'completed' or not backup.file_path or not os.path.exists(backup.file_path):
             return Response(
                 {'error': 'Backup not available for download'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
-        # In a real implementation, this would return the file
-        return Response({
-            'file_path': backup.file_path,
-            'file_size': backup.file_size,
-            'download_url': f'/api/admin/backups/{backup.id}/download/'
-        })
+
+        filename = os.path.basename(backup.file_path)
+        return FileResponse(
+            open(backup.file_path, 'rb'),
+            as_attachment=True,
+            filename=filename,
+            content_type='application/zip',
+        )
     
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
@@ -640,11 +674,9 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # In a real implementation, this would trigger restore
         return Response({
-            'message': 'Restore initiated',
-            'backup_id': backup.id
-        })
+            'error': 'Automatic restore is not enabled. Download the backup and restore it through a supervised maintenance workflow.'
+        }, status=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 class EmailTemplateViewSet(viewsets.ModelViewSet):
@@ -707,18 +739,23 @@ class SMSTemplateViewSet(viewsets.ModelViewSet):
 @permission_classes([IsAdmin])
 def admin_dashboard_stats(request):
     """Get admin dashboard statistics"""
-    total_users = User.objects.count()
-    active_users = User.objects.filter(is_active=True).count()
+    visible_users = User.objects.exclude(role='super-admin')
+    total_users = visible_users.count()
+    active_users = visible_users.filter(is_active=True).count()
     total_settings = SystemSettings.objects.count()
     
     # Recent audit logs
-    recent_logs = LogEntry.objects.select_related('actor', 'content_type').order_by('-timestamp')[:10]
+    recent_logs = (
+        LogEntry.objects.select_related('actor', 'content_type')
+        .exclude(actor__role='super-admin')
+        .order_by('-timestamp')[:10]
+    )
     
     # Users by role
-    user_by_role = User.objects.values('role').annotate(count=Count('id'))
+    user_by_role = visible_users.values('role').annotate(count=Count('id'))
     
     # Recent backups
-    recent_backups = SystemBackup.objects.order_by('-started_at')[:5]
+    recent_backups = SystemBackup.objects.exclude(created_by__role='super-admin').order_by('-started_at')[:5]
     
     from .admin_serializers import AuditLogSerializer, SystemBackupSerializer
     
@@ -736,7 +773,7 @@ class RoleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing roles
     """
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated, HasPermission('manage_roles')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_system']
     search_fields = ['name', 'code', 'description']
@@ -744,20 +781,7 @@ class RoleViewSet(viewsets.ModelViewSet):
     ordering = ['-priority', 'name']
     
     def get_queryset(self):
-        queryset = Role.objects.prefetch_related('permissions').all()
-        if self.request.user and self.request.user.role != 'super-admin':
-            queryset = queryset.exclude(code='super-admin')
-        return queryset
-
-    def get_object(self):
-        """
-        Ensure non-super-admins cannot access the super-admin role object.
-        """
-        obj = super().get_object()
-        if self.request.user and self.request.user.role != 'super-admin' and obj.code == 'super-admin':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have permission to access the super-admin role.")
-        return obj
+        return Role.objects.prefetch_related('permissions').exclude(code='super-admin')
     
     def get_serializer_class(self):
         from .admin_serializers import RoleSerializer, RoleCreateUpdateSerializer
@@ -773,10 +797,8 @@ class RoleViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         if instance.is_system:
-             return Response(
-                {'error': 'Cannot delete system roles'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'Cannot delete system roles'})
         instance.delete()
     
     @action(detail=True, methods=['get'])
@@ -790,11 +812,22 @@ class RoleViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def assign_permissions(self, request, pk=None):
         """Assign permissions to a role"""
+        if not HasPermission('manage_permissions').has_permission(request, self):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to assign role permissions.")
+
         role = self.get_object()
-        permission_ids = request.data.get('permission_ids', [])
-        
+        permission_ids = list(dict.fromkeys(request.data.get('permission_ids', [])))
+        active_ids = set(Permission.objects.filter(id__in=permission_ids, is_active=True).values_list('id', flat=True))
+        missing_ids = [permission_id for permission_id in permission_ids if permission_id not in active_ids]
+        if missing_ids:
+            return Response(
+                {'permission_ids': [f'Invalid or inactive permission ids: {missing_ids}']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         role.permissions.set(permission_ids)
-            
+
         return Response({'detail': 'Permissions updated successfully'})
 
 
@@ -802,7 +835,7 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for viewing permissions (read-only)
     """
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated, HasPermission('manage_permissions')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'is_active', 'is_system']
     search_fields = ['name', 'code', 'description']
@@ -821,7 +854,7 @@ class SystemModuleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing system modules
     """
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAuthenticated, HasPermission('view_modules')]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_enabled']
     search_fields = ['name', 'slug', 'description']
@@ -837,9 +870,9 @@ class SystemModuleViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """
-        List/Retrieve available to all admins.
-        Create/Update/Delete (enabling/disabling) restricted to super-admins.
+        List/Retrieve require module visibility. Create/Update/Delete
+        (enabling/disabling) require module management permission.
         """
         if self.action in ['list', 'retrieve']:
-            return [IsAdmin()]
-        return [IsSuperAdmin()]
+            return [IsAuthenticated(), HasPermission('view_modules')]
+        return [IsAuthenticated(), HasPermission('manage_modules')]

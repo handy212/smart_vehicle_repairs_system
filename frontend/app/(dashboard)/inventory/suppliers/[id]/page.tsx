@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { inventoryApi } from "@/lib/api/inventory";
+import { inventoryApi, type PurchaseOrder } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import {
   Globe, 
   Database,
   FileText,
-  Clock,
   CircleDollarSign,
   AlertCircle
 } from "lucide-react";
@@ -54,7 +53,7 @@ export default function SupplierDetailPage() {
       await quickbooksApi.syncInbound();
       toastSuccess("QuickBooks sync triggered successfully.");
       refetch();
-    } catch (err) {
+    } catch {
       toastError("Failed to trigger QuickBooks sync");
     } finally {
       setIsSyncing(false);
@@ -268,7 +267,7 @@ export default function SupplierDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactionList.map((po: any) => (
+                    {transactionList.map((po: PurchaseOrder) => (
                       <TableRow key={po.id} className="h-9 hover:bg-muted/10">
                         <TableCell className="font-bold py-1 px-4 text-xs">
                           <Link href={`/inventory/purchase-orders/${po.id}`} className="text-primary hover:underline">
@@ -447,4 +446,3 @@ export default function SupplierDetailPage() {
     </div>
   );
 }
-

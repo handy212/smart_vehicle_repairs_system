@@ -10,6 +10,7 @@ import { authApi } from "@/lib/api/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, Edit, CheckCircle, XCircle, Package, Printer } from "lucide-react";
 import Link from "next/link";
@@ -31,16 +32,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CircleDollarSign, Clock, Database, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function PurchaseOrderDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -53,7 +48,7 @@ export default function PurchaseOrderDetailPage() {
   const id = parseInt(params.id as string);
 
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [selectedApprover, setSelectedApprover] = useState<string>("");
+  const [selectedApproverIds, setSelectedApproverIds] = useState<number[]>([]);
 
   const { data: purchaseOrder, isLoading } = useQuery({
     queryKey: ["purchase-order", id],
@@ -67,8 +62,13 @@ export default function PurchaseOrderDetailPage() {
 
   const { activeBranchId } = useBranchStore();
   const isSubmitter = currentUser?.id === purchaseOrder?.created_by;
-  const isApprover = currentUser?.id === purchaseOrder?.assigned_approver || currentUser?.role === "admin" || currentUser?.role === "super-admin";
-  const canApprove = isApprover && !isSubmitter;
+  const currentUserPendingApproval = purchaseOrder?.approvals?.some(
+    (approval) => approval.approver === currentUser?.id && approval.status === "pending"
+  );
+  const isAdminApprover = currentUser?.role === "admin" || currentUser?.role === "super-admin";
+  const isLegacyApprover = currentUser?.id === purchaseOrder?.assigned_approver;
+  const isApprover = Boolean(currentUserPendingApproval || isLegacyApprover || isAdminApprover);
+  const canApprove = isApprover && (!isSubmitter || isAdminApprover);
   const purchaseOrderBranchId = typeof purchaseOrder?.branch === "object" ? purchaseOrder.branch?.id : purchaseOrder?.branch;
   const isBranchUser = activeBranchId === purchaseOrderBranchId;
 
@@ -80,29 +80,38 @@ export default function PurchaseOrderDetailPage() {
   const approvers = usersResponse?.results || [];
 
   const submitForApprovalMutation = useMutation({
-    mutationFn: (approverId?: number) => inventoryApi.submitPurchaseOrderForApproval(id, approverId),
+    mutationFn: (approverIds: number[]) => inventoryApi.submitPurchaseOrderForApproval(id, approverIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       setIsSubmitDialogOpen(false);
+      setSelectedApproverIds([]);
       toast({
         title: "Success",
         description: "Purchase order submitted for approval",
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to submit purchase order for approval",
+        description: getApiErrorMessage(error, "Failed to submit purchase order for approval"),
         variant: "destructive",
       });
     },
   });
 
   const handleSubmitForApproval = () => {
-    const approverId = selectedApprover ? parseInt(selectedApprover) : undefined;
-    submitForApprovalMutation.mutate(approverId);
+    submitForApprovalMutation.mutate(selectedApproverIds);
+  };
+
+  const toggleApprover = (approverId: number, checked: boolean | string) => {
+    setSelectedApproverIds((current) => {
+      if (checked) {
+        return current.includes(approverId) ? current : [...current, approverId];
+      }
+      return current.filter((idToKeep) => idToKeep !== approverId);
+    });
   };
 
   const approveMutation = useMutation({
@@ -116,10 +125,10 @@ export default function PurchaseOrderDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve purchase order",
+        description: getApiErrorMessage(error, "Failed to approve purchase order"),
         variant: "destructive",
       });
     },
@@ -136,10 +145,10 @@ export default function PurchaseOrderDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to reject purchase order",
+        description: getApiErrorMessage(error, "Failed to reject purchase order"),
         variant: "destructive",
       });
     },
@@ -156,10 +165,10 @@ export default function PurchaseOrderDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || error.response?.data?.detail || "Failed to confirm purchase order",
+        description: getApiErrorMessage(error, "Failed to confirm purchase order"),
         variant: "destructive",
       });
     },
@@ -176,10 +185,10 @@ export default function PurchaseOrderDetailPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to cancel purchase order",
+        description: getApiErrorMessage(error, "Failed to cancel purchase order"),
         variant: "destructive",
       });
     },
@@ -254,39 +263,51 @@ export default function PurchaseOrderDetailPage() {
   return (
     <div className="space-y-6">
       <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-        {/* ... (Submit dialog content remains same but consolidated for brevity in this tool call if needed, 
-            but I will include the full logic to ensure it works) */}
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>Submit for Approval</DialogTitle>
             <DialogDescription>
-              Select an approver for this purchase order.
+              Select every person who must approve this purchase order.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="approver" className="text-right text-sm font-medium">
-                Approver
-              </label>
-              <Select value={selectedApprover} onValueChange={setSelectedApprover}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select approver" />
-                </SelectTrigger>
-                <SelectContent>
-                  {approvers.map((user) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.full_name || user.username || user.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="max-h-[320px] space-y-2 overflow-y-auto py-4">
+            {approvers.map((user) => {
+              const isCurrentUser = user.id === currentUser?.id;
+              const isChecked = selectedApproverIds.includes(user.id);
+              const displayName = user.full_name || user.username || user.email;
+
+              return (
+                <label
+                  key={user.id}
+                  className={cn(
+                    "flex items-center gap-3 rounded border p-3 text-sm",
+                    isCurrentUser ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-muted/40"
+                  )}
+                >
+                  <Checkbox
+                    checked={isChecked}
+                    disabled={isCurrentUser}
+                    onCheckedChange={(checked) => toggleApprover(user.id, checked)}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{displayName}</span>
+                    {user.email && <span className="block truncate text-xs text-muted-foreground">{user.email}</span>}
+                  </span>
+                  {isCurrentUser && <Badge variant="secondary">Submitter</Badge>}
+                </label>
+              );
+            })}
+            {approvers.length === 0 && (
+              <p className="rounded border border-dashed p-4 text-sm text-muted-foreground">
+                No active approvers found.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitForApproval} disabled={submitForApprovalMutation.isPending || !selectedApprover}>
+            <Button onClick={handleSubmitForApproval} disabled={submitForApprovalMutation.isPending || selectedApproverIds.length === 0}>
               {submitForApprovalMutation.isPending ? "Submitting..." : "Submit"}
             </Button>
           </DialogFooter>
@@ -602,11 +623,47 @@ export default function PurchaseOrderDetailPage() {
                     <p className="text-[9px] text-muted-foreground">{purchaseOrder.created_at ? format(new Date(purchaseOrder.created_at), "MMM dd, HH:mm") : "-"}</p>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Approver</label>
-                    <p className="text-xs font-semibold mt-0.5">{purchaseOrder.assigned_approver_name || "Unassigned"}</p>
-                    <p className="text-[9px] text-muted-foreground">{purchaseOrder.approved_at ? `Approved ${format(new Date(purchaseOrder.approved_at), "MMM dd")}` : "Awaiting approval"}</p>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Approvals</label>
+                    <p className="text-xs font-semibold mt-0.5">
+                      {purchaseOrder.approval_progress?.total
+                        ? `${purchaseOrder.approval_progress.approved}/${purchaseOrder.approval_progress.total} approved`
+                        : purchaseOrder.assigned_approver_name || "Unassigned"}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {purchaseOrder.approved_at ? `Approved ${format(new Date(purchaseOrder.approved_at), "MMM dd")}` : "Awaiting approval"}
+                    </p>
                   </div>
                 </div>
+                {purchaseOrder.approvals && purchaseOrder.approvals.length > 0 && (
+                  <div className="space-y-2 border-t pt-3">
+                    {purchaseOrder.approvals.map((approval) => (
+                      <div key={approval.id} className="flex items-center justify-between gap-3 rounded border bg-muted/10 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold">{approval.approver_name || approval.approver_email || `User ${approval.approver}`}</p>
+                          <p className="text-[9px] text-muted-foreground">
+                            {approval.approved_at
+                              ? `Approved ${format(new Date(approval.approved_at), "MMM dd, HH:mm")}`
+                              : approval.rejected_at
+                                ? `Rejected ${format(new Date(approval.rejected_at), "MMM dd, HH:mm")}`
+                                : "Waiting"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            approval.status === "approved"
+                              ? "success"
+                              : approval.status === "rejected"
+                                ? "danger"
+                                : "warning"
+                          }
+                          className="shrink-0 text-[9px] uppercase"
+                        >
+                          {approval.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="pt-2 border-t">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Expected Delivery</label>
                   <p className="text-xs font-semibold mt-0.5 flex items-center gap-1">

@@ -6,12 +6,10 @@ import { format, isSameDay, parseISO, startOfWeek, endOfWeek, eachDayOfInterval,
 import { Shift, shiftsApi } from "@/lib/api/technicians";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, PlayCircle, StopCircle, Coffee, AlertCircle } from "lucide-react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, PlayCircle, StopCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 interface ShiftScheduleProps {
     shifts: Shift[];
@@ -35,14 +33,14 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
     const clockInMutation = useMutation({
         mutationFn: (shiftId: number) => shiftsApi.clockIn(shiftId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["technician", technicianId, "shifts"] });
+            queryClient.invalidateQueries({ queryKey: ["technician-shifts", technicianId] });
             toast({ title: "Clocked in successfully" });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to clock in",
+                description: getApiErrorMessage(error, "Failed to clock in"),
                 variant: "destructive",
             });
         },
@@ -51,14 +49,14 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
     const clockOutMutation = useMutation({
         mutationFn: (shiftId: number) => shiftsApi.clockOut(shiftId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["technician", technicianId, "shifts"] });
+            queryClient.invalidateQueries({ queryKey: ["technician-shifts", technicianId] });
             toast({ title: "Clocked out successfully" });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to clock out",
+                description: getApiErrorMessage(error, "Failed to clock out"),
                 variant: "destructive",
             });
         },
@@ -70,11 +68,11 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
 
     const getStatusColor = (status: Shift['status']) => {
         switch (status) {
-            case 'scheduled': return "text-primary bg-primary/10 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
-            case 'active': return "text-success bg-success/10 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
-            case 'completed': return "text-muted-foreground bg-muted border-border bg-muted text-muted-foreground border-border";
-            case 'absent': return "text-destructive bg-destructive/10 border-destructive/20 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
-            case 'cancelled': return "text-warning bg-warning/10 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
+            case 'scheduled': return "border-primary/20 bg-primary/10 text-primary";
+            case 'active': return "border-success/25 bg-success/10 text-success";
+            case 'completed': return "border-border bg-muted text-muted-foreground";
+            case 'absent': return "border-destructive/20 bg-destructive/10 text-destructive";
+            case 'cancelled': return "border-warning/25 bg-warning/10 text-warning-foreground";
             default: return "text-muted-foreground bg-muted border-border";
         }
     };
@@ -82,40 +80,40 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
     const formatHours = (hours: number | null | undefined) => {
         if (hours === null || hours === undefined) return null;
 
-        const numHours = typeof hours === 'number' ? hours : parseFloat(hours as any);
+        const numHours = Number(hours);
         if (isNaN(numHours)) return null;
         return `${numHours.toFixed(2)}h`;
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
+        <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="flex items-center gap-2 text-sm font-semibold">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                         {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
                     </h3>
                 </div>
                 <div className="flex items-center gap-1">
-                    <Button variant="outline" size="icon" onClick={prevWeek}>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={resetToToday}>
+                    <Button variant="outline" size="sm" className="h-8" onClick={resetToToday}>
                         Today
                     </Button>
-                    <Button variant="outline" size="icon" onClick={nextWeek}>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextWeek}>
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-7">
                 {weekDays.map((day) => {
                     const dayShifts = getShiftsForDay(day);
                     const isToday = isSameDay(day, new Date());
 
                     return (
-                        <Card key={day.toISOString()} className={cn("overflow-hidden flex flex-col h-full min-h-[200px]", isToday && "border-primary ring-1 ring-primary")}>
+                        <Card key={day.toISOString()} className={cn("flex min-h-[160px] flex-col overflow-hidden", isToday && "border-primary ring-1 ring-primary")}>
                             <div className={cn("p-2 text-center text-sm font-medium border-b bg-muted/50", isToday && "bg-primary/10 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300")}>
                                 {format(day, "EEE, MMM d")}
                             </div>
@@ -126,7 +124,6 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                                             key={shift.id}
                                             className={cn("text-xs p-2 rounded-md border space-y-1.5", getStatusColor(shift.status))}
                                         >
-                                        // Scheduled Time
                                             <div className="flex items-center gap-1 font-semibold">
                                                 <Clock className="h-3 w-3" />
                                                 <span>
@@ -134,7 +131,6 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                                                 </span>
                                             </div>
 
-                                        // Status Badge
                                             <div className="flex items-center justify-between">
                                                 <span className="capitalize font-medium">{shift.status}</span>
                                                 {shift.scheduled_hours && (
@@ -144,7 +140,6 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                                                 )}
                                             </div>
 
-                                        // Actual Hours (if completed or active)
                                             {shift.actual_hours !== null && shift.actual_hours !== undefined && (
                                                 <div className="bg-card/50 dark:bg-black/20 p-1.5 rounded text-[10px] space-y-0.5">
                                                     <div className="flex justify-between">
@@ -160,7 +155,6 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                                                 </div>
                                             )}
 
-                                        // Clock In/Out Buttons
                                             {shift.status === 'scheduled' && !shift.actual_start_time && (
                                                 <Button
                                                     size="sm"
@@ -186,7 +180,6 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                                                 </Button>
                                             )}
 
-                                        // Notes
                                             {shift.notes && (
                                                 <div className="text-[10px] opacity-80 truncate border-t pt-1" title={shift.notes}>
                                                     {shift.notes}
@@ -206,9 +199,9 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
             </div>
 
             {shifts.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-                    <AlertCircle className="h-12 w-12 mx-auto mb-2 opacity-20" />
-                    <p>No shifts found for this technician.</p>
+                <div className="rounded-lg border border-dashed bg-muted/20 py-6 text-center text-muted-foreground">
+                    <AlertCircle className="mx-auto mb-2 h-8 w-8 opacity-30" />
+                    <p className="text-sm">No shifts found for this technician.</p>
                 </div>
             )}
         </div>

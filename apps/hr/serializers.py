@@ -20,6 +20,23 @@ from .models import (
 
 User = get_user_model()
 
+STAFF_PROFILE_ROLES = {
+    'admin',
+    'manager',
+    'service_coordinator',
+    'receptionist',
+    'technician',
+    'parts_manager',
+    'accountant',
+    'hr_manager',
+}
+
+STAFF_BRANCH_ROLES = STAFF_PROFILE_ROLES - {'admin', 'manager'}
+
+
+def account_is_active_for_employment_status(status):
+    return status not in ('suspended', 'terminated', 'resigned')
+
 
 def count_business_days(start_date, end_date):
     """Count Monday-Friday days inclusively."""
@@ -118,6 +135,12 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user_data = attrs.get('user') or {}
         branch = user_data.get('branch')
+        role = attrs.get(
+            'role',
+            self.instance.user.role if self.instance else 'technician',
+        )
+        if role == 'super-admin':
+            raise serializers.ValidationError({'role': 'Invalid role selection.'})
         if request and branch and getattr(request.user, 'role', None) not in ['admin', 'super-admin']:
             if not request.user.has_branch_access(branch):
                 raise serializers.ValidationError({'branch': 'You cannot assign staff to a branch you do not have access to.'})
@@ -131,6 +154,11 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             email = attrs.get('email')
             if email and User.objects.filter(email__iexact=email).exists():
                 raise serializers.ValidationError({'email': 'A user with this email already exists.'})
+
+        if role in STAFF_BRANCH_ROLES:
+            effective_branch = branch or (self.instance.user.branch if self.instance else None)
+            if not effective_branch:
+                raise serializers.ValidationError({'branch': f'{role.replace("_", " ").title()} must be assigned to a branch.'})
 
         return attrs
 
@@ -170,6 +198,7 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
                 last_name=last_name,
                 phone=phone,
                 role=role,
+                is_staff=role != 'customer',
             )
 
             for attr, value in user_data.items():
@@ -181,6 +210,8 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
                 user=user,
                 defaults=validated_data
             )
+            user.is_active = account_is_active_for_employment_status(profile.employment_status)
+            user.save(update_fields=['is_active', 'updated_at'])
             return profile
 
     def update(self, instance, validated_data):
@@ -209,12 +240,20 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
                     else:
                         setattr(user, attr, value)
 
+                if 'role' in user_fields:
+                    user.is_staff = user.role != 'customer'
+
                 for attr, value in user_data.items():
                     setattr(user, attr, value)
 
                 user.save()
 
-            return super().update(instance, validated_data)
+            profile = super().update(instance, validated_data)
+            should_be_active = account_is_active_for_employment_status(profile.employment_status)
+            if profile.user.is_active != should_be_active:
+                profile.user.is_active = should_be_active
+                profile.user.save(update_fields=['is_active', 'updated_at'])
+            return profile
 
 
 class EmployeeProfileListSerializer(serializers.ModelSerializer):
@@ -225,6 +264,8 @@ class EmployeeProfileListSerializer(serializers.ModelSerializer):
     branch_name = serializers.SerializerMethodField()
     email = serializers.EmailField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True)
+    role = serializers.CharField(source='user.role', read_only=True)
+    is_account_active = serializers.BooleanField(source='user.is_active', read_only=True)
     profile_picture = serializers.ImageField(source='user.profile_picture', read_only=True)
     technician_id = serializers.SerializerMethodField()
 
@@ -232,6 +273,7 @@ class EmployeeProfileListSerializer(serializers.ModelSerializer):
         model = EmployeeProfile
         fields = [
             'id', 'user', 'full_name', 'email', 'phone', 'profile_picture',
+            'role', 'is_account_active',
             'department_name', 'position_title', 'branch_name', 'technician_id',
             'employment_type', 'employment_status', 'start_date',
         ]

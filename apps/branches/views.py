@@ -3,11 +3,8 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.shortcuts import get_object_or_404
-from django.db.models import Q, Count, Sum, Avg, F
+from django.db.models import Sum, F
 from django.utils import timezone
-from datetime import timedelta
-from django.db import transaction
 
 from .models import Branch
 from .serializers import (
@@ -17,7 +14,7 @@ from .serializers import (
     PublicBranchSerializer
 )
 from apps.accounts.models import User
-from apps.accounts.permissions import HasPermission, HasAnyPermission
+from apps.accounts.permissions import HasPermission, user_has_permission
 
 
 
@@ -67,11 +64,11 @@ class BranchViewSet(viewsets.ModelViewSet):
         if user.is_anonymous:
             return Branch.objects.filter(is_active=True)
             
-        if user.role == 'admin':
+        if user.role == 'admin' or user.role == 'super-admin' or user.is_superuser:
             return Branch.objects.all()
         elif user.role == 'manager':
             return user.managed_branches.all()
-        elif user.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+        elif user.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant', 'hr_manager']:
             if user.branch:
                 return Branch.objects.filter(id=user.branch.id)
         
@@ -79,204 +76,63 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set created_by when creating a branch"""
-        # Only admins can create branches
-        if self.request.user.role != 'admin':
+        if not user_has_permission(self.request.user, 'manage_branches'):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('Only administrators can create branches.')
+            raise PermissionDenied('You do not have permission to create branches.')
         serializer.save(created_by=self.request.user)
     
     def perform_update(self, serializer):
         """Check permissions before updating"""
-        # Only admins can update branches
-        if self.request.user.role != 'admin':
+        if not user_has_permission(self.request.user, 'manage_branches'):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('Only administrators can update branches.')
+            raise PermissionDenied('You do not have permission to update branches.')
         serializer.save()
     
     def perform_destroy(self, instance):
         """Check permissions and prevent deletion of branches with data"""
-        # Only admins can delete branches
-        if self.request.user.role != 'admin':
+        if not user_has_permission(self.request.user, 'manage_branches'):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('Only administrators can delete branches.')
-        
-        # If branch has staff assigned, reassign them to no branch
-        if instance.staff_count > 0:
-            # Reassign all staff to no branch before deletion
-            for user in User.objects.filter(branch=instance):
-                user.branch = None
-                user.save()
+            raise PermissionDenied('You do not have permission to delete branches.')
         
         # Prevent deletion if it's the only active branch
         active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
-        if not active_branches.exists():
+        if instance.is_active and not active_branches.exists():
             from rest_framework.exceptions import ValidationError
             raise ValidationError(
-                'Cannot delete the last active branch. Please activate another branch first or create a new one.'
+                'Cannot deactivate the last active branch. Please activate another branch first or create a new one.'
             )
         
-        # Soft delete by setting is_active=False instead of actually deleting
         instance.is_active = False
         instance.save()
     
     @action(detail=True, methods=['delete'])
     def force_delete(self, request, pk=None):
         """
-        Hard delete a branch and cascade delete all its related data.
-        WARNING: This is permanent and destructive.
+        Deprecated destructive endpoint.
+
+        Branches are archived by deactivation so operational history remains
+        intact. This keeps old work orders, invoices, inspections, and stock
+        movements auditable.
         """
-        if request.user.role != 'admin':
+        if not user_has_permission(request.user, 'manage_branches'):
             return Response(
-                {'detail': 'Only administrators can permanently delete branches.'},
+                {'detail': 'You do not have permission to archive branches.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-            
         instance = self.get_object()
-        
-        # Check if it's the headquarters or the last active branch
-        if instance.is_headquarters:
-            return Response(
-                {'detail': 'The headquarters branch cannot be deleted.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
         if not active_branches.exists() and instance.is_active:
             return Response(
-                {'detail': 'Cannot delete the last active branch. Please activate another branch first.'},
+                {'detail': 'Cannot deactivate the last active branch. Please activate another branch first.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            with transaction.atomic():
-                branch_id = instance.id
-                
-                # 1. Accounts/Users: Detach from branch
-                from apps.accounts.models import User
-                for user in User.objects.filter(branch=instance):
-                    user.branch = None
-                    user.save(update_fields=['branch'])
-                instance.managers.clear()  # Clear M2M
-                
-                # 2. Inventory - Leaf nodes and Decoupling
-                try:
-                    from apps.inventory.models import (
-                        StockItem, Part, PurchaseOrder, InventoryTransaction, 
-                        Transfer, PhysicalCountSession, StockAlert
-                    )
-                    
-                    # Pre-identify objects
-                    branch_part_ids = list(Part.objects.filter(branch=instance).values_list('id', flat=True))
-                    branch_stock_ids = list(StockItem.objects.filter(branch=instance).values_list('id', flat=True))
-                    
-                    # 2a. Purge all InventoryTransactions that reference the branch or parts/stock being deleted
-                    it_to_purge_qs = InventoryTransaction.objects.filter(
-                        Q(branch=instance) | 
-                        Q(part_id__in=branch_part_ids) |
-                        Q(work_order__branch=instance)
-                    )
-                    it_ids = list(it_to_purge_qs.values_list('id', flat=True))
-                    
-                    # Force update branch to None first to break the PROTECT link immediately
-                    InventoryTransaction.objects.filter(id__in=it_ids).update(branch=None)
-                    InventoryTransaction.objects.filter(id__in=it_ids).delete()
-                    
-                    # 2b. Detach Parts from branch
-                    Part.objects.filter(branch=instance).update(branch=None)
-                    
-                except ImportError:
-                    pass
-
-                # 3. Accounting & Billing
-                try:
-                    from apps.accounting.models import JournalEntry, Budget
-                    from apps.billing.models import (
-                        Invoice, Estimate, Bill, CreditNote, Payment, 
-                        BillPayment, Refund, PaymentAllocation
-                    )
-                    
-                    # 3a. Leaf nodes for Billing
-                    # Refund depends on Payment and Invoice (PROTECT)
-                    Refund.objects.filter(Q(invoice__branch=instance) | Q(customer__user__branch=instance)).delete()
-                    PaymentAllocation.objects.filter(invoice__branch=instance).delete()
-                    
-                    # 3b. Payments
-                    Payment.objects.filter(invoice__branch=instance).delete()
-                    BillPayment.objects.filter(bill__branch=instance).delete()
-                    
-                    # 3c. Main Billing Documents
-                    Invoice.objects.filter(branch=instance).delete()
-                    Bill.objects.filter(branch=instance).delete()
-                    Estimate.objects.filter(branch=instance).delete()
-                    CreditNote.objects.filter(branch=instance).delete()
-
-                    # 3d. Accounting
-                    # Bypass period locks for JournalEntries
-                    jes_to_delete = JournalEntry.objects.filter(branch=instance)
-                    for je in jes_to_delete:
-                        je._bypass_period_lock = True
-                        je.delete()
-                    
-                    Budget.objects.filter(branch=instance).delete()
-                except ImportError:
-                    pass
-
-                # 4. Operational Data (WorkOrders, Inspections, GatePass, etc.)
-                try:
-                    from apps.workorders.models import WorkOrder
-                    from apps.inspections.models import VehicleInspection
-                    from apps.gatepass.models import GatePass
-                    from apps.appointments.models import Appointment
-                    from apps.roadside.models import RoadsideRequest
-                    
-                    # GatePass depends on WorkOrder
-                    GatePass.objects.filter(branch=instance).delete()
-                    RoadsideRequest.objects.filter(branch=instance).delete()
-                    VehicleInspection.objects.filter(branch=instance).delete()
-                    WorkOrder.objects.filter(branch=instance).delete()
-                    Appointment.objects.filter(branch=instance).delete()
-                except ImportError:
-                    pass
-                
-                # 5. Inventory (Root objects after IT cleanup)
-                try:
-                    from apps.inventory.models import (
-                        StockItem, Part, PurchaseOrder, InventoryTransaction, 
-                        Transfer, PhysicalCountSession, StockAlert
-                    )
-                    PurchaseOrder.objects.filter(branch=instance).delete()
-                    Transfer.objects.filter(Q(source_branch=instance) | Q(destination_branch=instance)).delete()
-                    PhysicalCountSession.objects.filter(branch=instance).delete()
-                    StockAlert.objects.filter(branch=instance).delete()
-                    
-                    StockItem.objects.filter(branch=instance).delete()
-                    # Delete parts that were originally branch-specific
-                    # (they were detached in step 2)
-                    Part.objects.filter(id__in=branch_part_ids).delete()
-                except ImportError:
-                    pass
-
-                # 6. Fixed Assets
-                try:
-                    from apps.fixed_assets.models import FixedAsset
-                    FixedAsset.objects.filter(branch=instance).delete()
-                except ImportError:
-                    pass
-                
-                # 7. Delete the branch itself
-                branch_name = instance.name
-                instance.delete()
-                
-                return Response(
-                    {'detail': f'Branch "{branch_name}" and all related data have been permanently deleted.'},
-                    status=status.HTTP_200_OK
-                )
-        except Exception as e:
-            logger.error(f"Failed to hard delete branch {pk}: {str(e)}", exc_info=True)
-            return Response(
-                {'detail': f'Failed to delete branch due to protected relationships: {str(e)}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        instance.is_active = False
+        instance.save(update_fields=['is_active', 'updated_at'])
+        return Response(
+            {'detail': f'Branch "{instance.name}" has been archived. Historical records were preserved.'},
+            status=status.HTTP_200_OK
+        )
     
     @action(detail=True, methods=['get'])
     def staff(self, request, pk=None):
@@ -284,7 +140,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         branch = self.get_object()
         
         # Check if user has access to this branch
-        if not request.user.has_branch_access(branch) and request.user.role != 'admin':
+        if not request.user.has_branch_access(branch) and not user_has_permission(request.user, 'manage_branches'):
             return Response(
                 {'detail': 'You do not have permission to view staff for this branch.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -305,7 +161,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         branch = self.get_object()
         
         # Check if user has access to this branch
-        if not request.user.has_branch_access(branch) and request.user.role != 'admin':
+        if not request.user.has_branch_access(branch) and not user_has_permission(request.user, 'manage_branches'):
             return Response(
                 {'detail': 'You do not have permission to view managers for this branch.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -322,8 +178,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         """Assign a staff member to this branch"""
         branch = self.get_object()
         
-        # Only admin and managers of this branch can assign staff
-        if request.user.role != 'admin' and not request.user.has_branch_access(branch):
+        if not user_has_permission(request.user, 'manage_branches') and not request.user.has_branch_access(branch):
             return Response(
                 {'detail': 'You do not have permission to assign staff to this branch.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -364,10 +219,9 @@ class BranchViewSet(viewsets.ModelViewSet):
         """Assign a manager to this branch"""
         branch = self.get_object()
         
-        # Only admin can assign managers
-        if request.user.role != 'admin':
+        if not user_has_permission(request.user, 'manage_branches'):
             return Response(
-                {'detail': 'Only administrators can assign managers to branches.'},
+                {'detail': 'You do not have permission to assign managers to branches.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -397,10 +251,9 @@ class BranchViewSet(viewsets.ModelViewSet):
         """Remove a manager from this branch"""
         branch = self.get_object()
         
-        # Only admin can remove managers
-        if request.user.role != 'admin':
+        if not user_has_permission(request.user, 'manage_branches'):
             return Response(
-                {'detail': 'Only administrators can remove managers from branches.'},
+                {'detail': 'You do not have permission to remove managers from branches.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -440,7 +293,7 @@ class BranchViewSet(viewsets.ModelViewSet):
         # Check if user has access to this branch
         # Admin users have access to all branches
         user_has_access = False
-        if request.user.role == 'admin' or request.user.is_superuser:
+        if user_has_permission(request.user, 'manage_branches') or request.user.is_superuser:
             user_has_access = True
         elif request.user.role == 'manager':
             # Managers can access branches they manage

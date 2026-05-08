@@ -12,7 +12,6 @@ import {
   Truck,
   FileText,
   Boxes,
-  TrendingUp,
   ArrowLeftRight,
   Receipt,
   ClipboardList,
@@ -45,7 +44,6 @@ import {
   Repeat,
   Zap,
   Shield,
-  UserPlus,
   Calendar,
   Briefcase,
   GraduationCap,
@@ -54,8 +52,6 @@ import {
   MessageSquare,
   LucideIcon,
   Puzzle,
-  LayoutGrid,
-  ShieldAlert,
   Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -63,7 +59,6 @@ import { Button } from "@/components/ui/button";
 
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "@/store/authStore";
 import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { useMemo } from "react";
 import { useTheme } from "@/lib/hooks/useTheme";
@@ -76,7 +71,6 @@ interface SubNavItem {
   permission?: string;
   icon?: LucideIcon;
   module?: string;
-  requiredRole?: string;
 }
 
 interface SubNavProps {
@@ -89,7 +83,6 @@ interface SubNavProps {
 }
 
 export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed, sidebarCollapsed = false, module }: SubNavProps) {
-  const { user } = useAuthStore();
   const pathname = usePathname();
   const { resolvedTheme, theme: activeTheme } = useTheme();
   const { isModuleEnabled } = useModules();
@@ -153,8 +146,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
   }
 
   const filteredItems = items.filter(item =>
-    (!item.module || isModuleEnabled(item.module)) &&
-    (!item.requiredRole || user?.role === item.requiredRole)
+    !item.module || isModuleEnabled(item.module)
   );
 
   const renderItem = (item: SubNavItem, variant: "mobile" | "desktop") => {
@@ -341,16 +333,15 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   ],
 
   admin: [
-    { name: "Dashboard", href: "/admin", permission: "view_admin_dashboard", icon: LayoutDashboard },
     { name: "Users", href: "/admin/users", permission: "view_users", icon: Users },
-    { name: "Roles", href: "/admin/roles", permission: "view_roles", icon: ShieldCheck },
+    { name: "Roles", href: "/admin/roles", permission: "manage_roles", icon: ShieldCheck },
     { name: "Branches", href: "/admin/branches", permission: "view_branches", icon: Building2 },
-    { name: "Backups", href: "/admin/backups", permission: "view_backups", icon: Database },
+    { name: "Backups", href: "/admin/backups", permission: "manage_backups", icon: Database },
     { name: "Settings", href: "/admin/settings", permission: "view_settings", icon: Settings },
-    { name: "Modules", href: "/admin/modules", requiredRole: "super-admin", icon: Puzzle },
-    { name: "Email Templates", href: "/admin/settings/email-templates", permission: "view_email_templates", icon: Mail },
-    { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_log", icon: History },
-    { name: "Import History", href: "/admin/import-history", permission: "view_import_history", icon: Inbox },
+    { name: "Modules", href: "/admin/modules", permission: "view_modules", icon: Puzzle },
+    { name: "Email Templates", href: "/admin/settings/email-templates", permission: "manage_email_templates", icon: Mail },
+    { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_logs", icon: History },
+    { name: "Import History", href: "/admin/import-history", permission: "view_audit_logs", icon: Inbox },
     { name: "Integrations", href: "/admin/integrations", permission: "manage_settings", icon: Puzzle },
     { name: "Feedback", href: "/admin/feedback", permission: "view_settings", icon: MessageSquare },
   ],
@@ -387,6 +378,15 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   sms: [
     { name: "Console", href: "/sms", permission: "send_notifications", icon: MessageSquare },
     { name: "Templates", href: "/sms/templates", permission: "send_notifications", icon: Settings2 },
+  ],
+  technicians: [
+    { name: "Technicians", href: "/technicians", permission: "view_technicians", icon: Users },
+    { name: "Skills", href: "/technicians/skills", permission: "manage_technician_skills", icon: GraduationCap },
+  ],
+  fixedAssets: [
+    { name: "Assets", href: "/fixed-assets", permission: "view_assets", icon: Landmark },
+    { name: "Categories", href: "/fixed-assets/categories", permission: "manage_assets", icon: Tags },
+    { name: "Valuation", href: "/fixed-assets/reports/valuation", permission: "view_assets", icon: PieChart },
   ],
 };
 
@@ -439,6 +439,22 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
       items: subNavConfig.sms,
       title: "Communications",
       module: "sms",
+    };
+  }
+
+  if (pathname.startsWith("/technicians")) {
+    return {
+      items: subNavConfig.technicians,
+      title: "Technicians",
+      module: "technicians",
+    };
+  }
+
+  if (pathname.startsWith("/fixed-assets")) {
+    return {
+      items: subNavConfig.fixedAssets,
+      title: "Fixed Assets",
+      module: "fixed-assets",
     };
   }
 

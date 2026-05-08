@@ -2,7 +2,7 @@ import apiClient from "./client";
 
 export interface Notification {
   id: number;
-  recipient: number;
+  recipient: number | null;
   notification_type: string;
   channel?: string;
   title: string;
@@ -24,7 +24,7 @@ export interface Notification {
     vehicle_id?: number;
     inspection_id?: number;
 
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -35,6 +35,8 @@ export interface NotificationPreference {
   sms_enabled: boolean;
   push_enabled: boolean;
   in_app_enabled: boolean;
+  whatsapp_enabled: boolean;
+  whatsapp_manual_enabled: boolean;
   sound_enabled: boolean;
   appointment_notifications: boolean;
   work_order_notifications: boolean;
@@ -44,13 +46,20 @@ export interface NotificationPreference {
   inventory_notifications: boolean;
   vehicle_notifications: boolean;
   system_notifications: boolean;
+  roadside_requested_email: boolean;
+  roadside_requested_sms: boolean;
+  roadside_dispatched_email: boolean;
+  roadside_dispatched_sms: boolean;
+  roadside_arrived_email: boolean;
+  roadside_arrived_sms: boolean;
+  roadside_completed_email: boolean;
+  roadside_completed_sms: boolean;
   quiet_hours_enabled: boolean;
   quiet_hours_start?: string;
   quiet_hours_end?: string;
   digest_enabled: boolean;
   digest_frequency?: string;
   phone_number?: string;
-  whatsapp_manual_enabled: boolean;
 }
 
 export interface NotificationListResponse {
@@ -58,6 +67,20 @@ export interface NotificationListResponse {
   next: string | null;
   previous: string | null;
   results: Notification[];
+}
+
+export interface NotificationAdminStats {
+  days: number;
+  total: number;
+  unread: number;
+  failed: number;
+  pending: number;
+  delivered: number;
+  success_rate: number;
+  by_type: Record<string, number>;
+  by_channel: Record<string, number>;
+  by_status: Record<string, number>;
+  failed_recent: Notification[];
 }
 
 export interface NotificationTemplate {
@@ -77,6 +100,8 @@ export interface NotificationTemplate {
   updated_at: string;
   created_by?: number;
   created_by_name?: string;
+  whatsapp_template_name?: string;
+  whatsapp_template_variables?: string[];
 }
 
 export const notificationsApi = {
@@ -88,6 +113,7 @@ export const notificationsApi = {
     related_object_type?: string;
     related_object_id?: number;
     ordering?: string;
+    all?: boolean;
   }): Promise<NotificationListResponse> => {
     const response = await apiClient.get("/notifications/notifications/", { params });
     return response.data;
@@ -105,6 +131,11 @@ export const notificationsApi = {
 
   markAsRead: async (id: number): Promise<void> => {
     await apiClient.post(`/notifications/notifications/${id}/mark_read/`);
+  },
+
+  resend: async (id: number): Promise<{ status: string; notification_status: string; message: string }> => {
+    const response = await apiClient.post(`/notifications/notifications/${id}/resend/`);
+    return response.data;
   },
 
   markAllAsRead: async (): Promise<void> => {
@@ -133,6 +164,11 @@ export const notificationsApi = {
     return response.data;
   },
 
+  adminStats: async (days = 30): Promise<NotificationAdminStats> => {
+    const response = await apiClient.get("/notifications/notifications/admin_stats/", { params: { days } });
+    return response.data;
+  },
+
   // Preferences
   getPreferences: async (): Promise<NotificationPreference> => {
     const response = await apiClient.get("/notifications/preferences/my_preferences/");
@@ -142,6 +178,27 @@ export const notificationsApi = {
   updatePreferences: async (data: Partial<NotificationPreference>): Promise<NotificationPreference> => {
     const response = await apiClient.patch("/notifications/preferences/update_preferences/", data);
     return response.data;
+  },
+
+  pushSubscriptions: {
+    publicKey: async (): Promise<{ public_key: string; configured: boolean }> => {
+      const response = await apiClient.get("/notifications/push-subscriptions/public_key/");
+      return response.data;
+    },
+
+    subscribe: async (data: {
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+      device_name?: string;
+    }) => {
+      const response = await apiClient.post("/notifications/push-subscriptions/subscribe/", data);
+      return response.data;
+    },
+
+    unsubscribe: async (endpoint: string): Promise<{ message: string; count: number }> => {
+      const response = await apiClient.post("/notifications/push-subscriptions/unsubscribe/", { endpoint });
+      return response.data;
+    },
   },
 
   // Templates
@@ -185,4 +242,3 @@ export const notificationsApi = {
     return response.data;
   },
 };
-

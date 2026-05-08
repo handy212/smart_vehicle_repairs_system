@@ -3,10 +3,10 @@ from django.db import transaction
 from decimal import Decimal
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
-    PurchaseOrderItem, InventoryTransaction,
+    PurchaseOrderApproval, PurchaseOrderItem, InventoryTransaction,
     ServicePackage, ServicePackagePart,
     ServiceBundle, ServiceBundleItem,
-    StockItem, Transfer, TransferItem
+    StockItem, Transfer, TransferApproval, TransferItem
 )
 
 from apps.accounts.models import User
@@ -54,7 +54,9 @@ class SupplierListSerializer(serializers.ModelSerializer):
         return obj.parts.count()
 
     def get_active_po_count(self, obj):
-        return obj.purchase_orders.filter(status__in=['submitted', 'confirmed']).count()
+        return obj.purchase_orders.filter(
+            status__in=['pending_approval', 'approved', 'confirmed', 'partially_received']
+        ).count()
 
 
 class SupplierDetailSerializer(serializers.ModelSerializer):
@@ -303,9 +305,30 @@ class PurchaseOrderItemCreateSerializer(serializers.ModelSerializer):
         return value
 
 
+class PurchaseOrderApprovalSerializer(serializers.ModelSerializer):
+    approver_name = serializers.SerializerMethodField()
+    approver_email = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PurchaseOrderApproval
+        fields = [
+            'id', 'approver', 'approver_name', 'approver_email', 'status',
+            'approved_at', 'rejected_at', 'rejection_reason', 'created_at',
+            'updated_at'
+        ]
+
+    def get_approver_name(self, obj):
+        return obj.approver.get_full_name() or obj.approver.username
+
+    def get_approver_email(self, obj):
+        return obj.approver.email
+
+
 class PurchaseOrderListSerializer(serializers.ModelSerializer):
     supplier_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    assigned_approver_name = serializers.SerializerMethodField()
+    approval_progress = serializers.SerializerMethodField()
     total_items = serializers.ReadOnlyField()
     total_quantity = serializers.ReadOnlyField()
     received_quantity = serializers.ReadOnlyField()
@@ -318,7 +341,8 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
             'order_date', 'expected_delivery_date', 'due_date', 'total_items',
             'total_quantity', 'received_quantity', 'subtotal', 'total',
             'is_fully_received', 'created_by_name', 'assigned_approver',
-            'rejected_at', 'rejection_reason', 'created_at'
+            'assigned_approver_name', 'approval_progress', 'rejected_at',
+            'rejection_reason', 'created_at'
         ]
 
     def get_supplier_name(self, obj):
@@ -327,10 +351,29 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
     def get_created_by_name(self, obj):
         return obj.created_by.get_full_name() if obj.created_by else None
 
+    def get_assigned_approver_name(self, obj):
+        return obj.assigned_approver.get_full_name() if obj.assigned_approver else None
+
+    def get_approval_progress(self, obj):
+        approvals = list(getattr(obj, 'approvals', []).all())
+        total = len(approvals)
+        approved = sum(1 for approval in approvals if approval.status == 'approved')
+        rejected = sum(1 for approval in approvals if approval.status == 'rejected')
+        pending = sum(1 for approval in approvals if approval.status == 'pending')
+        return {
+            'total': total,
+            'approved': approved,
+            'pending': pending,
+            'rejected': rejected,
+        }
+
 
 class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     supplier = SupplierListSerializer(read_only=True)
     items = PurchaseOrderItemSerializer(many=True, read_only=True)
+    approvals = PurchaseOrderApprovalSerializer(many=True, read_only=True)
+    assigned_approver_name = serializers.SerializerMethodField()
+    approval_progress = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     submitted_by_name = serializers.SerializerMethodField()
     approved_by_name = serializers.SerializerMethodField()
@@ -366,6 +409,19 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
 
     def get_assigned_approver_name(self, obj):
         return obj.assigned_approver.get_full_name() if obj.assigned_approver else None
+
+    def get_approval_progress(self, obj):
+        approvals = list(obj.approvals.all())
+        total = len(approvals)
+        approved = sum(1 for approval in approvals if approval.status == 'approved')
+        rejected = sum(1 for approval in approvals if approval.status == 'rejected')
+        pending = sum(1 for approval in approvals if approval.status == 'pending')
+        return {
+            'total': total,
+            'approved': approved,
+            'pending': pending,
+            'rejected': rejected,
+        }
 
     def _get_qbo_mapping(self, obj):
         if not hasattr(self, '_qbo_mapping_cache'):
@@ -609,6 +665,25 @@ class TransferItemSerializer(serializers.ModelSerializer):
         ]
 
 
+class TransferApprovalSerializer(serializers.ModelSerializer):
+    approver_name = serializers.SerializerMethodField()
+    approver_email = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TransferApproval
+        fields = [
+            'id', 'approver', 'approver_name', 'approver_email', 'status',
+            'approved_at', 'rejected_at', 'rejection_reason', 'created_at',
+            'updated_at'
+        ]
+
+    def get_approver_name(self, obj):
+        return obj.approver.get_full_name() or obj.approver.username
+
+    def get_approver_email(self, obj):
+        return obj.approver.email
+
+
 class TransferSerializer(serializers.ModelSerializer):
     source_branch_name = serializers.ReadOnlyField(source='source_branch.name')
     destination_branch_name = serializers.ReadOnlyField(source='destination_branch.name')
@@ -618,6 +693,8 @@ class TransferSerializer(serializers.ModelSerializer):
     assigned_approver_name = serializers.SerializerMethodField()
     rejected_by_name = serializers.SerializerMethodField()
     items = TransferItemSerializer(many=True, read_only=True)
+    approvals = TransferApprovalSerializer(many=True, read_only=True)
+    approval_progress = serializers.SerializerMethodField()
     
     class Meta:
         model = Transfer
@@ -630,6 +707,7 @@ class TransferSerializer(serializers.ModelSerializer):
             'assigned_approver', 'assigned_approver_name',
             'approved_by', 'approved_by_name', 
             'rejected_by', 'rejected_by_name', 'rejected_at',
+            'approvals', 'approval_progress',
             'items', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -652,6 +730,15 @@ class TransferSerializer(serializers.ModelSerializer):
         
     def get_rejected_by_name(self, obj):
         return obj.rejected_by.get_full_name() if obj.rejected_by else None
+
+    def get_approval_progress(self, obj):
+        approvals = list(obj.approvals.all())
+        return {
+            'total': len(approvals),
+            'approved': sum(1 for approval in approvals if approval.status == 'approved'),
+            'pending': sum(1 for approval in approvals if approval.status == 'pending'),
+            'rejected': sum(1 for approval in approvals if approval.status == 'rejected'),
+        }
 
 
 class TransferCreateSerializer(serializers.ModelSerializer):

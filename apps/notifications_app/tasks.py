@@ -147,6 +147,23 @@ def cleanup_old_notifications():
     return result
 
 @shared_task
+def send_notification_digests(frequency='daily'):
+    """
+    Send daily or weekly notification digests to opted-in users.
+    """
+    from .services import NotificationService
+
+    result = NotificationService().send_digest_notifications(frequency=frequency)
+    logger.info(
+        "Notification digests processed: frequency=%s total=%s successful=%s failed=%s",
+        result['frequency'],
+        result['total'],
+        result['successful'],
+        result['failed'],
+    )
+    return result
+
+@shared_task
 def send_bulk_sms_async(recipients, message, scheduled_for=None):
     """
     Async task to process bulk SMS sends.
@@ -178,7 +195,21 @@ def send_bulk_sms_async(recipients, message, scheduled_for=None):
             except Exception as e:
                 logger.error(f"Async bulk SMS failed for user {recipient.get('value')}: {e}")
         elif recipient.get('type') == 'phone':
-            raw_phones.append(recipient.get('value'))
+            phone_number = recipient.get('value')
+            if scheduled_for:
+                Notification.objects.create(
+                    recipient=None,
+                    notification_type='custom',
+                    channel='sms',
+                    priority='normal',
+                    title='Scheduled Direct SMS',
+                    message=message,
+                    status='pending',
+                    scheduled_for=scheduled_for,
+                    data={'phone_number': phone_number, 'direct_send': True},
+                )
+            else:
+                raw_phones.append(phone_number)
             
     if raw_phones and not scheduled_for:
         send_bulk_sms(raw_phones, message)

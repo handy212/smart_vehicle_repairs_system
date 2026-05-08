@@ -524,6 +524,35 @@ class Transfer(models.Model):
         super().save(*args, **kwargs)
 
 
+class TransferApproval(models.Model):
+    """Individual approval assignment for a stock transfer."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    transfer = models.ForeignKey(Transfer, on_delete=models.CASCADE, related_name='approvals')
+    approver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transfer_approvals')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        unique_together = ['transfer', 'approver']
+        indexes = [
+            models.Index(fields=['transfer', 'status']),
+            models.Index(fields=['approver', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.transfer.transfer_number} - {self.approver.get_full_name() or self.approver.username}"
+
+
 class TransferItem(models.Model):
     """Item within a stock transfer"""
     transfer = models.ForeignKey(Transfer, on_delete=models.CASCADE, related_name='items')
@@ -676,6 +705,35 @@ class PurchaseOrder(models.Model):
         self.subtotal = sum(item.total for item in items)
         self.total = self.subtotal + self.tax_amount + self.shipping_cost
         self.save()
+
+
+class PurchaseOrderApproval(models.Model):
+    """Individual approval assignment for a purchase order."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    purchase_order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='approvals')
+    approver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='purchase_order_approvals')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        unique_together = ['purchase_order', 'approver']
+        indexes = [
+            models.Index(fields=['purchase_order', 'status']),
+            models.Index(fields=['approver', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.purchase_order.po_number} - {self.approver.get_full_name() or self.approver.username}"
 
 
 class PurchaseOrderItem(models.Model):

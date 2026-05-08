@@ -153,6 +153,13 @@ class GatePass(models.Model):
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['branch', 'status']),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['work_order'],
+                condition=~models.Q(status='cancelled'),
+                name='unique_active_gatepass_per_work_order',
+            ),
+        ]
     
     def __str__(self):
         return f"{self.gate_pass_number} - {self.work_order.work_order_number}"
@@ -171,6 +178,13 @@ class GatePass(models.Model):
         # Validate that work order is closed
         if self.work_order and self.work_order.status != 'closed':
             raise ValidationError("Gate pass can only be created for closed work orders.")
+
+        if self.work_order_id and self.status != 'cancelled':
+            existing = GatePass.objects.filter(work_order_id=self.work_order_id).exclude(status='cancelled')
+            if self.pk:
+                existing = existing.exclude(pk=self.pk)
+            if existing.exists():
+                raise ValidationError("A gate pass already exists for this work order.")
         
         # Validate pickup person name if not customer
         if not self.picked_up_by_customer and not self.pickup_person_name:
@@ -186,9 +200,10 @@ class GatePass(models.Model):
         
         self.status = 'issued'
         self.issued_at = timezone.now()
+        self.updated_at = timezone.now()
         if user:
             self.authorized_by = user
-        self.save(update_fields=['status', 'issued_at', 'authorized_by'])
+        self.save(update_fields=['status', 'issued_at', 'authorized_by', 'updated_at'])
     
     def complete(self, user=None):
         """Mark gate pass as completed (vehicle picked up)"""
@@ -197,9 +212,10 @@ class GatePass(models.Model):
         
         self.status = 'completed'
         self.completed_at = timezone.now()
+        self.updated_at = timezone.now()
         if user:
             self.authorized_by = user
-        self.save(update_fields=['status', 'completed_at', 'authorized_by'])
+        self.save(update_fields=['status', 'completed_at', 'authorized_by', 'updated_at'])
     
     def cancel(self, user=None):
         """Cancel the gate pass"""
@@ -207,9 +223,10 @@ class GatePass(models.Model):
             raise ValidationError(f"Cannot cancel gate pass in {self.status} status.")
         
         self.status = 'cancelled'
+        self.updated_at = timezone.now()
         if user:
             self.authorized_by = user
-        self.save(update_fields=['status', 'authorized_by'])
+        self.save(update_fields=['status', 'authorized_by', 'updated_at'])
     
     @property
     def pickup_person_display(self):

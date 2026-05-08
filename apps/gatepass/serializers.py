@@ -102,15 +102,11 @@ class GatePassCreateSerializer(serializers.ModelSerializer):
         if value.status != 'closed':
             raise serializers.ValidationError("Gate pass can only be created for closed work orders.")
         
-        # Check for existing active gate pass
-        existing = GatePass.objects.filter(
-            work_order=value,
-            status__in=['pending', 'issued']
-        )
+        existing = GatePass.objects.filter(work_order=value).exclude(status='cancelled')
         if self.instance:
             existing = existing.exclude(pk=self.instance.pk)
         if existing.exists():
-            raise serializers.ValidationError("An active gate pass already exists for this work order.")
+            raise serializers.ValidationError("A gate pass already exists for this work order.")
         
         return value
     
@@ -120,6 +116,25 @@ class GatePassCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'pickup_person_name': 'Pickup person name is required when customer is not picking up.'
             })
+
+        work_order = data.get('work_order')
+        branch = data.get('branch')
+        vehicle = data.get('vehicle')
+        customer = data.get('customer')
+
+        if work_order:
+            if branch and work_order.branch_id != branch.id:
+                raise serializers.ValidationError({
+                    'branch': 'Gate pass branch must match the selected work order branch.'
+                })
+            if vehicle and work_order.vehicle_id != vehicle.id:
+                raise serializers.ValidationError({
+                    'vehicle': 'Gate pass vehicle must match the selected work order vehicle.'
+                })
+            if customer and work_order.customer_id != customer.id:
+                raise serializers.ValidationError({
+                    'customer': 'Gate pass customer must match the selected work order customer.'
+                })
         return data
     
     def create(self, validated_data):

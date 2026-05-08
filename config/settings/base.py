@@ -333,6 +333,7 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+SYSTEM_BACKUP_ASYNC = env.bool('SYSTEM_BACKUP_ASYNC', default=False)
 
 # QBO Inbound Sync Schedule — runs every 30 minutes
 # These are default schedules; admins can also override via django-celery-beat's DB scheduler.

@@ -19,6 +19,9 @@ import {
   FileText,
   Package,
   Car,
+  DollarSign,
+  RefreshCw,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -27,13 +30,16 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useDebounce } from "@/lib/hooks/useDebounce";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
-type FilterType = "all" | "unread";
+type FilterType = "all" | "unread" | "failed";
 
 export default function NotificationsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { hasPermission } = usePermissions();
+  const canManageNotifications = hasPermission("manage_notifications");
 
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
@@ -43,11 +49,13 @@ export default function NotificationsPage() {
     typeof window !== "undefined" && !!localStorage.getItem("access_token");
 
   const { data: notificationsData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["notifications", filter, debouncedSearch],
+    queryKey: ["notifications", filter, debouncedSearch, canManageNotifications],
     queryFn: ({ pageParam = 1 }) =>
       notificationsApi.list({
         page: pageParam,
         is_read: filter === "unread" ? false : undefined,
+        status: filter === "failed" ? "failed" : undefined,
+        all: canManageNotifications && filter === "failed" ? true : undefined,
       }),
     getNextPageParam: (lastPage, pages) => {
       return lastPage.next ? pages.length + 1 : undefined;
@@ -61,6 +69,13 @@ export default function NotificationsPage() {
     queryFn: () => notificationsApi.unreadCount(),
     enabled: hasAccessToken,
     refetchInterval: 30000,
+  });
+
+  const { data: adminStats } = useQuery({
+    queryKey: ["notifications", "admin-stats"],
+    queryFn: () => notificationsApi.adminStats(30),
+    enabled: hasAccessToken && canManageNotifications,
+    refetchInterval: 60000,
   });
 
   const markAsReadMutation = useMutation({
@@ -79,6 +94,25 @@ export default function NotificationsPage() {
       toast({
         title: "Success",
         description: "All notifications marked as read",
+      });
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: (id: number) => notificationsApi.resend(id),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast({
+        title: result.status === "success" ? "Notification retried" : "Retry failed",
+        description: result.message,
+        variant: result.status === "success" ? "default" : "destructive",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Retry failed",
+        description: "Could not retry this notification.",
+        variant: "destructive",
       });
     },
   });
@@ -111,6 +145,8 @@ export default function NotificationsPage() {
         return <Package className={iconClass} />;
       case "vehicle":
         return <Car className={iconClass} />;
+      case "estimate":
+        return <DollarSign className={iconClass} />;
       default:
         return <Bell className={iconClass} />;
     }
@@ -143,7 +179,7 @@ export default function NotificationsPage() {
         case "work_order":
           return `/workorders/${id}`;
         case "invoice":
-          return `/billing/${id}`;
+          return `/billing/invoices/${id}`;
         case "estimate":
           return `/billing/estimates/${id}`;
         case "customer":
@@ -161,6 +197,12 @@ export default function NotificationsPage() {
         case "part":
         case "inventory":
           return `/inventory/${id}`;
+        case "subscription":
+          return `/billing/subscriptions/${id}`;
+        case "roadside":
+        case "roadside_request":
+        case "roadsideassistancerequest":
+          return `/roadside/${id}`;
         default:
           return null;
       }
@@ -225,6 +267,30 @@ export default function NotificationsPage() {
         </div>
       </div>
 
+      {canManageNotifications && adminStats && (
+        <div className="rounded-lg border border-border bg-card p-3">
+          <div className="mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">System Health</h2>
+            <span className="text-xs text-muted-foreground">Last {adminStats.days} days</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+            {[
+              { label: "Total", value: adminStats.total },
+              { label: "Delivered", value: adminStats.delivered },
+              { label: "Pending", value: adminStats.pending },
+              { label: "Failed", value: adminStats.failed },
+              { label: "Success", value: `${adminStats.success_rate}%` },
+            ].map((item) => (
+              <div key={item.label} className="rounded-md border border-border bg-muted/40 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                <p className="text-lg font-semibold text-foreground">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Search & Filters */}
       <Card className="border-none shadow-sm bg-muted/50">
         <div className="p-3 space-y-3">
@@ -273,6 +339,21 @@ export default function NotificationsPage() {
                 </Badge>
               )}
             </Button>
+            {canManageNotifications && (
+              <Button
+                size="sm"
+                variant={filter === "failed" ? "default" : "outline"}
+                onClick={() => setFilter("failed")}
+                className="h-8"
+              >
+                Failed
+                {!!adminStats?.failed && (
+                  <Badge className="ml-2 bg-destructive px-1.5 py-0 text-[10px]">
+                    {adminStats.failed}
+                  </Badge>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </Card>
@@ -298,18 +379,18 @@ export default function NotificationsPage() {
                 )}
                 onClick={() => isClickable && handleNotificationClick(notification)}
               >
-                // Unread Dot
+                {/* Unread Dot */}
                 {isUnread && (
                   <div className="absolute left-1.5 top-5 w-2 h-2 rounded-full bg-primary dark:bg-orange-400" />
                 )}
 
                 <div className="flex items-start gap-3">
-                  // Avatar/Icon
+                  {/* Avatar/Icon */}
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                     {getTypeIcon(notification.notification_type)}
                   </div>
 
-                  // Content
+                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-foreground mb-0.5">
                       {notification.title}
@@ -318,7 +399,7 @@ export default function NotificationsPage() {
                       {notification.message}
                     </p>
 
-                    // Metadata
+                    {/* Metadata */}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         {getTypeIcon(notification.notification_type)}
@@ -331,8 +412,24 @@ export default function NotificationsPage() {
                     </div>
                   </div>
 
-                  // Actions
+                  {/* Actions */}
                   <div className="flex-shrink-0 flex items-center gap-1 transition-opacity">
+                    {canManageNotifications && notification.status === "failed" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          resendMutation.mutate(notification.id);
+                        }}
+                        className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        title="Retry failed notification"
+                        disabled={resendMutation.isPending}
+                      >
+                        <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                        Retry
+                      </Button>
+                    )}
                     {isUnread && (
                       <Button
                         variant="ghost"
@@ -353,7 +450,7 @@ export default function NotificationsPage() {
             );
           })}
 
-          // Load More
+          {/* Load More */}
           {hasNextPage && (
             <div className="flex justify-center pt-4">
               <Button
@@ -374,7 +471,7 @@ export default function NotificationsPage() {
               <Bell className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-card-foreground mb-1">
-              {debouncedSearch ? "No notifications found" : filter === "unread" ? "No unread notifications" : "No notifications yet"}
+              {debouncedSearch ? "No notifications found" : filter === "unread" ? "No unread notifications" : filter === "failed" ? "No failed notifications" : "No notifications yet"}
             </h3>
             <p className="text-sm text-muted-foreground max-w-sm">
               {debouncedSearch

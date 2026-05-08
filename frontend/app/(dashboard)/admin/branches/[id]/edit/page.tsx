@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { branchesApi, Branch } from "@/lib/api/branches";
+import { branchesApi } from "@/lib/api/branches";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +36,16 @@ const branchSchema = z.object({
 });
 
 type BranchFormData = z.infer<typeof branchSchema>;
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: Record<string, unknown> } })?.response?.data;
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  const fieldErrors = Object.values(data)
+    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .filter((value): value is string => typeof value === "string");
+  return fieldErrors.join(", ") || fallback;
+}
 
 export default function BranchEditPage() {
   const router = useRouter();
@@ -118,15 +127,10 @@ export default function BranchEditPage() {
       router.push(`/admin/branches/${branchId}`);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description:
-          error.response?.data?.detail ||
-          Object.values(error.response?.data || {})
-            .flat()
-            .join(", ") ||
-          "Failed to update branch",
+        description: getApiErrorMessage(error, "Failed to update branch"),
         variant: "destructive",
       });
     },
@@ -135,7 +139,7 @@ export default function BranchEditPage() {
   const onSubmit = async (data: BranchFormData) => {
     // Clean up empty strings - convert to null/undefined for optional fields
 
-    const cleanedData: any = { ...data };
+    const cleanedData: Partial<BranchFormData> = { ...data };
 
     // Convert empty strings to null for optional fields
     if (cleanedData.description === "") delete cleanedData.description;
@@ -158,7 +162,7 @@ export default function BranchEditPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 px-4 pt-4">
         <div className="flex items-center gap-4">
           <div className="h-9 w-48 bg-border rounded animate-pulse"></div>
         </div>
@@ -201,12 +205,12 @@ export default function BranchEditPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => router.back()}>
+            <Button variant="ghost" size="sm" className="h-8" onClick={() => router.back()}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Edit Branch</h1>
+              <h1 className="text-xl font-bold text-foreground">Edit Branch</h1>
               <p className="text-sm text-muted-foreground mt-1">{branch.name}</p>
             </div>
           </div>
@@ -215,10 +219,10 @@ export default function BranchEditPage() {
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card>
-            <CardHeader>
-              <CardTitle>Branch Information</CardTitle>
+            <CardHeader className="px-4 py-3">
+              <CardTitle className="text-sm">Branch Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 px-4 pb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">
@@ -357,11 +361,11 @@ export default function BranchEditPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 mt-6">
-            <Button type="button" variant="secondary" onClick={() => router.back()}>
+            <Button type="button" variant="secondary" size="sm" className="h-8" onClick={() => router.back()}>
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" size="sm" className="h-8" disabled={isSubmitting}>
               <Save className="w-4 h-4 mr-2" />
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
@@ -371,4 +375,3 @@ export default function BranchEditPage() {
     </PermissionGuard>
   );
 }
-

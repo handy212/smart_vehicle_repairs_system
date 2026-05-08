@@ -25,6 +25,25 @@ export interface SMSHistoryItem {
     error_message?: string;
 }
 
+export interface SMSTemplate {
+    id: number;
+    name: string;
+    sms_body: string;
+}
+
+export interface SMSStats {
+    sent_today: number;
+    scheduled: number;
+    failed_today: number;
+    total_sent: number;
+}
+
+export interface SMSBalance {
+    success: boolean;
+    balance: number;
+    currency?: string;
+}
+
 export interface BulkSendSMSResponse {
     message: string;
     results: Record<string, unknown>[];
@@ -68,18 +87,18 @@ const smsApi = {
     // Get Templates (SMS channel only)
     getTemplates: async () => {
         const response = await api.get('/notifications/templates/', { params: { channel: 'sms' } });
-        return response.data.results || response.data; // Handle pagination if present
+        return (response.data.results || response.data) as SMSTemplate[];
     },
 
     // Get SMS Stats
     getStats: async () => {
-        const response = await api.get('/notifications/sms-console/stats/');
+        const response = await api.get<SMSStats>('/notifications/sms-console/stats/');
         return response.data;
     },
 
     // Get SMS Balance
     getBalance: async () => {
-        const response = await api.get('/notifications/sms-console/balance/');
+        const response = await api.get<SMSBalance>('/notifications/sms-console/balance/');
         return response.data;
     }
 };

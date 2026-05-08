@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { useMutation } from '@tanstack/react-query';
 import smsApi from '@/services/sms';
 import { useToast } from '@/lib/hooks/useToast';
+import { getApiErrorMessage } from '@/lib/api/errors';
+import { isAxiosError } from 'axios';
 
 interface Message {
     role: 'user' | 'model';
@@ -49,7 +51,7 @@ export function AIAssistDialog({
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<React.ElementRef<typeof ScrollArea>>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Scroll to bottom when new messages arrive
@@ -82,12 +84,11 @@ export function AIAssistDialog({
                 { role: 'model', content: res.reply, suggestion: res.suggestion },
             ]);
         },
-        onError: (err: any) => {
-            const httpStatus = err?.response?.status;
-            const serverMsg = err?.response?.data?.error;
+        onError: (err: unknown) => {
+            const httpStatus = isAxiosError(err) ? err.response?.status : undefined;
             const description = httpStatus === 429
                 ? 'AI quota exceeded — please try again in a moment.'
-                : serverMsg || 'Failed to get AI response.';
+                : getApiErrorMessage(err, 'Failed to get AI response.');
             toast({ title: 'AI Error', description, variant: 'destructive' });
         },
     });
@@ -150,7 +151,7 @@ export function AIAssistDialog({
                 </DialogHeader>
 
                 {/* Messages area */}
-                <ScrollArea className="flex-1 min-h-0" ref={scrollRef as any}>
+                <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
                     <div className="px-4 py-4 space-y-4">
                         {messages.length === 0 && (
                             <div className="space-y-4 py-2">

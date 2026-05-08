@@ -2,6 +2,7 @@ import apiClient from "./client";
 import { Customer } from "./customers";
 import { Vehicle } from "./vehicles";
 import { WorkOrder } from "./workorders";
+import { AxiosError } from "axios";
 
 export interface GatePass {
   id: number;
@@ -119,8 +120,8 @@ export const gatepassApi = {
       const response = await apiClient.get(`/gatepass/gate-passes/from-workorder/${workOrderId}/`);
       return response.data;
 
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
         return null;
       }
       throw error;

@@ -2,11 +2,10 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, SystemBackup } from "@/lib/api/admin";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Download, RotateCcw, Trash2, Database, FileArchive, HardDrive, RefreshCw } from "lucide-react";
+import { Plus, Download, Trash2, Database, FileArchive, HardDrive, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,14 +14,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Input } from "@/components/ui/input";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
-import { useCurrency } from "@/lib/hooks/useCurrency";
+type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "secondary" | "outline";
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  const data = (error as { response?: { data?: { detail?: string; error?: string } } })?.response?.data;
+  return data?.detail || data?.error || fallback;
+}
+
 export default function BackupsPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -38,24 +39,44 @@ export default function BackupsPage() {
         backup_type: backupTypeFilter !== "all" ? backupTypeFilter : undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
       }),
+    refetchInterval: (query) => {
+      const rows = query.state.data?.results || [];
+      return rows.some((backup) => backup.status === "pending" || backup.status === "in_progress") ? 5000 : false;
+    },
   });
 
   const backups = backupsData?.results || [];
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const totalBackups = backupsData?.count || 0;
+
+  const formatBytes = (bytes?: number | null) => {
+    if (!bytes) return "-";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let size = bytes;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex += 1;
+    }
+    return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+  };
 
   const createMutation = useMutation({
     mutationFn: (data: { backup_type: string; notes?: string }) => adminApi.backups.create(data),
-    onSuccess: () => {
+    onSuccess: (backup) => {
       queryClient.invalidateQueries({ queryKey: ["backups"] });
-      toast({ title: "Success", description: "Backup process started successfully" });
+      toast({
+        title: backup.status === "completed" ? "Backup ready" : "Backup started",
+        description:
+          backup.status === "completed"
+            ? "Backup file is ready to download"
+            : "Backup generation is queued. Keep a Celery worker running for async backups.",
+      });
       setIsCreateDialogOpen(false);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to create backup",
+        description: getApiErrorMessage(error, "Failed to create backup"),
         variant: "destructive",
       });
     },
@@ -68,51 +89,39 @@ export default function BackupsPage() {
       toast({ title: "Success", description: "Backup deleted successfully" });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete backup",
+        description: getApiErrorMessage(error, "Failed to delete backup"),
         variant: "destructive",
       });
     },
   });
 
   const downloadMutation = useMutation({
-    mutationFn: (id: number) => adminApi.backups.download(id),
-    onSuccess: (data) => {
-      // In a real implementation, this would trigger a file download
-      // Simulating download/toast
-      if (data.file_path) {
-        window.open(data.file_path, '_blank');
-      }
+    mutationFn: async (backup: SystemBackup) => {
+      const blob = await adminApi.backups.download(backup.id);
+      return { backup, blob };
+    },
+    onSuccess: ({ backup, blob }) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${backup.backup_type}-backup-${backup.id}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
       toast({
         title: "Download Started",
-        description: `Backup file downloading...`,
+        description: "Backup file downloading...",
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to download backup",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const restoreMutation = useMutation({
-    mutationFn: (id: number) => adminApi.backups.restore(id),
-    onSuccess: () => {
-      toast({
-        title: "Restore Initiated",
-        description: "The system is being restored. You may be logged out.",
-      });
-    },
-
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to restore backup",
+        description: getApiErrorMessage(error, "Failed to download backup"),
         variant: "destructive",
       });
     },
@@ -121,16 +130,6 @@ export default function BackupsPage() {
   const handleDelete = (backup: SystemBackup) => {
     if (confirm(`Are you sure you want to delete backup "${backup.backup_type}" from ${format(new Date(backup.started_at), "MMM dd, yyyy")}?`)) {
       deleteMutation.mutate(backup.id);
-    }
-  };
-
-  const handleRestore = (backup: SystemBackup) => {
-    if (
-      confirm(
-        `Are you sure you want to restore from this backup? This will overwrite current data. This action cannot be undone.`
-      )
-    ) {
-      restoreMutation.mutate(backup.id);
     }
   };
 
@@ -147,14 +146,16 @@ export default function BackupsPage() {
     }
   };
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): BadgeVariant => {
     switch (status) {
       case "completed":
         return "success";
       case "in_progress":
         return "secondary";
       case "failed":
-        return "destructive";
+        return "danger";
+      case "pending":
+        return "warning";
       default:
         return "outline";
     }
@@ -171,7 +172,7 @@ export default function BackupsPage() {
           <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </Button>
-          <PermissionGuard permission="manage_settings">
+          <PermissionGuard permission="manage_backups">
             <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-white h-8 text-xs">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Create Backup
@@ -272,13 +273,13 @@ export default function BackupsPage() {
                         </TableCell>
                         <TableCell className="px-4 py-2.5">
 
-                          <Badge variant={getStatusVariant(backup.status) as any} className="text-[10px] h-5 px-2 rounded-full font-medium">
+                          <Badge variant={getStatusVariant(backup.status)} className="text-[10px] h-5 px-2 rounded-full font-medium">
                             {backup.status.replace("_", " ")}
                           </Badge>
                         </TableCell>
                         <TableCell className="px-4 py-2.5 text-xs font-mono text-muted-foreground">
                           {backup.file_size_display || backup.file_size
-                            ? backup.file_size_display || `{formatCurrency((backup.file_size! / 1024 / 1024))} MB`
+                            ? backup.file_size_display || formatBytes(backup.file_size)
                             : "-"}
                         </TableCell>
                         <TableCell className="px-4 py-2.5 text-xs text-muted-foreground">
@@ -296,11 +297,11 @@ export default function BackupsPage() {
                           <div className="flex items-center justify-end gap-1 transition-opacity">
                             {backup.status === "completed" && (
                               <>
-                                <PermissionGuard permission="manage_settings">
+                                <PermissionGuard permission="manage_backups">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => downloadMutation.mutate(backup.id)}
+                                    onClick={() => downloadMutation.mutate(backup)}
                                     disabled={downloadMutation.isPending}
                                     title="Download"
                                     className="h-7 w-7 p-0"
@@ -308,21 +309,9 @@ export default function BackupsPage() {
                                     <Download className="w-3.5 h-3.5 text-primary" />
                                   </Button>
                                 </PermissionGuard>
-                                <PermissionGuard permission="manage_settings">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleRestore(backup)}
-                                    disabled={restoreMutation.isPending}
-                                    title="Restore"
-                                    className="h-7 w-7 p-0"
-                                  >
-                                    <RotateCcw className="w-3.5 h-3.5 text-primary" />
-                                  </Button>
-                                </PermissionGuard>
                               </>
                             )}
-                            <PermissionGuard permission="manage_settings">
+                            <PermissionGuard permission="manage_backups">
                               <Button
                                 variant="ghost"
                                 size="sm"

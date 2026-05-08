@@ -9,8 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Mail, MessageSquare, Bell, Smartphone, Volume2, Calendar, Wrench, Receipt, CreditCard, FileText, Package, Car } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
+import { getApiErrorMessage } from "@/lib/api/errors";
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
 
 export default function NotificationPreferencesPage() {
   const { toast } = useToast();
@@ -22,36 +30,115 @@ export default function NotificationPreferencesPage() {
   });
 
   const [formData, setFormData] = useState<Partial<NotificationPreference>>({});
-
-  // Initialize form data when preferences load
-  useEffect(() => {
-    if (preferences) {
-      setFormData(preferences);
-    }
-  }, [preferences]);
+  const [pushStatus, setPushStatus] = useState(
+    typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported"
+  );
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<NotificationPreference>) =>
       notificationsApi.updatePreferences(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
+      setFormData({});
       toast({
         title: "Success",
         description: "Preferences updated successfully",
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update preferences",
+        description: getApiErrorMessage(error, "Failed to update preferences"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const pushSubscribeMutation = useMutation({
+    mutationFn: async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        throw new Error("Browser push is not supported on this device.");
+      }
+
+      const publicKey = await notificationsApi.pushSubscriptions.publicKey();
+      if (!publicKey.configured || !publicKey.public_key) {
+        throw new Error("Push notifications are not configured on the server.");
+      }
+
+      const permission = await Notification.requestPermission();
+      setPushStatus(permission);
+      if (permission !== "granted") {
+        throw new Error("Push notification permission was not granted.");
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+      const subscription = existing || await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey.public_key),
+      });
+      const payload = subscription.toJSON();
+
+      if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) {
+        throw new Error("Browser returned an incomplete push subscription.");
+      }
+
+      await notificationsApi.pushSubscriptions.subscribe({
+        endpoint: payload.endpoint,
+        keys: {
+          p256dh: payload.keys.p256dh,
+          auth: payload.keys.auth,
+        },
+        device_name: navigator.userAgent,
+      });
+      return payload.endpoint;
+    },
+    onSuccess: () => {
+      handleChange("push_enabled", true);
+      toast({ title: "Push enabled", description: "This browser is subscribed to push notifications." });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Push setup failed",
+        description: error instanceof Error ? error.message : getApiErrorMessage(error, "Failed to enable push notifications."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const pushUnsubscribeMutation = useMutation({
+    mutationFn: async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        return;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        return;
+      }
+      const endpoint = subscription.endpoint;
+      await subscription.unsubscribe();
+      await notificationsApi.pushSubscriptions.unsubscribe(endpoint);
+    },
+    onSuccess: () => {
+      handleChange("push_enabled", false);
+      toast({ title: "Push disabled", description: "This browser was unsubscribed from push notifications." });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Push setup failed",
+        description: getApiErrorMessage(error, "Failed to disable push notifications."),
         variant: "destructive",
       });
     },
   });
 
 
-  const handleChange = (field: keyof NotificationPreference, value: any) => {
+  const handleChange = (
+    field: keyof NotificationPreference,
+    value: NotificationPreference[keyof NotificationPreference]
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -163,6 +250,70 @@ export default function NotificationPreferencesPage() {
                 onCheckedChange={(checked) => handleChange("push_enabled", checked === true)}
               />
             </div>
+            {mergedData.push_enabled && (
+              <div className="ml-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Browser Push</p>
+                  <p className="text-xs text-muted-foreground">
+                    Permission: {pushStatus}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={() => pushSubscribeMutation.mutate()}
+                    disabled={pushSubscribeMutation.isPending}
+                  >
+                    Enable Browser
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8"
+                    onClick={() => pushUnsubscribeMutation.mutate()}
+                    disabled={pushUnsubscribeMutation.isPending}
+                  >
+                    Disable
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
+              <div className="flex items-center space-x-3">
+                <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <Label htmlFor="whatsapp_enabled" className="text-sm font-medium text-foreground cursor-pointer">
+                    WhatsApp API
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Receive automated WhatsApp notifications</p>
+                </div>
+              </div>
+              <Checkbox
+                id="whatsapp_enabled"
+                checked={mergedData.whatsapp_enabled ?? true}
+                onCheckedChange={(checked) => handleChange("whatsapp_enabled", checked === true)}
+              />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
+              <div className="flex items-center space-x-3">
+                <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <Label htmlFor="whatsapp_manual_enabled" className="text-sm font-medium text-foreground cursor-pointer">
+                    Manual WhatsApp
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Allow staff-prepared WhatsApp messages</p>
+                </div>
+              </div>
+              <Checkbox
+                id="whatsapp_manual_enabled"
+                checked={mergedData.whatsapp_manual_enabled ?? true}
+                onCheckedChange={(checked) => handleChange("whatsapp_manual_enabled", checked === true)}
+              />
+            </div>
             <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
               <div className="flex items-center space-x-3">
                 <Bell className="w-5 h-5 text-muted-foreground" />
@@ -195,6 +346,49 @@ export default function NotificationPreferencesPage() {
                 onCheckedChange={(checked) => handleChange("sound_enabled", checked === true)}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Digest */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Digest</CardTitle>
+            <CardDescription>
+              Receive a summary instead of checking every notification individually.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted transition-colors">
+              <Label htmlFor="digest_enabled" className="text-sm font-medium text-foreground cursor-pointer">
+                Enable Digest
+              </Label>
+              <Checkbox
+                id="digest_enabled"
+                checked={mergedData.digest_enabled ?? false}
+                onCheckedChange={(checked) => handleChange("digest_enabled", checked === true)}
+              />
+            </div>
+            {mergedData.digest_enabled && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {[
+                  { value: "daily", label: "Daily" },
+                  { value: "weekly", label: "Weekly" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleChange("digest_frequency", option.value)}
+                    className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                      (mergedData.digest_frequency || "daily") === option.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -250,7 +444,7 @@ export default function NotificationPreferencesPage() {
           <CardHeader>
             <CardTitle>Quiet Hours</CardTitle>
             <CardDescription>
-              Set times when you don't want to receive notifications
+              Set times when you don&apos;t want to receive notifications
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -301,4 +495,3 @@ export default function NotificationPreferencesPage() {
     </div>
   );
 }
-

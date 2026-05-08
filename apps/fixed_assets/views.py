@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from apps.accounts.permissions import IsModuleEnabled
+from apps.accounts.permissions import HasPermission, IsModuleEnabled
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count, Q, Avg, F
 from django.utils import timezone
@@ -34,6 +34,11 @@ class AssetCategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'active']:
+            return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('view_assets')]
+        return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('manage_assets')]
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -66,6 +71,19 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
         'net_book_value', 'accumulated_depreciation', 'created_at'
     ]
     ordering = ['-created_at']
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'active', 'dashboard_stats', 'fully_depreciated', 'valuation_report']:
+            return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('view_assets')]
+        if self.action == 'create':
+            return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('create_assets')]
+        if self.action in ['update', 'partial_update', 'calculate_depreciation', 'post_depreciation']:
+            return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('edit_assets')]
+        if self.action == 'destroy':
+            return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('delete_assets')]
+        if self.action == 'run_depreciation':
+            return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('run_depreciation')]
+        return [IsAuthenticated(), IsModuleEnabled('fixed-assets')]
     
     def get_queryset(self):
         """Filter assets by user's accessible branches"""
@@ -338,6 +356,9 @@ class DepreciationScheduleViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_fields = ['asset', 'is_posted']
     ordering_fields = ['period_start_date', 'created_at']
     ordering = ['-period_start_date']
+
+    def get_permissions(self):
+        return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('view_assets')]
     
     def get_queryset(self):
         """Filter by user's accessible branches"""
@@ -371,6 +392,11 @@ class AssetMaintenanceViewSet(viewsets.ModelViewSet):
     filterset_fields = ['asset', 'maintenance_type']
     ordering_fields = ['maintenance_date', 'created_at']
     ordering = ['-maintenance_date']
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'upcoming', 'overdue']:
+            return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('view_asset_maintenance')]
+        return [IsAuthenticated(), IsModuleEnabled('fixed-assets'), HasPermission('create_asset_maintenance')]
     
     def get_queryset(self):
         """Filter by user's accessible branches"""
