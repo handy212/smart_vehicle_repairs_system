@@ -12,8 +12,7 @@
   }
 
   @page {
-    margin: 1cm;
-    /* Reduced from 1.5cm for more space */
+    margin: 6mm;
     size: A4 portrait;
   }
 
@@ -23,9 +22,7 @@
     padding: 0 !important;
     font-family: 'Arial', 'Helvetica', sans-serif !important;
     font-size: 8pt !important;
-    /* Reduced from 10pt */
     line-height: 1.25 !important;
-    /* Tighter line spacing */
     color: #000 !important;
   }
 
@@ -62,36 +59,43 @@
   /* ==================== HEADERS & FOOTERS ==================== */
   .print-header {
     display: block !important;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
     border-bottom: 2px solid #000;
+  }
+
+  .print-container > .print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
   }
 
   .print-footer {
     display: block !important;
-    margin-top: 20px;
-    padding-top: 10px;
+    margin-top: 10px;
+    padding-top: 6px;
     border-top: 1px solid #666;
-    font-size: 9pt;
+    font-size: 8pt;
     color: #666;
     text-align: center;
   }
 
   .print-header-logo {
-    max-height: 60px;
-    max-width: 200px;
+    max-height: 40px;
+    max-width: 120px;
   }
 
   .print-header-title {
-    font-size: 24pt !important;
+    font-size: 16pt !important;
     font-weight: bold !important;
     margin: 0 !important;
     color: #000 !important;
   }
 
   .print-header-subtitle {
-    font-size: 14pt !important;
-    margin: 5px 0 !important;
+    font-size: 10pt !important;
+    margin: 3px 0 !important;
     color: #333 !important;
   }
 
@@ -100,18 +104,16 @@
     width: 100% !important;
     border-collapse: collapse !important;
     margin: 8px 0 !important;
-    /* Reduced from 10px */
-    page-break-inside: avoid !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   th,
   td {
-    border: 1px solid #000 !important;
-    padding: 4px 6px !important;
-    /* Reduced from 6px 8px */
+    border: 0.5px solid #9ca3af !important;
+    padding: 2px 4px !important;
     text-align: left !important;
-    font-size: 9pt !important;
-    /* Reduced from 10pt */
+    font-size: 8pt !important;
   }
 
   thead {
@@ -130,6 +132,7 @@
 
   tr {
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   /* Zebra striping for better readability */
@@ -169,19 +172,21 @@
 
   .page-break-avoid {
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   /* ==================== SECTIONS ==================== */
   .print-section {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .print-section-title {
-    font-size: 14pt !important;
+    font-size: 10pt !important;
     font-weight: bold !important;
-    margin-bottom: 10px !important;
-    padding-bottom: 5px !important;
+    margin-bottom: 6px !important;
+    padding-bottom: 3px !important;
     border-bottom: 1px solid #ccc !important;
     color: #000 !important;
   }
@@ -192,7 +197,7 @@
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) rotate(-45deg) !important;
-    font-size: 120pt !important;
+    font-size: 90pt !important;
     font-weight: bold !important;
     opacity: 0.1 !important;
     z-index: 9999 !important;
@@ -232,7 +237,7 @@
   .financial-summary {
     background-color: #f0f0f0 !important;
     font-weight: bold !important;
-    font-size: 12pt !important;
+    font-size: 9pt !important;
   }
 
   /* ==================== LINKS & COLORS ==================== */
@@ -242,8 +247,7 @@
   }
 
   a[href]:after {
-    content: " (" attr(href) ")" !important;
-    font-size: 9pt !important;
+    content: "" !important;
   }
 
   /* ==================== RESPONSIVE PRINT ==================== */
@@ -256,9 +260,9 @@
   .status-badge {
     display: inline-block !important;
     padding: 2px 8px !important;
-    border: 1px solid #000 !important;
+    border: 0.5px solid #9ca3af !important;
     border-radius: 3px !important;
-    font-size: 9pt !important;
+    font-size: 8pt !important;
     font-weight: bold !important;
     text-transform: uppercase !important;
   }

@@ -154,7 +154,7 @@ export default function AccountingDashboardPage() {
                         <Database className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
                         {isSyncing ? "Syncing..." : "Sync from QuickBooks"}
                     </Button>
-                    <Button size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={handleExport}>
+                    <Button size="sm" className={isPerfex ? "h-8 text-xs" : "h-9"} onClick={() => handleExport()}>
                         <Download className="w-4 h-4 mr-2" />
                         Export Report
                     </Button>

@@ -17,7 +17,7 @@ import { useState, useRef, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -264,7 +264,7 @@ export default function EstimatesPage() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
     if (!data?.results || data.results.length === 0) {
       toast({
         title: "No Data",
@@ -274,7 +274,7 @@ export default function EstimatesPage() {
       return;
     }
 
-    exportToCSV(
+    (format === "pdf" ? exportToPDF : exportToCSV)(
       data.results,
       "estimates",
       [
@@ -401,7 +401,18 @@ export default function EstimatesPage() {
                         className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted  disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         <Download className="w-4 h-4" />
-                        Export CSV
+                        Export Excel
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleExport("pdf");
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={!data?.results || data.results.length === 0}
+                        className="w-full text-left px-4 py-2 text-sm text-card-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export PDF
                       </button>
                     </PermissionGuard>
                   </div>
@@ -940,4 +951,3 @@ export default function EstimatesPage() {
     </div>
   );
 }
-

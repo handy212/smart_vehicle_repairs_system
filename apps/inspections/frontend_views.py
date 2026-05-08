@@ -356,6 +356,7 @@ def inspection_print(request, pk):
 def inspection_pdf(request, pk):
     """Generate PDF for inspection"""
     try:
+        from django.conf import settings
         from weasyprint import HTML
         from django.template.loader import render_to_string
         
@@ -389,7 +390,8 @@ def inspection_pdf(request, pk):
         html_string = render_to_string('inspections/inspection_print_clean.html', context)
         
         # Generate PDF
-        pdf = HTML(string=html_string).write_pdf()
+        base_url = getattr(settings, 'INTERNAL_API_URL', 'http://localhost:8000')
+        pdf = HTML(string=html_string, base_url=base_url).write_pdf()
         
         # Return PDF response
         response = HttpResponse(pdf, content_type='application/pdf')

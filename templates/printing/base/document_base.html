@@ -8,8 +8,6 @@
     {% if base_url %}<base href="{{ base_url }}/" />{% endif %}
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
         * {
             margin: 0;
             padding: 0;
@@ -17,9 +15,9 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            font-size: 8pt;
-            line-height: 1.25;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 7.5pt;
+            line-height: 1.2;
             color: #000;
             background: #e5e7eb;
         }
@@ -28,8 +26,8 @@
         .a4-sheet {
             width: 210mm;
             min-height: 297mm;
-            margin: 20px auto;
-            padding: 15mm;
+            margin: 12px auto;
+            padding: 8mm;
             background: #fff;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
@@ -50,12 +48,11 @@
         /* Page Configuration */
         @page {
             size: {% block page_size %}A4{% endblock %};
-            margin: 5mm;
-            /* Zero margins as requested */
+            margin: 6mm;
 
             @bottom-center {
                 content: "Page " counter(page) " of " counter(pages) " | " attr(data-company-name);
-                font-family: 'Inter', sans-serif;
+                font-family: Arial, Helvetica, sans-serif;
                 font-size: 7pt;
                 color: #6b7280;
             }
@@ -71,15 +68,15 @@
         }
 
         .mb-4 {
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .mb-6 {
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .mb-8 {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .mt-1 {
@@ -91,15 +88,15 @@
         }
 
         .mt-12 {
-            margin-top: 2rem;
+            margin-top: 1.25rem;
         }
 
         .mt-4 {
-            margin-top: 0.75rem;
+            margin-top: 0.5rem;
         }
 
         .mt-8 {
-            margin-top: 1.5rem;
+            margin-top: 1rem;
         }
 
         /* Font Sizes (Scaled down) */
@@ -280,20 +277,20 @@
         }
 
         .p-4 {
-            padding: 0.75rem;
+            padding: 0.5rem;
         }
 
         .pl-4 {
-            padding-left: 0.75rem;
+            padding-left: 0.5rem;
         }
 
         .pr-4 {
-            padding-right: 0.75rem;
+            padding-right: 0.5rem;
         }
 
         .py-4 {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
         }
 
         .rounded {
@@ -424,7 +421,7 @@
         }
 
         .space-y-4>*+* {
-            margin-top: 1rem;
+            margin-top: 0.6rem;
         }
 
         .gap-1 {
@@ -440,17 +437,17 @@
         }
 
         .gap-4 {
-            gap: 1rem;
+            gap: 0.75rem;
         }
 
         .gap-6 {
-            gap: 1.5rem;
+            gap: 0.9rem;
         }
 
         .grid-2-col {
             display: flex;
             justify-content: space-between;
-            gap: 15px;
+            gap: 10px;
         }
 
         .grid-3-col {
@@ -474,32 +471,31 @@
         /* Header Layout */
         .header-container {
             border-bottom: 2px solid #000;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            /* Align to top */
+            gap: 12px;
         }
 
         .header-left {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
-            flex: 0 0 60%;
-            /* Fixed width for left section */
+            gap: 8px;
+            flex: 1 1 auto;
+            min-width: 0;
         }
 
         .company-details {
             flex: 1;
-            margin-left: 20px;
-            /* Push text right to give logo more room */
+            min-width: 0;
         }
 
         .header-right {
             text-align: right;
             flex-shrink: 0;
-            /* Prevent right side from shrinking */
+            max-width: 38%;
         }
 
         .logo-placeholder {
@@ -516,8 +512,8 @@
         }
 
         .logo-img {
-            max-height: 40px;
-            max-width: 80px;
+            max-height: 34px;
+            max-width: 88px;
             object-fit: contain;
             flex-shrink: 0;
         }
@@ -527,16 +523,15 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-            padding-left: 15px;
-            padding-right: 15px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            padding-left: 8px;
+            padding-right: 8px;
             border-bottom: 1px solid #e5e7eb;
         }
 
-        /* Content Wrapper - Add padding since page margin is 0 */
         .content-wrapper {
-            padding: 0 15px 15px 15px;
+            padding: 0 8px 8px 8px;
         }
 
         /* Components */
@@ -544,27 +539,29 @@
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
+            page-break-inside: auto;
+            break-inside: auto;
         }
 
         .table th,
         .data-table th {
             background-color: #f3f4f6;
             text-align: left;
-            padding: 3px 5px;
+            padding: 2px 4px;
             font-weight: 600;
             color: #000;
-            font-size: 8pt;
-            border: 1px solid #000;
+            font-size: 7.5pt;
+            border: 0.5px solid #9ca3af;
         }
 
         .table td,
         .data-table td {
-            padding: 3px 5px;
-            border: 1px solid #000;
+            padding: 2px 4px;
+            border: 0.5px solid #9ca3af;
             vertical-align: top;
             color: #000;
-            font-size: 8pt;
+            font-size: 7.5pt;
         }
 
         .table .row-notes,
@@ -576,9 +573,11 @@
         }
 
         .info-card {
-            border: 1px solid #e5e7eb;
+            border: 1px solid #d1d5db;
             border-radius: 4px;
-            padding: 6px;
+            padding: 5px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .info-item {
@@ -599,18 +598,20 @@
         /* Financial Summary - Right Aligned */
         .financial-summary {
             float: right;
-            max-width: 350px;
-            min-width: 300px;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            max-width: 320px;
+            min-width: 260px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .summary-item {
             display: flex;
             justify-content: space-between;
-            padding: 4px 8px;
+            padding: 3px 6px;
             border-bottom: 1px solid #e5e7eb;
-            font-size: 8pt;
+            font-size: 7.5pt;
         }
 
         .summary-item.subtotal,
@@ -619,7 +620,7 @@
             font-size: 9pt;
             border-top: 2px solid #000;
             border-bottom: 2px solid #000;
-            padding: 6px 8px;
+            padding: 4px 6px;
         }
 
         .summary-item.total {
@@ -668,6 +669,20 @@
             .page-break-avoid {
                 page-break-inside: avoid;
             }
+
+            thead {
+                display: table-header-group;
+            }
+
+            tfoot {
+                display: table-footer-group;
+            }
+
+            tr,
+            .avoid-break {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
         }
     </style>
 
@@ -684,9 +699,9 @@
 
 <body data-company-name="{% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %}">
     {% if show_print_controls %}
-    <div class="no-print" style="position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;">
-        <button onclick="window.print()" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">Print</button>
-        <button onclick="window.close()" style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;">Close</button>
+    <div class="no-print" style="position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:6px;">
+        <button onclick="window.print()" style="padding:6px 10px;background:#2563eb;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Print</button>
+        <button onclick="window.close()" style="padding:6px 10px;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Close</button>
     </div>
     {% endif %}
     <div class="{% if show_print_controls %}a4-sheet{% endif %}">
@@ -726,7 +741,7 @@
         </div>
 
         <!-- Right: Tax ID & Branch/Reg Info (Replacing Doc Name) -->
-        <div class="text-right text-xs text-gray-500">
+        <div class="header-right text-right text-xs text-gray-500">
             {% if company_tax_id %}
             <div>Tax ID: <span class="font-semibold text-gray-900">{{ company_tax_id }}</span></div>
             {% endif %}
@@ -762,7 +777,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="border-t mt-4 pt-2 text-center text-gray-500 text-xs" style="padding: 10px 15px;">
+    <div class="border-t mt-4 pt-2 text-center text-gray-500 text-xs" style="padding: 6px 8px;">
         {% if company_name %}{{ company_name }}{% elif branch %}{{ branch.name }}{% else %}Smart Vehicle Repairs{% endif %} | Generated on {% now "F d, Y" %}
     </div>
     </div>

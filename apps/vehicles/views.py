@@ -763,10 +763,9 @@ class VehicleViewSet(viewsets.ModelViewSet):
             'message': 'License plate is available'
         })
     
-    @action(detail=False, methods=['post'])
-    def import_csv(self, request):
-        """Import vehicles from CSV file"""
-        import csv
+    def _handle_vehicle_excel_import(self, request):
+        """Import vehicles from an Excel workbook."""
+        import openpyxl
         from django.db import transaction
         from apps.accounts.admin_views import log_audit
         from apps.customers.models import Customer
@@ -774,29 +773,45 @@ class VehicleViewSet(viewsets.ModelViewSet):
         if 'file' not in request.FILES:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
         
-        csv_file = request.FILES['file']
-        filename = csv_file.name
+        import_file = request.FILES['file']
+        filename = import_file.name
+
+        if not filename.lower().endswith('.xlsx'):
+            return Response({
+                'error': 'Vehicle import requires a proper Excel workbook (.xlsx). Download the template and upload that format.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             imported_count = 0
             skipped_count = 0
             errors = []
             
-            # Read CSV file
-            decoded_file = csv_file.read().decode('utf-8').splitlines()
-            reader = csv.DictReader(decoded_file)
-            
-            # Required headers
+            workbook = openpyxl.load_workbook(import_file, read_only=True, data_only=True)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(values_only=True)
+            raw_headers = next(rows, None)
+            if not raw_headers:
+                return Response({'error': 'Excel file is empty'}, status=status.HTTP_400_BAD_REQUEST)
+
+            headers = [str(header or '').strip().lower() for header in raw_headers]
             required_headers = ['vin', 'make', 'model', 'year', 'owner']
-            
-            # Check if required headers exist
-            if not all(header in reader.fieldnames for header in required_headers):
+
+            if not all(header in headers for header in required_headers):
                 return Response({
-                    'error': f'CSV file must contain these columns: {", ".join(required_headers)}'
+                    'error': f'Excel file must contain these columns: {", ".join(required_headers)}'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Process each row
-            for row_num, row in enumerate(reader, start=2):
+
+            def clean_value(value):
+                return '' if value is None else str(value).strip()
+
+            for row_num, values in enumerate(rows, start=2):
+                row = {
+                    headers[index]: clean_value(value)
+                    for index, value in enumerate(values)
+                    if index < len(headers) and headers[index]
+                }
+                if not any(row.values()):
+                    continue
                 try:
                     vin = row.get('vin', '').strip().upper()
                     make = row.get('make', '').strip()
@@ -853,7 +868,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 user=request.user,
                 action='import',
                 model_name='Vehicle',
-                object_repr=f'CSV Import: {filename}',
+                object_repr=f'Excel Import: {filename}',
                 changes={
                     'imported': imported_count,
                     'skipped': skipped_count,
@@ -875,7 +890,7 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 user=request.user,
                 action='import',
                 model_name='Vehicle',
-                object_repr=f'CSV Import Failed: {filename}',
+                object_repr=f'Excel Import Failed: {filename}',
                 changes={
                     'error': str(e),
                     'filename': filename,
@@ -883,6 +898,16 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 request=request
             )
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def import_excel(self, request):
+        """Import vehicles from an Excel workbook."""
+        return self._handle_vehicle_excel_import(request)
+
+    @action(detail=False, methods=['post'])
+    def import_csv(self, request):
+        """Compatibility route for old clients; only Excel is accepted now."""
+        return self._handle_vehicle_excel_import(request)
 
 
 class VehicleMileageHistoryViewSet(viewsets.ModelViewSet):

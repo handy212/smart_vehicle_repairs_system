@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils/cn";
+import type { LucideIcon } from "lucide-react";
 import {
     User,
     Users,
@@ -8,6 +9,7 @@ import {
     CreditCard,
     Receipt,
     FileBarChart,
+    Calendar,
     Car,
     Wrench,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -26,8 +28,7 @@ import { Button } from "@/components/ui/button";
 interface SidebarItem {
     id: string;
     label: string;
-
-    icon: any;
+    icon: LucideIcon;
     count?: number;
 }
 
@@ -50,6 +51,7 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
         { id: "credit-notes", label: "Credit Notes", icon: FileText, count: counts.credit_notes },
         { id: "contracts", label: "Contracts", icon: FileText },
         { id: "subscriptions", label: "Subscriptions", icon: Mail, count: counts.subscriptions },
+        { id: "appointments", label: "Appointments", icon: Calendar, count: counts.appointments },
         { id: "vehicles", label: "Vehicles", icon: Car, count: counts.vehicles },
         { id: "workorders", label: "Work Orders", icon: Wrench, count: counts.work_orders },
         { id: "reminders", label: "Reminders", icon: Bell, count: counts.reminders },

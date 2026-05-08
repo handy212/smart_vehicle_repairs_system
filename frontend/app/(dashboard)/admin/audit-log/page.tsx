@@ -123,7 +123,7 @@ export default function AuditLogPage() {
     },
   });
 
-  const handleDownload = async (format: 'csv' | 'json') => {
+  const handleDownload = async (format: 'xlsx' | 'pdf' | 'json') => {
     setIsDownloading(true);
     try {
       const blob = await adminApi.auditLogs.download({
@@ -240,12 +240,22 @@ export default function AuditLogPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDownload('csv')}
+                  onClick={() => handleDownload('xlsx')}
                   disabled={isDownloading}
                   className="h-8 text-xs"
                 >
                   <Download className="w-3.5 h-3.5 mr-1.5" />
-                  Download CSV
+                  Download Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload('pdf')}
+                  disabled={isDownloading}
+                  className="h-8 text-xs"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Download PDF
                 </Button>
                 <Button
                   variant="outline"

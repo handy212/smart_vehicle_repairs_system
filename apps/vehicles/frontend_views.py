@@ -611,6 +611,7 @@ def export_vehicles_pdf(request, vehicles):
     """Export vehicles to PDF format"""
     try:
         import weasyprint
+        from django.conf import settings
     except Exception as e:
         # Catch any exception during import (ImportError, NameError, etc.)
         messages.error(request, f"PDF generation is not available: {str(e)}")
@@ -629,7 +630,8 @@ def export_vehicles_pdf(request, vehicles):
     
     try:
         # Use weasyprint to generate PDF
-        weasyprint.HTML(string=html_content).write_pdf(response)
+        base_url = getattr(settings, 'INTERNAL_API_URL', 'http://localhost:8000')
+        weasyprint.HTML(string=html_content, base_url=base_url).write_pdf(response)
     except Exception as e:
         messages.error(request, f"Error generating PDF: {str(e)}")
         return redirect('vehicles:vehicle-list')

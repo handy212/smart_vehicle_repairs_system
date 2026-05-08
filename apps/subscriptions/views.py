@@ -394,6 +394,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription = self.get_object()
         
         try:
+            from django.conf import settings
             from weasyprint import HTML
             
             context = {
@@ -405,7 +406,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             html_string = render_to_string('subscriptions/membership_card.html', context, request=request)
             
             # Generate PDF
-            pdf = HTML(string=html_string).write_pdf()
+            base_url = getattr(settings, 'INTERNAL_API_URL', 'http://localhost:8000')
+            pdf = HTML(string=html_string, base_url=base_url).write_pdf()
             
             # Return PDF response
             response = HttpResponse(pdf, content_type='application/pdf')

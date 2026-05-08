@@ -65,8 +65,8 @@ class Command(BaseCommand):
                 'view_own_vehicles': ('vehicles', 'View Own Vehicles', 'View own vehicles only'),
                 'view_vehicle_history': ('vehicles', 'View Vehicle History', 'View vehicle service history'),
                 'view_service_history': ('vehicles', 'View Service History', 'View complete service history'),
-                'export_vehicles': ('vehicles', 'Export Vehicles', 'Export vehicle data to CSV/Excel'),
-                'import_vehicles': ('vehicles', 'Import Vehicles', 'Import vehicles from CSV/Excel'),
+                'export_vehicles': ('vehicles', 'Export Vehicles', 'Export vehicle data to Excel'),
+                'import_vehicles': ('vehicles', 'Import Vehicles', 'Import vehicles from Excel'),
                 
                 # ==================== ROADSIDE ASSISTANCE ====================
                 'view_roadside': ('vehicles', 'View Roadside', 'View roadside assistance requests'),
@@ -159,7 +159,7 @@ class Command(BaseCommand):
                 'request_parts': ('inventory', 'Request Parts', 'Request parts from inventory'),
                 'approve_part_requests': ('inventory', 'Approve Part Requests', 'Approve technician part requests'),
                 'export_inventory': ('inventory', 'Export Inventory', 'Export inventory data'),
-                'import_inventory': ('inventory', 'Import Inventory', 'Import inventory from CSV/Excel'),
+                'import_inventory': ('inventory', 'Import Inventory', 'Import inventory from Excel'),
                 
                 # ==================== BILLING & PAYMENTS ====================
                 'view_billing': ('billing', 'View Billing', 'View billing and invoice information'),

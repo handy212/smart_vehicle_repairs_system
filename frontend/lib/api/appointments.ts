@@ -43,6 +43,7 @@ export const appointmentsApi = {
     status?: string;
     customer?: number;
     vehicle?: number;
+    all_branches?: boolean;
     search?: string;
     date_from?: string;
     date_to?: string;
@@ -150,4 +151,3 @@ export const appointmentsApi = {
     return response.data;
   },
 };
-

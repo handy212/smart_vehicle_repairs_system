@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -259,7 +259,7 @@ export default function WorkOrdersPage() {
     });
   };
 
-  const handleExport = () => {
+  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
     if (!data?.results || data.results.length === 0) {
       toast({
         title: "No Data",
@@ -269,7 +269,7 @@ export default function WorkOrdersPage() {
       return;
     }
 
-    exportToCSV(
+    (format === "pdf" ? exportToPDF : exportToCSV)(
       data.results,
       "workorders",
       [
@@ -468,7 +468,15 @@ export default function WorkOrdersPage() {
                   className="text-xs"
                 >
                   <Download className="w-3.5 h-3.5 mr-2" />
-                  Export CSV
+                  Export Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleExport("pdf")}
+                  disabled={!data?.results || data.results.length === 0}
+                  className="text-xs"
+                >
+                  <Download className="w-3.5 h-3.5 mr-2" />
+                  Export PDF
                 </DropdownMenuItem>
               </PermissionGuard>
               <DropdownMenuItem onClick={() => setShowTaskTypesDialog(true)} className="text-xs">

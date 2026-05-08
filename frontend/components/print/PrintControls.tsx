@@ -2,8 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Mail } from "lucide-react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { useState } from "react";
 
 interface PrintControlsProps {
     onPrint?: () => void;
@@ -31,10 +29,10 @@ export function PrintControls({
     };
 
     return (
-        <div className={`print-controls no-print flex gap-3 items-center justify-end mb-6 ${className}`}>
+        <div className={`print-controls no-print flex flex-wrap gap-2 items-center justify-end mb-3 ${className}`}>
             <Button
                 variant="outline"
-                size="default"
+                size="sm"
                 onClick={handlePrint}
                 disabled={isLoading}
             >
@@ -45,7 +43,7 @@ export function PrintControls({
             {onDownloadPDF && (
                 <Button
                     variant="outline"
-                    size="default"
+                    size="sm"
                     onClick={onDownloadPDF}
                     disabled={isLoading}
                 >
@@ -57,7 +55,7 @@ export function PrintControls({
             {showEmail && onEmail && (
                 <Button
                     variant="outline"
-                    size="default"
+                    size="sm"
                     onClick={onEmail}
                     disabled={isLoading}
                 >

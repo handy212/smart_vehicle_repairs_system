@@ -15,7 +15,7 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { AdvancedFilters, FilterOption } from "@/components/ui/advanced-filters";
 import { SortConfig } from "@/components/ui/sortable-header";
@@ -68,10 +68,10 @@ export default function ProformasPage() {
 
     const invoices = data?.results || [];
 
-    const handleExport = () => {
+    const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
         if (!data?.results || data.results.length === 0) return;
 
-        exportToCSV(
+        (format === "pdf" ? exportToPDF : exportToCSV)(
             data.results,
             "proforma_invoices",
             [
@@ -110,7 +110,7 @@ export default function ProformasPage() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleExport}
+                        onClick={() => handleExport()}
                         disabled={!data?.results || data.results.length === 0}
                         className="h-9"
                     >

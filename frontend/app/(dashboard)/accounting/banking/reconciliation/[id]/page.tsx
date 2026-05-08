@@ -381,7 +381,7 @@ export default function ReconciliationDetailPage() {
                         <>
                             <Button variant="outline" size="sm" onClick={() => setIsUploadDialogOpen(true)}>
                                 <Upload className="w-4 h-4 mr-2" />
-                                Upload CSV
+                                Upload Excel
                             </Button>
                             <Button
                                 variant={Math.abs(difference) < 0.01 ? "default" : "secondary"}
@@ -592,10 +592,10 @@ export default function ReconciliationDetailPage() {
                         <DialogTitle>Upload Bank Statement</DialogTitle>
                     </DialogHeader>
                     <div className="py-4">
-                        <Label htmlFor="file" className="mb-2 block">CSV File</Label>
-                        <Input id="file" type="file" accept=".csv" onChange={handleUpload} />
+                        <Label htmlFor="file" className="mb-2 block">Excel File</Label>
+                        <Input id="file" type="file" accept=".xlsx" onChange={handleUpload} />
                         <p className="text-xs text-muted-foreground mt-2">
-                            Format: Date (YYYY-MM-DD), Description, Amount (+/-)
+                            Required columns: Date (YYYY-MM-DD), Description, Amount (+/-)
                         </p>
                     </div>
                 </DialogContent>

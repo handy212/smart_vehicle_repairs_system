@@ -387,7 +387,7 @@ export default function ReportsPage() {
               onChange={(e) => setEndDate(e.target.value)}
               className={`w-full sm:w-40 ${isPerfex ? "h-8 text-xs" : "h-10 text-sm"}`}
             />
-            <Button variant="secondary" onClick={handleExport} className={isPerfex ? "h-8 text-xs" : "h-10"}>
+            <Button variant="secondary" onClick={() => handleExport()} className={isPerfex ? "h-8 text-xs" : "h-10"}>
               <Download className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Export</span>
             </Button>

@@ -168,7 +168,7 @@ export default function PartCategoriesPage() {
                     <DropdownMenuContent align="end" className="w-48">
                          <DropdownMenuItem disabled>
                             <Download className="w-4 h-4 mr-2" />
-                            Export CSV
+                            Export Excel
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

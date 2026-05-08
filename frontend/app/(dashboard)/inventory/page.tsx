@@ -19,7 +19,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePermissions } from "@/lib/hooks/usePermissions";
@@ -193,12 +193,12 @@ export default function InventoryPage() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
     if (!parts || parts.length === 0) {
       toast({ title: "No Data", description: "No parts to export", variant: "destructive" });
       return;
     }
-    exportToCSV(parts, "inventory", [
+    (format === "pdf" ? exportToPDF : exportToCSV)(parts, "inventory", [
       { key: "part_number", label: "Part Number" },
       { key: "name", label: "Name" },
       { key: "category", label: "Category" },
@@ -397,13 +397,17 @@ export default function InventoryPage() {
               <PermissionGuard permission="import_inventory">
                 <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
                   <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
+                  Import Excel
                 </DropdownMenuItem>
               </PermissionGuard>
               <PermissionGuard permission="export_inventory">
-                <DropdownMenuItem onClick={handleExport} disabled={!parts || parts.length === 0}>
+                <DropdownMenuItem onClick={() => handleExport()} disabled={!parts || parts.length === 0}>
                   <Download className="w-4 h-4 mr-2" />
-                  Export CSV
+                  Export Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("pdf")} disabled={!parts || parts.length === 0}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { if (parts) exportPartsForImport(parts); }} disabled={!parts || parts.length === 0}>
                   <Download className="w-4 h-4 mr-2" />
@@ -591,7 +595,8 @@ export default function InventoryPage() {
           return result;
         }}
         title="Import Parts"
-        description="Upload a CSV file with part data. Required columns: part_number, name, category."
+        description="Upload an Excel file with part data. Required columns: part_number, name, category."
+        accept=".xlsx"
         onDownloadTemplate={downloadPartTemplate}
       />
 

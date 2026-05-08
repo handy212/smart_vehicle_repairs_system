@@ -303,7 +303,7 @@ class CustomerImportForm(forms.Form):
     Form for importing customers from CSV
     """
     csv_file = forms.FileField(
-        label='CSV File',
+        label='Excel File',
         help_text='Upload a CSV file with customer data. Maximum file size: 2 MB.',
         widget=forms.FileInput(attrs={
             'class': 'form-control',

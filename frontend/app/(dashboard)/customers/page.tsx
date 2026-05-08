@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { customersApi } from "@/lib/api/customers";
+import { customersApi, type Customer } from "@/lib/api/customers";
 import { reportingApi } from "@/lib/api/reporting";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,8 @@ import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToExcel } from "@/lib/utils/excel-export";
+import jsPDF from "jspdf";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -29,7 +30,6 @@ import {
 } from "@/components/ui/tooltip";
 import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadCustomerTemplate } from "@/lib/utils/import-templates";
-import { exportCustomersForImport } from "@/lib/utils/export-templates";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import {
@@ -64,6 +64,9 @@ export default function CustomersPage() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
+  const canImportCustomers = hasPermission("create_customers") || hasPermission("manage_customers");
+  const canExportCustomers = hasPermission("view_customers") || hasPermission("manage_customers");
 
   // Advanced filter options
   const filterOptions: FilterOption[] = [
@@ -110,26 +113,32 @@ export default function CustomersPage() {
     },
   ];
 
-  const quickFilters: QuickFilter[] = [
-    {
-      label: "Last 30 Days",
-      value: "last_30_days",
-      filters: {
-        created_at__gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        created_at__lte: new Date().toISOString().split("T")[0],
+  const quickFilters: QuickFilter[] = useMemo(() => {
+    const today = new Date();
+    const last30Days = new Date(today);
+    last30Days.setDate(today.getDate() - 30);
+
+    return [
+      {
+        label: "Last 30 Days",
+        value: "last_30_days",
+        filters: {
+          created_at__gte: last30Days.toISOString().split("T")[0],
+          created_at__lte: today.toISOString().split("T")[0],
+        },
       },
-    },
-    {
-      label: "Active Customers",
-      value: "active",
-      filters: { status: "active" },
-    },
-    {
-      label: "Inactive > 6m",
-      value: "inactive_6m",
-      filters: { inactive_period: "6_months" },
-    },
-  ];
+      {
+        label: "Active Customers",
+        value: "active",
+        filters: { status: "active" },
+      },
+      {
+        label: "Inactive > 6m",
+        value: "inactive_6m",
+        filters: { inactive_period: "6_months" },
+      },
+    ];
+  }, []);
 
   // Fetch Dashboard Stats for KPIs
   const { data: dashboardOverview } = useQuery({
@@ -207,19 +216,93 @@ export default function CustomersPage() {
     }
   }, [deleteMutation]);
 
-  const handleExport = () => {
+  const getCustomerExportRows = () => customers.map((customer: Customer) => ({
+    name: customer.company_name || customer.full_name || `${customer.user?.first_name || ""} ${customer.user?.last_name || ""}`.trim(),
+    email: customer.email || customer.user?.email || "",
+    phone: customer.phone || customer.user?.phone || "",
+    type: customer.customer_type || "",
+    status: customer.status || "",
+    balance: Number(customer.current_balance || 0),
+    last_visit: customer.last_visit_date ? new Date(customer.last_visit_date).toLocaleDateString() : "",
+  }));
+
+  const handleExport = (format: "xlsx" | "pdf") => {
     if (!customers || customers.length === 0) {
       toast({ title: "No Data", description: "No customers to export", variant: "destructive" });
       return;
     }
-    exportToCSV(customers, "customers", [
-      { key: "full_name", label: "Name" },
-      { key: "email", label: "Email" },
-      { key: "customer_type", label: "Type" },
-      { key: "current_balance", label: "Balance" },
-      { key: "status", label: "Status" },
-    ]);
-    toast({ title: "Success", description: "Customers exported successfully" });
+
+    const rows = getCustomerExportRows();
+    const dateStamp = new Date().toISOString().split("T")[0];
+
+    if (format === "xlsx") {
+      exportToExcel(
+        [
+          ["Name", "Email", "Phone", "Type", "Status", "Balance", "Last Visit"],
+          ...rows.map((row) => [row.name, row.email, row.phone, row.type, row.status, row.balance, row.last_visit]),
+        ],
+        `customers_${dateStamp}.xlsx`,
+        {
+          sheetName: "Customers",
+          reportTitle: "Customers",
+          dateInfo: `Exported records: ${rows.length}`,
+          boldRows: [0],
+          currencyColumns: [5],
+          freezePane: { row: 1, col: 0 },
+        }
+      );
+    } else {
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const headers = ["Name", "Email", "Phone", "Type", "Status", "Balance", "Last Visit"];
+      const widths = [150, 170, 95, 70, 70, 80, 80];
+      let y = 72;
+
+      pdf.setFontSize(14);
+      pdf.text("Customers", 40, 40);
+      pdf.setFontSize(8);
+      pdf.text(`Exported ${rows.length} records on ${dateStamp}`, 40, 56);
+
+      const drawHeader = () => {
+        let x = 40;
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "bold");
+        headers.forEach((header, index) => {
+          pdf.text(header, x, y);
+          x += widths[index];
+        });
+        y += 14;
+        pdf.setDrawColor(220);
+        pdf.line(40, y - 8, 800, y - 8);
+        pdf.setFont("helvetica", "normal");
+      };
+
+      drawHeader();
+      rows.forEach((row) => {
+        if (y > 560) {
+          pdf.addPage();
+          y = 48;
+          drawHeader();
+        }
+        const values = [
+          row.name,
+          row.email,
+          row.phone,
+          row.type,
+          row.status,
+          formatCurrency(row.balance),
+          row.last_visit,
+        ];
+        let x = 40;
+        values.forEach((value, index) => {
+          pdf.text(String(value || "-").slice(0, index < 2 ? 32 : 18), x, y);
+          x += widths[index];
+        });
+        y += 16;
+      });
+      pdf.save(`customers_${dateStamp}.pdf`);
+    }
+
+    toast({ title: "Success", description: `Customers exported as ${format.toUpperCase()}` });
   };
 
   return (
@@ -322,18 +405,31 @@ export default function CustomersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <PermissionGuard permission="import_customers">
+              {canImportCustomers && (
                 <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
                   <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
+                  Import Excel
                 </DropdownMenuItem>
-              </PermissionGuard>
-              <PermissionGuard permission="export_customers">
-                <DropdownMenuItem onClick={handleExport}>
+              )}
+              {canExportCustomers && (
+                <>
+                  {canImportCustomers && <DropdownMenuSeparator />}
+                  <DropdownMenuItem onClick={() => handleExport("xlsx")}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport("pdf")}>
+                    <FileDown className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </DropdownMenuItem>
+                </>
+              )}
+              {!canImportCustomers && !canExportCustomers && (
+                <DropdownMenuItem disabled>
                   <Download className="w-4 h-4 mr-2" />
-                  Export CSV
+                  No actions available
                 </DropdownMenuItem>
-              </PermissionGuard>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -366,7 +462,8 @@ export default function CustomersPage() {
           return result;
         }}
         title="Import Customers"
-        description="Upload a CSV file with customer data."
+        description="Upload a customer Excel workbook (.xlsx). Download the template first so the columns match."
+        accept=".xlsx"
         onDownloadTemplate={downloadCustomerTemplate}
       />
 
@@ -414,4 +511,3 @@ export default function CustomersPage() {
     </div>
   );
 }
-

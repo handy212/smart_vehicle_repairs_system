@@ -274,9 +274,9 @@ export default function PurchaseOrdersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleExport}>
+              <DropdownMenuItem onClick={() => handleExport()}>
                 <Download className="w-4 h-4 mr-2" />
-                Export CSV
+                Export Excel
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

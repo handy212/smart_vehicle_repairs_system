@@ -33,11 +33,11 @@ export function ImportDialog({
   onClose,
   onImport,
   title,
-  description = "Upload a CSV file to import data. Make sure the file matches the required format.",
-  accept = ".csv",
+  description = "Upload a file to import data. Make sure the file matches the required format.",
+  accept = ".xlsx",
   downloadTemplateUrl,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  templateFileName = "template.csv",
+  templateFileName = "template.xlsx",
   onDownloadTemplate,
 }: ImportDialogProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -50,11 +50,36 @@ export function ImportDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const acceptsExcel = accept.toLowerCase().includes(".xlsx");
+  const acceptedExtensions = accept
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  const validateImportFile = (selectedFile: File) => {
+    const fileName = selectedFile.name.toLowerCase();
+    const matchesAcceptedType = acceptedExtensions.length === 0 || acceptedExtensions.some((extension) => fileName.endsWith(extension));
+
+    if (!matchesAcceptedType) {
+      return { valid: false, error: `File must be ${acceptedExtensions.join(" or ")}` };
+    }
+
+    if (fileName.endsWith(".csv")) {
+      return validateCSVFile(selectedFile);
+    }
+
+    if (fileName.endsWith(".xlsx")) {
+      return { valid: true };
+    }
+
+    return { valid: false, error: "Unsupported file type" };
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       // Validate file
-      const validation = validateCSVFile(selectedFile);
+      const validation = validateImportFile(selectedFile);
       if (!validation.valid) {
         setValidationError(validation.error || "Invalid file");
         setFile(null);
@@ -74,20 +99,22 @@ export function ImportDialog({
       setPreview(null);
       setShowPreview(false);
 
-      // Load preview
-      setIsLoadingPreview(true);
-      try {
-        const csvPreview = await previewCSV(selectedFile, 5);
-        setPreview(csvPreview);
+      if (selectedFile.name.toLowerCase().endsWith(".csv")) {
+        setIsLoadingPreview(true);
+        try {
+          const csvPreview = await previewCSV(selectedFile, 5);
+          setPreview(csvPreview);
 
-      } catch (error: any) {
-        toast({
-          title: "Preview Error",
-          description: error?.message || "Failed to preview CSV file",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingPreview(false);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Failed to preview file";
+          toast({
+            title: "Preview Error",
+            description: message,
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingPreview(false);
+        }
       }
     }
   };
@@ -124,10 +151,11 @@ export function ImportDialog({
         });
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "An error occurred during import";
       toast({
         title: "Import Failed",
-        description: error?.message || "An error occurred during import",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -186,7 +214,7 @@ export function ImportDialog({
               <div className="flex items-start gap-2 flex-1">
                 <FileText className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="block text-sm font-medium text-primary">Download CSV Template</span>
+                  <span className="block text-sm font-medium text-primary">Download {acceptsExcel ? "Excel" : "CSV"} Template</span>
                   <span className="text-xs text-primary/80">Includes sample data and required column structure</span>
                 </div>
               </div>
@@ -265,7 +293,7 @@ export function ImportDialog({
           {showPreview && preview && (
             <div className="space-y-2 border border-border rounded-md p-3 bg-muted bg-background">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-foreground">CSV Preview</h4>
+                <h4 className="text-sm font-medium text-foreground">File Preview</h4>
                 <span className="text-xs text-muted-foreground">
                   Showing first {preview.rows.length} of {preview.totalRows} rows
                 </span>

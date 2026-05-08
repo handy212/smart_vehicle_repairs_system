@@ -1,5 +1,9 @@
+import * as XLSX from "xlsx-js-style";
+import jsPDF from "jspdf";
+
 /**
- * Utility functions for exporting data to CSV
+ * Utility functions for exporting data.
+ * Kept exportToCSV name for existing callers, but it now writes real Excel workbooks.
  */
 
 
@@ -8,46 +12,75 @@ export function exportToCSV<T extends Record<string, any>>(
   filename: string,
   headers: { key: keyof T; label: string }[]
 ) {
-  // Create CSV content
-  const csvHeaders = headers.map((h) => h.label).join(",");
-  const csvRows = data.map((row) =>
-    headers
-      .map((header) => {
-        const value = row[header.key];
-        // Handle null/undefined
-        if (value === null || value === undefined) return "";
-        // Handle objects (e.g., nested user object)
-        if (typeof value === "object") {
-          if (value.first_name && value.last_name) {
-            return `"${value.first_name} ${value.last_name}"`;
-          }
-          if (value.name) return `"${value.name}"`;
-          if (value.email) return `"${value.email}"`;
-          return "";
-        }
-        // Handle strings with commas or quotes
-        const stringValue = String(value);
-        if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
-          return `"${stringValue.replace(/"/g, '""')}"`;
-        }
-        return stringValue;
-      })
-      .join(",")
-  );
+  const rows = [
+    headers.map((header) => header.label),
+    ...data.map((row) => headers.map((header) => formatExportValue(row[header.key]))),
+  ];
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  worksheet["!cols"] = headers.map((header) => ({ wch: Math.min(Math.max(header.label.length + 4, 14), 36) }));
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Export");
+  XLSX.writeFile(workbook, `${filename}_${new Date().toISOString().split("T")[0]}.xlsx`);
+}
 
-  const csvContent = [csvHeaders, ...csvRows].join("\n");
+export function exportToPDF<T extends Record<string, any>>(
+  data: T[],
+  filename: string,
+  headers: { key: keyof T; label: string }[],
+  title = filename
+) {
+  const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const dateStamp = new Date().toISOString().split("T")[0];
+  const usableWidth = 760;
+  const colWidth = usableWidth / Math.max(headers.length, 1);
+  let y = 72;
 
-  // Create blob and download
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
+  pdf.setFontSize(14);
+  pdf.text(title, 40, 40);
+  pdf.setFontSize(8);
+  pdf.text(`Exported ${data.length} records on ${dateStamp}`, 40, 56);
 
-  link.setAttribute("href", url);
-  link.setAttribute("download", `${filename}_${new Date().toISOString().split("T")[0]}.csv`);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const drawHeader = () => {
+    let x = 40;
+    pdf.setFont("helvetica", "bold");
+    headers.forEach((header) => {
+      pdf.text(header.label, x, y);
+      x += colWidth;
+    });
+    y += 14;
+    pdf.setDrawColor(220);
+    pdf.line(40, y - 8, 800, y - 8);
+    pdf.setFont("helvetica", "normal");
+  };
+
+  drawHeader();
+  data.forEach((row) => {
+    if (y > 560) {
+      pdf.addPage();
+      y = 48;
+      drawHeader();
+    }
+    let x = 40;
+    headers.forEach((header) => {
+      pdf.text(formatExportValue(row[header.key]).slice(0, Math.max(10, Math.floor(colWidth / 5))), x, y);
+      x += colWidth;
+    });
+    y += 16;
+  });
+
+  pdf.save(`${filename}_${dateStamp}.pdf`);
+}
+
+function formatExportValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (record.first_name && record.last_name) return `${record.first_name} ${record.last_name}`;
+    if (record.name) return String(record.name);
+    if (record.email) return String(record.email);
+    return "";
+  }
+  return String(value);
 }
 
 /**
@@ -76,4 +109,3 @@ export function formatCurrencyForCSV(amount: string | number | null | undefined)
   if (isNaN(num)) return "";
   return num.toFixed(2);
 }
-

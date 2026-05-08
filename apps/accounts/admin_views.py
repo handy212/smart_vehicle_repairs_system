@@ -29,6 +29,37 @@ from .permission_models import Permission, Role, UserPermissionOverride
 User = get_user_model()
 
 
+def log_audit(user, action, model_name, object_repr, changes=None, request=None):
+    """Create a manual audit log entry for bulk operations such as imports."""
+    from django.apps import apps
+    from django.contrib.contenttypes.models import ContentType
+
+    model_class = next(
+        (
+            model for model in apps.get_models()
+            if model.__name__.lower() == str(model_name).lower()
+        ),
+        None,
+    )
+    content_type = ContentType.objects.get_for_model(model_class) if model_class else None
+    action_map = {
+        'create': LogEntry.Action.CREATE,
+        'import': LogEntry.Action.UPDATE,
+        'update': LogEntry.Action.UPDATE,
+        'delete': LogEntry.Action.DELETE,
+    }
+
+    return LogEntry.objects.create(
+        content_type=content_type,
+        object_pk=(changes or {}).get('filename', object_repr),
+        object_repr=object_repr,
+        action=action_map.get(str(action).lower(), LogEntry.Action.UPDATE),
+        actor=user if getattr(user, 'is_authenticated', False) else None,
+        remote_addr=request.META.get('REMOTE_ADDR') if request else None,
+        changes=changes or {},
+    )
+
+
 def is_admin(user):
     """Check if user is admin"""
     return user.is_authenticated and (user.is_superuser or user.role == 'admin')

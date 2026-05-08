@@ -472,7 +472,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     def import_history(self, request):
         """Get import history (filtered audit logs for import actions)"""
         queryset = self.filter_queryset(self.get_queryset()).filter(
-            object_repr__icontains='CSV Import'
+            object_repr__icontains='Import'
         )
 
         page = self.paginate_queryset(queryset)
@@ -525,20 +525,19 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def download(self, request):
         """
-        Download audit logs as CSV or JSON.
+        Download audit logs as Excel, PDF, or JSON.
         Supports same filters as list endpoint.
         """
-        import csv
         import json
+        import openpyxl
         from django.http import HttpResponse
         from django.utils import timezone
-        import io
+        from io import BytesIO
         
-        # Get format (csv or json)
-        format_type = request.query_params.get('file_format', 'csv').lower()
-        if format_type not in ['csv', 'json']:
+        format_type = request.query_params.get('file_format', 'xlsx').lower()
+        if format_type not in ['xlsx', 'pdf', 'json']:
             return Response(
-                {'error': 'Format must be csv or json'},
+                {'error': 'Format must be xlsx, pdf, or json'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -558,23 +557,12 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         # Generate filename
         timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
         filename = f'audit_logs_{timestamp}.{format_type}'
-        
-        if format_type == 'csv':
-            # Create in-memory buffer
-            output = io.StringIO()
-            
-            if not logs:
-                # Return empty CSV
-                response = HttpResponse('', content_type='text/csv')
-                response['Content-Disposition'] = f'attachment; filename="{filename}"'
-                return response
-            
-            # Get all possible field names from logs
+
+        if format_type in ['xlsx', 'pdf']:
             fieldnames = set()
             for log in logs:
                 fieldnames.update(log.keys())
-            
-            # Order fields logically
+
             ordered_fields = [
                 'id', 'timestamp', 'user_name', 'user_email', 'action',
                 'model_name', 'object_id', 'object_repr', 'ip_address',
@@ -584,23 +572,51 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             for field in sorted(fieldnames):
                 if field not in ordered_fields:
                     ordered_fields.append(field)
-            
-            writer = csv.DictWriter(output, fieldnames=ordered_fields, extrasaction='ignore')
-            writer.writeheader()
-            
+
+            rows = [ordered_fields]
             for log in logs:
-                # Convert changes dict to string for CSV
-                row = log.copy()
-                if 'changes' in row and isinstance(row['changes'], dict):
-                    row['changes'] = json.dumps(row['changes'])
-                writer.writerow(row)
-            
-            # Create HTTP response with CSV content
-            response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8')
+                rows.append([
+                    json.dumps(log.get(field), default=str) if isinstance(log.get(field), (dict, list)) else str(log.get(field, ''))
+                    for field in ordered_fields
+                ])
+
+        if format_type == 'xlsx':
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+            worksheet.title = 'Audit Logs'
+            for row in rows:
+                worksheet.append(row)
+            for column_cells in worksheet.columns:
+                max_length = max(len(str(cell.value or '')) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 12), 40)
+            output = BytesIO()
+            workbook.save(output)
+            output.seek(0)
+            response = HttpResponse(
+                output.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
-        
-        else:  # JSON
+
+        if format_type == 'pdf':
+            from apps.core.services.report_pdf import build_table_pdf_response
+
+            return build_table_pdf_response(
+                title='Audit Logs',
+                subtitle=f"Generated on {timezone.now().strftime('%Y-%m-%d %H:%M')}",
+                filename=filename,
+                headers=ordered_fields,
+                rows=rows[1:],
+                landscape=True,
+                max_rows=500,
+                summary=[
+                    f'Records included: {min(len(rows) - 1, 500)}',
+                    f'Filtered records available: {total_count}',
+                ],
+            )
+
+        else:
             response = HttpResponse(
                 json.dumps(logs, indent=2, default=str),
                 content_type='application/json; charset=utf-8'

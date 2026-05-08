@@ -14,7 +14,7 @@ import { Search, ArrowLeft, Eye, Download } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 
 export default function TillHistoryPage() {
     const router = useRouter();
@@ -32,10 +32,10 @@ export default function TillHistoryPage() {
         }),
     });
 
-    const handleExport = () => {
+    const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
         if (!tillsData?.results || tillsData.results.length === 0) return;
 
-        exportToCSV(tillsData.results, "till_history", [
+        (format === "pdf" ? exportToPDF : exportToCSV)(tillsData.results, "till_history", [
             { key: "id", label: "Till ID" },
             { key: "cashier_name", label: "Cashier" },
             { key: "branch_name", label: "Branch" },
@@ -58,9 +58,9 @@ export default function TillHistoryPage() {
                     </Button>
                     <h1 className="text-2xl font-bold">Till History</h1>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleExport}>
+                <Button variant="outline" size="sm" onClick={() => handleExport()}>
                     <Download className="h-4 w-4 mr-2" />
-                    Export CSV
+                    Export Excel
                 </Button>
             </div>
 

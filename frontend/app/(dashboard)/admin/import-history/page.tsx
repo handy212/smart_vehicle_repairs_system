@@ -144,9 +144,9 @@ export default function ImportHistoryPage() {
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
               <RefreshCw className="w-4 h-4 text-muted-foreground" />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={!data?.results || data.results.length === 0} className="h-8 text-xs bg-card">
+            <Button variant="outline" size="sm" onClick={() => handleExport()} disabled={!data?.results || data.results.length === 0} className="h-8 text-xs bg-card">
               <Download className="w-3.5 h-3.5 mr-1.5" />
-              Export CSV
+              Export Excel
             </Button>
           </div>
         </div>

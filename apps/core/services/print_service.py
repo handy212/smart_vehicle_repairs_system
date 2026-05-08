@@ -224,7 +224,40 @@ class DocumentPrinter:
         return """
         @page {
             size: A4;
-            margin: 20mm;
+            margin: 6mm;
+        }
+
+        html,
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 7.5pt;
+            line-height: 1.2;
+        }
+
+        table {
+            page-break-inside: auto;
+            break-inside: auto;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        tfoot {
+            display: table-footer-group;
+        }
+
+        tr,
+        .avoid-break,
+        .page-break-avoid,
+        .info-card,
+        .financial-summary {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        a[href]::after {
+            content: "";
         }
         """
 

@@ -7,8 +7,7 @@ import { customersApi } from "@/lib/api/customers";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
 import { billingApi } from "@/lib/api/billing";
 import { workordersApi } from "@/lib/api/workorders";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { appointmentsApi } from "@/lib/api/appointments";
+import { appointmentsApi, type Appointment } from "@/lib/api/appointments";
 import { subscriptionsApi } from "@/lib/api/subscriptions";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { CustomerSidebar } from "./components/CustomerSidebar";
@@ -36,7 +35,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useToast } from "@/lib/hooks/useToast";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { format } from "date-fns";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Edit, Trash2 } from "lucide-react";
@@ -50,11 +48,9 @@ export default function CustomerDetailPage() {
   const customerId = parseInt(params.id as string);
   const initialView = searchParams.get("view") || "profile";
   const [activeView, setActiveView] = useState(initialView);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { formatCurrency } = useCurrency();
   const { addRecentItem } = useRecentItems();
 
-  // Update URL when view changes
   useEffect(() => {
     const url = new URL(window.location.href);
     url.searchParams.set("view", activeView);
@@ -83,6 +79,7 @@ export default function CustomerDetailPage() {
   const { data: estimates = [] } = useQuery({ queryKey: ["estimates", "customer", customerId], queryFn: () => billingApi.estimates.list({ customer: customerId }).then(res => res.results), enabled: !!customerId });
   const { data: payments = [] } = useQuery({ queryKey: ["payments", "customer", customerId], queryFn: () => billingApi.payments.list({ customer: customerId }), enabled: !!customerId });
   const { data: subscriptions = [] } = useQuery({ queryKey: ["subscriptions", "customer", customerId], queryFn: () => subscriptionsApi.list({ customer: customerId }).then(res => res.results), enabled: !!customerId });
+  const { data: appointments = [] } = useQuery({ queryKey: ["appointments", "customer", customerId], queryFn: () => appointmentsApi.list({ customer: customerId, all_branches: true, ordering: "-appointment_date" }).then(res => res.results), enabled: !!customerId });
   const { data: workOrders = [] } = useQuery({ queryKey: ["workorders", "customer", customerId], queryFn: () => workordersApi.list({ customer: customerId }).then(res => res.results), enabled: !!customerId });
   const { data: reminders = [] } = useQuery({ queryKey: ["customer-reminders", customerId], queryFn: () => customersApi.reminders.list(customerId), enabled: !!customerId });
   const { data: contacts = [] } = useQuery({ queryKey: ["customer-contacts", customerId], queryFn: () => customersApi.contacts.list(customerId), enabled: !!customerId });
@@ -93,6 +90,7 @@ export default function CustomerDetailPage() {
     estimates: estimates.length,
     payments: payments.length,
     subscriptions: subscriptions.length,
+    appointments: appointments.length,
     work_orders: workOrders.length,
     reminders: reminders.length,
     contacts: contacts.length,
@@ -131,6 +129,24 @@ export default function CustomerDetailPage() {
             emptyMessage="No vehicles found"
 
             onRowDoubleClick={(item: any) => router.push(`/vehicles/${item.id}`)}
+          />
+        );
+      case "appointments":
+        return (
+          <DataTable<Appointment>
+            data={appointments}
+            columns={[
+              { header: "Appointment #", accessorKey: "appointment_number", cell: (item) => <Link href={`/appointments/${item.id}`} className="text-primary hover:underline">{item.appointment_number}</Link> },
+              { header: "Date", accessorKey: "appointment_date", cell: (item) => item.appointment_date ? format(new Date(item.appointment_date), "MMM dd, yyyy") : "-" },
+              { header: "Time", accessorKey: "appointment_time" },
+              { header: "Vehicle", accessorKey: "vehicle_display", cell: (item) => item.vehicle_display || item.vehicle_info || item.vehicle_plate || "-" },
+              { header: "Service", accessorKey: "service_type" },
+              { header: "Status", accessorKey: "status", cell: (item) => <Badge variant="outline">{item.status}</Badge> },
+              { header: "Branch", accessorKey: "branch_name" },
+              { header: "Estimate", accessorKey: "estimated_cost", cell: (item) => item.estimated_cost ? formatCurrency(Number(item.estimated_cost)) : "-" },
+            ]}
+            emptyMessage="No appointments found"
+            onRowDoubleClick={(item) => router.push(`/appointments/${item.id}`)}
           />
         );
       case "workorders":

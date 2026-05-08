@@ -255,7 +255,7 @@ class AuditLogImportHistoryTest(AuditLogAPISetup):
         self.customer_import_log = LogEntry.objects.create(
             content_type=self.customer_ct,
             object_pk="customers.csv",
-            object_repr="CSV Import: customers.csv",
+            object_repr="Excel Import: customers.csv",
             action=LogEntry.Action.UPDATE,
             actor=self.admin_user,
             remote_addr="127.0.0.1",
@@ -269,7 +269,7 @@ class AuditLogImportHistoryTest(AuditLogAPISetup):
         self.vehicle_import_log = LogEntry.objects.create(
             content_type=self.vehicle_ct,
             object_pk="vehicles.csv",
-            object_repr="CSV Import Failed: vehicles.csv",
+            object_repr="Excel Import Failed: vehicles.csv",
             action=LogEntry.Action.UPDATE,
             actor=self.admin_user,
             remote_addr="127.0.0.1",
@@ -278,7 +278,7 @@ class AuditLogImportHistoryTest(AuditLogAPISetup):
                 "imported": 0,
                 "skipped": 0,
                 "total_errors": 1,
-                "error": "Invalid CSV header",
+                "error": "Invalid Excel header",
             },
         )
 

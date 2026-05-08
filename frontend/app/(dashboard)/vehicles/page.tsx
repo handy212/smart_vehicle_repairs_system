@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
 import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
@@ -189,9 +189,9 @@ export default function VehiclesPage() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
     if (!data?.results?.length) return;
-    exportToCSV(data.results, "vehicles_export", [
+    (format === "pdf" ? exportToPDF : exportToCSV)(data.results, "vehicles_export", [
       { key: "vin", label: "VIN" },
       { key: "make", label: "Make" },
       { key: "model", label: "Model" },
@@ -295,11 +295,15 @@ export default function VehiclesPage() {
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
                   <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
+                  Import Excel
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExport}>
+                <DropdownMenuItem onClick={() => handleExport()}>
                   <Download className="w-4 h-4 mr-2" />
-                  Export Fleet
+                  Export Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("pdf")}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -410,7 +414,8 @@ export default function VehiclesPage() {
           return result;
         }}
         title="Import Fleet"
-        description="Upload a CSV file with vehicle data. Required columns: vin, make, model, year, and owner CID."
+        description="Upload an Excel file with vehicle data. Required columns: vin, make, model, year, and owner CID."
+        accept=".xlsx"
         onDownloadTemplate={downloadVehicleTemplate}
       />
     </div>

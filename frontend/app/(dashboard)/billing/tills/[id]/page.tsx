@@ -76,7 +76,7 @@ export default function TillDetailPage() {
                     <Badge variant={till.status === 'open' ? 'success' : 'secondary'} className="px-4 py-1 text-sm">
                         {till.status.toUpperCase()}
                     </Badge>
-                    <Button variant="outline" onClick={handleExport}>
+                    <Button variant="outline" onClick={() => handleExport()}>
                         <Download className="mr-2 h-4 w-4" />
                         Export
                     </Button>

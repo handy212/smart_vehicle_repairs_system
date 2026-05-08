@@ -14,7 +14,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { exportToCSV } from "@/lib/utils/export";
+import { exportToCSV, exportToPDF } from "@/lib/utils/export";
 
 export default function PaymentsPage() {
     const [search, setSearch] = useState("");
@@ -70,7 +70,7 @@ export default function PaymentsPage() {
         return variants[status] || 'default';
     };
 
-    const handleExport = () => {
+    const handleExport = (format: "xlsx" | "pdf" = "xlsx") => {
         if (!filteredPayments || filteredPayments.length === 0) {
             toast({
                 title: "No Data",
@@ -80,7 +80,7 @@ export default function PaymentsPage() {
             return;
         }
 
-        exportToCSV(
+        (format === "pdf" ? exportToPDF : exportToCSV)(
             filteredPayments,
             "payments",
             [
@@ -126,10 +126,16 @@ export default function PaymentsPage() {
                     </div>
                     <h1 className="text-xl font-bold text-foreground tracking-tight">Payments</h1>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Export CSV
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleExport()}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Excel
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExport("pdf")}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export PDF
+                    </Button>
+                </div>
             </div>
 
             <Card className="border-none shadow-sm bg-muted/50">

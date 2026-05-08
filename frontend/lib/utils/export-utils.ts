@@ -1,5 +1,7 @@
+import * as XLSX from "xlsx-js-style";
+
 /**
- * Export utilities for generating CSV files from data
+ * Export utilities for generating Excel files from array data.
  */
 
 /**
@@ -29,14 +31,15 @@ export function formatCellValue(value: any): string {
 /**
  * Generate a filename with timestamp
  */
-export function generateFilenameWithTimestamp(prefix: string, extension: string = 'csv'): string {
+export function generateFilenameWithTimestamp(prefix: string, extension: string = 'xlsx'): string {
     const now = new Date();
     const timestamp = now.toISOString().split('T')[0]; // YYYY-MM-DD
     return `${prefix}_${timestamp}.${extension}`;
 }
 
 /**
- * Export data to CSV and trigger download
+ * Export data to Excel and trigger download.
+ * Kept exportToCSV name for existing callers.
  */
 export function exportToCSV(
 
@@ -45,38 +48,18 @@ export function exportToCSV(
     headers?: string[]
 ): void {
     try {
-        // Build CSV content
-        const rows: string[] = [];
-
-        // Add headers if provided
-        if (headers && headers.length > 0) {
-            rows.push(headers.map(formatCellValue).join(','));
-        }
-
-        // Add data rows
-        data.forEach(row => {
-            rows.push(row.map(formatCellValue).join(','));
-        });
-
-        const csvContent = rows.join('\n');
-
-        // Create blob and download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        URL.revokeObjectURL(url);
+        const rows = headers && headers.length > 0 ? [headers, ...data] : data;
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(rows);
+        worksheet["!cols"] = (rows[0] || []).map((cell) => ({ wch: Math.min(Math.max(String(cell || '').length + 4, 14), 36) }));
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Export');
+        const outputFilename = filename.endsWith('.xlsx')
+            ? filename
+            : filename.replace(/\.csv$/i, '.xlsx');
+        XLSX.writeFile(workbook, outputFilename);
     } catch (error) {
-        console.error('Error exporting to CSV:', error);
-        throw new Error('Failed to export data to CSV');
+        console.error('Error exporting to Excel:', error);
+        throw new Error('Failed to export data to Excel');
     }
 }
 

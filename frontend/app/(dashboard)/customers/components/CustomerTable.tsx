@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -101,7 +102,7 @@ const CustomerRow = memo(function CustomerRow({
         </div>
       </TableCell>
 
-      <TableCell className="text-right">
+      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
@@ -142,7 +143,7 @@ const CustomerRow = memo(function CustomerRow({
               Send SMS
             </DropdownMenuItem>
 
-            <div className="h-px bg-muted my-1" />
+            <DropdownMenuSeparator />
 
             <DropdownMenuItem
               onClick={(e) => {
@@ -169,7 +170,7 @@ const CustomerRow = memo(function CustomerRow({
               New Appointment
             </DropdownMenuItem>
 
-            <div className="h-px bg-muted my-1" />
+            <DropdownMenuSeparator />
 
             <DropdownMenuItem
               onClick={(e) => {

@@ -12,6 +12,7 @@ import { Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
 interface ExportDropdownProps {
     onExportCSV: () => void;
     onExportExcel: () => void;
+    onExportPDF?: () => void;
     disabled?: boolean;
     variant?: "default" | "outline" | "ghost";
     size?: "default" | "sm" | "lg";
@@ -20,6 +21,7 @@ interface ExportDropdownProps {
 export function ExportDropdown({
     onExportCSV,
     onExportExcel,
+    onExportPDF,
     disabled = false,
     variant = "outline",
     size = "sm"
@@ -35,13 +37,19 @@ export function ExportDropdown({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={onExportCSV} className="cursor-pointer">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onExportExcel} className="cursor-pointer">
                     <FileSpreadsheet className="w-4 h-4 mr-2 text-success" />
                     Export as Excel
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={onExportExcel} className="cursor-pointer">
+                    <FileSpreadsheet className="w-4 h-4 mr-2 text-success" />
+                    Export formatted Excel
+                </DropdownMenuItem>
+                {onExportPDF && (
+                    <DropdownMenuItem onClick={onExportPDF} className="cursor-pointer">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Export as PDF
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );

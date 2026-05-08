@@ -1,5 +1,7 @@
+import * as XLSX from "xlsx-js-style";
+
 /**
- * Utility functions for generating CSV import templates
+ * Utility functions for generating import templates
  */
 
 export function downloadCSVTemplate(headers: string[], sampleRows: string[][], filename: string) {
@@ -20,6 +22,27 @@ export function downloadCSVTemplate(headers: string[], sampleRows: string[][], f
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+export function downloadExcelTemplate(headers: string[], sampleRows: string[][], filename: string) {
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+
+  worksheet["!cols"] = headers.map((header) => ({ wch: Math.min(Math.max(header.length + 2, 14), 32) }));
+
+  headers.forEach((_, index) => {
+    const address = XLSX.utils.encode_cell({ r: 0, c: index });
+    if (worksheet[address]) {
+      worksheet[address].s = {
+        font: { bold: true, color: { rgb: "111827" } },
+        fill: { fgColor: { rgb: "E5E7EB" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      };
+    }
+  });
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Import Template");
+  XLSX.writeFile(workbook, filename);
 }
 
 export function getCustomerImportTemplate() {
@@ -204,16 +227,15 @@ export function getPartImportTemplate() {
 
 export function downloadCustomerTemplate() {
   const { headers, sampleRows } = getCustomerImportTemplate();
-  downloadCSVTemplate(headers, sampleRows, "customer_import_template.csv");
+  downloadExcelTemplate(headers, sampleRows, "customer_import_template.xlsx");
 }
 
 export function downloadVehicleTemplate() {
   const { headers, sampleRows } = getVehicleImportTemplate();
-  downloadCSVTemplate(headers, sampleRows, "vehicle_import_template.csv");
+  downloadExcelTemplate(headers, sampleRows, "vehicle_import_template.xlsx");
 }
 
 export function downloadPartTemplate() {
   const { headers, sampleRows } = getPartImportTemplate();
-  downloadCSVTemplate(headers, sampleRows, "part_import_template.csv");
+  downloadExcelTemplate(headers, sampleRows, "part_import_template.xlsx");
 }
-

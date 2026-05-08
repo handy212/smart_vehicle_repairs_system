@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.db import transaction
+from django.db import models
 from django.db.models import Sum, Q
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -1558,7 +1559,15 @@ class ReportingService:
         if work_order_id:
             wo_qs = wo_qs.filter(id=work_order_id)
         if start_date and end_date:
-            wo_qs = wo_qs.filter(created_at__range=[start_date, end_date])
+            from datetime import datetime, time
+
+            start_dt = datetime.combine(start_date, time.min) if not isinstance(start_date, datetime) else start_date
+            end_dt = datetime.combine(end_date, time.max) if not isinstance(end_date, datetime) else end_date
+            if timezone.is_naive(start_dt):
+                start_dt = timezone.make_aware(start_dt)
+            if timezone.is_naive(end_dt):
+                end_dt = timezone.make_aware(end_dt)
+            wo_qs = wo_qs.filter(created_at__range=[start_dt, end_dt])
         if branch_id:
             wo_qs = wo_qs.filter(branch_id=branch_id)
 
@@ -2054,14 +2063,21 @@ class ExportService:
         """
         import io
         from reportlab.lib import colors
-        from reportlab.lib.pagesizes import letter, landscape
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer, PageBreak
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from django.conf import settings
+        from reportlab.lib.units import inch, mm
+        from apps.core.services.report_pdf import get_compact_table_style
         
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            leftMargin=8 * mm,
+            rightMargin=8 * mm,
+            topMargin=8 * mm,
+            bottomMargin=8 * mm,
+        )
         styles = getSampleStyleSheet()
         story = []
         
@@ -2069,19 +2085,21 @@ class ExportService:
         title_style = ParagraphStyle(
             'Title',
             parent=styles['Heading1'],
-            fontSize=24,
+            fontSize=16,
+            leading=19,
             alignment=1, # Center
-            spaceAfter=30
+            spaceAfter=12
         )
         subtitle_style = ParagraphStyle(
             'Subtitle',
             parent=styles['Normal'],
-            fontSize=14,
+            fontSize=9,
+            leading=11,
             alignment=1, # Center
-            spaceAfter=12
+            spaceAfter=6
         )
         
-        story.append(Spacer(1, 2*inch))
+        story.append(Spacer(1, 1.5*inch))
         story.append(Paragraph("Management Accounts Pack", title_style))
         story.append(Paragraph(f"Period: {start_date} to {end_date}", subtitle_style))
         story.append(Paragraph(f"Generated on {timezone.now().date()}", subtitle_style))
@@ -2091,7 +2109,7 @@ class ExportService:
         metrics = DashboardService.get_management_metrics(start_date, end_date)
         
         story.append(Paragraph("Executive Summary", styles['Heading1']))
-        story.append(Spacer(1, 0.2*inch))
+        story.append(Spacer(1, 0.1*inch))
         
         kpi_data = [
             ['Metric', 'Value'],
@@ -2104,23 +2122,14 @@ class ExportService:
             ['Avg Job Margin', f"{metrics['kpis']['avg_job_margin']:.1f}%"],
         ]
         
-        kpi_table = Table(kpi_data, colWidths=[3*inch, 2*inch])
-        kpi_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]))
+        kpi_table = Table(kpi_data, colWidths=[3*inch, 2*inch], repeatRows=1)
+        kpi_table.setStyle(get_compact_table_style())
         story.append(kpi_table)
         story.append(PageBreak())
         
         # --- PROFIT & LOSS SUMMARY ---
         story.append(Paragraph("Profit & Loss Summary", styles['Heading1']))
-        story.append(Spacer(1, 0.2*inch))
+        story.append(Spacer(1, 0.1*inch))
         
         pl = ReportingService.get_profit_loss(start_date, end_date)
         
@@ -2142,16 +2151,13 @@ class ExportService:
         pl_data.append(['', ''])
         pl_data.append(['NET INCOME', f"{pl['totals']['net_income']:,.2f}"])
         
-        pl_table = Table(pl_data, colWidths=[4*inch, 2*inch])
-        pl_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'), # Net Income bold
-             # Highlight Totals
-            ('BACKGROUND', (0, len(pl['income'])+2), (1, len(pl['income'])+2), colors.lightgrey), # Total Income
-            ('BACKGROUND', (0, -3), (1, -3), colors.lightgrey), # Total Expenses
-            ('BACKGROUND', (0, -1), (1, -1), colors.lightgreen), # Net Income
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ]))
+        pl_table = Table(pl_data, colWidths=[4*inch, 2*inch], repeatRows=1)
+        pl_style = get_compact_table_style()
+        pl_style.add('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold')
+        pl_style.add('BACKGROUND', (0, len(pl['income']) + 2), (1, len(pl['income']) + 2), colors.HexColor('#f3f4f6'))
+        pl_style.add('BACKGROUND', (0, -3), (1, -3), colors.HexColor('#f3f4f6'))
+        pl_style.add('BACKGROUND', (0, -1), (1, -1), colors.HexColor('#dcfce7'))
+        pl_table.setStyle(pl_style)
         story.append(pl_table)
         
         doc.build(story)

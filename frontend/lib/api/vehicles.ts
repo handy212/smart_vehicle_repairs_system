@@ -139,7 +139,7 @@ export const vehiclesApi = {
   import: async (file: File): Promise<{ imported: number; skipped: number; errors?: string[] }> => {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await apiClient.post("/vehicles/vehicles/import_csv/", formData, {
+    const response = await apiClient.post("/vehicles/vehicles/import_excel/", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -245,4 +245,3 @@ export const vehiclesApi = {
     return response.data;
   },
 };
-

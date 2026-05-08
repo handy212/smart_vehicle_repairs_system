@@ -18,12 +18,6 @@ import json
 import csv
 import io
 from datetime import datetime, timedelta
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-
 from apps.billing.models import Invoice, Estimate, Payment, TaxRate, EstimateLineItem
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -958,60 +952,32 @@ def export_invoices_pdf(request):
         if customer_filter:
             invoices = invoices.filter(customer_id=customer_filter)
         
-        # Create PDF response
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="invoices_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
-        
-        # Create PDF document
-        doc = SimpleDocTemplate(response, pagesize=A4)
-        elements = []
-        styles = getSampleStyleSheet()
-        
-        # Title
-        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], alignment=1, spaceAfter=30)
-        title = Paragraph("Invoices Report", title_style)
-        elements.append(title)
-        
-        # Report info
-        report_info = Paragraph(f"Generated on: {timezone.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal'])
-        elements.append(report_info)
-        elements.append(Spacer(1, 20))
-        
-        # Create table data
-        data = [['Invoice #', 'Customer', 'Date', 'Total', 'Status']]
-        
-        for invoice in invoices[:100]:  # Limit to first 100 for performance
-            data.append([
+        from apps.core.services.report_pdf import build_table_pdf_response
+
+        rows = []
+        for invoice in invoices:
+            rows.append([
                 invoice.invoice_number,
                 f"{invoice.customer.user.first_name} {invoice.customer.user.last_name}",
                 invoice.invoice_date.strftime('%m/%d/%Y'),
                 f"${invoice.total:,.2f}",
-                invoice.get_status_display()
+                invoice.get_status_display(),
             ])
-        
-        # Create table
-        table = Table(data, colWidths=[1.2*inch, 2*inch, 1*inch, 1*inch, 1*inch])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        
-        elements.append(table)
-        
-        # Summary
-        elements.append(Spacer(1, 20))
+
         total_amount = sum(invoice.total for invoice in invoices)
-        summary = Paragraph(f"Total Invoices: {invoices.count()} | Total Amount: ${total_amount:,.2f}", styles['Normal'])
-        elements.append(summary)
-        
-        doc.build(elements)
-        return response
+        return build_table_pdf_response(
+            title='Invoices Report',
+            subtitle=f"Generated on {timezone.now().strftime('%Y-%m-%d %H:%M')}",
+            filename=f'invoices_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf',
+            headers=['Invoice #', 'Customer', 'Date', 'Total', 'Status'],
+            rows=rows,
+            landscape=False,
+            max_rows=500,
+            summary=[
+                f'Total invoices: {invoices.count()}',
+                f'Total amount: ${total_amount:,.2f}',
+            ],
+        )
         
     except Exception as e:
         messages.error(request, f'Error generating PDF: {str(e)}')

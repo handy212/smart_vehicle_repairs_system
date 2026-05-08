@@ -6,8 +6,7 @@ from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveAPIView,
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils.dateparse import parse_date
 from django.core.exceptions import ValidationError as DjangoValidationError
-import csv
-import io
+import openpyxl
 from decimal import Decimal
 from django.utils import timezone
 from django.db.models import Q
@@ -239,7 +238,7 @@ class BankStatementViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def upload(self, request, pk=None):
-        """Upload and parse bank statement CSV"""
+        """Upload and parse bank statement Excel workbook."""
         statement = self.get_object()
 
         if statement.reconciled:
@@ -252,19 +251,38 @@ class BankStatementViewSet(viewsets.ModelViewSet):
         statement.statement_file = file_obj
         statement.save()
         
-        # Parse CSV
+        if not file_obj.name.lower().endswith('.xlsx'):
+            return Response({
+                'error': 'Bank statement upload requires a proper Excel workbook (.xlsx).'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Parse Excel workbook
         try:
-            decoded_file = file_obj.read().decode('utf-8')
-            io_string = io.StringIO(decoded_file)
-            reader = csv.DictReader(io_string)
-            
+            workbook = openpyxl.load_workbook(file_obj, read_only=True, data_only=True)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(values_only=True)
+            raw_headers = next(rows, None)
+            if not raw_headers:
+                return Response({'error': 'Excel file is empty'}, status=status.HTTP_400_BAD_REQUEST)
+
+            headers = [str(header or '').strip().lower() for header in raw_headers]
+            required_headers = ['date', 'description', 'amount']
+            if not all(header in headers for header in required_headers):
+                return Response({
+                    'error': f'Excel file must contain these columns: {", ".join(required_headers)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
             lines_created = 0
-            
-            for row in reader:
-                # Expected headers: Date, Description, Amount
-                # normalize keys to lowercase
-                row = {k.lower(): v for k, v in row.items()}
-                
+
+            for values in rows:
+                row = {
+                    headers[index]: '' if value is None else str(value).strip()
+                    for index, value in enumerate(values)
+                    if index < len(headers) and headers[index]
+                }
+                if not any(row.values()):
+                    continue
+
                 date_str = row.get('date')
                 desc = row.get('description', '')
                 amount_str = row.get('amount', '0')
@@ -308,7 +326,7 @@ class BankStatementViewSet(viewsets.ModelViewSet):
             })
             
         except Exception as e:
-            return Response({'error': f"Failed to parse CSV: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f"Failed to parse Excel file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BankStatementLineViewSet(viewsets.ModelViewSet):

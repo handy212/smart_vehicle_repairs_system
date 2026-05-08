@@ -472,7 +472,7 @@ export const adminApi = {
     },
 
     download: async (params?: {
-      format?: 'csv' | 'json';
+      format?: 'xlsx' | 'pdf' | 'json';
       action?: string;
       model_name?: string;
       user?: number;
@@ -480,7 +480,7 @@ export const adminApi = {
       date_from?: string;
       date_to?: string;
     }): Promise<Blob> => {
-      const format = params?.format || 'csv';
+      const format = params?.format || 'xlsx';
       // Map format to file_format for backend to avoid DRF content negotiation issues
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { format: _, ...rest } = params || {};

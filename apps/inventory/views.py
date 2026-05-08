@@ -279,39 +279,54 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
     # Removed redundant actions (adjust, bulk_adjust, reserve, etc.)
     # provided by StockManagementMixin and InventoryReportMixin
     
-    @action(detail=False, methods=['post'])
-    def import_csv(self, request):
-        """Import parts from CSV file"""
-        import csv
+    def _handle_part_excel_import(self, request):
+        """Import parts from an Excel workbook."""
+        import openpyxl
         from django.db import transaction
         from apps.accounts.admin_views import log_audit
         
         if 'file' not in request.FILES:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
         
-        csv_file = request.FILES['file']
-        filename = csv_file.name
+        import_file = request.FILES['file']
+        filename = import_file.name
+
+        if not filename.lower().endswith('.xlsx'):
+            return Response({
+                'error': 'Inventory import requires a proper Excel workbook (.xlsx). Download the template and upload that format.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             imported_count = 0
             skipped_count = 0
             errors = []
             
-            # Read CSV file
-            decoded_file = csv_file.read().decode('utf-8').splitlines()
-            reader = csv.DictReader(decoded_file)
-            
-            # Required headers
+            workbook = openpyxl.load_workbook(import_file, read_only=True, data_only=True)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(values_only=True)
+            raw_headers = next(rows, None)
+            if not raw_headers:
+                return Response({'error': 'Excel file is empty'}, status=status.HTTP_400_BAD_REQUEST)
+
+            headers = [str(header or '').strip().lower() for header in raw_headers]
             required_headers = ['part_number', 'name']
-            
-            # Check if required headers exist
-            if not all(header in reader.fieldnames for header in required_headers):
+
+            if not all(header in headers for header in required_headers):
                 return Response({
-                    'error': f'CSV file must contain these columns: {", ".join(required_headers)}'
+                    'error': f'Excel file must contain these columns: {", ".join(required_headers)}'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Process each row
-            for row_num, row in enumerate(reader, start=2):
+
+            def clean_value(value):
+                return '' if value is None else str(value).strip()
+
+            for row_num, values in enumerate(rows, start=2):
+                row = {
+                    headers[index]: clean_value(value)
+                    for index, value in enumerate(values)
+                    if index < len(headers) and headers[index]
+                }
+                if not any(row.values()):
+                    continue
                 try:
                     part_number = row.get('part_number', '').strip()
                     name = row.get('name', '').strip()
@@ -429,7 +444,7 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                 user=request.user,
                 action='import',
                 model_name='Part',
-                object_repr=f'CSV Import: {filename}',
+                object_repr=f'Excel Import: {filename}',
                 changes={
                     'imported': imported_count,
                     'skipped': skipped_count,
@@ -451,7 +466,7 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                 user=request.user,
                 action='import',
                 model_name='Part',
-                object_repr=f'CSV Import Failed: {filename}',
+                object_repr=f'Excel Import Failed: {filename}',
                 changes={
                     'error': str(e),
                     'filename': filename,
@@ -459,6 +474,16 @@ class PartViewSet(StockManagementMixin, InventoryReportMixin, viewsets.ModelView
                 request=request
             )
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def import_excel(self, request):
+        """Import parts from an Excel workbook."""
+        return self._handle_part_excel_import(request)
+
+    @action(detail=False, methods=['post'])
+    def import_csv(self, request):
+        """Compatibility route for old clients; only Excel is accepted now."""
+        return self._handle_part_excel_import(request)
     
     @action(detail=False, methods=['get'])
     def inventory_accounting_report(self, request):

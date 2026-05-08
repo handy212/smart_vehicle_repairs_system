@@ -28,6 +28,8 @@ export function PrintLayout({
     documentType,
     documentNumber,
     watermark,
+    showHeader = true,
+    showFooter = true,
     companyInfo,
     className = '',
     metaInfo,
@@ -40,6 +42,8 @@ export function PrintLayout({
         hour: '2-digit',
         minute: '2-digit'
     });
+    const companyName = companyInfo?.name || COMPANY_NAME;
+    const companyInitial = companyName.trim().charAt(0).toUpperCase() || 'S';
 
     return (
         <div id="print-content-root" className={`print-container ${className}`}>
@@ -53,28 +57,32 @@ export function PrintLayout({
                 </div>
             )}
 
-            {/* 1. Main Header: Logo & Company Info */}
-            <div className="flex justify-between items-center mb-4 pb-2 border-b-2 border-black print-header">
-                <div className="flex items-center gap-4">
-                    {/* Logo Placeholder */}
-                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center font-bold text-muted-foreground text-lg print-header-logo">S</div>
-
-                    <div className="company-details">
-                        <h1 className="text-xl font-bold text-foreground leading-none mb-1">{companyInfo?.name || COMPANY_NAME}</h1>
-                        <div className="text-xs text-muted-foreground space-y-0.5">
-                            <p>{companyInfo?.address || '123 Repair Lane, Auto City, AC 12345'}</p>
-                            <p>{companyInfo?.phone || '(555) 123-4567'}</p>
+            {showHeader && (
+                <div className="flex justify-between items-start gap-3 mb-3 pb-2 border-b-2 border-black print-header">
+                    <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-9 h-9 bg-muted rounded flex shrink-0 items-center justify-center font-bold text-muted-foreground text-base print-header-logo">
+                            {companyInitial}
                         </div>
-                        {additionalHeaderInfo}
-                    </div>
-                </div>
 
-                {/* Right: Tax/Branch Info */}
-                <div className="text-right text-xs text-muted-foreground">
-                    <p>Tax ID: <span className="font-semibold text-black">TR-8842-19</span></p>
-                    <p>{companyInfo?.name || COMPANY_NAME} Service Center</p>
+                        <div className="company-details min-w-0">
+                            <h1 className="text-lg font-bold text-foreground leading-tight mb-1">{companyName}</h1>
+                            {(companyInfo?.address || companyInfo?.phone) && (
+                                <div className="text-xs text-muted-foreground leading-snug">
+                                    {companyInfo?.address && <p>{companyInfo.address}</p>}
+                                    {companyInfo?.phone && <p>{companyInfo.phone}</p>}
+                                </div>
+                            )}
+                            {additionalHeaderInfo}
+                        </div>
+                    </div>
+
+                    {companyInfo?.website && (
+                        <div className="text-right text-xs text-muted-foreground shrink-0">
+                            <p>{companyInfo.website}</p>
+                        </div>
+                    )}
                 </div>
-            </div>
+            )}
 
             {/* 2. Document Title Bar */}
             {documentType && (
@@ -96,13 +104,14 @@ export function PrintLayout({
             </div>
 
             {/* Footer */}
-            <div className="print-footer mt-8 pt-4 border-t border-border text-center text-xs text-muted-foreground print-only">
-                <p>{companyInfo?.name || COMPANY_NAME} &bull; {companyInfo?.website || 'www.smartvehiclerepairs.com'}</p>
-                <div className="mt-1 flex justify-center items-center gap-4">
-                    <span>Generated on {currentDate}</span>
-                    <span>Page 1 of 1</span>
+            {showFooter && (
+                <div className="print-footer mt-4 pt-2 border-t border-border text-center text-xs text-muted-foreground print-only">
+                    <p>{companyName}{companyInfo?.website ? ` | ${companyInfo.website}` : ''}</p>
+                    <div className="mt-1 flex justify-center items-center gap-4">
+                        <span>Generated on {currentDate}</span>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

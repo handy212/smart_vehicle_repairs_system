@@ -310,9 +310,9 @@ export default function RoadsidePage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                             <PermissionGuard permission="export_roadside">
-                                <DropdownMenuItem onClick={handleExport}>
+                                <DropdownMenuItem onClick={() => handleExport()}>
                                     <Download className="w-4 h-4 mr-2" />
-                                    Export CSV
+                                    Export Excel
                                 </DropdownMenuItem>
                             </PermissionGuard>
                         </DropdownMenuContent>

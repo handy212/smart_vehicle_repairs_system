@@ -13,11 +13,6 @@ import csv
 import io
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, landscape
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
 from datetime import datetime, timedelta
 
 from .models import (
@@ -172,51 +167,31 @@ def export_parts(queryset, format_type):
         return response
     
     elif format_type == 'pdf':
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="parts_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
-        
-        doc = SimpleDocTemplate(response, pagesize=landscape(letter))
-        elements = []
-        
-        # Title
-        styles = getSampleStyleSheet()
-        title = Paragraph(f"<b>Parts Inventory Export</b><br/>{datetime.now().strftime('%B %d, %Y')}", styles['Title'])
-        elements.append(title)
-        elements.append(Spacer(1, 0.25*inch))
-        
-        # Table data
-        data = [['Part #', 'Name', 'Category', 'Supplier', 'Stock', 'Unit', 'Price', 'Status']]
-        
-        for part in queryset[:100]:  # Limit to 100 for PDF
-            data.append([
-                str(part.part_number)[:15],
-                str(part.name)[:30],
-                str(part.category.name)[:20] if part.category else '-',
-                str(part.preferred_supplier.name)[:20] if part.preferred_supplier else '-',
-                str(part.quantity_in_stock),
-                str(part.get_unit_display())[:8],
+        from apps.core.services.report_pdf import build_table_pdf_response
+
+        rows = []
+        for part in queryset:
+            rows.append([
+                part.part_number,
+                part.name,
+                part.category.name if part.category else '-',
+                part.preferred_supplier.name if part.preferred_supplier else '-',
+                part.quantity_in_stock,
+                part.get_unit_display(),
                 f"${float(part.selling_price):.2f}" if part.selling_price else '-',
-                'Active' if part.is_active else 'Inactive'
+                'Active' if part.is_active else 'Inactive',
             ])
-        
-        # Create table
-        table = Table(data, colWidths=[0.8*inch, 2*inch, 1.2*inch, 1.5*inch, 0.6*inch, 0.6*inch, 0.8*inch, 0.8*inch])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-        ]))
-        
-        elements.append(table)
-        doc.build(elements)
-        
-        return response
+
+        return build_table_pdf_response(
+            title='Parts Inventory Export',
+            subtitle=f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            filename=f'parts_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf',
+            headers=['Part #', 'Name', 'Category', 'Supplier', 'Stock', 'Unit', 'Price', 'Status'],
+            rows=rows,
+            landscape=True,
+            max_rows=500,
+            summary=[f'Total parts exported: {queryset.count()}'],
+        )
 
 
 @login_required
@@ -402,7 +377,7 @@ def part_import_view(request):
 @login_required
 def part_import_template_view(request):
     """
-    Download CSV template for importing parts
+    Download Excel template for importing parts
     """
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="parts_import_template.csv"'

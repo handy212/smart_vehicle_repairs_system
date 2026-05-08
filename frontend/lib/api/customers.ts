@@ -110,7 +110,7 @@ export const customersApi = {
   import: async (file: File): Promise<{ imported: number; skipped: number; errors?: string[] }> => {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await apiClient.post("/customers/customers/import_csv/", formData, {
+    const response = await apiClient.post("/customers/customers/import_excel/", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -312,4 +312,3 @@ export const customersApi = {
     },
   },
 };
-
