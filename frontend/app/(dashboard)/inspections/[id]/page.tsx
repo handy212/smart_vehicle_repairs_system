@@ -157,7 +157,7 @@ export default function InspectionDetailPage() {
       setShowApproveOnBehalfDialog(true);
       return;
     }
-    approveMutation.mutate();
+    approveMutation.mutate(undefined);
   };
 
   const handleApproveOnBehalf = () => {

@@ -41,8 +41,8 @@ export default function TransfersPage() {
                 page,
                 search: searchQuery || undefined,
                 status: advancedFilters.status || undefined,
-                source_branch: advancedFilters.source_branch || undefined,
-                destination_branch: advancedFilters.destination_branch || undefined,
+                source_branch: advancedFilters.source_branch ? Number(advancedFilters.source_branch) : undefined,
+                destination_branch: advancedFilters.destination_branch ? Number(advancedFilters.destination_branch) : undefined,
             }),
     });
 
@@ -80,7 +80,7 @@ export default function TransfersPage() {
             case "pending_approval": return "warning";
             case "requested": return "warning";
             case "approved": return "info";
-            case "in_transit": return "primary";
+            case "in_transit": return "default";
             case "received": return "success";
             case "rejected": return "danger";
             case "cancelled": return "secondary";

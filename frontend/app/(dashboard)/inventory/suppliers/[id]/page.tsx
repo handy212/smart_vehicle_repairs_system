@@ -294,7 +294,7 @@ export default function SupplierDetailPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-bold text-xs px-4">
-                          {formatCurrency(parseFloat(po.total))}
+                          {formatCurrency(parseFloat(po.total ?? "0"))}
                         </TableCell>
                         <TableCell className="px-1">
                           <Link href={`/inventory/purchase-orders/${po.id}`}>

@@ -39,7 +39,7 @@ function getStatusVariant(status: string): ComponentProps<typeof Badge>["variant
     case "completed":
       return "success";
     case "cancelled":
-      return "destructive";
+      return "danger";
     default:
       return "secondary";
   }

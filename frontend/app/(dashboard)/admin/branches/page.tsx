@@ -568,8 +568,7 @@ function BranchDialog({
   });
 
   const onSubmit = async (data: BranchFormData) => {
-
-    const cleanedData: Partial<BranchFormData> = { ...data };
+    const cleanedData = { ...data } as BranchFormData;
 
     if (cleanedData.description === "") delete cleanedData.description;
     if (cleanedData.email === "") delete cleanedData.email;
@@ -583,8 +582,9 @@ function BranchDialog({
     }
 
     if (branch) {
-      delete cleanedData.code;
-      await updateMutation.mutateAsync(cleanedData);
+      const updateData: Partial<BranchFormData> = { ...cleanedData };
+      delete updateData.code;
+      await updateMutation.mutateAsync(updateData);
     } else {
       await createMutation.mutateAsync(cleanedData);
     }

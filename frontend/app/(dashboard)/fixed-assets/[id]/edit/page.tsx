@@ -2,7 +2,7 @@
 
 import { useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -75,8 +75,7 @@ function EditFixedAssetContent({ params }: { params: Promise<{ id: string }> }) 
     const assetId = parseInt(id);
 
     const form = useForm<FormValues>({
-
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as Resolver<FormValues>,
         defaultValues: {
             asset_number: "",
             name: "",

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { techniciansApi, skillsApi, Skill } from "@/lib/api/technicians";
@@ -71,7 +71,7 @@ export default function EditTechnicianPage() {
     const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as Resolver<z.infer<typeof formSchema>>,
         defaultValues: {
             first_name: "",
             last_name: "",

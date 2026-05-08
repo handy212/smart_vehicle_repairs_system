@@ -368,7 +368,7 @@ function SearchResultItem({
         onAdd({
             part: part.id,
             quantity: quantity,
-            unit_cost: unitCost || 0
+            unit_cost: unitCost?.toString()
         });
         setIsAdded(true);
         setTimeout(() => setIsAdded(false), 2000); // Reset "Added" state after 2s

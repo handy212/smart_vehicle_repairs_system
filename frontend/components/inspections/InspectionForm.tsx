@@ -1,6 +1,6 @@
 "use client";
 
-import { Path, useForm, useWatch } from "react-hook-form";
+import { Path, useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -82,7 +82,7 @@ export function InspectionForm({
         setError,
         control,
     } = useForm<InspectionFormData>({
-        resolver: zodResolver(inspectionSchema),
+        resolver: zodResolver(inspectionSchema) as Resolver<InspectionFormData>,
         defaultValues: {
             inspection_date: new Date().toISOString().slice(0, 16),
             ...initialData,

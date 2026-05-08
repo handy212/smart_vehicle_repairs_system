@@ -178,7 +178,7 @@ export function CreateInspectionForm({
                                 {fieldErrors.odometer_reading}
                             </p>
                         )}
-                        {workOrder?.vehicle && typeof workOrder.vehicle === 'object' && workOrder.vehicle.current_mileage > 0 && (
+                        {workOrder?.vehicle && typeof workOrder.vehicle === 'object' && workOrder.vehicle.current_mileage != null && workOrder.vehicle.current_mileage > 0 && (
                             <p className="text-xs text-muted-foreground mt-1">
                                 Current Mileage: {workOrder.vehicle.current_mileage.toLocaleString()}
                             </p>
