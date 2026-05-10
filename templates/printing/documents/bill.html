@@ -10,8 +10,7 @@
 <div>Bill Date: {{ document.bill_date|date:"F d, Y" }}</div>
 <div>Due Date: {{ document.due_date|date:"F d, Y" }}</div>
 <div>Status: <span
-        class="font-bold uppercase {% if document.status == 'paid' %}text-success{% elif document.status == 'overdue' %}text-danger{% endif %}">{{
-        document.get_status_display }}</span></div>
+        class="font-bold uppercase {% if document.status == 'paid' %}text-success{% elif document.status == 'overdue' %}text-danger{% endif %}">{{ document.get_status_display }}</span></div>
 {% endblock %}
 
 {% block content %}

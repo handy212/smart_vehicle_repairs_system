@@ -170,15 +170,13 @@ class SubscriptionService:
     def activate_subscription(subscription, invoice=None):
         """
         Activate a subscription after payment.
-        Implements AA 5-working-day activation delay.
+        Uses the selected subscription start date as the benefits start date.
         """
         if subscription.status == 'active' and subscription.is_active() and not (
             invoice and subscription.metadata and subscription.metadata.get('pending_renewal', {}).get('invoice_id') == invoice.id
         ):
             return subscription
         
-        # Calculate activation date (5 working days after payment)
-        payment_date = timezone.now().date()
         pending_renewal = (subscription.metadata or {}).get('pending_renewal')
         if pending_renewal and invoice and pending_renewal.get('invoice_id') == invoice.id:
             subscription.start_date = pending_renewal['start_date']
@@ -190,7 +188,7 @@ class SubscriptionService:
             subscription.metadata['last_renewal_invoice_id'] = invoice.id
             subscription.metadata.pop('pending_renewal', None)
             subscription.metadata.pop('renewal_invoice_id', None)
-        subscription.activation_date = subscription.calculate_activation_date(payment_date)
+        subscription.activation_date = subscription.calculate_activation_date()
         
         subscription.status = 'active'
         subscription.payment_status = 'paid'

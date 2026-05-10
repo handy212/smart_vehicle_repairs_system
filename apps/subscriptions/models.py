@@ -393,41 +393,30 @@ class Subscription(models.Model):
     
     def calculate_activation_date(self, payment_date=None):
         """
-        Calculate activation date - 5 working days after payment (AA policy).
+        Calculate activation date.
         
         Args:
-            payment_date: Date of payment (defaults to purchased_at)
+            payment_date: Date of payment (used only when no start date exists)
         Returns:
             date: Activation date
         """
-        from datetime import timedelta
-        
-        if not payment_date:
-            payment_date = self.purchased_at.date() if self.purchased_at else self.start_date
-        
-        # Add 5 working days (Monday-Friday)
-        working_days = 0
-        current_date = payment_date
-        
-        while working_days < 5:
-            current_date += timedelta(days=1)
-            # Skip weekends (Saturday=5, Sunday=6)
-            if current_date.weekday() < 5:
-                working_days += 1
-        
-        return current_date
+        if self.start_date:
+            return self.start_date
+        if payment_date:
+            return payment_date
+        return self.purchased_at.date() if self.purchased_at else timezone.now().date()
     
     def is_active(self):
         """
         Check if subscription is currently active.
-        Includes AA 5-day activation delay check.
+        A paid subscription is usable from its selected start date.
         """
         if self.status != 'active':
             return False
         
         today = timezone.now().date()
         
-        # Check activation date if set (AA 5-day rule)
+        # Future-dated subscriptions are paid but not usable until their start date.
         if self.activation_date and today < self.activation_date:
             return False
         

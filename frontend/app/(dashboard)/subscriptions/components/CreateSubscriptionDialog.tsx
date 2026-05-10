@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Package } from "@/lib/api/subscriptions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customersApi, Customer } from "@/lib/api/customers";
+import type { Vehicle } from "@/lib/api/vehicles";
 import { subscriptionsApi } from "@/lib/api/subscriptions";
 import { packagesApi } from "@/lib/api/subscriptions";
 import { useToast } from "@/lib/hooks/useToast";
@@ -104,7 +105,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
             reset();
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Creation Failed",
                 description: getApiErrorMessage(error, "Could not create subscription"),
@@ -180,7 +181,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                         </SelectTrigger>
                                         <SelectContent>
 
-                                            {customerVehicles?.map((v: any) => {
+                                            {customerVehicles?.map((v: Vehicle) => {
                                                 const vehicleType = v.vehicle_type || '';
                                                 const isAllowed = ['saloon', 'suv', 'pickup', 'minivan'].includes(vehicleType.toLowerCase());
                                                 return (

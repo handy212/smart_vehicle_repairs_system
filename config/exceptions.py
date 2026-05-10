@@ -61,6 +61,16 @@ def custom_exception_handler(exc, context):
                     context.get('view', 'unknown'),
                     exc,
                 )
+            elif response.status_code == 400:
+                # Log detailed validation error information
+                logger.warning(
+                    "Validation error (400) in %s: %s | Response data: %s | Request method: %s | Request path: %s",
+                    context.get('view', 'unknown'),
+                    exc,
+                    response.data,
+                    context.get('request').method if context.get('request') else 'unknown',
+                    context.get('request').path if context.get('request') else 'unknown',
+                )
             else:
                 logger.warning(
                     "Client error in %s: %s",

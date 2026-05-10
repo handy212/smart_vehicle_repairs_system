@@ -72,6 +72,7 @@ export interface Invoice {
   tax_regime?: string;
   total: string;
   amount_paid?: string;
+  amount_due?: string;
   balance_due?: string;
   payment_terms?: string;
   notes?: string;
@@ -288,6 +289,22 @@ export interface BillLineItem {
   unit_price: string;
   total?: string;
   expense_category?: string;
+  inventory_item?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BillPayment {
+  id: number;
+  payment_number: string;
+  bill: number;
+  amount: string;
+  payment_date: string;
+  payment_method: "cash" | "check" | "bank_transfer" | "mobile_money" | "credit_card" | "other";
+  reference_number?: string;
+  notes?: string;
+  paid_by?: number;
+  paid_by_name?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -298,12 +315,14 @@ export interface Bill {
   vendor: number; // ID
   vendor_name?: string;
   branch: number; // ID
+  purchase_order?: number | null;
+  purchase_order_number?: string;
   reference_number?: string;
   bill_date: string;
   due_date: string;
   terms?: string;
   notes?: string;
-  status: 'draft' | 'open' | 'partially_paid' | 'paid' | 'overdue' | 'void';
+  status: 'draft' | 'pending_approval' | 'rejected' | 'open' | 'partially_paid' | 'paid' | 'overdue' | 'void';
   currency: string;
   subtotal: string;
   tax_amount: string;
@@ -311,6 +330,19 @@ export interface Bill {
   amount_paid: string;
   amount_due: string;
   line_items?: BillLineItem[];
+  payments?: BillPayment[];
+  submitted_by?: number | null;
+  submitted_by_name?: string;
+  submitted_at?: string | null;
+  assigned_approver?: number | null;
+  assigned_approver_name?: string;
+  approved_by?: number | null;
+  approved_by_name?: string;
+  approved_at?: string | null;
+  rejected_by?: number | null;
+  rejected_by_name?: string;
+  rejected_at?: string | null;
+  rejection_reason?: string;
   ledger_bill?: number; // ID of DL Bill
   ledger_bill_url?: string;
   created_by?: number;
@@ -324,6 +356,15 @@ export interface BillListResponse {
   next: string | null;
   previous: string | null;
   results: Bill[];
+}
+
+export interface BillApprover {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name?: string;
+  role: string;
 }
 
 export const billingApi = {
@@ -350,6 +391,11 @@ export const billingApi = {
       return response.data;
     },
 
+    approvers: async (): Promise<BillApprover[]> => {
+      const response = await apiClient.get("/billing/bills/approvers/");
+      return response.data;
+    },
+
     create: async (data: Partial<Bill>): Promise<Bill> => {
       const response = await apiClient.post("/billing/bills/", data);
       return response.data;
@@ -357,6 +403,31 @@ export const billingApi = {
 
     update: async (id: number, data: Partial<Bill>): Promise<Bill> => {
       const response = await apiClient.put(`/billing/bills/${id}/`, data);
+      return response.data;
+    },
+
+    recordPayment: async (id: number, data: Partial<BillPayment>): Promise<BillPayment> => {
+      const response = await apiClient.post(`/billing/bills/${id}/record_payment/`, data);
+      return response.data;
+    },
+
+    submitForApproval: async (id: number, approverId: number): Promise<Bill> => {
+      const response = await apiClient.post(`/billing/bills/${id}/submit-for-approval/`, { approver_id: approverId });
+      return response.data;
+    },
+
+    approve: async (id: number): Promise<Bill> => {
+      const response = await apiClient.post(`/billing/bills/${id}/approve/`);
+      return response.data;
+    },
+
+    reject: async (id: number, reason?: string): Promise<Bill> => {
+      const response = await apiClient.post(`/billing/bills/${id}/reject/`, { reason });
+      return response.data;
+    },
+
+    void: async (id: number): Promise<Bill> => {
+      const response = await apiClient.post(`/billing/bills/${id}/void/`);
       return response.data;
     },
 

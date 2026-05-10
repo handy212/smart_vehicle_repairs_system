@@ -9,6 +9,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi } from "@/lib/api/roadside";
 import { customersApi } from "@/lib/api/customers";
 import { subscriptionsApi } from "@/lib/api/subscriptions";
+import { branchesApi } from "@/lib/api/branches";
+import type { Branch } from "@/lib/api/branches";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +20,7 @@ import {
     Truck, User as UserIcon,
     Info, Navigation, Check,
     Map as MapIcon,
-    ArrowRight
+    ArrowRight, Building2, PencilLine
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
@@ -72,6 +74,8 @@ export default function NewRoadsideRequestDashboardPage() {
 
     const [serverError, setServerError] = useState<string | null>(null);
     const [isLocating, setIsLocating] = useState(false);
+    // 'branch' = user selected a branch, 'custom' = manual text entry
+    const [destinationMode, setDestinationMode] = useState<'branch' | 'custom'>('branch');
 
     const {
         register,
@@ -115,6 +119,15 @@ export default function NewRoadsideRequestDashboardPage() {
         enabled: !!selectedCustomerId && !!selectedVehicleId,
     });
 
+    // Fetch active branches (only needed when towing is selected)
+    const { data: branchesData } = useQuery({
+        queryKey: ["branches", "active"],
+        queryFn: () => branchesApi.list({ is_active: true }),
+        enabled: serviceType === 'towing',
+        staleTime: 5 * 60 * 1000,
+    });
+    const branches: Branch[] = Array.isArray(branchesData) ? branchesData : (branchesData as { results: Branch[] })?.results ?? [];
+
     const activeSubscription = activeSubscriptionData?.results?.find((subscription) => subscription.is_active_status) || null;
     const pendingActivationSubscription = activeSubscriptionData?.results?.find((subscription) => !subscription.is_active_status) || null;
 
@@ -129,7 +142,7 @@ export default function NewRoadsideRequestDashboardPage() {
             router.push(`/roadside/${data.id}`);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             const errorMessage = getApiErrorMessage(error, "Failed to create request");
             setServerError(errorMessage);
         },
@@ -158,7 +171,7 @@ export default function NewRoadsideRequestDashboardPage() {
                     description: `Coordinates: ${lat}, ${lng}`
                 });
             },
-            (_error) => {
+            () => {
                 setIsLocating(false);
                 toast({
                     title: "Error",
@@ -328,7 +341,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     <div className="flex items-center justify-between text-sm">
                                                         <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
                                                             <Check className="w-4 h-4" />
-                                                            <span>Usable Subscription: {activeSubscription.package_name || "Standard Coverage"}</span>
+                                                            <span>Subscription Package: {activeSubscription.package_name || "Standard Coverage"}</span>
                                                         </div>
                                                         <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">Covered</Badge>
                                                     </div>
@@ -497,14 +510,70 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 <p className="text-xs text-destructive font-medium">{errors.tow_distance_km.message}</p>
                                             )}
                                         </div>
+
+                                        {/* Destination — branch picker + custom */}
                                         <div className="space-y-3">
-                                            <Label htmlFor="destination" className="font-semibold text-orange-800 dark:text-orange-400">Destination Location</Label>
-                                            <Input
-                                                id="destination"
-                                                {...register("destination")}
-                                                placeholder="Repair Shop, Home, etc."
-                                                className="h-11 border-orange-200 dark:border-orange-800"
-                                            />
+                                            <Label className="font-semibold text-orange-800 dark:text-orange-400">Destination Location</Label>
+
+                                            {/* Toggle */}
+                                            <div className="flex rounded-lg border border-orange-200 dark:border-orange-800 overflow-hidden text-xs">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDestinationMode('branch')}
+                                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors ${destinationMode === 'branch'
+                                                            ? 'bg-primary text-white font-semibold'
+                                                            : 'bg-card text-muted-foreground hover:bg-muted'
+                                                        }`}
+                                                >
+                                                    <Building2 className="h-3 w-3" /> Select Branch
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setDestinationMode('custom'); setValue('destination', ''); }}
+                                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors ${destinationMode === 'custom'
+                                                            ? 'bg-primary text-white font-semibold'
+                                                            : 'bg-card text-muted-foreground hover:bg-muted'
+                                                        }`}
+                                                >
+                                                    <PencilLine className="h-3 w-3" /> Custom Location
+                                                </button>
+                                            </div>
+
+                                            {destinationMode === 'branch' ? (
+                                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                                    {branches.length === 0 ? (
+                                                        <p className="text-xs text-muted-foreground italic">No branches available.</p>
+                                                    ) : branches.map(branch => {
+                                                        // Include branch name to guarantee uniqueness if multiple branches share an address
+                                                        const destinationText = `${branch.name}${branch.address ? ` - ${branch.address}` : ''}${branch.city ? `, ${branch.city}` : ''}`;
+                                                        const isSelected = watch('destination') === destinationText;
+                                                        return (
+                                                            <button
+                                                                key={branch.id}
+                                                                type="button"
+                                                                onClick={() => setValue('destination', destinationText, { shouldValidate: true })}
+                                                                className={`w-full text-left p-2.5 rounded-lg border text-xs transition-all ${isSelected
+                                                                        ? 'border-primary bg-primary/10 text-primary font-semibold'
+                                                                        : 'border-border bg-card hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/10'
+                                                                    }`}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-semibold truncate">{branch.name}</span>
+                                                                    {isSelected && <Check className="h-3 w-3 shrink-0 ml-1" />}
+                                                                </div>
+                                                                <div className="text-muted-foreground mt-0.5 truncate">{[branch.address, branch.city].filter(Boolean).join(', ')}</div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="destination"
+                                                    {...register("destination")}
+                                                    placeholder="Repair shop, home address, etc."
+                                                    className="h-11 border-orange-200 dark:border-orange-800"
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -518,16 +587,6 @@ export default function NewRoadsideRequestDashboardPage() {
                                         rows={4}
                                         className="resize-none"
                                     />
-                                </div>
-
-                                <div className="pt-2">
-                                    <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-border">
-                                        <Info className="h-5 w-5 text-primary mt-0.5" />
-                                        <div className="space-y-1">
-                                            <p className="text-xs font-bold text-foreground uppercase tracking-wider">Policy Check</p>
-                                            <p className="text-[11px] text-muted-foreground leading-relaxed">System will auto-check usable AA membership during submission and apply benefits only when active and within allowance.</p>
-                                        </div>
-                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

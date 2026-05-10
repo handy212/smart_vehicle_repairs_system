@@ -21,11 +21,12 @@ from apps.billing.models import (
     CreditNoteLineItem,
     Bill,
     BillLineItem,
+    BillPayment,
 )
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder
-from apps.inventory.models import Part
+from apps.inventory.models import Part, PurchaseOrder
 
 
 # ============================================================================
@@ -1337,7 +1338,7 @@ class BillLineItemSerializer(serializers.ModelSerializer):
         model = BillLineItem
         fields = [
             'id', 'description', 'quantity', 'unit_price', 
-            'total', 'expense_category',
+            'total', 'expense_category', 'inventory_item',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['total', 'created_at', 'updated_at']
@@ -1349,7 +1350,8 @@ class BillLineItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BillLineItem
         fields = [
-            'description', 'quantity', 'unit_price', 'expense_category'
+            'description', 'quantity', 'unit_price', 'expense_category',
+            'inventory_item'
         ]
 
 
@@ -1357,25 +1359,39 @@ class BillSerializer(serializers.ModelSerializer):
     """Serializer for bills (list/detail)"""
     
     vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    purchase_order_number = serializers.CharField(source='purchase_order.po_number', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    assigned_approver_name = serializers.CharField(source='assigned_approver.get_full_name', read_only=True)
+    submitted_by_name = serializers.CharField(source='submitted_by.get_full_name', read_only=True)
+    approved_by_name = serializers.CharField(source='approved_by.get_full_name', read_only=True)
+    rejected_by_name = serializers.CharField(source='rejected_by.get_full_name', read_only=True)
     line_items = BillLineItemSerializer(many=True, read_only=True)
+    payments = serializers.SerializerMethodField()
     
     class Meta:
         model = Bill
         fields = [
             'id', 'bill_number', 'vendor', 'vendor_name', 'branch',
+            'purchase_order', 'purchase_order_number',
             'reference_number', 'bill_date', 'due_date',
             'terms', 'notes', 'status', 'currency',
             'subtotal', 'tax_amount', 'total', 
             'amount_paid', 'amount_due',
-            'line_items',
+            'line_items', 'payments',
             'created_by', 'created_by_name',
+            'submitted_by', 'submitted_by_name', 'submitted_at',
+            'assigned_approver', 'assigned_approver_name',
+            'approved_by', 'approved_by_name', 'approved_at',
+            'rejected_by', 'rejected_by_name', 'rejected_at', 'rejection_reason',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'bill_number', 'subtotal', 'total', 'amount_due',
             'created_by', 'created_at', 'updated_at'
         ]
+
+    def get_payments(self, obj):
+        return BillPaymentSerializer(obj.payments.all(), many=True).data
     
    
 
@@ -1384,29 +1400,81 @@ class BillCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating bills"""
     
     line_items = BillLineItemCreateSerializer(many=True)
+    purchase_order = serializers.PrimaryKeyRelatedField(
+        queryset=PurchaseOrder.objects.select_related('supplier', 'branch'),
+        required=False,
+        allow_null=True
+    )
     
     class Meta:
         model = Bill
         fields = [
             'id', 'bill_number', 'vendor', 'branch',
+            'purchase_order',
             'reference_number', 'bill_date', 'due_date',
-            'terms', 'notes', 'currency',
+            'terms', 'notes', 'status', 'currency',
             'tax_amount',
             'line_items'
         ]
         read_only_fields = ['id', 'bill_number']
+
+    def _has_posted_journal(self, bill):
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounting.models import JournalEntry
+
+        return JournalEntry.objects.filter(
+            content_type=ContentType.objects.get_for_model(bill),
+            object_id=bill.id
+        ).exists()
     
     def validate(self, data):
         if not data.get('line_items'):
             raise serializers.ValidationError({"line_items": "At least one line item is required"})
+
+        purchase_order = data.get(
+            'purchase_order',
+            self.instance.purchase_order if self.instance else None
+        )
+        requested_status = data.get('status', self.instance.status if self.instance else 'draft')
+        if purchase_order:
+            vendor = data.get('vendor', self.instance.vendor if self.instance else None)
+            branch = data.get('branch', self.instance.branch if self.instance else None)
+            if vendor and purchase_order.supplier_id != vendor.id:
+                raise serializers.ValidationError({
+                    "purchase_order": "Selected purchase order belongs to a different vendor."
+                })
+            if branch and purchase_order.branch_id and purchase_order.branch_id != branch.id:
+                raise serializers.ValidationError({
+                    "purchase_order": "Selected purchase order belongs to a different branch."
+                })
+            if purchase_order.status != 'received':
+                raise serializers.ValidationError({
+                    "purchase_order": "Purchase order must be fully received before creating a vendor bill."
+                })
+
+            existing_bills = Bill.objects.filter(purchase_order=purchase_order).exclude(status='void')
+            if self.instance:
+                existing_bills = existing_bills.exclude(pk=self.instance.pk)
+            if existing_bills.exists():
+                raise serializers.ValidationError({
+                    "purchase_order": "A non-void bill already exists for this purchase order."
+                })
+        elif requested_status in {'open', 'paid', 'partially_paid'}:
+            raise serializers.ValidationError({
+                "status": "Standalone bills must be submitted and approved before they can be opened."
+            })
         return data
 
     @transaction.atomic
     def create(self, validated_data):
         line_items_data = validated_data.pop('line_items')
+        requested_status = validated_data.pop('status', 'draft')
         
         # Set created_by
         validated_data['created_by'] = self.context['request'].user
+        # Keep the first save in draft so accounting signals do not post a
+        # zero-total bill before line items have been created.
+        validated_data['status'] = 'draft'
         
         # Create bill
         bill = Bill.objects.create(**validated_data)
@@ -1418,11 +1486,21 @@ class BillCreateSerializer(serializers.ModelSerializer):
         # Calculate totals
         bill.calculate_totals()
         bill.refresh_from_db()
+
+        if requested_status != bill.status:
+            bill.status = requested_status
+            bill.save()
+            bill.refresh_from_db()
         
         return bill
 
     @transaction.atomic
     def update(self, instance, validated_data):
+        if instance.amount_paid > 0 or self._has_posted_journal(instance):
+            raise serializers.ValidationError({
+                "detail": "Posted bills or bills with payments cannot be edited. Create a reversal/credit workflow instead."
+            })
+
         line_items_data = validated_data.pop('line_items', None)
         
         # Update bill fields
@@ -1441,3 +1519,25 @@ class BillCreateSerializer(serializers.ModelSerializer):
             instance.refresh_from_db()
             
         return instance
+
+
+class BillPaymentSerializer(serializers.ModelSerializer):
+    paid_by_name = serializers.CharField(source='paid_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = BillPayment
+        fields = [
+            'id', 'payment_number', 'bill', 'amount', 'payment_date',
+            'payment_method', 'reference_number', 'notes', 'paid_by',
+            'paid_by_name', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'payment_number', 'bill', 'paid_by', 'paid_by_name',
+            'created_at', 'updated_at'
+        ]
+
+
+class BillPaymentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BillPayment
+        fields = ['amount', 'payment_date', 'payment_method', 'reference_number', 'notes']

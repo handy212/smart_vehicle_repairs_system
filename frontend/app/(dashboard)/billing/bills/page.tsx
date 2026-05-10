@@ -1,41 +1,37 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { billingApi, Bill } from "@/lib/api/billing";
+import { useQuery } from "@tanstack/react-query";
+import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Trash2, Download, Eye, X, Printer, DollarSign, Ban, CreditCard, Filter } from "lucide-react";
+import { Plus, Search, FileText, AlertCircle, CheckCircle, Clock, Eye, X, DollarSign, Ban, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { useToast } from "@/lib/hooks/useToast";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { AdvancedFilters, FilterOption } from "@/components/ui/advanced-filters";
 import { SortConfig } from "@/components/ui/sortable-header";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { BadgeProps } from "@/components/ui/badge";
 
 export default function BillsPage() {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+    const [advancedFilters, setAdvancedFilters] = useState<Record<string, unknown>>({});
 
-    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-
-
-    const queryClient = useQueryClient();
-
-    const { toast } = useToast();
+    const [sortConfig] = useState<SortConfig | null>(null);
     const router = useRouter();
     const { formatCurrency } = useCurrency();
+
+    const getFilterValue = (key: string) => {
+        const value = advancedFilters[key];
+        return typeof value === "string" && value.length > 0 ? value : undefined;
+    };
 
     // Advanced filter options
     const filterOptions: FilterOption[] = [
@@ -45,6 +41,8 @@ export default function BillsPage() {
             type: "select",
             options: [
                 { value: "draft", label: "Draft" },
+                { value: "pending_approval", label: "Pending Approval" },
+                { value: "rejected", label: "Rejected" },
                 { value: "open", label: "Open" },
                 { value: "partially_paid", label: "Partially Paid" },
                 { value: "paid", label: "Paid" },
@@ -65,7 +63,7 @@ export default function BillsPage() {
     ];
 
 
-    const { data, isLoading, error } = useQuery({
+    const { data, isLoading } = useQuery({
         queryKey: ["bills", page, search, advancedFilters, sortConfig],
         queryFn: () => {
             const ordering = sortConfig
@@ -73,18 +71,18 @@ export default function BillsPage() {
                 : undefined;
             return billingApi.bills.list({
                 page,
-                status: advancedFilters.status || undefined,
+                status: getFilterValue("status"),
                 search: search || undefined,
-                date_from: advancedFilters.bill_date_from || undefined,
-                date_to: advancedFilters.bill_date_to || undefined,
-                due_date_from: advancedFilters.due_date_from || undefined,
-                due_date_to: advancedFilters.due_date_to || undefined,
+                date_from: getFilterValue("bill_date_from"),
+                date_to: getFilterValue("bill_date_to"),
+                due_date_from: getFilterValue("due_date_from"),
+                due_date_to: getFilterValue("due_date_to"),
                 ordering,
             });
         },
     });
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): BadgeProps["variant"] => {
         switch (status) {
             case "paid":
                 return "success";
@@ -92,6 +90,10 @@ export default function BillsPage() {
                 return "info";
             case "draft":
                 return "default";
+            case "pending_approval":
+                return "warning";
+            case "rejected":
+                return "danger";
             case "partially_paid":
                 return "warning";
             case "overdue":
@@ -299,7 +301,7 @@ export default function BillsPage() {
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
 
-                                                <Badge variant={getStatusVariant(bill.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
+                                                <Badge variant={getStatusVariant(bill.status)} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                                                     <span className="flex items-center gap-1.5">
                                                         {getStatusIcon(bill.status)}
                                                         <span className="capitalize">{bill.status.replace("_", " ")}</span>

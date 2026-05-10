@@ -78,6 +78,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     customer_full_name = serializers.SerializerMethodField()
     package_name = serializers.CharField(source='package.name', read_only=True)
     package_code = serializers.CharField(source='package.code', read_only=True)
+    vehicle_display = serializers.SerializerMethodField()
+    vehicle_license_plate = serializers.CharField(source='vehicle.license_plate', read_only=True)
     is_active_status = serializers.SerializerMethodField()
     is_expired_status = serializers.SerializerMethodField()
     days_remaining = serializers.SerializerMethodField()
@@ -91,7 +93,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'subscription_number',
             'customer', 'customer_name', 'customer_full_name',
-            'package', 'package_name', 'package_code', 'vehicle',
+            'package', 'package_name', 'package_code',
+            'vehicle', 'vehicle_display', 'vehicle_license_plate',
             'start_date', 'end_date', 'activation_date',
             'status', 'is_active_status','is_expired_status', 'days_remaining',
             'auto_renew',
@@ -113,6 +116,21 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def get_customer_full_name(self, obj):
         """Get customer full name"""
         return obj.customer.full_name if hasattr(obj.customer, 'full_name') else str(obj.customer)
+
+    def get_vehicle_display(self, obj):
+        """Get the vehicle registration plate for subscription views."""
+        if not obj.vehicle:
+            return None
+
+        if obj.vehicle.license_plate:
+            return obj.vehicle.license_plate
+
+        vehicle_name = " ".join(
+            str(part)
+            for part in [obj.vehicle.year, obj.vehicle.make, obj.vehicle.model]
+            if part
+        )
+        return vehicle_name or f"Vehicle #{obj.vehicle_id}"
     
     def get_is_active_status(self, obj):
         """Check if subscription is active"""
@@ -172,6 +190,8 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
     
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     package_name = serializers.CharField(source='package.name', read_only=True)
+    vehicle_display = serializers.SerializerMethodField()
+    vehicle_license_plate = serializers.CharField(source='vehicle.license_plate', read_only=True)
     is_active_status = serializers.SerializerMethodField()
     days_remaining = serializers.SerializerMethodField()
     invoice_id = serializers.SerializerMethodField()
@@ -181,7 +201,8 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'subscription_number',
             'customer', 'customer_name',
-            'package', 'package_name', 'vehicle',
+            'package', 'package_name',
+            'vehicle', 'vehicle_display', 'vehicle_license_plate',
             'start_date', 'end_date', 'activation_date',
             'status', 'is_active_status', 'days_remaining',
             'invoice_id',
@@ -195,6 +216,21 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
     def get_days_remaining(self, obj):
         """Get days remaining"""
         return obj.days_remaining()
+
+    def get_vehicle_display(self, obj):
+        """Get the vehicle registration plate for subscription lists."""
+        if not obj.vehicle:
+            return None
+
+        if obj.vehicle.license_plate:
+            return obj.vehicle.license_plate
+
+        vehicle_name = " ".join(
+            str(part)
+            for part in [obj.vehicle.year, obj.vehicle.make, obj.vehicle.model]
+            if part
+        )
+        return vehicle_name or f"Vehicle #{obj.vehicle_id}"
 
     def get_invoice_id(self, obj):
         """Get the most relevant invoice ID for list actions."""
@@ -322,16 +358,20 @@ class SubscriptionUsageSerializer(serializers.ModelSerializer):
     subscription_number = serializers.CharField(source='subscription.subscription_number', read_only=True)
     customer_name = serializers.SerializerMethodField()
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    usage_type_label = serializers.SerializerMethodField()
+    reference_label = serializers.SerializerMethodField()
+    activity_label = serializers.SerializerMethodField()
+    is_refund = serializers.SerializerMethodField()
     
     class Meta:
         model = SubscriptionUsage
         fields = [
             'id',
             'subscription', 'subscription_number',
-            'usage_type', 'quantity_used',
+            'usage_type', 'usage_type_label', 'quantity_used',
             'service_date', 'customer_name',
-            'reference_type', 'reference_id',
-            'description',
+            'reference_type', 'reference_id', 'reference_label',
+            'description', 'activity_label', 'is_refund',
             'created_by', 'created_by_name',
             'created_at'
         ]
@@ -342,6 +382,51 @@ class SubscriptionUsageSerializer(serializers.ModelSerializer):
     def get_customer_name(self, obj):
         """Get customer name"""
         return obj.subscription.customer.customer_number if obj.subscription else None
+
+    def get_usage_type_label(self, obj):
+        """Display canonical feature keys as user-facing service names."""
+        labels = {
+            'roadside_first_aid': 'Mechanical & Electrical First Aid',
+            'towing_services_km': 'Towing Service',
+            'emergency_fuel': 'Emergency Fuel Delivery',
+            'key_lock_out': 'Key Lock Out',
+            'extrication': 'Extrication',
+            'accident_estimate': 'Accident Estimate',
+            'pre_purchase_inspection': 'Pre-Purchase Inspection',
+            'battery_boosts': 'Battery Boost',
+            'flat_tyre_service': 'Flat Tyre Service',
+            'total_service_calls': 'Service Call',
+            'kilometer': 'Kilometer',
+            'call_out': 'Call Out',
+            'towing': 'Towing Service',
+            'inspection': 'Inspection',
+            'roadside_assistance': 'Roadside Assistance',
+            'other': 'Other',
+        }
+        return labels.get(obj.usage_type, obj.usage_type.replace('_', ' ').title())
+
+    def get_reference_label(self, obj):
+        """Show a useful related-object label instead of a raw id."""
+        if not obj.reference_type or not obj.reference_id:
+            return ''
+
+        if obj.reference_type == 'roadside':
+            try:
+                from apps.roadside.models import RoadsideRequest
+                roadside_request = RoadsideRequest.objects.only('request_number').get(pk=obj.reference_id)
+                return roadside_request.request_number
+            except RoadsideRequest.DoesNotExist:
+                return f"Roadside #{obj.reference_id}"
+
+        return f"{obj.get_reference_type_display()} #{obj.reference_id}"
+
+    def get_activity_label(self, obj):
+        """Prefer the recorded description, falling back to service label."""
+        return obj.description or self.get_usage_type_label(obj)
+
+    def get_is_refund(self, obj):
+        """Whether this activity added allowance back."""
+        return obj.quantity_used < 0
 
 
 class SubscriptionUsageCreateSerializer(serializers.ModelSerializer):

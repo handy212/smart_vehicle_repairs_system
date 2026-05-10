@@ -2,7 +2,14 @@
 Admin for roadside assistance
 """
 from django.contrib import admin
-from .models import RoadsideRequest
+from .models import RoadsideRequest, RoadsideDispatch
+
+
+class RoadsideDispatchInline(admin.TabularInline):
+    model = RoadsideDispatch
+    extra = 0
+    fields = ['technician', 'dispatched_at', 'dispatched_by', 'notes']
+    readonly_fields = ['dispatched_at']
 
 
 @admin.register(RoadsideRequest)
@@ -16,6 +23,7 @@ class RoadsideRequestAdmin(admin.ModelAdmin):
     search_fields = ['request_number', 'customer__first_name', 'customer__last_name', 'vehicle__license_plate']
     readonly_fields = ['request_number', 'requested_at', 'updated_at']
     date_hierarchy = 'requested_at'
+    inlines = [RoadsideDispatchInline]
     
     fieldsets = (
         ('Request Information', {
@@ -40,3 +48,12 @@ class RoadsideRequestAdmin(admin.ModelAdmin):
             'fields': ('requested_at', 'created_by', 'updated_at')
         }),
     )
+
+
+@admin.register(RoadsideDispatch)
+class RoadsideDispatchAdmin(admin.ModelAdmin):
+    list_display = ['request', 'technician', 'dispatched_at', 'dispatched_by']
+    list_filter = ['dispatched_at']
+    search_fields = ['request__request_number', 'technician__first_name', 'technician__last_name']
+    readonly_fields = ['dispatched_at']
+

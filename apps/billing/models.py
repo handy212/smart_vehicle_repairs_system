@@ -1563,6 +1563,8 @@ class Bill(models.Model):
     """
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('pending_approval', 'Pending Approval'),
+        ('rejected', 'Rejected'),
         ('open', 'Open'),
         ('partially_paid', 'Partially Paid'),
         ('paid', 'Paid'),
@@ -1623,6 +1625,14 @@ class Bill(models.Model):
 
     # Tracking
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='bills_created')
+    submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='bills_submitted')
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    assigned_approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='bills_assigned_for_approval')
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='bills_approved')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='bills_rejected')
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1654,7 +1664,7 @@ class Bill(models.Model):
         self.amount_due = self.total - self.amount_paid
         
         # Update status based on payment
-        if self.status not in ['draft', 'void']:
+        if self.status not in ['draft', 'pending_approval', 'rejected', 'void']:
             if self.amount_paid >= self.total and self.total > 0:
                 self.status = 'paid'
             elif self.amount_paid > 0:

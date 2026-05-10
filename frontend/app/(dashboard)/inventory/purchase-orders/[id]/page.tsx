@@ -33,7 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CircleDollarSign, Clock, Database, FileText } from "lucide-react";
+import { CircleDollarSign, Clock, Database, FileText, ReceiptText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
@@ -358,6 +358,15 @@ export default function PurchaseOrderDetailPage() {
               <Printer className="w-4 h-4 mr-2" />
               Print
             </Button>
+          )}
+
+          {purchaseOrder.items && purchaseOrder.items.length > 0 && purchaseOrder.status === "received" && (
+            <Link href={`/billing/bills/new?po=${id}`}>
+              <Button variant="outline" size="sm" className="h-8 text-xs font-bold">
+                <ReceiptText className="w-4 h-4 mr-2" />
+                Create Bill
+              </Button>
+            </Link>
           )}
 
           {purchaseOrder.status === "draft" && (

@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
 import json
+from dateutil.relativedelta import relativedelta
 
 from apps.accounts.models import User
 from apps.customers.models import Customer
@@ -70,6 +71,8 @@ class SubscriptionTests(TestCase):
         self.assertEqual(sub.payment_status, 'pending')
         self.assertIsNotNone(sub.metadata.get('invoice_id')) # Using metadata linking
         self.assertEqual(invoice.status, 'pending')
+        selected_start = sub.start_date
+        selected_end = sub.end_date
         
         # Activate
         SubscriptionService.activate_subscription(sub, invoice)
@@ -77,6 +80,10 @@ class SubscriptionTests(TestCase):
         sub.refresh_from_db()
         self.assertEqual(sub.status, 'active')
         self.assertEqual(sub.payment_status, 'paid')
+        self.assertEqual(sub.activation_date, selected_start)
+        self.assertEqual(sub.start_date, selected_start)
+        self.assertEqual(sub.end_date, selected_end)
+        self.assertEqual(sub.end_date, selected_start + relativedelta(months=self.package.duration_months))
         
         invoice.refresh_from_db()
         self.assertEqual(invoice.status, 'paid')
@@ -189,11 +196,12 @@ class SubscriptionTests(TestCase):
         # Verify restored
         self.assertEqual(sub.get_remaining_allowance('battery_boosts'), 5)
 
-    def test_activation_delay_blocks_usage_until_activation_date(self):
+    def test_future_start_date_blocks_usage_until_start_date(self):
         sub, _ = SubscriptionService.create_subscription_with_invoice(
             customer=self.customer,
             package=self.package,
             vehicle=self.vehicle,
+            start_date=timezone.now().date() + timezone.timedelta(days=7),
             created_by=self.admin
         )
         SubscriptionService.activate_subscription(sub)

@@ -47,6 +47,8 @@ export interface Subscription {
     package_name?: string;
     package_code?: string;
     vehicle?: number | null;
+    vehicle_display?: string | null;
+    vehicle_license_plate?: string | null;
     start_date: string;
     end_date: string;
     status: 'pending' | 'active' | 'expired' | 'cancelled' | 'suspended';
@@ -73,7 +75,7 @@ export interface Subscription {
     created_at: string;
     updated_at: string;
 
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 export interface SubscriptionRenewalResponse {
@@ -87,13 +89,17 @@ export interface SubscriptionUsage {
     id: number;
     subscription: number;
     subscription_number?: string;
-    usage_type: 'kilometer' | 'call_out' | 'towing' | 'inspection' | 'roadside_assistance' | 'other';
+    usage_type: string;
+    usage_type_label?: string;
     quantity_used: string;
     service_date: string;
     customer_name?: string;
     reference_type?: 'workorder' | 'appointment' | 'inspection' | 'roadside' | 'other' | null;
     reference_id?: number | null;
+    reference_label?: string;
     description?: string;
+    activity_label?: string;
+    is_refund?: boolean;
     created_by?: number | null;
     created_by_name?: string;
     created_at: string;
@@ -240,16 +246,6 @@ export const subscriptionsApi = {
         return response.data;
     },
 
-    activate: async (id: number): Promise<Subscription> => {
-        const response = await apiClient.post(`/subscriptions/subscriptions/${id}/activate/`);
-        return response.data;
-    },
-
-    suspend: async (id: number): Promise<Subscription> => {
-        const response = await apiClient.post(`/subscriptions/subscriptions/${id}/suspend/`);
-        return response.data;
-    },
-
     usage: async (id: number): Promise<SubscriptionUsage[]> => {
         const response = await apiClient.get(`/subscriptions/subscriptions/${id}/usage/`);
         return response.data;
@@ -257,8 +253,7 @@ export const subscriptionsApi = {
 
     stats: async (id: number): Promise<{
         days_remaining: number;
-
-        usage_summary: Record<string, any>;
+        usage_summary: Record<string, unknown>;
         remaining_allowances: Record<string, number>;
     }> => {
         const response = await apiClient.get(`/subscriptions/subscriptions/${id}/stats/`);

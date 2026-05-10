@@ -3,9 +3,26 @@ Serializers for roadside assistance
 """
 from rest_framework import serializers
 from decimal import Decimal
-from .models import RoadsideRequest
+from .models import RoadsideRequest, RoadsideDispatch
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class DispatchedTechnicianSerializer(serializers.ModelSerializer):
+    """Minimal serializer for a dispatched technician entry"""
+    technician_name = serializers.SerializerMethodField()
+
+    def get_technician_name(self, obj):
+        t = obj.technician
+        return t.get_full_name() or t.username
+
+    class Meta:
+        model = RoadsideDispatch
+        fields = ['id', 'technician', 'technician_name', 'dispatched_at', 'notes']
+
 
 
 class RoadsideRequestSerializer(serializers.ModelSerializer):
@@ -21,6 +38,7 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
     subscription_number = serializers.SerializerMethodField()
     invoice_number = serializers.SerializerMethodField()
     customer_email = serializers.ReadOnlyField(source='customer.user.email')
+    dispatched_technicians = DispatchedTechnicianSerializer(source='dispatches', many=True, read_only=True)
     
     def get_customer_name(self, obj):
         """Get customer name safely"""
@@ -83,6 +101,7 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
             'description', 'customer_phone',
             'tow_distance_km', 'destination',
             'assigned_technician', 'assigned_technician_name',
+            'dispatched_technicians',
             'dispatched_at', 'arrived_at', 'completed_at',
             'subscription_used', 'subscription_number', 'subscription_allowance_deducted',
             'is_covered_by_subscription', 'charge_amount',
@@ -120,6 +139,15 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
         user = getattr(request, 'user', None)
         customer = data.get('customer')
         vehicle = data.get('vehicle')
+        
+        # Log the incoming request data for debugging
+        logger.debug(
+            "RoadsideRequestCreateSerializer.validate() called | User: %s | Data keys: %s | Customer: %s | Vehicle: %s",
+            user,
+            list(data.keys()),
+            customer,
+            vehicle,
+        )
 
         if user and getattr(user, 'role', None) == 'customer':
             customer_profile = getattr(user, 'customer_profile', None)
@@ -129,13 +157,16 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
                 except Customer.DoesNotExist:
                     customer_profile = None
             if not customer_profile:
+                logger.debug("Customer profile not found for user: %s", user)
                 raise serializers.ValidationError({"customer": "Customer profile not found"})
             data['customer'] = customer_profile
             customer = customer_profile
         
         if not customer:
+            logger.debug("Customer is required but not provided. User: %s", user)
             raise serializers.ValidationError({"customer": "Customer is required"})
         if not vehicle:
+            logger.debug("Vehicle is required but not provided. User: %s", user)
             raise serializers.ValidationError({"vehicle": "Vehicle is required"})
         
         # Ensure vehicle belongs to customer
@@ -155,6 +186,7 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
         # Validate customer phone
         customer_phone = data.get('customer_phone')
         if not customer_phone or len(customer_phone.strip()) == 0:
+            logger.debug("Customer phone validation failed. Phone: %s", customer_phone)
             raise serializers.ValidationError(
                 {"customer_phone": "Customer phone number is required for roadside assistance"}
             )
@@ -162,6 +194,7 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
         # Validate breakdown location
         breakdown_location = data.get('breakdown_location')
         if not breakdown_location or len(breakdown_location.strip()) == 0:
+            logger.debug("Breakdown location validation failed. Location: %s", breakdown_location)
             raise serializers.ValidationError(
                 {"breakdown_location": "Breakdown location is required"}
             )
@@ -203,6 +236,14 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
                     # Case 1: Service not covered (remaining=0 usually if key missing in logic or actually 0)
                     # Case 2: Insufficient allowance
                     if not has_allowance:
+                        logger.debug(
+                            "Subscription allowance check failed. Customer: %s, Service: %s, Has allowance: %s, Remaining: %s, Subscription: %s",
+                            customer,
+                            service_type,
+                            has_allowance,
+                            remaining,
+                            subscription,
+                        )
                         raise serializers.ValidationError(
                             {
                                 "service_type": f"Service '{service_type}' is not available under your current subscription (Remaining: {remaining})."

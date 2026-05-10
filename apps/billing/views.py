@@ -36,6 +36,7 @@ from apps.billing.models import (
     CreditNoteLineItem,
     Bill,
     BillLineItem,
+    BillPayment,
 )
 from apps.billing.services import PDFService, BillingService
 from apps.billing.mixins import (
@@ -62,6 +63,8 @@ from apps.billing.serializers import (
     BillSerializer,
     BillCreateSerializer,
     BillLineItemSerializer,
+    BillPaymentSerializer,
+    BillPaymentCreateSerializer,
 )
 from apps.billing.models import TaxRate, Estimate, EstimateLineItem, Invoice, Payment, PaymentAllocation
 from apps.billing.tax_service import TaxService
@@ -670,6 +673,12 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
             if date_to:
                 queryset = queryset.filter(invoice_date__lte=date_to)
         
+        # Filter for invoices with remaining balance (for allocation use cases)
+        has_balance = self.request.query_params.get('has_balance', 'false').lower() == 'true'
+        if has_balance:
+            from django.db.models import Q
+            queryset = queryset.exclude(amount_due__lte=0).exclude(status='paid')
+        
         return queryset
     
     def get_serializer_class(self):
@@ -1105,6 +1114,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
         allocated = payment.allocations.aggregate(
             total=Sum('amount')
         )['total'] or Decimal('0')
+        if allocated == 0 and payment.invoice_id:
+            allocated = payment.amount
         unallocated = payment.amount - allocated
         return Response({
             'payment_amount': str(payment.amount),
@@ -1485,7 +1496,10 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         payment_id = request.data.get('payment_id')
         allocations = request.data.get('allocations', [])
         
+        logger.warning(f"allocate_payment called | payment_id: {payment_id} | allocations: {allocations} | User: {request.user}")
+        
         if not payment_id or not allocations:
+            logger.error(f"Missing required fields | payment_id: {payment_id} | allocations: {allocations}")
             return Response(
                 {"error": "payment_id and allocations are required"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1494,6 +1508,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         try:
             payment = Payment.objects.get(id=payment_id)
         except Payment.DoesNotExist:
+            logger.error(f"Payment not found | payment_id: {payment_id}")
             return Response(
                 {"error": "Payment not found"},
                 status=status.HTTP_404_NOT_FOUND
@@ -1501,6 +1516,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         
         # Validate payment status
         if payment.status != 'completed':
+            logger.error(f"Payment status validation failed | payment_id: {payment_id} | status: {payment.status} | required: completed")
             return Response(
                 {"error": "Only completed payments can be allocated"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1509,6 +1525,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         # Validate total allocation doesn't exceed payment amount
         total_allocated = sum(Decimal(str(a.get('amount', 0))) for a in allocations)
         if total_allocated > payment.amount:
+            logger.error(f"Total allocation exceeds payment amount | payment_id: {payment_id} | total_allocated: {total_allocated} | payment.amount: {payment.amount}")
             return Response(
                 {
                     "error": f"Total allocation ({total_allocated}) exceeds payment amount ({payment.amount})"
@@ -1528,16 +1545,28 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
                     invoice_id = alloc_data.get('invoice_id')
                     amount = Decimal(str(alloc_data.get('amount', 0)))
                     
+                    logger.debug(f"Processing allocation | invoice_id: {invoice_id} | amount: {amount}")
+                    
                     if amount <= 0:
+                        logger.error(f"Invalid allocation amount | amount: {amount}")
                         raise serializers.ValidationError(f"Allocation amount must be greater than 0")
                     
                     try:
                         invoice = Invoice.objects.get(id=invoice_id)
                     except Invoice.DoesNotExist:
+                        logger.error(f"Invoice not found | invoice_id: {invoice_id}")
                         raise serializers.ValidationError(f"Invoice {invoice_id} not found")
+                    
+                    # Check if invoice is already fully paid
+                    if invoice.amount_due <= 0:
+                        logger.warning(f"Invoice is already fully paid | invoice_id: {invoice_id} | invoice_number: {invoice.invoice_number} | amount_due: {invoice.amount_due}")
+                        raise serializers.ValidationError(
+                            f"Invoice {invoice.invoice_number} is already fully paid and cannot receive additional allocation"
+                        )
                     
                     # Validate allocation doesn't exceed invoice balance
                     if amount > invoice.amount_due:
+                        logger.error(f"Allocation exceeds invoice balance | invoice_id: {invoice_id} | invoice_number: {invoice.invoice_number} | amount: {amount} | amount_due: {invoice.amount_due}")
                         raise serializers.ValidationError(
                             f"Allocation amount ({amount}) exceeds invoice {invoice.invoice_number} balance ({invoice.amount_due})"
                         )
@@ -1551,6 +1580,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
                     )
                     created_allocations.append(allocation)
         except serializers.ValidationError as e:
+            logger.error(f"ValidationError in allocate_payment | payment_id: {payment_id} | error: {str(e)}")
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1580,7 +1610,10 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         
         payment_id = request.data.get('payment_id')
         
+        logger.warning(f"auto_allocate called | payment_id: {payment_id} | User: {request.user}")
+        
         if not payment_id:
+            logger.error(f"Missing payment_id in auto_allocate request")
             return Response(
                 {"error": "payment_id is required"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1589,6 +1622,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         try:
             payment = Payment.objects.get(id=payment_id)
         except Payment.DoesNotExist:
+            logger.error(f"Payment not found | payment_id: {payment_id}")
             return Response(
                 {"error": "Payment not found"},
                 status=status.HTTP_404_NOT_FOUND
@@ -1596,6 +1630,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         
         # Validate payment status
         if payment.status != 'completed':
+            logger.error(f"Payment status validation failed | payment_id: {payment_id} | status: {payment.status}")
             return Response(
                 {"error": "Only completed payments can be allocated"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1604,6 +1639,7 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         # Get customer from payment
         customer = payment.customer
         if not customer:
+            logger.error(f"Payment has no customer | payment_id: {payment_id}")
             return Response(
                 {"error": "Payment has no associated customer"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1617,7 +1653,10 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
             Q(amount_due__gt=0)
         ).order_by('invoice_date', 'id')
         
+        logger.info(f"Found {unpaid_invoices.count()} unpaid invoices for customer {customer.id}")
+        
         if not unpaid_invoices.exists():
+            logger.error(f"No unpaid invoices found | payment_id: {payment_id} | customer: {customer.id}")
             return Response(
                 {"error": "No unpaid invoices found for this customer"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -1777,7 +1816,9 @@ class BillViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing vendor bills
     """
-    queryset = Bill.objects.select_related('vendor', 'branch', 'created_by').prefetch_related('line_items')
+    queryset = Bill.objects.select_related(
+        'vendor', 'branch', 'purchase_order', 'created_by'
+    ).prefetch_related('line_items', 'payments')
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get_permissions(self):
@@ -1786,14 +1827,16 @@ class BillViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_bills')]
         elif self.action in ['create']:
             return [IsAuthenticated(), HasPermission('create_bills')]
-        elif self.action in ['update', 'partial_update']:
+        elif self.action in ['update', 'partial_update', 'record_payment', 'void', 'submit_for_approval', 'approvers']:
             return [IsAuthenticated(), HasPermission('edit_bills')]
+        elif self.action in ['approve', 'reject']:
+            return [IsAuthenticated(), HasPermission('manage_billing')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('manage_billing')]
         return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'vendor', 'branch', 'due_date']
-    search_fields = ['bill_number', 'vendor__name', 'reference_number', 'notes']
+    filterset_fields = ['status', 'vendor', 'branch', 'purchase_order', 'due_date']
+    search_fields = ['bill_number', 'vendor__name', 'purchase_order__po_number', 'reference_number', 'notes']
     ordering_fields = ['bill_date', 'due_date', 'total', 'created_at']
     ordering = ['-bill_date']
 
@@ -1813,7 +1856,7 @@ class BillViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update']:
             return BillCreateSerializer
         return BillSerializer
     
@@ -1828,6 +1871,180 @@ class BillViewSet(viewsets.ModelViewSet):
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
             
         serializer.save(branch=branch, created_by=request.user)
+
+    @action(detail=False, methods=['get'])
+    def approvers(self, request):
+        """Return active users who can approve standalone vendor bills."""
+        from apps.accounts.models import User
+
+        users = User.objects.filter(
+            is_active=True,
+            role__in=['manager', 'admin', 'super-admin']
+        ).exclude(id=request.user.id).order_by('first_name', 'last_name', 'email')
+
+        return Response([
+            {
+                'id': user.id,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'full_name': user.get_full_name(),
+                'role': user.role,
+            }
+            for user in users
+        ])
+
+    @action(detail=True, methods=['post'], url_path='submit-for-approval')
+    def submit_for_approval(self, request, pk=None):
+        """Submit a standalone vendor bill for approval."""
+        bill = self.get_object()
+        if bill.purchase_order_id:
+            return Response(
+                {"error": "PO-linked bills use purchase order approval and do not need bill approval."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.status not in ['draft', 'rejected']:
+            return Response(
+                {"error": "Only draft or rejected standalone bills can be submitted for approval."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.total <= 0:
+            return Response(
+                {"error": "Bill total must be greater than zero before approval."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        approver_id = request.data.get('approver_id')
+        if not approver_id:
+            return Response(
+                {"error": "Select an approver before submitting this bill."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        from apps.accounts.models import User
+        try:
+            approver = User.objects.get(id=approver_id, is_active=True)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Selected approver was not found."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if approver.id == request.user.id:
+            return Response(
+                {"error": "Bills must be approved by someone other than the submitter."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if getattr(approver, 'role', None) not in {'manager', 'admin', 'super-admin'}:
+            return Response(
+                {"error": "Selected approver must be a manager or admin."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        bill.status = 'pending_approval'
+        bill.assigned_approver = approver
+        bill.submitted_by = request.user
+        bill.submitted_at = timezone.now()
+        bill.rejection_reason = ''
+        bill.save()
+        try:
+            notification_triggers.bill_approval_request(bill, approver)
+        except Exception as e:
+            logger.warning("Failed to send bill approval notification: %s", e, exc_info=True)
+        return Response(BillSerializer(bill).data)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve a standalone vendor bill and open it for AP posting."""
+        bill = self.get_object()
+        if bill.purchase_order_id:
+            return Response(
+                {"error": "PO-linked bills are approved through the purchase order workflow."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.status != 'pending_approval':
+            return Response(
+                {"error": "Only pending approval bills can be approved."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.assigned_approver_id and bill.assigned_approver_id != request.user.id and getattr(request.user, 'role', None) not in {'admin', 'super-admin'}:
+            return Response(
+                {"error": "Only the assigned approver or an admin can approve this bill."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        bill.status = 'open'
+        bill.approved_by = request.user
+        bill.approved_at = timezone.now()
+        bill.save()
+        return Response(BillSerializer(bill).data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject a standalone vendor bill back for correction."""
+        bill = self.get_object()
+        if bill.purchase_order_id:
+            return Response(
+                {"error": "PO-linked bills are controlled by the purchase order workflow."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.status != 'pending_approval':
+            return Response(
+                {"error": "Only pending approval bills can be rejected."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if bill.assigned_approver_id and bill.assigned_approver_id != request.user.id and getattr(request.user, 'role', None) not in {'admin', 'super-admin'}:
+            return Response(
+                {"error": "Only the assigned approver or an admin can reject this bill."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        bill.status = 'rejected'
+        bill.rejected_by = request.user
+        bill.rejected_at = timezone.now()
+        if request.data.get('reason'):
+            bill.rejection_reason = request.data['reason']
+            bill.notes = f"{bill.notes}\nRejection reason: {request.data['reason']}".strip()
+        bill.save()
+        return Response(BillSerializer(bill).data)
+
+    @action(detail=True, methods=['post'])
+    def record_payment(self, request, pk=None):
+        """Record a payment made to the vendor for this bill."""
+        bill = self.get_object()
+        if bill.status in ['draft', 'pending_approval', 'rejected', 'void']:
+            return Response(
+                {"error": "Payments can only be recorded for approved/open, overdue, or partially paid bills."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = BillPaymentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data['amount'] > bill.amount_due:
+            return Response(
+                {"error": "Payment amount cannot exceed the bill amount due."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        payment = serializer.save(bill=bill, paid_by=request.user)
+        return Response(BillPaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def void(self, request, pk=None):
+        """Void a vendor bill when no payment has been recorded."""
+        bill = self.get_object()
+        if bill.amount_paid > 0:
+            return Response(
+                {"error": "Bills with recorded payments cannot be voided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        from django.contrib.contenttypes.models import ContentType
+        from apps.accounting.models import JournalEntry
+
+        if JournalEntry.objects.filter(
+            content_type=ContentType.objects.get_for_model(bill),
+            object_id=bill.id
+        ).exists():
+            return Response(
+                {"error": "Posted bills cannot be voided without a reversal workflow."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        bill.status = 'void'
+        bill.save()
+        return Response(BillSerializer(bill).data)
 
     @action(detail=True, methods=['get'])
     def pdf(self, request, pk=None):

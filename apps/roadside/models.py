@@ -340,3 +340,54 @@ class RoadsideRequest(models.Model):
         if reason:
             self.notes = f"{self.notes}\nFailed: {reason}" if self.notes else f"Failed: {reason}"
         self.save()
+
+    def get_all_technicians(self):
+        """Return all dispatched technicians (primary + additional)"""
+        dispatches = self.dispatches.select_related('technician').order_by('dispatched_at')
+        return [d.technician for d in dispatches]
+
+
+class RoadsideDispatch(models.Model):
+    """
+    Tracks each technician dispatched to a roadside request.
+    Allows multiple technicians per request.
+    """
+    request = models.ForeignKey(
+        RoadsideRequest,
+        on_delete=models.CASCADE,
+        related_name='dispatches',
+        help_text="Roadside request this dispatch belongs to"
+    )
+    technician = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='roadside_dispatches',
+        help_text="Dispatched technician"
+    )
+    dispatched_at = models.DateTimeField(
+        _('dispatched at'),
+        default=timezone.now,
+        help_text="When this technician was dispatched"
+    )
+    dispatched_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='dispatches_created',
+        help_text="Staff member who dispatched this technician"
+    )
+    notes = models.TextField(
+        _('notes'),
+        blank=True,
+        help_text="Optional notes for this dispatch assignment"
+    )
+
+    class Meta:
+        ordering = ['dispatched_at']
+        verbose_name = _('roadside dispatch')
+        verbose_name_plural = _('roadside dispatches')
+        unique_together = [('request', 'technician')]
+
+    def __str__(self):
+        return f"{self.request.request_number} → {self.technician}"

@@ -11,7 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError as DjangoValidationError
 
-from .models import RoadsideRequest
+from .models import RoadsideRequest, RoadsideDispatch
 from .serializers import (
     RoadsideRequestSerializer,
     RoadsideRequestCreateSerializer,
@@ -43,7 +43,7 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         queryset = RoadsideRequest.objects.select_related(
             'customer', 'vehicle', 'branch', 'assigned_technician', 
             'subscription_used', 'created_by'
-        )
+        ).prefetch_related('dispatches__technician')
         
         # For my_requests action, let the action handle filtering
         if action == 'my_requests':
@@ -117,6 +117,9 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         elif action == 'assign_dispatch':
             permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
             return [p() for p in permission_classes]
+        elif action in ['add_technician', 'remove_technician']:
+            permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
+            return [p() for p in permission_classes]
         elif action in ['en_route', 'in_progress', 'arrive', 'complete', 'fail']:
              # Allow dispatchers OR the assigned technician (via object permission or get_queryset security)
              # But we must Block customers
@@ -153,6 +156,7 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         branch = resolve_branch(request, branch_id=branch_id)
         
         if branch is None:
+            logger.error(f"Branch resolution failed for roadside request. User: {request.user}, branch_id: {branch_id}, request_data: {request.data}")
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
             
         # 1. Start atomic transaction for the entire request creation
@@ -283,7 +287,7 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def assign_dispatch(self, request, pk=None):
-        """Dispatch a roadside request to a technician"""
+        """Dispatch a roadside request to a technician (sets primary technician, changes status)"""
         roadside_request = self.get_object()
         
         try:
@@ -303,6 +307,12 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST
                         )
                     roadside_request.mark_dispatched(technician=technician)
+                    # Record in the dispatch log (upsert: ignore if already exists)
+                    RoadsideDispatch.objects.get_or_create(
+                        request=roadside_request,
+                        technician=technician,
+                        defaults={'dispatched_by': request.user}
+                    )
                 except User.DoesNotExist:
                     return Response(
                         {'error': 'Technician not found'},
@@ -322,6 +332,94 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.warning(f"Failed to send dispatch notification: {e}")
         
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def add_technician(self, request, pk=None):
+        """Add an additional technician to an active roadside request without changing its status"""
+        roadside_request = self.get_object()
+
+        if not roadside_request.is_active():
+            return Response(
+                {'error': 'Cannot add technician to a completed, cancelled, or failed request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        technician_id = request.data.get('technician_id')
+        if not technician_id:
+            return Response({'error': 'technician_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.accounts.models import User
+        try:
+            technician = User.objects.get(id=technician_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Technician not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not technician.is_technician:
+            return Response({'error': 'Assigned user must be a technician'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if roadside_request.branch and not technician.has_branch_access(roadside_request.branch):
+            return Response(
+                {'error': 'Technician does not have access to this request branch'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        notes = request.data.get('notes', '')
+        dispatch, created = RoadsideDispatch.objects.get_or_create(
+            request=roadside_request,
+            technician=technician,
+            defaults={'dispatched_by': request.user, 'notes': notes}
+        )
+        if not created:
+            return Response(
+                {'error': 'This technician is already assigned to this request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # If this is the first dispatch record, set as primary technician & transition status
+        if not roadside_request.assigned_technician:
+            roadside_request.assigned_technician = technician
+            if roadside_request.status == 'requested':
+                roadside_request.status = 'dispatched'
+                roadside_request.dispatched_at = timezone.now()
+            roadside_request.save(update_fields=['assigned_technician', 'status', 'dispatched_at', 'updated_at'])
+
+        try:
+            notification_triggers.roadside_dispatched(roadside_request)
+        except Exception as e:
+            logger.warning(f"Failed to send dispatch notification for additional technician: {e}")
+
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def remove_technician(self, request, pk=None):
+        """Remove a technician from an active roadside request"""
+        roadside_request = self.get_object()
+
+        if not roadside_request.is_active():
+            return Response(
+                {'error': 'Cannot modify technicians on a completed, cancelled, or failed request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        technician_id = request.data.get('technician_id')
+        if not technician_id:
+            return Response({'error': 'technician_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted, _ = RoadsideDispatch.objects.filter(
+            request=roadside_request, technician_id=technician_id
+        ).delete()
+        if not deleted:
+            return Response({'error': 'Technician not found on this request'}, status=status.HTTP_404_NOT_FOUND)
+
+        # If we just removed the primary technician, promote the next one
+        if str(roadside_request.assigned_technician_id) == str(technician_id):
+            next_dispatch = roadside_request.dispatches.select_related('technician').first()
+            roadside_request.assigned_technician = next_dispatch.technician if next_dispatch else None
+            roadside_request.save(update_fields=['assigned_technician', 'updated_at'])
+
         serializer = self.get_serializer(roadside_request)
         return Response(serializer.data)
     

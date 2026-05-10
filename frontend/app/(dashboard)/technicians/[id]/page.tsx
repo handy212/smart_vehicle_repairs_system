@@ -241,7 +241,6 @@ function TechnicianProfileContent() {
                                 <TabsTrigger value="schedule" className={technicianTabClass}>Schedule</TabsTrigger>
                             </PermissionGuard>
                             <TabsTrigger value="history" className={technicianTabClass}>Job History</TabsTrigger>
-                            <TabsTrigger value="location" className={technicianTabClass}>Live Location</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="overview" className="space-y-3">

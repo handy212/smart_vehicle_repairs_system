@@ -131,16 +131,18 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         
-        if user.role == 'admin' or user.role == 'manager':
-            return Subscription.objects.all()
+        queryset = Subscription.objects.select_related('customer', 'package', 'vehicle')
+
+        if user.role in ['admin', 'manager', 'super-admin'] or getattr(user, 'is_superuser', False):
+            return queryset
         elif user.role == 'customer' and hasattr(user, 'customer_profile'):
             customer = user.customer_profile
-            return Subscription.objects.filter(customer=customer)
+            return queryset.filter(customer=customer)
         
         return Subscription.objects.none()
     
-    def perform_create(self, serializer):
-        """Set purchase date and handle subscription creation with invoice"""
+    def _create_subscription_with_invoice(self, serializer):
+        """Create a subscription through the service and return its invoice."""
         from .services import SubscriptionService
         from rest_framework.exceptions import ValidationError
         
@@ -178,7 +180,23 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             request=self.request
         )
         
-        return subscription
+        return subscription, invoice
+
+    def create(self, request, *args, **kwargs):
+        """Create a subscription and return the generated invoice reference."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        subscription, invoice = self._create_subscription_with_invoice(serializer)
+        response_serializer = SubscriptionSerializer(subscription, context=self.get_serializer_context())
+        data = dict(response_serializer.data)
+        data['invoice_id'] = invoice.id
+        data['invoice_number'] = invoice.invoice_number
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
+        """Set purchase date and handle subscription creation with invoice."""
+        subscription, _invoice = self._create_subscription_with_invoice(serializer)
+        serializer.instance = subscription
     
     @action(detail=False, methods=['get'])
     def my_subscriptions(self, request):
@@ -262,6 +280,30 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             'is_active': subscription.is_active(),
             'days_remaining': subscription.days_remaining(),
             'allowances': usage_summary
+        })
+
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        """Get compact subscription usage statistics."""
+        subscription = self.get_object()
+        allowances = subscription.get_all_remaining_allowances()
+        usage_summary = {}
+
+        for feature_type, initial in (subscription.package.features or {}).items():
+            if isinstance(initial, (int, float)):
+                total_used = subscription.usage_records.filter(
+                    usage_type=feature_type
+                ).aggregate(total=Sum('quantity_used'))['total'] or Decimal('0')
+                usage_summary[feature_type] = {
+                    'initial': initial,
+                    'used': float(total_used),
+                    'remaining': allowances.get(feature_type, 0),
+                }
+
+        return Response({
+            'days_remaining': subscription.days_remaining(),
+            'usage_summary': usage_summary,
+            'remaining_allowances': allowances,
         })
     
     @action(detail=True, methods=['post'])

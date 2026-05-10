@@ -9,9 +9,10 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface AllocationHistoryProps {
     paymentId: number;
+    directInvoiceNumber?: string;
 }
 
-export function AllocationHistory({ paymentId }: AllocationHistoryProps) {
+export function AllocationHistory({ paymentId, directInvoiceNumber }: AllocationHistoryProps) {
     const { formatCurrency } = useCurrency();
     const { data: allocations, isLoading } = useQuery({
         queryKey: ["payment-allocations", paymentId],
@@ -34,6 +35,18 @@ export function AllocationHistory({ paymentId }: AllocationHistoryProps) {
     }
 
     if (!allocations || allocations.length === 0) {
+        if (directInvoiceNumber) {
+            return (
+                <div className="mt-3 pt-3 border-t border-border">
+                    <div className="flex items-center gap-2 text-xs text-success bg-success/10 px-3 py-2 rounded-md">
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span className="font-medium">Applied directly</span>
+                        <span className="text-muted-foreground">- Payment recorded against invoice {directInvoiceNumber}</span>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="mt-3 pt-3 border-t border-border">
                 <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 dark:bg-amber-900/20 px-3 py-2 rounded-md">
@@ -94,7 +107,7 @@ export function AllocationHistory({ paymentId }: AllocationHistoryProps) {
 
                                 {allocation.notes && (
                                     <p className="text-xs text-muted-foreground italic mt-2 pl-5">
-                                        "{allocation.notes}"
+                                        {allocation.notes}
                                     </p>
                                 )}
                             </div>

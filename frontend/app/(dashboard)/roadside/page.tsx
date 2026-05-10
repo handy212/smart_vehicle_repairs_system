@@ -38,14 +38,52 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
+import type { RoadsideDashboardStats } from "@/lib/api/roadside";
+
+type RoadsideFilterValue = string | boolean | undefined;
+type RoadsideFilters = Record<string, RoadsideFilterValue>;
+
+function stringFilter(value: RoadsideFilterValue) {
+    return typeof value === "string" && value ? value : undefined;
+}
+
+function StatsGrid({ stats }: { stats?: RoadsideDashboardStats }) {
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="shadow-sm border bg-card">
+                <CardContent className="p-3 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
+                    <span className="text-lg font-bold text-foreground">{stats?.total_requests || 0}</span>
+                </CardContent>
+            </Card>
+            <Card className="shadow-sm border bg-card">
+                <CardContent className="p-3 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
+                    <span className="text-lg font-bold text-primary">{stats?.active_requests || 0}</span>
+                </CardContent>
+            </Card>
+            <Card className="shadow-sm border bg-card">
+                <CardContent className="p-3 flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Completed</span>
+                    <span className="text-lg font-bold text-success">{stats?.completed_requests || 0}</span>
+                </CardContent>
+            </Card>
+            <Card className="shadow-sm border bg-card">
+                <CardContent className="p-3 flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Subscribed</span>
+                    <span className="text-lg font-bold text-success dark:text-emerald-400">{stats?.covered_by_subscription || 0}</span>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
 
 export default function RoadsidePage() {
     const router = useRouter();
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
     const [page, setPage] = useState(1);
-    // * eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+    const [advancedFilters, setAdvancedFilters] = useState<RoadsideFilters>({});
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
     const { toast } = useToast();
@@ -134,8 +172,8 @@ export default function RoadsidePage() {
             return roadsideApi.list({
                 page,
                 search: debouncedSearch || undefined,
-                status: advancedFilters.status || undefined,
-                service_type: advancedFilters.service_type || undefined,
+                status: stringFilter(advancedFilters.status),
+                service_type: stringFilter(advancedFilters.service_type),
                 is_covered_by_subscription: advancedFilters.is_covered_by_subscription === 'true' ? true : advancedFilters.is_covered_by_subscription === 'false' ? false : undefined,
                 ordering,
             });
@@ -161,36 +199,6 @@ export default function RoadsidePage() {
     const handleExport = () => {
         toast({ title: "Export", description: "Export functionality coming soon" });
     };
-
-    // Stats Grid Component
-    const StatsGrid = () => (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="shadow-sm border bg-card">
-                <CardContent className="p-3 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</span>
-                    <span className="text-lg font-bold text-foreground">{stats?.total_requests || 0}</span>
-                </CardContent>
-            </Card>
-            <Card className="shadow-sm border bg-card">
-                <CardContent className="p-3 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
-                    <span className="text-lg font-bold text-primary">{stats?.active_requests || 0}</span>
-                </CardContent>
-            </Card>
-            <Card className="shadow-sm border bg-card">
-                <CardContent className="p-3 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Completed</span>
-                    <span className="text-lg font-bold text-success">{stats?.completed_requests || 0}</span>
-                </CardContent>
-            </Card>
-            <Card className="shadow-sm border bg-card">
-                <CardContent className="p-3 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Subscribed</span>
-                    <span className="text-lg font-bold text-success dark:text-emerald-400">{stats?.covered_by_subscription || 0}</span>
-                </CardContent>
-            </Card>
-        </div>
-    );
 
     if (error) {
         return (
@@ -222,7 +230,7 @@ export default function RoadsidePage() {
                         </Button>
                     </Link>
                 </div>
-                <StatsGrid />
+                <StatsGrid stats={stats} />
             </div>
 
             {/* Unified Toolbar */}

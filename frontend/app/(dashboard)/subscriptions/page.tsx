@@ -98,10 +98,10 @@ export default function SubscriptionsPage() {
       setSelectedSubscription(null);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to cancel subscription",
+        description: getApiErrorMessage(error, "Failed to cancel subscription"),
         variant: "destructive",
       });
     },
@@ -116,7 +116,7 @@ export default function SubscriptionsPage() {
       setSelectedSubscription(null);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
         description: getApiErrorMessage(error, "Failed to delete subscription"),
@@ -136,7 +136,7 @@ export default function SubscriptionsPage() {
       setNewPackageId(null);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
         description: getApiErrorMessage(error, "Failed to change plan"),
@@ -156,7 +156,7 @@ export default function SubscriptionsPage() {
       });
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
         description: getApiErrorMessage(error, "Failed to renew subscription"),
@@ -201,10 +201,10 @@ export default function SubscriptionsPage() {
       setSelectedSubscription(fullSubscription);
       setIsDetailsDialogOpen(true);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to load subscription details",
+        description: getApiErrorMessage(error, "Failed to load subscription details"),
         variant: "destructive",
       });
     }
@@ -233,7 +233,9 @@ export default function SubscriptionsPage() {
             {subscription.customer_name || `Customer #${subscription.customer}`}
           </span>
           {subscription.vehicle && (
-            <span className="text-xs text-muted-foreground">Vehicle ID: {subscription.vehicle}</span>
+            <span className="text-xs text-muted-foreground">
+              {subscription.vehicle_license_plate || subscription.vehicle_display || `Vehicle #${subscription.vehicle}`}
+            </span>
           )}
         </div>
       ),

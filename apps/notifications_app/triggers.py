@@ -1415,6 +1415,43 @@ Please review and approve.'''
         )
         self.service.send_notification(in_app_notification)
 
+    def bill_approval_request(self, bill, recipient):
+        """Notify approver that a standalone vendor bill requires approval."""
+        if not recipient:
+            return
+
+        context = self._get_default_context()
+        context.update({
+            'bill_id': bill.id,
+            'bill_number': bill.bill_number,
+            'vendor': bill.vendor.name,
+            'total': str(bill.total) if bill.total else '0.00',
+            'requested_by': bill.submitted_by.get_full_name() if bill.submitted_by else str(bill.created_by),
+            'approval_url': f"{self._get_base_url()}/billing/bills/{bill.id}",
+        })
+
+        title = f'Approval Required: Bill {bill.bill_number}'
+        message = f'''Vendor Bill {bill.bill_number} from {bill.vendor.name} requires your approval.
+
+Total: {context['total']}
+Requested By: {context['requested_by']}
+
+Please review and approve.'''
+
+        for channel in ['email', 'in_app']:
+            notification = Notification.objects.create(
+                recipient=recipient,
+                notification_type='payment',
+                channel=channel,
+                priority='high',
+                title=title,
+                message=message,
+                data=context,
+                related_object_type='bill',
+                related_object_id=bill.id
+            )
+            self.service.send_notification(notification)
+
     def stock_transfer_approval_request(self, transfer, recipient):
         """Notify manager that stock transfer requires approval"""
         if not recipient:

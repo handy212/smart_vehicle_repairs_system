@@ -196,6 +196,10 @@ class AccountingService:
 
         invoice_type = ContentType.objects.get_for_model(invoice)
         invoice_reference = invoice.invoice_number or f"INV-{invoice.id}"
+        total_amount = Decimal(str(invoice.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
+
+        if total_amount <= 0:
+            return None
 
         # Check if the AR/revenue entry has already been posted. COGS is a
         # separate entry for the same invoice and should not block this one.
@@ -225,7 +229,6 @@ class AccountingService:
 
             # 3. Create Transactions
             
-            total_amount = Decimal(str(invoice.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
             tax_amount = Decimal(str(invoice.tax_amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
             revenue_amount = Decimal(str(invoice.subtotal or Decimal('0'))).quantize(cls.MONEY_QUANT)
             if revenue_amount == 0 and total_amount > 0:
@@ -487,12 +490,9 @@ class AccountingService:
                 reference=payment.reference_number or payment.payment_number,
                 posted=True,
                 created_by=payment.processed_by,
-                # branch=payment.invoice.branch, # Payment linked to invoice, infer branch
+                branch=payment.invoice.branch if payment.invoice and payment.invoice.branch else None,
                 content_object=payment
             )
-            if payment.invoice and payment.invoice.branch:
-                je.branch = payment.invoice.branch
-                je.save()
 
             # 3. Create Transactions
             

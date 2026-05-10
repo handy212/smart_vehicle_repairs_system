@@ -13,7 +13,12 @@ User = get_user_model()
 
 class BillTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='password123', email='test@example.com', role='admin')
+        self.user = User.objects.create_superuser(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+            role='super-admin'
+        )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
         

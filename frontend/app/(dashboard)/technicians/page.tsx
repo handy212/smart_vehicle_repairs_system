@@ -110,16 +110,6 @@ function TechniciansContent() {
                     { label: "Dashboard", href: "/dashboard" },
                     { label: "Technicians" }
                 ]}
-                actions={
-                    <PermissionGuard permission="manage_technicians">
-                        <Button size="sm" asChild>
-                            <Link href="/hr/staff/new">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add via HR
-                            </Link>
-                        </Button>
-                    </PermissionGuard>
-                }
             />
 
             {!isLoading && technicians.length > 0 && (

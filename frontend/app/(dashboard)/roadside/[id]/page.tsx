@@ -23,7 +23,7 @@ import {
     DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
@@ -52,6 +52,8 @@ const editRequestSchema = z.object({
 });
 
 type EditRequestFormData = z.infer<typeof editRequestSchema>;
+type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "secondary" | "outline";
+type CommunicationMethod = "sms" | "email";
 
 export default function RoadsideDetailPage() {
     const params = useParams();
@@ -66,9 +68,10 @@ export default function RoadsideDetailPage() {
     const isValidId = !isNaN(requestId);
 
     const [isDispatchDialogOpen, setIsDispatchDialogOpen] = useState(false);
+    const [dispatchMode, setDispatchMode] = useState<'initial' | 'add'>('initial');
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false); // We'll keep the name for now to avoid refactor friction, but it's a general message dialog
-    const [communicationMethod, setCommunicationMethod] = useState<"sms" | "email">("sms");
+    const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
+    const [communicationMethod, setCommunicationMethod] = useState<CommunicationMethod>("sms");
     const [smsMessage, setSmsMessage] = useState("");
     const [emailSubject, setEmailSubject] = useState("");
     const [isFetchingSuggestion, setIsFetchingSuggestion] = useState(false);
@@ -115,11 +118,44 @@ export default function RoadsideDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
             toast({ title: "Success", description: "Technician dispatched" });
             setIsDispatchDialogOpen(false);
+            setSelectedTechnicianId("");
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Dispatch Failed",
                 description: getApiErrorMessage(error, "Technician could not be dispatched"),
+                variant: "destructive",
+            });
+        }
+    });
+
+    const addTechnicianMutation = useMutation({
+        mutationFn: (technicianId: number) => roadsideApi.addTechnician(requestId, technicianId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
+            toast({ title: "Success", description: "Technician added to this request" });
+            setIsDispatchDialogOpen(false);
+            setSelectedTechnicianId("");
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Failed",
+                description: getApiErrorMessage(error, "Could not add technician"),
+                variant: "destructive",
+            });
+        }
+    });
+
+    const removeTechnicianMutation = useMutation({
+        mutationFn: (technicianId: number) => roadsideApi.removeTechnician(requestId, technicianId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
+            toast({ title: "Removed", description: "Technician removed from this request" });
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Failed",
+                description: getApiErrorMessage(error, "Could not remove technician"),
                 variant: "destructive",
             });
         }
@@ -133,10 +169,10 @@ export default function RoadsideDetailPage() {
             setIsEditDialogOpen(false);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Update Failed",
-                description: error.response?.data?.detail || "Failed to update request",
+                description: getApiErrorMessage(error, "Failed to update request"),
                 variant: "destructive"
             });
         }
@@ -154,7 +190,7 @@ export default function RoadsideDetailPage() {
             }
         },
 
-        onSuccess: (data: any, action) => {
+        onSuccess: (data, action) => {
             queryClient.invalidateQueries({ queryKey: ["roadside", "detail", requestId] });
 
             const invoiceId = data?.invoice || data?.invoice_id;
@@ -170,7 +206,7 @@ export default function RoadsideDetailPage() {
                 toast({ title: "Updated", description: `Status changed to ${action}` });
             }
         },
-        onError: (error: any, action) => {
+        onError: (error: unknown, action) => {
             toast({
                 title: "Action Failed",
                 description: getApiErrorMessage(error, `Could not ${action.replace("_", " ")} this request`),
@@ -180,7 +216,7 @@ export default function RoadsideDetailPage() {
     });
 
     const sendSmsMutation = useMutation({
-        mutationFn: (data: { method: "sms" | "email", message: string, subject?: string }) => {
+        mutationFn: (data: { method: CommunicationMethod, message: string, subject?: string }) => {
             if (data.method === "email") {
                 return roadsideApi.sendCustomerEmail(requestId, data.message, data.subject);
             }
@@ -196,16 +232,16 @@ export default function RoadsideDetailPage() {
             setEmailSubject("");
         },
 
-        onError: (error: any, variables) => {
+        onError: (error: unknown, variables) => {
             toast({
                 title: variables.method === "email" ? "Email Failed" : "SMS Failed",
-                description: error.response?.data?.error || `Failed to send ${variables.method === "email" ? "email" : "SMS"}`,
+                description: getApiErrorMessage(error, `Failed to send ${variables.method === "email" ? "email" : "SMS"}`),
                 variant: "destructive"
             });
         }
     });
 
-    const fetchSuggestion = async (method: "sms" | "email") => {
+    const fetchSuggestion = useCallback(async (method: CommunicationMethod) => {
         setIsFetchingSuggestion(true);
         try {
             const suggestion = await roadsideApi.getSuggestedMessage(requestId, method);
@@ -218,22 +254,35 @@ export default function RoadsideDetailPage() {
         } finally {
             setIsFetchingSuggestion(false);
         }
-    };
+    }, [requestId]);
 
     // Auto-fetch suggestion when dialog opens or method changes
     useEffect(() => {
         if (isSmsDialogOpen && !smsMessage.trim()) {
             fetchSuggestion(communicationMethod);
         }
-    }, [isSmsDialogOpen, communicationMethod]);
+    }, [isSmsDialogOpen, communicationMethod, fetchSuggestion, smsMessage]);
 
     useEffect(() => {
         if (request && searchParams.get("action") === "dispatch" && request.status === "requested") {
+            setDispatchMode('initial');
             setIsDispatchDialogOpen(true);
         }
     }, [request, searchParams]);
 
-    const getStatusVariant = (status: string) => {
+    const openAddTechnicianDialog = () => {
+        setDispatchMode('add');
+        setSelectedTechnicianId("");
+        setIsDispatchDialogOpen(true);
+    };
+
+    const openInitialDispatchDialog = () => {
+        setDispatchMode('initial');
+        setSelectedTechnicianId("");
+        setIsDispatchDialogOpen(true);
+    };
+
+    const getStatusVariant = (status: string): BadgeVariant => {
         switch (status) {
             case "completed": return "success";
             case "requested": return "warning";
@@ -269,7 +318,7 @@ export default function RoadsideDetailPage() {
         return (
             <div className="p-8 text-center space-y-4">
                 <div className="text-destructive font-bold text-xl">Request Not Found</div>
-                <p className="text-muted-foreground">We couldn't find the roadside request you're looking for.</p>
+                <p className="text-muted-foreground">We could not find the roadside request you are looking for.</p>
                 <Button onClick={() => router.push("/roadside")}>Go back to Roadside List</Button>
             </div>
         );
@@ -293,7 +342,7 @@ export default function RoadsideDetailPage() {
                                 {request.service_type_display}
                             </h1>
 
-                            <Badge variant={getStatusVariant(request.status) as any} className="text-[10px] px-2 py-0.5 uppercase tracking-wider font-bold">
+                            <Badge variant={getStatusVariant(request.status)} className="text-[10px] px-2 py-0.5 uppercase tracking-wider font-bold">
                                 {request.status_display}
                             </Badge>
                             {request.is_covered_by_subscription && (
@@ -304,10 +353,12 @@ export default function RoadsideDetailPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-9" onClick={handleOpenEdit}>
-                            <Wrench className="w-4 h-4 mr-2" />
-                            Edit Request
-                        </Button>
+                        {!['completed', 'cancelled', 'failed'].includes(request.status) && (
+                            <Button variant="outline" size="sm" className="h-9" onClick={handleOpenEdit}>
+                                <Wrench className="w-4 h-4 mr-2" />
+                                Edit Request
+                            </Button>
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => router.back()} className="h-9">
                             <ArrowLeft className="w-4 h-4 mr-2" /> Back
                         </Button>
@@ -507,7 +558,7 @@ export default function RoadsideDetailPage() {
                         </CardHeader>
                         <CardContent className="space-y-2">
                             {request.status === 'requested' && (
-                                <Button size="sm" className="w-full" onClick={() => setIsDispatchDialogOpen(true)}>
+                                <Button size="sm" className="w-full" onClick={openInitialDispatchDialog}>
                                     <Truck className="h-3 w-3 mr-1.5" /> Dispatch
                                 </Button>
                             )}
@@ -650,28 +701,64 @@ export default function RoadsideDetailPage() {
                         </Card>
                     )}
 
-                    {/* Technician Card */}
-                    {request.assigned_technician && (
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Technician</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="h-10 w-10 rounded-full bg-border flex items-center justify-center text-sm font-bold text-primary">
-                                        {request.assigned_technician_name?.substring(0, 2).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-sm text-foreground truncate">{request.assigned_technician_name}</div>
-                                        <div className="text-xs text-muted-foreground">Mobile Tech</div>
-                                    </div>
-                                </div>
-                                <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setIsDispatchDialogOpen(true)}>
-                                    Change
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
+                    {/* Technicians Card — multi-dispatch */}
+                    {(() => {
+                        const dispatched = request.dispatched_technicians ?? [];
+                        const isActive = !['completed', 'cancelled', 'failed'].includes(request.status);
+                        if (dispatched.length === 0 && !isActive) return null;
+                        return (
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                                        <span>Technicians ({dispatched.length})</span>
+                                        {isActive && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 text-[10px] px-2 text-primary"
+                                                onClick={openAddTechnicianDialog}
+                                            >
+                                                + Add
+                                            </Button>
+                                        )}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                    {dispatched.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground italic">No technicians assigned yet.</p>
+                                    ) : (
+                                        dispatched.map((d) => (
+                                            <div key={d.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border border-border">
+                                                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                                                    {d.technician_name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-xs font-medium text-foreground truncate">{d.technician_name}</div>
+                                                    <div className="text-[10px] text-muted-foreground">
+                                                        {d.technician === request.assigned_technician ? 'Lead' : 'Support'}
+                                                    </div>
+                                                </div>
+                                                {isActive && (
+                                                    <button
+                                                        className="text-muted-foreground hover:text-destructive transition-colors ml-auto"
+                                                        title="Remove technician"
+                                                        onClick={() => {
+                                                            if (confirm(`Remove ${d.technician_name} from this request?`)) {
+                                                                removeTechnicianMutation.mutate(d.technician);
+                                                            }
+                                                        }}
+                                                        disabled={removeTechnicianMutation.isPending}
+                                                    >
+                                                        <XCircle className="h-3.5 w-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </CardContent>
+                            </Card>
+                        );
+                    })()}
 
                     {/* AA Coverage Card */}
                     {request.is_covered_by_subscription && (
@@ -713,12 +800,17 @@ export default function RoadsideDetailPage() {
             </div>
 
             {/* Dialogs */}
-            <Dialog open={isDispatchDialogOpen} onOpenChange={setIsDispatchDialogOpen}>
+            <Dialog open={isDispatchDialogOpen} onOpenChange={(open) => { setIsDispatchDialogOpen(open); if (!open) setSelectedTechnicianId(""); }}>
                 <DialogContent className="sm:max-w-[400px] p-0 gap-0 bg-card border border-border shadow-xl rounded-xl">
                     <DialogHeader className="p-6 pb-3">
-                        <DialogTitle className="text-base font-semibold">Assign Technician</DialogTitle>
+                        <DialogTitle className="text-base font-semibold">
+                            {dispatchMode === 'add' ? 'Add Technician' : 'Assign & Dispatch'}
+                        </DialogTitle>
                         <DialogDescription className="text-xs">
-                            Select a technician to perform the {request.service_type_display}.
+                            {dispatchMode === 'add'
+                                ? 'Select an additional technician to join this request.'
+                                : `Select a technician to perform the ${request.service_type_display}.`
+                            }
                         </DialogDescription>
                     </DialogHeader>
                     <div className="px-6 pb-4 pt-2 space-y-4">
@@ -731,7 +823,14 @@ export default function RoadsideDetailPage() {
                             >
                                 <option value="">-- Choose technician --</option>
                                 {technicians?.map(tech => (
-                                    <option key={tech.id} value={tech.id}>{tech.full_name || tech.username}</option>
+                                    <option
+                                        key={tech.id}
+                                        value={tech.id}
+                                        disabled={request.dispatched_technicians?.some(d => d.technician === tech.id)}
+                                    >
+                                        {tech.full_name || tech.username}
+                                        {request.dispatched_technicians?.some(d => d.technician === tech.id) ? ' (already assigned)' : ''}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -740,11 +839,21 @@ export default function RoadsideDetailPage() {
                         <Button variant="ghost" size="sm" onClick={() => setIsDispatchDialogOpen(false)}>Cancel</Button>
                         <Button
                             size="sm"
-                            onClick={() => dispatchMutation.mutate(parseInt(selectedTechnicianId))}
-                            disabled={!selectedTechnicianId || dispatchMutation.isPending}
+                            onClick={() => {
+                                const id = parseInt(selectedTechnicianId);
+                                if (dispatchMode === 'add') {
+                                    addTechnicianMutation.mutate(id);
+                                } else {
+                                    dispatchMutation.mutate(id);
+                                }
+                            }}
+                            disabled={!selectedTechnicianId || dispatchMutation.isPending || addTechnicianMutation.isPending}
                             className="bg-primary hover:bg-primary/90 text-white"
                         >
-                            {dispatchMutation.isPending ? "Assigning..." : "Assign & Dispatch"}
+                            {(dispatchMutation.isPending || addTechnicianMutation.isPending)
+                                ? 'Assigning...'
+                                : dispatchMode === 'add' ? 'Add Technician' : 'Assign & Dispatch'
+                            }
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -830,7 +939,7 @@ export default function RoadsideDetailPage() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <Tabs value={communicationMethod} onValueChange={(v) => setCommunicationMethod(v as any)} className="w-full">
+                    <Tabs value={communicationMethod} onValueChange={(value) => setCommunicationMethod(value as CommunicationMethod)} className="w-full">
                         <TabsList className="grid w-full grid-cols-2 mb-4">
                             <TabsTrigger value="sms" className="flex items-center gap-2">
                                 <MessageSquare className="h-3.5 w-3.5" /> SMS

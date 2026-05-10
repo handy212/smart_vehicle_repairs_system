@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { packagesApi, subscriptionsApi, Package } from "@/lib/api/subscriptions";
+import { packagesApi, subscriptionsApi, Package, Subscription } from "@/lib/api/subscriptions";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const packageSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -114,10 +115,10 @@ export default function PackagesPage() {
       setPackageToDelete(null);
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to delete package",
+        description: getApiErrorMessage(error, "Failed to delete package"),
         variant: "destructive",
       });
     },
@@ -171,10 +172,10 @@ export default function PackagesPage() {
       reset();
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to create package",
+        description: getApiErrorMessage(error, "Failed to create package"),
         variant: "destructive",
       });
     },
@@ -191,10 +192,10 @@ export default function PackagesPage() {
       reset();
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update package",
+        description: getApiErrorMessage(error, "Failed to update package"),
         variant: "destructive",
       });
     },
@@ -305,7 +306,7 @@ export default function PackagesPage() {
       accessor: "id" as const,
       cell: (pkg: Package) => {
 
-        const count = subscriptions.filter((s: any) => s.package === pkg.id && s.status === "active").length;
+        const count = subscriptions.filter((s: Subscription) => s.package === pkg.id && s.status === "active").length;
         return (
           <div className="flex items-center gap-1.5">
             <span className={cn("text-sm font-bold", count > 0 ? "text-primary" : "text-muted-foreground")}>{count}</span>
@@ -715,4 +716,3 @@ export default function PackagesPage() {
     </div>
   );
 }
-

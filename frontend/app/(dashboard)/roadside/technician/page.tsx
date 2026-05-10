@@ -14,6 +14,7 @@ import {
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import Link from "next/link";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 export default function TechnicianRoadsideDashboard() {
     const queryClient = useQueryClient();
@@ -52,10 +53,10 @@ export default function TechnicianRoadsideDashboard() {
             });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Update Failed",
-                description: error.response?.data?.error || "Failed to update status",
+                description: getApiErrorMessage(error, "Failed to update status"),
                 variant: "destructive"
             });
         }
@@ -85,7 +86,7 @@ export default function TechnicianRoadsideDashboard() {
                         <Truck className="h-12 w-12 text-gray-300 mb-4" />
                         <h3 className="text-lg font-bold text-card-foreground">No Active Assignments</h3>
                         <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-                            You don't have any active roadside requests assigned to you at the moment.
+                            You do not have any active roadside requests assigned to you at the moment.
                         </p>
                     </CardContent>
                 </Card>

@@ -1,5 +1,46 @@
 import apiClient from "./client";
 
+export interface PaginatedResponse<T> {
+    count: number;
+    next?: string | null;
+    previous?: string | null;
+    results: T[];
+}
+
+export interface RoadsideDashboardStats {
+    total_requests: number;
+    active_requests: number;
+    completed_requests: number;
+    covered_by_subscription: number;
+}
+
+export interface RoadsideListParams {
+    page?: number;
+    search?: string;
+    status?: string;
+    service_type?: string;
+    customer?: number;
+    vehicle?: number;
+    branch?: number;
+    is_covered_by_subscription?: boolean;
+    assigned_technician?: number;
+    ordering?: string;
+}
+
+function isPaginatedRoadsideResponse(
+    data: PaginatedResponse<RoadsideRequest> | RoadsideRequest[]
+): data is PaginatedResponse<RoadsideRequest> {
+    return !Array.isArray(data) && Array.isArray(data.results);
+}
+
+export interface DispatchedTechnician {
+    id: number;
+    technician: number;
+    technician_name: string;
+    dispatched_at: string;
+    notes?: string;
+}
+
 export interface RoadsideRequest {
     id: number;
     request_number: string;
@@ -48,11 +89,13 @@ export interface RoadsideRequest {
     arrived_at?: string;
     completed_at?: string;
     assigned_technician_name?: string;
+    dispatched_technicians?: DispatchedTechnician[];
     customer_feedback?: string;
     customer_name?: string;
     service_type_display?: string;
     subscription_allowance_deducted?: boolean;
     invoice?: number;
+    invoice_id?: number;
     invoice_number?: string;
     subscription_used?: number;
     assigned_technician?: number;
@@ -80,8 +123,8 @@ export const roadsideApi = {
      */
     getAssignedRequests: async () => {
 
-        const response = await apiClient.get<any>("/roadside/requests/");
-        if (response.data && Array.isArray(response.data.results)) {
+        const response = await apiClient.get<PaginatedResponse<RoadsideRequest> | RoadsideRequest[]>("/roadside/requests/");
+        if (isPaginatedRoadsideResponse(response.data)) {
             return response.data.results;
         }
         return Array.isArray(response.data) ? response.data : [];
@@ -160,7 +203,7 @@ export const roadsideApi = {
      */
     dashboardStats: async () => {
 
-        const response = await apiClient.get<any>("/roadside/requests/dashboard_stats/");
+        const response = await apiClient.get<RoadsideDashboardStats>("/roadside/requests/dashboard_stats/");
         return response.data;
     },
 
@@ -168,8 +211,8 @@ export const roadsideApi = {
      * Admin: List all requests with filtering
      */
 
-    list: async (params?: any) => {
-        const response = await apiClient.get<{ results: RoadsideRequest[]; count: number; next?: string; previous?: string }>("/roadside/requests/", { params });
+    list: async (params?: RoadsideListParams) => {
+        const response = await apiClient.get<PaginatedResponse<RoadsideRequest>>("/roadside/requests/", { params });
         return response.data;
     },
 
@@ -214,10 +257,26 @@ export const roadsideApi = {
     },
 
     /**
+     * Admin: Add an additional technician to a request (no status change)
+     */
+    addTechnician: async (id: number | string, technicianId: number, notes?: string) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/add_technician/`, { technician_id: technicianId, notes });
+        return response.data;
+    },
+
+    /**
+     * Admin: Remove a technician from a request
+     */
+    removeTechnician: async (id: number | string, technicianId: number) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/remove_technician/`, { technician_id: technicianId });
+        return response.data;
+    },
+
+    /**
      * Create a new request (Admin/Manager)
      */
 
-    create: async (data: any) => {
+    create: async (data: RoadsideRequestCreate) => {
         const response = await apiClient.post<RoadsideRequest>("/roadside/requests/", data);
         return response.data;
     }

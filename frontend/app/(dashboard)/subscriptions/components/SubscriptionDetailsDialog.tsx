@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Subscription, subscriptionsApi } from "@/lib/api/subscriptions";
+import { Subscription, subscriptionsApi, SubscriptionUsage } from "@/lib/api/subscriptions";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useQuery } from "@tanstack/react-query";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -18,6 +18,8 @@ interface SubscriptionDetailsDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
+
+type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "secondary" | "outline";
 
 export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: SubscriptionDetailsDialogProps) {
     const { formatCurrency } = useCurrency();
@@ -40,7 +42,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
         }
     };
 
-    const getStatusVariant = (status: string) => {
+    const getStatusVariant = (status: string): BadgeVariant => {
         switch (status) {
             case "active": return "success";
             case "expired": return "danger";
@@ -71,6 +73,13 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
         battery_boosts: <Zap className="w-3.5 h-3.5" />,
         default: <Shield className="w-3.5 h-3.5" />
     };
+    const isPendingActivation = subscription.status === "active" && subscription.is_active_status === false;
+    const statusLabel = isPendingActivation
+        ? subscription.activation_date
+            ? `Paid - starts ${format(new Date(subscription.activation_date), "MMM dd")}`
+            : "Paid - pending start"
+        : subscription.status;
+    const statusVariant = isPendingActivation ? "warning" : getStatusVariant(subscription.status);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,8 +105,8 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                             </div>
                         </div>
 
-                        <Badge variant={getStatusVariant(subscription.status) as any} className="capitalize px-3 py-1">
-                            {subscription.status === "active" && subscription.is_active_status === false ? "pending activation" : subscription.status}
+                        <Badge variant={statusVariant} className="capitalize px-3 py-1">
+                            {statusLabel}
                         </Badge>
                     </div>
                 </DialogHeader>
@@ -116,14 +125,15 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 </div>
                                 <div className="min-w-0">
                                     <div className="font-bold text-foreground text-sm truncate">{subscription.customer_full_name}</div>
-                                    <div className="text-[11px] text-muted-foreground font-mono">ID: {subscription.customer}</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 py-1.5 px-2 bg-muted/80 rounded-lg border border-border">
                                 <Car className="w-4 h-4 text-muted-foreground" />
                                 <div className="min-w-0">
-                                    <div className="text-[9px] font-bold text-muted-foreground uppercase leading-none">Vehicle ID</div>
-                                    <div className="text-[12px] font-mono font-medium text-foreground mt-0.5 truncate">{subscription.vehicle || 'N/A'}</div>
+                                    <div className="text-[9px] font-bold text-muted-foreground uppercase leading-none">Vehicle</div>
+                                    <div className="text-[12px] font-mono font-medium text-foreground mt-0.5 truncate">
+                                        {subscription.vehicle_license_plate || subscription.vehicle_display || 'N/A'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -137,7 +147,7 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                 <div className="flex justify-between items-center">
                                     <span className="text-[12px] text-muted-foreground">Period</span>
                                     <span className="text-[12px] font-semibold text-foreground">
-                                        {format(new Date(subscription.start_date), "MMM dd")} - {format(new Date(subscription.end_date), "MMM dd, yyyy")}
+                                        {format(new Date(subscription.start_date), "MMM dd, yyyy")} - {format(new Date(subscription.end_date), "MMM dd, yyyy")}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center px-2 py-1 bg-muted rounded-md">
@@ -220,26 +230,31 @@ export function SubscriptionDetailsDialog({ subscription, open, onOpenChange }: 
                                     <TableHeader className="bg-muted/50">
                                         <TableRow className="h-9">
                                             <TableHead className="text-[11px] font-bold text-muted-foreground uppercase h-9">Date</TableHead>
-                                            <TableHead className="text-[11px] font-bold text-muted-foreground uppercase h-9">Service</TableHead>
+                                            <TableHead className="text-[11px] font-bold text-muted-foreground uppercase h-9">Activity</TableHead>
                                             <TableHead className="text-right text-[11px] font-bold text-muted-foreground uppercase h-9">Used</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
 
-                                        {usageHistory.slice(0, 5).map((usage: any) => (
+                                        {usageHistory.slice(0, 5).map((usage: SubscriptionUsage) => (
                                             <TableRow key={usage.id} className="hover:bg-muted/30 h-10 border-slate-50">
                                                 <TableCell className="p-2 align-middle">
                                                     <div className="text-[11px] font-medium text-foreground">{format(new Date(usage.service_date), "MMM dd, yyyy")}</div>
-                                                    <div className="text-[9px] text-muted-foreground">{format(new Date(usage.service_date), "h:mm a")}</div>
+                                                    <div className="text-[9px] text-muted-foreground">{usage.is_refund ? "Refund" : "Service"}</div>
                                                 </TableCell>
                                                 <TableCell className="p-2 align-middle">
                                                     <div className="capitalize text-[11px] font-semibold text-foreground truncate max-w-[120px]">
-                                                        {usage.usage_type?.replace(/_/g, " ")}
+                                                        {usage.activity_label || usage.usage_type_label || usage.usage_type?.replace(/_/g, " ")}
                                                     </div>
-                                                    <div className="text-[9px] text-muted-foreground">#{usage.reference_id || 'N/A'}</div>
+                                                    <div className="text-[9px] text-muted-foreground">
+                                                        {usage.reference_label || usage.created_by_name || "Manual entry"}
+                                                    </div>
                                                 </TableCell>
-                                                <TableCell className="p-2 align-middle text-right font-bold text-[11px] text-foreground">
-                                                    -{usage.quantity_used}
+                                                <TableCell className={cn(
+                                                    "p-2 align-middle text-right font-bold text-[11px]",
+                                                    usage.is_refund ? "text-success" : "text-foreground"
+                                                )}>
+                                                    {usage.is_refund ? "+" : "-"}{Math.abs(Number(usage.quantity_used)).toLocaleString()}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

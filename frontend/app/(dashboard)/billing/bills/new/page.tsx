@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { CalendarIcon, Plus, Save, Trash2, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
@@ -53,40 +53,48 @@ const lineItemSchema = z.object({
     quantity: z.number().min(1, "Quantity must be at least 1"),
     unit_price: z.number().min(0, "Price must be non-negative"),
     expense_category: z.string().optional(),
+    inventory_item: z.number().optional(),
 });
 
 const formSchema = z.object({
     vendor: z.string().min(1, "Vendor is required"),
     branch: z.string().min(1, "Branch is required"),
+    purchase_order: z.string().optional(),
     reference_number: z.string().optional(),
     bill_date: z.string().min(1, "Bill date is required"),
     due_date: z.string().min(1, "Due date is required"),
     terms: z.string().optional(),
     notes: z.string().optional(),
-    currency: z.string().default("USD"),
+    currency: z.string().min(1),
     line_items: z.array(lineItemSchema).min(1, "At least one line item is required"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
+const initialBillDate = format(new Date(), "yyyy-MM-dd");
+const initialDueDate = format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+
 export default function NewBillPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const initialPurchaseOrderId = searchParams.get("po") || "";
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const { currency: configuredCurrency, formatCurrency } = useCurrency();
 
-    const form = useForm({
+    const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             vendor: "",
             branch: "",
+            purchase_order: initialPurchaseOrderId,
             reference_number: "",
             notes: "",
-            bill_date: format(new Date(), "yyyy-MM-dd"),
-            due_date: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
+            bill_date: initialBillDate,
+            due_date: initialDueDate,
             terms: "Net 30",
             currency: "USD",
-            line_items: [{ description: "", quantity: 1, unit_price: 0, expense_category: "" }],
+            line_items: [{ description: "", quantity: 1, unit_price: 0, expense_category: "", inventory_item: undefined }],
         },
     });
 
@@ -97,10 +105,26 @@ export default function NewBillPage() {
         }
     }, [configuredCurrency, form]);
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control: form.control,
         name: "line_items",
     });
+
+    const selectedVendor = useWatch({
+        control: form.control,
+        name: "vendor",
+    });
+
+    const selectedPurchaseOrder = useWatch({
+        control: form.control,
+        name: "purchase_order",
+    });
+
+    useEffect(() => {
+        if (initialPurchaseOrderId) {
+            form.setValue("purchase_order", initialPurchaseOrderId);
+        }
+    }, [form, initialPurchaseOrderId]);
 
     // Watch line items to calculate totals
     const lineItems = useWatch({
@@ -132,6 +156,67 @@ export default function NewBillPage() {
         ? branchesResponse
         : branchesResponse?.results || [];
 
+    const { data: purchaseOrdersResponse } = useQuery({
+        queryKey: ["purchase-orders", "billable", selectedVendor],
+        queryFn: () => inventoryApi.listPurchaseOrders({
+            supplier: parseInt(selectedVendor || "0"),
+        }),
+        enabled: Boolean(selectedVendor),
+    });
+
+    const purchaseOrders = Array.isArray(purchaseOrdersResponse)
+        ? purchaseOrdersResponse
+        : purchaseOrdersResponse?.results || [];
+
+    const billablePurchaseOrders = purchaseOrders.filter((po) =>
+        po.status === "received"
+    );
+
+    const { data: purchaseOrderDetail } = useQuery({
+        queryKey: ["purchase-order", selectedPurchaseOrder],
+        queryFn: () => inventoryApi.getPurchaseOrder(parseInt(selectedPurchaseOrder || "0")),
+        enabled: Boolean(selectedPurchaseOrder),
+    });
+
+    useEffect(() => {
+        if (!purchaseOrderDetail) return;
+
+        const supplierId = typeof purchaseOrderDetail.supplier === "object"
+            ? purchaseOrderDetail.supplier.id
+            : purchaseOrderDetail.supplier;
+        const branchId = typeof purchaseOrderDetail.branch === "object"
+            ? purchaseOrderDetail.branch?.id
+            : purchaseOrderDetail.branch;
+
+        if (supplierId) {
+            form.setValue("vendor", supplierId.toString());
+        }
+        if (branchId) {
+            form.setValue("branch", branchId.toString());
+        }
+        if (purchaseOrderDetail.due_date) {
+            form.setValue("due_date", purchaseOrderDetail.due_date);
+        }
+
+        const importedItems = (purchaseOrderDetail.items || []).map((item) => {
+            const part = typeof item.part === "object" ? item.part : null;
+            const partName = item.part_name || part?.name || item.part_number || "Inventory item";
+            const partNumber = item.part_number || part?.part_number;
+
+            return {
+                description: partNumber ? `${partNumber} - ${partName}` : partName,
+                quantity: Number(item.quantity_received || item.quantity || 1),
+                unit_price: parseFloat(item.unit_cost || "0"),
+                expense_category: "Inventory",
+                inventory_item: part?.id || (typeof item.part === "number" ? item.part : undefined),
+            };
+        });
+
+        if (importedItems.length > 0) {
+            replace(importedItems);
+        }
+    }, [form, purchaseOrderDetail, replace]);
+
     // Create Mutation
     const createMutation = useMutation({
         mutationFn: (data: Partial<Bill>) => billingApi.bills.create(data),
@@ -145,10 +230,13 @@ export default function NewBillPage() {
             router.push(`/billing/bills/${data.id}`);
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
+            const apiError = error as { response?: { data?: { detail?: string } | unknown } };
             toast({
                 title: "Error Creating Bill",
-                description: error.response?.data?.detail || JSON.stringify(error.response?.data) || "Failed to create bill",
+                description: typeof apiError.response?.data === "object" && apiError.response.data !== null && "detail" in apiError.response.data
+                    ? String(apiError.response.data.detail)
+                    : JSON.stringify(apiError.response?.data) || "Failed to create bill",
                 variant: "destructive",
             });
         },
@@ -158,6 +246,8 @@ export default function NewBillPage() {
         createMutation.mutate({
             vendor: parseInt(data.vendor),
             branch: parseInt(data.branch),
+            purchase_order: data.purchase_order ? parseInt(data.purchase_order) : null,
+            status: data.purchase_order ? "open" : "draft",
             reference_number: data.reference_number,
             bill_date: data.bill_date,
             due_date: data.due_date,
@@ -203,7 +293,10 @@ export default function NewBillPage() {
                                     <FormItem>
                                         <FormLabel>Vendor</FormLabel>
                                         <Select
-                                            onValueChange={field.onChange}
+                                            onValueChange={(value) => {
+                                                field.onChange(value);
+                                                form.setValue("purchase_order", "");
+                                            }}
                                             defaultValue={field.value}
                                             value={field.value}
                                         >
@@ -245,6 +338,35 @@ export default function NewBillPage() {
                                                 {branches.map(b => (
                                                     <SelectItem key={b.id} value={b.id.toString()}>
                                                         {b.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="purchase_order"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Purchase Order</FormLabel>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                            disabled={!selectedVendor || billablePurchaseOrders.length === 0}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={selectedVendor ? "Link a PO" : "Select vendor first"} />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {billablePurchaseOrders.map((po) => (
+                                                    <SelectItem key={po.id} value={po.id.toString()}>
+                                                        {po.po_number} - {formatCurrency(parseFloat(po.total || "0"))}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -335,7 +457,7 @@ export default function NewBillPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => append({ description: "", quantity: 1, unit_price: 0, expense_category: "" })}
+                                onClick={() => append({ description: "", quantity: 1, unit_price: 0, expense_category: "", inventory_item: undefined })}
                             >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Item
@@ -356,8 +478,8 @@ export default function NewBillPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {fields.map((field, index) => {
-                                            const qty = form.watch(`line_items.${index}.quantity`) || 0;
-                                            const price = form.watch(`line_items.${index}.unit_price`) || 0;
+                                            const qty = lineItems?.[index]?.quantity || 0;
+                                            const price = lineItems?.[index]?.unit_price || 0;
                                             const total = qty * price;
 
                                             return (

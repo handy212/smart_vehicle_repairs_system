@@ -9,8 +9,7 @@
 {% block document_meta %}
 <div>Date: {{ document.created_at|date:"F d, Y" }}</div>
 <div>Status: <span
-        class="font-bold uppercase {% if document.status == 'received' %}text-success{% elif document.status == 'cancelled' or document.status == 'rejected' %}text-danger{% endif %}">{{
-        document.get_status_display }}</span></div>
+        class="font-bold uppercase {% if document.status == 'received' %}text-success{% elif document.status == 'cancelled' or document.status == 'rejected' %}text-danger{% endif %}">{{ document.get_status_display }}</span></div>
 {% endblock %}
 
 {% block content %}

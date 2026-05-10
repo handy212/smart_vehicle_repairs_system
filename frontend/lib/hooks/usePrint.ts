@@ -3,7 +3,7 @@ import { useBranchStore } from '@/store/branchStore';
 import { getAccessToken } from '@/lib/utils/token';
 
 interface PrintOptions {
-    documentType: 'invoice' | 'estimate' | 'work_order' | 'inspection' | 'purchase_order' | 'receipt' | 'gate_pass' | 'credit_note';
+    documentType: 'invoice' | 'estimate' | 'work_order' | 'inspection' | 'purchase_order' | 'receipt' | 'gate_pass' | 'credit_note' | 'bill';
     documentId: number;
     documentNumber: string;
 }
@@ -113,6 +113,9 @@ export function usePrint() {
                     break;
                 case 'receipt':
                     endpoint = `/billing/payments/${documentId}/pdf/`;
+                    break;
+                case 'bill':
+                    endpoint = `/billing/bills/${documentId}/pdf/`;
                     break;
                 default:
                     // Fallback to billing for legacy/unknown types

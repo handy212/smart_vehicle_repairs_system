@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils/cn";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import RecordPaymentDialog from "./components/RecordPaymentDialog";
 import ProcessRefundDialog from "./components/ProcessRefundDialog";
-import { PaymentAllocationModal } from "@/components/billing/PaymentAllocationModal";
 import { AllocationHistory } from "@/components/billing/AllocationHistory";
 import { InvoiceNotes } from "./components/InvoiceNotes";
 import { InvoiceReminders } from "./components/InvoiceReminders";
@@ -35,6 +34,34 @@ import { Undo2, Database } from "lucide-react";
 import { quickbooksApi } from "@/lib/api/quickbooks";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+
+const parseAmount = (value?: string | number | null) => {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+  const num = typeof value === "number" ? value : parseFloat(value);
+  return Number.isNaN(num) ? 0 : num;
+};
+
+const hasAmountValue = (value?: string | number | null) =>
+  value !== null && value !== undefined && String(value).trim() !== "";
+
+const getInvoiceBalanceDue = (invoice?: Invoice | null) => {
+  if (!invoice) {
+    return 0;
+  }
+
+  if (hasAmountValue(invoice.balance_due)) {
+    return parseAmount(invoice.balance_due);
+  }
+
+  if (hasAmountValue(invoice.amount_due)) {
+    return parseAmount(invoice.amount_due);
+  }
+
+  return Math.max(parseAmount(invoice.total) - parseAmount(invoice.amount_paid), 0);
+};
+
 export default function InvoiceDetailPage() {
   const { formatCurrency } = useCurrency();
   const params = useParams();
@@ -45,14 +72,7 @@ export default function InvoiceDetailPage() {
   const invoiceId = parseInt(params.id as string);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
-  useEffect(() => {
-    if (searchParams.get("action") === "record_payment") {
-      setShowPaymentDialog(true);
-    }
-  }, [searchParams]);
-
   const [selectedPaymentForRefund, setSelectedPaymentForRefund] = useState<Payment | null>(null);
-  const [selectedPaymentForAllocation, setSelectedPaymentForAllocation] = useState<Payment | null>(null);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
@@ -106,6 +126,8 @@ export default function InvoiceDetailPage() {
   const canManagePaymentAdjustments =
     isAdminUser || hasAnyPermission(["process_payments", "refund_payments", "manage_billing"]);
   const currentStatus = invoice?.status ?? null;
+  const balanceDue = getInvoiceBalanceDue(invoice);
+  const canAcceptPayment = canRecordPayment && currentStatus !== 'paid' && currentStatus !== 'void' && balanceDue > 0;
   const getApiErrorMessage = (error: unknown, fallback: string) => {
     if (typeof error === "object" && error && "response" in error) {
       const response = (error as { response?: { data?: { error?: string; detail?: string } } }).response;
@@ -119,6 +141,25 @@ export default function InvoiceDetailPage() {
     queryFn: () => billingApi.payments.list({ invoice: invoiceId }),
     enabled: !!invoice,
   });
+
+  useEffect(() => {
+    if (searchParams.get("action") !== "record_payment" || !invoice) {
+      return;
+    }
+
+    if (canAcceptPayment) {
+      setShowPaymentDialog(true);
+    } else {
+      setShowPaymentDialog(false);
+      if (invoice.status === "paid" || balanceDue <= 0) {
+        toast({
+          title: "Invoice Already Paid",
+          description: "This invoice has no balance due, so another payment cannot be recorded.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [balanceDue, canAcceptPayment, invoice, searchParams, toast]);
 
   const statusChangeMutation = useMutation({
     mutationFn: async (newStatus: string) => {
@@ -308,14 +349,6 @@ export default function InvoiceDetailPage() {
     }
   };
 
-  const parseAmount = (value?: string | number | null) => {
-    if (value === null || value === undefined) {
-      return 0;
-    }
-    const num = typeof value === "number" ? value : parseFloat(value);
-    return Number.isNaN(num) ? 0 : num;
-  };
-
   const taxBreakdown = {
     regime: invoice.tax_breakdown?.regime || invoice.tax_regime || "ghana_standard",
     nhilAmount: parseAmount(invoice.tax_breakdown?.nhil_amount ?? invoice.tax_nhil_amount),
@@ -331,8 +364,7 @@ export default function InvoiceDetailPage() {
     taxBreakdown.vatAmount > 0;
   const hasEstimateLink = Boolean(invoice.estimate && invoice.estimate_number);
   const hasWorkOrderLink = Boolean(invoice.work_order && invoice.work_order_number);
-  const balanceDue = parseFloat(invoice.balance_due || "0");
-  const amountPaid = parseFloat(invoice.amount_paid || "0");
+  const amountPaid = parseAmount(invoice.amount_paid);
 
   return (
     <>
@@ -394,7 +426,7 @@ export default function InvoiceDetailPage() {
               <Download className="w-4 h-4 mr-2" />
               {isDownloading ? "Downloading..." : "PDF"}
             </Button>
-            {canRecordPayment && invoice.status !== 'paid' && parseFloat(invoice.balance_due || "0") > 0 && (
+            {canAcceptPayment && (
               <Button size="sm" onClick={() => setShowPaymentDialog(true)}>
                 <DollarSign className="w-4 h-4 mr-2" />
                 Record Payment
@@ -789,12 +821,12 @@ export default function InvoiceDetailPage() {
                 <div className="space-y-1 pt-2 border-t border-dashed border-border">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Amount Paid</span>
-                    <span className="text-success font-medium">{formatCurrency(parseFloat(invoice.amount_paid || "0"))}</span>
+                    <span className="text-success font-medium">{formatCurrency(amountPaid)}</span>
                   </div>
                   <div className="flex justify-between text-base font-semibold">
                     <span className="text-foreground">Balance Due</span>
-                    <span className={cn(parseFloat(invoice.balance_due || "0") > 0 ? "text-destructive" : "text-foreground")}>
-                      {formatCurrency(parseFloat(invoice.balance_due || "0"))}
+                    <span className={cn(balanceDue > 0 ? "text-destructive" : "text-foreground")}>
+                      {formatCurrency(balanceDue)}
                     </span>
                   </div>
                 </div>
@@ -808,9 +840,9 @@ export default function InvoiceDetailPage() {
             <div className="flex justify-between items-center bg-card p-4 rounded-lg border shadow-sm">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Payment History</h3>
-                <p className="text-sm text-muted-foreground">Manage payments and allocations</p>
+                <p className="text-sm text-muted-foreground">Manage payments and receipts</p>
               </div>
-              {canRecordPayment && (currentStatus || invoice.status) !== 'paid' && parseFloat(String(invoice.balance_due || 0)) > 0 && invoice.status !== 'void' && (
+              {canAcceptPayment && (
                 <Button onClick={() => setShowPaymentDialog(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Record New Payment
@@ -868,16 +900,6 @@ export default function InvoiceDetailPage() {
                                 >
                                   <Printer className="w-4 h-4 mr-2" /> Receipt
                                 </Button>
-                                {canManagePaymentAdjustments && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-9 px-3 text-primary hover:text-primary hover:bg-primary/10 rounded-none border-r"
-                                    onClick={() => setSelectedPaymentForAllocation(payment)}
-                                  >
-                                    <DollarSign className="w-4 h-4 mr-2" /> Allocate
-                                  </Button>
-                                )}
                                 {canManagePaymentAdjustments && (parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")) > 0 && (
                                   <Button
                                     variant="ghost"
@@ -894,7 +916,10 @@ export default function InvoiceDetailPage() {
                         </div>
 
                         <div className="pl-0 md:pl-16 mt-4">
-                          <AllocationHistory paymentId={payment.id} />
+                          <AllocationHistory
+                            paymentId={payment.id}
+                            directInvoiceNumber={payment.invoice_number || invoice.invoice_number}
+                          />
                         </div>
                       </div>
                     ))}
@@ -906,7 +931,7 @@ export default function InvoiceDetailPage() {
                     </div>
                     <h3 className="text-xl font-semibold text-foreground mb-2">No payments recorded</h3>
                     <p className="text-muted-foreground mb-8 max-w-sm mx-auto">This invoice has not received any payments yet. Record a payment to settle the balance.</p>
-                    {canRecordPayment && (
+                    {canAcceptPayment && (
                       <Button size="lg" onClick={() => setShowPaymentDialog(true)}>
                         <DollarSign className="w-5 h-5 mr-2" /> Record First Payment
                       </Button>
@@ -985,18 +1010,6 @@ export default function InvoiceDetailPage() {
             onSuccess={() => {
               setSelectedPaymentForRefund(null);
             }}
-          />
-        )
-      }
-
-      {
-        selectedPaymentForAllocation && (
-          <PaymentAllocationModal
-            paymentId={selectedPaymentForAllocation.id}
-            paymentAmount={selectedPaymentForAllocation.amount}
-            customerId={typeof invoice?.customer === 'object' ? invoice.customer.id : (invoice?.customer || selectedPaymentForAllocation.customer || 0)}
-            open={!!selectedPaymentForAllocation}
-            onClose={() => setSelectedPaymentForAllocation(null)}
           />
         )
       }
