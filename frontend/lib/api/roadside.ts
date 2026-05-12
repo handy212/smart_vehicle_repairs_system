@@ -119,6 +119,10 @@ export interface RoadsideRequestCreate {
     pay_as_you_go?: boolean;
 }
 
+type RoadsideRequestUpdate = Omit<Partial<RoadsideRequest>, "charge_amount"> & {
+    charge_amount?: number | string;
+};
+
 export const roadsideApi = {
     /**
      * Get requests assigned to the current user (technician)
@@ -229,7 +233,7 @@ export const roadsideApi = {
     /**
      * Admin: Update request details
      */
-    partialUpdate: async (id: number | string, data: Partial<RoadsideRequest> & { charge_amount?: number | string }) => {
+    partialUpdate: async (id: number | string, data: RoadsideRequestUpdate) => {
         const response = await apiClient.patch<RoadsideRequest>(`/roadside/requests/${id}/`, data);
         return response.data;
     },

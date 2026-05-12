@@ -57,50 +57,31 @@ const serviceTypes: Array<{ value: (typeof serviceTypeValues)[number]; label: st
     { value: 'other', label: 'Other' },
 ];
 
-const emptyToUndefined = (value: unknown) => {
-    if (value === "" || value === null || value === undefined) return undefined;
-    if (typeof value === "number" && Number.isNaN(value)) return undefined;
-    return value;
-};
-
-const numberFromInput = (value: unknown) => {
-    const normalized = emptyToUndefined(value);
-    if (normalized === undefined) return undefined;
-    return typeof normalized === "number" ? normalized : Number(normalized);
-};
-
 const requiredId = (fieldName: string) =>
-    z.preprocess(
-        numberFromInput,
-        z.number({ error: `${fieldName} is required` })
-            .int(`${fieldName} must be valid`)
-            .min(1, `${fieldName} is required`)
-    );
+    z.number({ error: `${fieldName} is required` })
+        .int(`${fieldName} must be valid`)
+        .min(1, `${fieldName} is required`);
 
 const optionalNumber = (message: string) =>
-    z.preprocess(
-        numberFromInput,
-        z.number({ error: message }).optional()
-    );
+    z.union([
+        z.number({ error: message }),
+        z.nan().transform(() => undefined),
+    ]).optional();
 
 const roadsideRequestSchema = z.object({
     customer: requiredId("Customer"),
     vehicle: requiredId("Vehicle"),
-    service_type: z.preprocess(
-        emptyToUndefined,
-        z.enum(serviceTypeValues, { error: "Service type is required" })
-    ),
+    service_type: z.enum(serviceTypeValues, { error: "Service type is required" }),
     breakdown_location: z.string().min(1, "Breakdown location is required"),
     latitude: optionalNumber("Latitude must be a valid number"),
     longitude: optionalNumber("Longitude must be a valid number"),
     description: z.string().optional(),
     customer_phone: z.string().min(1, "Phone number is required"),
-    tow_distance_km: z.preprocess(
-        numberFromInput,
+    tow_distance_km: z.union([
         z.number({ error: "Tow distance is required for towing service" })
-            .min(0, "Tow distance cannot be negative")
-            .optional()
-    ),
+            .min(0, "Tow distance cannot be negative"),
+        z.nan().transform(() => undefined),
+    ]).optional(),
     charge_amount: optionalNumber("Charge amount must be a valid number"),
     destination: z.string().optional(),
     notes: z.string().optional(),

@@ -7,7 +7,7 @@ import jsPDF from "jspdf";
  */
 
 
-export function exportToCSV<T extends Record<string, unknown>>(
+export function exportToCSV<T extends object>(
   data: T[],
   filename: string,
   headers: { key: keyof T; label: string }[]
@@ -53,7 +53,7 @@ export function exportMultiSheetXlsx(
   XLSX.writeFile(workbook, `${filename}_${dateStamp}.xlsx`);
 }
 
-export function exportToPDF<T extends Record<string, unknown>>(
+export function exportToPDF<T extends object>(
   data: T[],
   filename: string,
   headers: { key: keyof T; label: string }[],

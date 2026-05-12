@@ -450,6 +450,7 @@ export const billingApi = {
   invoices: {
     list: async (params?: {
       page?: number;
+      page_size?: number;
       status?: string;
       customer?: number;
       search?: string;
