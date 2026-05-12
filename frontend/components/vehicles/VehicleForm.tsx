@@ -27,7 +27,10 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
 export const vehicleSchema = z.object({
-    vin: z.string().min(1, "VIN is required"),
+    vin: z.string()
+        .min(17, "VIN must be 17 characters")
+        .max(17, "VIN must be 17 characters")
+        .regex(/^[A-HJ-NPR-Z0-9]{17}$/, "VIN cannot contain I, O, Q, or special characters"),
     make: z.string().min(1, "Make is required"),
     model: z.string().min(1, "Model is required"),
     year: z.number().min(1900).max(new Date().getFullYear() + 1),
@@ -38,7 +41,7 @@ export const vehicleSchema = z.object({
     owner: z.number().min(1, "Owner is required"),
     status: z.enum(["active", "in_service", "sold", "totaled", "inactive"]),
     vehicle_type: z.enum(["saloon", "suv", "pickup", "minivan", "motorcycle", "truck", "other"]),
-    relationship: z.enum(["owner", "driver", "fleet_manager"]),
+    relationship: z.enum(["owner", "driver", "fleet_manager", "other"]),
 });
 
 export type VehicleFormData = z.infer<typeof vehicleSchema>;
@@ -503,6 +506,7 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                         <SelectItem value="owner">Owner</SelectItem>
                                         <SelectItem value="driver">Driver</SelectItem>
                                         <SelectItem value="fleet_manager">Fleet Manager</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

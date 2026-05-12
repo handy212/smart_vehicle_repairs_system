@@ -146,6 +146,7 @@ export default function EditVehiclePage() {
     status: (vehicle.status as any) || "active",
 
     vehicle_type: (vehicle.vehicle_type as any) || "saloon",
+    relationship: (vehicle.relationship as any) || "owner",
     image: vehicle.image,
   };
 

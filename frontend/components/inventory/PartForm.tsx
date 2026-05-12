@@ -12,18 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { CheckCircle2, Image as ImageIcon, X, Package, ScanBarcode } from "lucide-react";
+import { Image as ImageIcon, X, Package, ScanBarcode } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Image from "next/image";
 import { useCurrency } from "@/lib/hooks/useCurrency";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BarcodeScanner } from "@/components/shared/BarcodeScanner";
+import { getMediaUrl } from "@/lib/api/utils";
 
 export const partSchema = z.object({
     part_number: z.string().min(1, "Part number is required"),
@@ -63,18 +60,18 @@ export const partSchema = z.object({
 export type PartFormData = z.infer<typeof partSchema>;
 
 interface PartFormProps {
-    initialData?: Partial<PartFormData> & { image?: string };
-    onSubmit: (data: PartFormData, imageFile: File | null) => Promise<void>;
-    isSubmitting: boolean;
-    mode: "create" | "edit";
-    onCancel?: () => void;
+    initialData?: Partial<PartFormData> & { image?: string | null };
+    onSubmit: (data: PartFormData, imageFile: File | null, clearImage: boolean) => Promise<void>;
+    formId?: string;
 }
 
-export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }: PartFormProps) {
+export function PartForm({ initialData, onSubmit, formId }: PartFormProps) {
     const { formatCurrency } = useCurrency();
     const [imageFile, setImageFile] = useState<File | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
+    const [clearExistingImage, setClearExistingImage] = useState(false);
+    const [imagePreview, setImagePreview] = useState<string | null>(
+        initialData?.image ? getMediaUrl(initialData.image) : null
+    );
     const [activeTab, setActiveTab] = useState("basic");
     const [showScanner, setShowScanner] = useState(false);
 
@@ -124,11 +121,11 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
     const markup = watch("markup_percentage") || 0;
     const calculatedSellingPrice = costPrice ? costPrice * (1 + markup / 100) : undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setImageFile(file);
+            setClearExistingImage(false);
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result as string);
@@ -137,18 +134,18 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const removeImage = () => {
         setImageFile(null);
         setImagePreview(null);
+        setClearExistingImage(Boolean(initialData?.image));
     };
 
     const handleFormSubmit = (data: PartFormData) => {
-        return onSubmit(data, imageFile);
+        return onSubmit(data, imageFile, clearExistingImage);
     };
 
     return (
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+        <form id={formId} onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <Dialog open={showScanner} onOpenChange={setShowScanner}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -389,6 +386,54 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
 
                 {/* Sidebar */}
                 <div className="space-y-6">
+                    <Card className="overflow-hidden">
+                        <div className="relative aspect-square border-b border-border bg-muted/40 flex items-center justify-center">
+                            {imagePreview ? (
+                                <>
+                                    <Image
+                                        src={imagePreview}
+                                        alt="Part preview"
+                                        fill
+                                        className="object-contain"
+                                        unoptimized={imagePreview.startsWith("http") || imagePreview.startsWith("data:")}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeImage}
+                                        className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+                                        aria-label="Remove part image"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                    <ImageIcon className="w-12 h-12 mb-2 opacity-30" />
+                                    <span className="text-sm font-medium">No Image</span>
+                                </div>
+                            )}
+                        </div>
+                        <CardContent className="p-4">
+                            <label className="block w-full">
+                                <div className="flex items-center justify-center w-full px-4 py-2 border border-dashed border-border rounded-md cursor-pointer hover:bg-muted transition-colors">
+                                    <ImageIcon className="w-4 h-4 mr-2 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        {imagePreview ? "Change Image" : "Upload Image"}
+                                    </span>
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                    />
+                                </div>
+                            </label>
+                            <p className="text-[10px] text-center text-muted-foreground mt-2">
+                                Supports JPG, PNG, WebP
+                            </p>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader className="pb-3 border-b border-border">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -433,30 +478,6 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                     <Input type="number" step="0.01" id="core_charge" {...register("core_charge", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })} className="h-8 text-sm" />
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-3 border-b border-border">
-                            <CardTitle className="text-base font-medium">Actions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-4 space-y-3">
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                {isSubmitting ? (
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Saving...
-                                    </div>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                                        {mode === 'create' ? "Create Part" : "Save Changes"}
-                                    </>
-                                )}
-                            </Button>
-                            <Button type="button" variant="ghost" className="w-full" onClick={onCancel}>
-                                Cancel
-                            </Button>
                         </CardContent>
                     </Card>
                 </div>

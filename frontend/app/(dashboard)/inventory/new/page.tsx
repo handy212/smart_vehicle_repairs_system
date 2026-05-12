@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi, Part } from "@/lib/api/inventory";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
@@ -14,6 +14,7 @@ export default function NewPartPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const formId = "part-create-form";
 
   const createMutation = useMutation({
     mutationFn: (data: FormData | Partial<Part>) => {
@@ -95,6 +96,24 @@ export default function NewPartPage() {
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" onClick={() => router.push("/inventory")}>
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} disabled={createMutation.isPending}>
+            {createMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </div>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Create Part
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {serverError && (
@@ -105,10 +124,8 @@ export default function NewPartPage() {
       )}
 
       <PartForm
+        formId={formId}
         onSubmit={onSubmit}
-        isSubmitting={createMutation.isPending}
-        mode="create"
-        onCancel={() => router.push("/inventory")}
       />
     </div>
   );

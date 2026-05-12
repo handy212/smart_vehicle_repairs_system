@@ -33,6 +33,7 @@ const lineItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
   quantity: z.number().min(0).optional(),
   unit_price: z.number().min(0).optional(),
+  discount_percentage: z.number().min(0).max(100).optional(),
   labor_hours: z.number().min(0).optional(),
   labor_rate: z.number().min(0).optional(),
   is_taxable: z.boolean(),
@@ -190,6 +191,7 @@ export default function EditInvoicePage() {
         notes: item.notes || "",
         quantity: item.quantity ? parseFloat(item.quantity) : 1,
         unit_price: item.unit_price ? parseFloat(item.unit_price) : 0,
+        discount_percentage: item.discount_percentage ? parseFloat(item.discount_percentage) : 0,
         labor_hours: item.labor_hours ? parseFloat(item.labor_hours) : undefined,
         labor_rate: item.labor_rate ? parseFloat(item.labor_rate) : undefined,
         part: item.part || undefined,
@@ -230,6 +232,7 @@ export default function EditInvoicePage() {
         description: partData.name,
         quantity: 1,
         unit_price: parseFloat(partData.selling_price || partData.cost_price || "0"),
+        discount_percentage: 0,
         part: partData.id,
         part_number: partData.part_number,
         is_taxable: true,
@@ -238,7 +241,7 @@ export default function EditInvoicePage() {
       setValue("line_items", [...lineItems, newLineItem]);
     } else {
 
-      const newItem: any = { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true };
+      const newItem: any = { item_type: "labor", description: "", quantity: 1, unit_price: 0, discount_percentage: 0, is_taxable: true };
       setLineItems([...lineItems, newItem]);
       setValue("line_items", [...lineItems, newItem]);
     }
@@ -259,11 +262,20 @@ export default function EditInvoicePage() {
     setValue("line_items", updated, { shouldValidate: false });
   };
 
-  const calculateLineItemTotal = (item: LineItemFormData): number => {
+  const calculateLineItemGrossTotal = (item: LineItemFormData): number => {
     if (item.item_type === "labor" && item.labor_hours && item.labor_rate) {
       return item.labor_hours * item.labor_rate;
     }
     return (item.quantity || 0) * (item.unit_price || 0);
+  };
+
+  const calculateLineItemDiscount = (item: LineItemFormData): number => {
+    const itemDiscountPercentage = Math.min(Math.max(item.discount_percentage || 0, 0), 100);
+    return (calculateLineItemGrossTotal(item) * itemDiscountPercentage) / 100;
+  };
+
+  const calculateLineItemTotal = (item: LineItemFormData): number => {
+    return Math.max(calculateLineItemGrossTotal(item) - calculateLineItemDiscount(item), 0);
   };
 
   const subtotal = lineItems.reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
@@ -313,6 +325,7 @@ export default function EditInvoicePage() {
           description: item.description,
           quantity: item.quantity || 0,
           unit_price: (item.unit_price || 0).toString(),
+          discount_percentage: (item.discount_percentage || 0).toString(),
           labor_hours: item.labor_hours,
           labor_rate: item.labor_rate?.toString(),
           is_taxable: item.is_taxable,
@@ -648,6 +661,7 @@ export default function EditInvoicePage() {
                       <TableHead className="min-w-[200px] py-1 px-2 h-8">Description</TableHead>
                       <TableHead className="w-[100px] py-1 px-2 h-8">Qty</TableHead>
                       <TableHead className="w-[120px] py-1 px-2 h-8">Rate</TableHead>
+                      <TableHead className="w-[100px] py-1 px-2 h-8">Disc %</TableHead>
                       <TableHead className="w-[80px] text-center py-1 px-2 h-8">Tax</TableHead>
                       <TableHead className="w-[120px] text-right py-1 px-2 h-8">Total</TableHead>
                       <TableHead className="w-[50px] py-1 px-2 h-8"></TableHead>
@@ -703,6 +717,18 @@ export default function EditInvoicePage() {
                             className="h-8 text-sm"
                           />
                         </TableCell>
+                        <TableCell className="py-1 px-2">
+                          <Input
+                            type="number"
+                            value={item.discount_percentage || ""}
+                            onChange={(e) => updateLineItem(index, "discount_percentage", parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            className="h-8 text-sm"
+                          />
+                        </TableCell>
                         <TableCell className="text-center py-1 px-2">
                           <Checkbox
                             checked={item.is_taxable}
@@ -710,7 +736,12 @@ export default function EditInvoicePage() {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium text-sm py-1 px-2">
-                          {formatCurrency(calculateLineItemTotal(item))}
+                          <div>{formatCurrency(calculateLineItemTotal(item))}</div>
+                          {(item.discount_percentage || 0) > 0 && (
+                            <div className="text-[11px] font-normal text-destructive">
+                              -{formatCurrency(calculateLineItemDiscount(item))}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="py-1 px-2">
                           <Button

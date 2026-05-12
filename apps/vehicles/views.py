@@ -91,7 +91,10 @@ class VehicleViewSet(viewsets.ModelViewSet):
                     pass
             
             # Base filters for due service
-            q_filter = Q(service_schedules__next_service_due_date__lte=target_date) | Q(service_schedules__next_service_due_mileage__lte=F('current_mileage'))
+            q_filter = (
+                Q(service_schedules__next_service_due_date__lte=target_date) |
+                Q(service_schedules__next_service_due_mileage__lte=F('current_mileage'))
+            )
             
             # Optional service type filter (filtering vehicles that have schedules of this type due)
             service_type_id = self.request.query_params.get('service_due_type')
@@ -103,11 +106,11 @@ class VehicleViewSet(viewsets.ModelViewSet):
                     is_active=True
                 ).filter(
                     Q(next_service_due_date__lte=target_date) | 
-                    Q(next_service_due_mileage__lte=F('current_mileage'))
+                    Q(next_service_due_mileage__lte=F('vehicle__current_mileage'))
                 )
                 queryset = queryset.filter(id__in=due_schedules.values_list('vehicle_id', flat=True))
             else:
-                queryset = queryset.filter(q_filter)
+                queryset = queryset.filter(service_schedules__is_active=True).filter(q_filter)
                 
             queryset = queryset.filter(status='active').distinct()
             
@@ -425,16 +428,22 @@ class VehicleViewSet(viewsets.ModelViewSet):
     def dashboard_stats(self, request):
         """Get vehicle dashboard statistics"""
         today = timezone.now().date()
+        base_queryset = Vehicle.objects.all()
+        user = request.user
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            base_queryset = base_queryset.filter(owner=user.customer_profile)
         
         stats = {
-            'total_vehicles': Vehicle.objects.count(),
-            'active_vehicles': Vehicle.objects.filter(status='active').count(),
-            'in_service_vehicles': Vehicle.objects.filter(status='in_service').count(),
-            'sold_vehicles': Vehicle.objects.filter(status='sold').count(),
-            'due_service_vehicles': Vehicle.objects.filter(
-                Q(next_service_due_date__lte=today) |
-                Q(next_service_due_mileage__lte=F('current_mileage'))
-            ).filter(status='active').count()
+            'total_vehicles': base_queryset.count(),
+            'active_vehicles': base_queryset.filter(status='active').count(),
+            'in_service_vehicles': base_queryset.filter(status='in_service').count(),
+            'sold_vehicles': base_queryset.filter(status='sold').count(),
+            'due_service_vehicles': base_queryset.filter(
+                Q(service_schedules__next_service_due_date__lte=today) |
+                Q(service_schedules__next_service_due_mileage__lte=F('current_mileage')),
+                service_schedules__is_active=True,
+                status='active',
+            ).distinct().count()
         }
         return Response(stats)
 
@@ -488,12 +497,24 @@ class VehicleViewSet(viewsets.ModelViewSet):
         serializer = VehicleMileageHistorySerializer(data=request.data)
         
         if serializer.is_valid():
-            # Update vehicle's current mileage
             new_mileage = serializer.validated_data['mileage']
-            if new_mileage > vehicle.current_mileage:
+            current_mileage = vehicle.current_mileage or 0
+            if new_mileage < current_mileage:
+                return Response(
+                    {
+                        'mileage': (
+                            f"New mileage ({new_mileage}) cannot be less than "
+                            f"current mileage ({current_mileage})"
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if new_mileage > current_mileage:
                 vehicle.current_mileage = new_mileage
-                vehicle.save()
-            
+                vehicle.save(update_fields=['current_mileage', 'updated_at'])
+                vehicle.check_service_schedules_due()
+
             serializer.save(vehicle=vehicle, recorded_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -568,9 +589,11 @@ class VehicleViewSet(viewsets.ModelViewSet):
         """Get vehicles due for service"""
         today = timezone.now().date()
         vehicles = self.get_queryset().filter(
-            Q(next_service_due_date__lte=today) |
-            Q(next_service_due_mileage__lte=F('current_mileage'))
-        ).filter(status='active')
+            Q(service_schedules__next_service_due_date__lte=today) |
+            Q(service_schedules__next_service_due_mileage__lte=F('current_mileage')),
+            service_schedules__is_active=True,
+            status='active',
+        ).distinct()
         
         serializer = VehicleListSerializer(vehicles, many=True)
         return Response(serializer.data)

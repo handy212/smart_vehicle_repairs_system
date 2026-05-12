@@ -135,7 +135,7 @@ class PartListSerializer(serializers.ModelSerializer):
             'quantity_on_order', 'reorder_point', 'unit', 'cost_price', 'selling_price',
             'markup_percentage', 'profit_margin', 'bin_location', 'preferred_supplier',
             'preferred_supplier_name', 'is_low_stock', 'is_out_of_stock', 'needs_reorder',
-            'is_active', 'created_at'
+            'image', 'is_active', 'created_at'
         ]
 
 
@@ -234,7 +234,28 @@ class PartDetailSerializer(serializers.ModelSerializer):
         return obj.created_by.get_full_name() if obj.created_by else None
 
 
-class PartCreateSerializer(serializers.ModelSerializer):
+class PartBarcodeSerializerMixin(serializers.Serializer):
+    barcode = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate_barcode(self, value):
+        if value is None:
+            return None
+
+        barcode = str(value).strip()
+        if not barcode:
+            return None
+
+        existing_parts = Part.objects.filter(barcode__iexact=barcode)
+        instance = getattr(self, 'instance', None)
+        if instance and instance.pk:
+            existing_parts = existing_parts.exclude(pk=instance.pk)
+        if existing_parts.exists():
+            raise serializers.ValidationError("A part with this barcode already exists.")
+
+        return barcode
+
+
+class PartCreateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Part
         exclude = ['created_by', 'last_cost_update', 'last_price_update', 
@@ -252,7 +273,7 @@ class PartCreateSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class PartUpdateSerializer(serializers.ModelSerializer):
+class PartUpdateSerializer(PartBarcodeSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Part
         fields = [

@@ -17,6 +17,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useBranchStore } from "@/store/branchStore";
+import { getMediaUrl } from "@/lib/api/utils";
 
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
@@ -70,6 +71,7 @@ export default function PartDetailPage() {
   };
 
   const stockStatus = getStockStatus();
+  const partImageUrl = part.image ? getMediaUrl(part.image) : "";
 
   return (
     <div className="space-y-6 pb-12">
@@ -125,11 +127,11 @@ export default function PartDetailPage() {
                       onClick={() => setShowImageModal(true)}
                     >
                       <Image
-                        src={part.image}
+                        src={partImageUrl}
                         alt={part.name}
                         fill
                         className="object-contain bg-muted transition-transform group-hover:scale-105"
-                        unoptimized={part.image?.startsWith("data:")}
+                        unoptimized
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                         <span className="opacity-0 group-hover:opacity-100 bg-black/60 text-white text-xs px-2 py-1 rounded">View</span>
@@ -447,11 +449,11 @@ export default function PartDetailPage() {
           <div className="relative w-full h-[80vh] flex items-center justify-center">
             {part.image && (
               <Image
-                src={part.image}
+                src={partImageUrl}
                 alt={part.name}
                 fill
                 className="object-contain"
-                unoptimized={part.image?.startsWith("data:")}
+                unoptimized
               />
             )}
             <button

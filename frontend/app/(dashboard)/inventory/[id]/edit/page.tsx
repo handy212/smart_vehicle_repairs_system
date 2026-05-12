@@ -4,7 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi, Part } from "@/lib/api/inventory";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
@@ -17,6 +17,7 @@ export default function EditPartPage() {
   const partId = parseInt(params.id as string);
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const formId = "part-edit-form";
 
   const { data: part, isLoading } = useQuery({
     queryKey: ["part", partId],
@@ -52,7 +53,7 @@ export default function EditPartPage() {
     },
   });
 
-  const onSubmit = async (data: PartFormData, imageFile: File | null) => {
+  const onSubmit = async (data: PartFormData, imageFile: File | null, clearImage = false) => {
     setServerError(null);
     try {
       // Exclude quantity_in_stock - stock is managed via StockItem per branch
@@ -78,6 +79,7 @@ export default function EditPartPage() {
           weight: data.weight?.toString(),
           markup_percentage: data.markup_percentage?.toString(),
           core_charge: data.core_charge?.toString(),
+          ...(clearImage ? { image: null } : {}),
         };
         await updateMutation.mutateAsync(apiData);
       }
@@ -113,7 +115,7 @@ export default function EditPartPage() {
     );
   }
 
-  const initialData: Partial<PartFormData> & { image?: string } = {
+  const initialData: Partial<PartFormData> & { image?: string | null } = {
     part_number: part.part_number,
     name: part.name || "",
     description: part.description || "",
@@ -166,6 +168,24 @@ export default function EditPartPage() {
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" onClick={() => router.push(`/inventory/${partId}`)}>
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Saving...
+              </div>
+            ) : (
+              <>
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {serverError && (
@@ -176,11 +196,9 @@ export default function EditPartPage() {
       )}
 
       <PartForm
+        formId={formId}
         initialData={initialData}
         onSubmit={onSubmit}
-        isSubmitting={updateMutation.isPending}
-        mode="edit"
-        onCancel={() => router.push(`/inventory/${partId}`)}
       />
     </div>
   );

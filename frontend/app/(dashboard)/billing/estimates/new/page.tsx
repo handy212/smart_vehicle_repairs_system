@@ -39,6 +39,7 @@ const lineItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
   quantity: optionalNumber(),
   unit_price: optionalNumber(),
+  discount_percentage: optionalNumber(),
   labor_hours: optionalNumber(),
   labor_rate: optionalNumber(),
   is_taxable: z.boolean(),
@@ -131,7 +132,7 @@ export default function NewEstimatePage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [partSearchTerm, setPartSearchTerm] = useState("");
   const [lineItems, setLineItems] = useState<ExtendedLineItem[]>([
-    { item_type: "labor", description: "Labor Service", quantity: 1, unit_price: 0, labor_hours: 1, labor_rate: 0, is_taxable: true },
+    { item_type: "labor", description: "Labor Service", quantity: 1, unit_price: 0, discount_percentage: 0, labor_hours: 1, labor_rate: 0, is_taxable: true },
   ]);
 
   // Fetch Next Estimate Number
@@ -222,6 +223,7 @@ export default function NewEstimatePage() {
             labor_hours: parseFloat(t.estimated_hours || "1"),
             labor_rate: 0,
             unit_price: 0,
+            discount_percentage: 0,
             is_taxable: true,
             notes: t.detailed_notes
           });
@@ -237,6 +239,7 @@ export default function NewEstimatePage() {
             description: p.part_name || "Part",
             quantity: p.quantity || 1,
             unit_price: parseFloat(p.selling_price || "0"),
+            discount_percentage: 0,
             part: p.part,
             part_number: p.part_number,
             part_name: p.part_name,
@@ -285,6 +288,7 @@ export default function NewEstimatePage() {
           description: partData.name,
           quantity: 1,
           unit_price: parseFloat(partData.selling_price || "0"),
+          discount_percentage: 0,
           part: partData.id,
           part_number: partData.part_number,
           part_name: partData.name,
@@ -294,7 +298,7 @@ export default function NewEstimatePage() {
     } else {
       updatedLineItems = [
         ...lineItems,
-        { item_type: "labor", description: "New Labor Item", quantity: 1, unit_price: 0, labor_hours: 1, labor_rate: 0, is_taxable: true },
+        { item_type: "labor", description: "New Labor Item", quantity: 1, unit_price: 0, discount_percentage: 0, labor_hours: 1, labor_rate: 0, is_taxable: true },
       ];
     }
     setLineItems(updatedLineItems);
@@ -315,11 +319,20 @@ export default function NewEstimatePage() {
     setValue("line_items", updated, { shouldValidate: true });
   };
 
-  const calculateLineItemTotal = (item: Partial<ExtendedLineItem>): number => {
+  const calculateLineItemGrossTotal = (item: Partial<ExtendedLineItem>): number => {
     if (item.item_type === "labor") {
       return (item.labor_hours || 0) * (item.labor_rate || 0);
     }
     return (item.quantity || 0) * (item.unit_price || 0);
+  };
+
+  const calculateLineItemDiscount = (item: Partial<ExtendedLineItem>): number => {
+    const itemDiscountPercentage = Math.min(Math.max(item.discount_percentage || 0, 0), 100);
+    return (calculateLineItemGrossTotal(item) * itemDiscountPercentage) / 100;
+  };
+
+  const calculateLineItemTotal = (item: Partial<ExtendedLineItem>): number => {
+    return Math.max(calculateLineItemGrossTotal(item) - calculateLineItemDiscount(item), 0);
   };
 
   const subtotal = lineItems.reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
@@ -397,6 +410,7 @@ export default function NewEstimatePage() {
         lineItem.quantity = item.quantity || 1;
         lineItem.unit_price = (item.unit_price || 0).toString();
       }
+      lineItem.discount_percentage = (item.discount_percentage || 0).toString();
 
       if (item.part) lineItem.part = item.part;
       if (item.part_number) lineItem.part_number = item.part_number;
@@ -688,6 +702,7 @@ export default function NewEstimatePage() {
                       <TableHead className="min-w-[200px] py-1 px-2 h-8">Description</TableHead>
                       <TableHead className="w-[100px] py-1 px-2 h-8">Qty</TableHead>
                       <TableHead className="w-[120px] py-1 px-2 h-8">Rate</TableHead>
+                      <TableHead className="w-[100px] py-1 px-2 h-8">Disc %</TableHead>
                       <TableHead className="w-[80px] text-center py-1 px-2 h-8">Tax</TableHead>
                       <TableHead className="w-[120px] text-right py-1 px-2 h-8">Amount</TableHead>
                       <TableHead className="w-[50px] py-1 px-2 h-8"></TableHead>
@@ -755,6 +770,18 @@ export default function NewEstimatePage() {
                             className="h-8 text-sm"
                           />
                         </TableCell>
+                        <TableCell className="py-1 px-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={item.discount_percentage || ""}
+                            onChange={(e) => updateLineItem(index, "discount_percentage", parseFloat(e.target.value) || 0)}
+                            className="h-8 text-sm"
+                            placeholder="0"
+                          />
+                        </TableCell>
                         <TableCell className="text-center py-1 px-2">
                           <Checkbox
                             checked={item.is_taxable}
@@ -762,7 +789,12 @@ export default function NewEstimatePage() {
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium text-sm py-1 px-2">
-                          {formatCurrency(calculateLineItemTotal(item))}
+                          <div>{formatCurrency(calculateLineItemTotal(item))}</div>
+                          {(item.discount_percentage || 0) > 0 && (
+                            <div className="text-[11px] font-normal text-destructive">
+                              -{formatCurrency(calculateLineItemDiscount(item))}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="py-1 px-2">
                           <Button

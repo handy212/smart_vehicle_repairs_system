@@ -24,6 +24,8 @@ export interface InvoiceLineItem {
   description: string;
   quantity?: number;
   unit_price?: string;
+  discount_percentage?: string;
+  discount_amount?: string;
   total?: string;
   labor_hours?: number;
   labor_rate?: string;
@@ -153,6 +155,8 @@ export interface EstimateLineItem {
   description: string;
   quantity?: number;
   unit_price?: string;
+  discount_percentage?: string;
+  discount_amount?: string;
   total?: string;
   labor_hours?: number;
   labor_rate?: string;

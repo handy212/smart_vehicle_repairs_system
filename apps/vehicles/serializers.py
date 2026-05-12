@@ -74,7 +74,7 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
         model = Vehicle
         fields = [
             'id', 'owner', 'vin', 'year', 'make', 'model', 'trim',
-            'exterior_color', 'interior_color', 'license_plate', 'license_plate_state',
+            'vehicle_type', 'exterior_color', 'interior_color', 'license_plate', 'license_plate_state',
             'current_mileage', 'mileage_unit', 'engine_type', 'engine_size',
             'transmission_type', 'fuel_tank_capacity', 'tire_size',
             'condition_rating', 'purchase_date', 'warranty_expiry_date',
@@ -368,7 +368,7 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            'owner', 'year', 'make', 'model', 'trim', 'vehicle_type',
+            'owner', 'vin', 'year', 'make', 'model', 'trim', 'vehicle_type',
             'exterior_color', 'interior_color', 'license_plate', 'license_plate_state',
             'current_mileage', 'engine_type', 'engine_size', 'transmission_type',
             'fuel_tank_capacity', 'tire_size', 'condition_rating',
@@ -376,6 +376,36 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
             'last_service_date', 'next_service_due_date', 'next_service_due_mileage',
             'status', 'relationship', 'notes', 'tags', 'image'
         ]
+
+    def validate_vin(self, value):
+        """Validate VIN format and uniqueness when editing."""
+        if not value:
+            raise serializers.ValidationError("VIN is required")
+
+        vin = value.upper().strip()
+        if len(vin) != 17:
+            raise serializers.ValidationError(f"VIN must be exactly 17 characters (got {len(vin)})")
+        if any(char in set('IOQ') for char in vin):
+            raise serializers.ValidationError("VIN cannot contain letters I, O, or Q")
+
+        existing_vehicles = Vehicle.objects.filter(vin=vin)
+        if self.instance and self.instance.pk:
+            existing_vehicles = existing_vehicles.exclude(pk=self.instance.pk)
+        if existing_vehicles.exists():
+            raise serializers.ValidationError("A vehicle with this VIN already exists.")
+
+        return vin
+
+    def validate_current_mileage(self, value):
+        """Prevent accidental odometer rollbacks on regular edits."""
+        if value is None or not self.instance:
+            return value
+        current_mileage = self.instance.current_mileage or 0
+        if value < current_mileage:
+            raise serializers.ValidationError(
+                f"New mileage ({value}) cannot be less than current mileage ({current_mileage})"
+            )
+        return value
     
     def validate_license_plate(self, value):
         """Validate license plate uniqueness"""
@@ -394,6 +424,21 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A vehicle with this license plate already exists.")
         
         return license_plate
+
+    def update(self, instance, validated_data):
+        license_plate = validated_data.get('license_plate')
+        if license_plate is not None and not str(license_plate).strip():
+            vin = validated_data.get('vin') or instance.vin
+            if vin and len(vin) >= 8:
+                base_plate = f"VIN-{vin[-8:]}"
+                new_plate = base_plate
+                counter = 1
+                while Vehicle.objects.filter(license_plate=new_plate).exclude(pk=instance.pk).exists():
+                    new_plate = f"{base_plate}-{counter}"
+                    counter += 1
+                validated_data['license_plate'] = new_plate
+
+        return super().update(instance, validated_data)
 
 
 class VehicleMileageHistorySerializer(serializers.ModelSerializer):

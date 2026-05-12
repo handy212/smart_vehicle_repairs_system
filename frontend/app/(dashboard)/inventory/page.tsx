@@ -33,6 +33,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Image from "next/image";
+import { getMediaUrl } from "@/lib/api/utils";
 
 // Stats Grid Component
 const StatsGrid = ({ stats, loading }: { stats: any; loading: boolean }) => {
@@ -465,6 +467,7 @@ export default function InventoryPage() {
                         className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded cursor-pointer"
                       />
                     </TableHead>
+                    <TableHead className="h-9 w-12 px-2"></TableHead>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Part #</TableHead>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Name</TableHead>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-4">Category</TableHead>
@@ -489,6 +492,21 @@ export default function InventoryPage() {
                           onChange={() => bulkSelection.toggleSelection(part.id)}
                           className="h-3.5 w-3.5 text-primary focus:ring-primary border-border rounded cursor-pointer"
                         />
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
+                        <div className="relative h-9 w-9 overflow-hidden rounded-md border border-border bg-muted flex items-center justify-center">
+                          {part.image ? (
+                            <Image
+                              src={getMediaUrl(part.image)}
+                              alt={part.name}
+                              fill
+                              className="object-contain"
+                              unoptimized
+                            />
+                          ) : (
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="px-4 py-2 font-mono text-xs font-medium text-card-foreground">
                         {part.part_number || "-"}

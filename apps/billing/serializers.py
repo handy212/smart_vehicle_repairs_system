@@ -31,6 +31,22 @@ from apps.workorders.models import WorkOrder
 from apps.inventory.models import Part, PurchaseOrder
 
 
+def calculate_discounted_line_total(item):
+    """Return the saved line total after any inline item discount."""
+    item_type = item.get('item_type', '')
+    if item_type == 'labor' and item.get('labor_hours') is not None and item.get('labor_rate') is not None:
+        gross_total = Decimal(str(item.get('labor_hours') or 0)) * Decimal(str(item.get('labor_rate') or 0))
+    else:
+        gross_total = Decimal(str(item.get('quantity', 0) or 0)) * Decimal(str(item.get('unit_price', 0) or 0))
+
+    discount_percentage = Decimal(str(item.get('discount_percentage', 0) or 0))
+    discount_amount = Decimal('0')
+    if discount_percentage > 0:
+        discount_amount = (gross_total * discount_percentage / Decimal('100')).quantize(Decimal('0.01'))
+
+    return max(gross_total - discount_amount, Decimal('0')).quantize(Decimal('0.01'))
+
+
 # ============================================================================
 # TAX RATE SERIALIZERS
 # ============================================================================
@@ -85,12 +101,12 @@ class EstimateLineItemSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'item_type', 'description', 'notes',
             'part', 'part_name', 'part_number',
-            'quantity', 'unit_price', 'total',
+            'quantity', 'unit_price', 'discount_percentage', 'discount_amount', 'total',
             'labor_hours', 'labor_rate',
             'is_taxable', 'order',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['total', 'created_at', 'updated_at']
+        read_only_fields = ['discount_amount', 'total', 'created_at', 'updated_at']
 
 
 class EstimateLineItemCreateSerializer(serializers.ModelSerializer):
@@ -101,7 +117,7 @@ class EstimateLineItemCreateSerializer(serializers.ModelSerializer):
         fields = [
             'item_type', 'description', 'notes',
             'part', 'part_number',
-            'quantity', 'unit_price',
+            'quantity', 'unit_price', 'discount_percentage',
             'labor_hours', 'labor_rate',
             'is_taxable', 'order'
         ]
@@ -442,12 +458,12 @@ class InvoiceLineItemSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'item_type', 'description', 'notes',
             'part', 'part_name', 'part_number',
-            'quantity', 'unit_price', 'total',
+            'quantity', 'unit_price', 'discount_percentage', 'discount_amount', 'total',
             'labor_hours', 'labor_rate',
             'is_taxable', 'order',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['total', 'created_at', 'updated_at']
+        read_only_fields = ['discount_amount', 'total', 'created_at', 'updated_at']
 
 
 # ============================================================================
@@ -673,6 +689,7 @@ class InvoiceLineItemCreateSerializer(serializers.Serializer):
     unit_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     labor_hours = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
     labor_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    discount_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=Decimal('0'), min_value=Decimal('0'), max_value=Decimal('100'))
     part = serializers.PrimaryKeyRelatedField(queryset=Part.objects.all(), required=False, allow_null=True)
     part_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
     is_taxable = serializers.BooleanField(default=True)
@@ -789,10 +806,7 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             taxable_before_discount = Decimal('0')
             
             for item in line_items_data:
-                # Calculate item total from quantity and unit_price
-                quantity = Decimal(str(item.get('quantity', 0) or 0))
-                unit_price = Decimal(str(item.get('unit_price', 0) or 0))
-                item_total = (quantity * unit_price).quantize(Decimal('0.01'))
+                item_total = calculate_discounted_line_total(item)
                 
                 item_type = item.get('item_type', '')
                 
@@ -938,10 +952,7 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
                 taxable_before_discount = Decimal('0')
                 
                 for order, item in enumerate(line_items_data):
-                    # Calculate item total from quantity and unit_price
-                    quantity = Decimal(str(item.get('quantity', 0) or 0))
-                    unit_price = Decimal(str(item.get('unit_price', 0) or 0))
-                    item_total = (quantity * unit_price).quantize(Decimal('0.01'))
+                    item_total = calculate_discounted_line_total(item)
                     
                     item_type = item.get('item_type', '')
                     

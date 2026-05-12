@@ -496,6 +496,8 @@ class Estimate(models.Model):
                 part_number=item.part_number,
                 quantity=item.quantity,
                 unit_price=item.unit_price,
+                discount_percentage=item.discount_percentage,
+                discount_amount=item.discount_amount,
                 total=item.total,
                 is_taxable=item.is_taxable
             )
@@ -539,6 +541,13 @@ class EstimateLineItem(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))]
     )
+    discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))]
+    )
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     
     # Labor-specific fields
@@ -573,8 +582,16 @@ class EstimateLineItem(models.Model):
         return f"{self.estimate.estimate_number} - {self.description}"
     
     def save(self, *args, **kwargs):
-        # Calculate total
-        self.total = (self.quantity * self.unit_price).quantize(Decimal('0.01'))
+        if self.item_type == 'labor' and self.labor_hours is not None and self.labor_rate is not None:
+            gross_total = self.labor_hours * self.labor_rate
+        else:
+            gross_total = self.quantity * self.unit_price
+
+        self.discount_amount = Decimal('0')
+        if self.discount_percentage > 0:
+            self.discount_amount = (gross_total * self.discount_percentage / Decimal('100')).quantize(Decimal('0.01'))
+
+        self.total = max(gross_total - self.discount_amount, Decimal('0')).quantize(Decimal('0.01'))
         
         super().save(*args, **kwargs)
         
@@ -957,6 +974,13 @@ class InvoiceLineItem(models.Model):
         blank=True,
         validators=[MinValueValidator(Decimal('0'))]
     )
+    discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))]
+    )
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     
     labor_hours = models.DecimalField(
@@ -987,16 +1011,21 @@ class InvoiceLineItem(models.Model):
         return f"{self.invoice.invoice_number} - {self.description}"
     
     def save(self, *args, **kwargs):
-        total = Decimal('0')
+        gross_total = Decimal('0')
         if self.item_type == 'labor' and self.labor_hours and self.labor_rate:
-            total = (self.labor_hours * self.labor_rate)
+            gross_total = self.labor_hours * self.labor_rate
         elif self.quantity and self.unit_price:
-            total = (self.quantity * self.unit_price)
+            gross_total = self.quantity * self.unit_price
         elif self.unit_price:
-            total = self.unit_price
+            gross_total = self.unit_price
         elif self.total:
-            total = self.total
-        self.total = total.quantize(Decimal('0.01'))
+            gross_total = self.total
+
+        self.discount_amount = Decimal('0')
+        if self.discount_percentage > 0:
+            self.discount_amount = (gross_total * self.discount_percentage / Decimal('100')).quantize(Decimal('0.01'))
+
+        self.total = max(gross_total - self.discount_amount, Decimal('0')).quantize(Decimal('0.01'))
         super().save(*args, **kwargs)
 
 class Payment(models.Model):

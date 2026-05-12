@@ -23,7 +23,7 @@ export interface Vehicle {
   health_score?: number;
   is_high_risk?: boolean;
   total_maintenance_cost?: string | number;
-  relationship?: "owner" | "driver" | "fleet_manager" | string;
+  relationship?: "owner" | "driver" | "fleet_manager" | "other" | string;
   // Legacy fields for backward compatibility
   color?: string;
   mileage?: number;

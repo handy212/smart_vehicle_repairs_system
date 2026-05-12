@@ -173,7 +173,7 @@ export interface Part {
   compatible_years?: string;
   warranty_months?: number;
   warranty_notes?: string;
-  image?: string;
+  image?: string | null;
   is_active: boolean;
   is_taxable?: boolean;
   is_core?: boolean;
