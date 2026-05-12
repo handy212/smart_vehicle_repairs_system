@@ -708,6 +708,7 @@ export default function InvoiceDetailPage() {
                         <TableHead className="w-[40%] py-2">Item / Description</TableHead>
                         <TableHead className="text-right py-2">Qty</TableHead>
                         <TableHead className="text-right py-2">Rate</TableHead>
+                        <TableHead className="text-right py-2">Discount</TableHead>
                         <TableHead className="text-right py-2">Tax</TableHead>
                         <TableHead className="text-right py-2">Total</TableHead>
                       </TableRow>
@@ -715,33 +716,55 @@ export default function InvoiceDetailPage() {
                     <TableBody>
                       {invoice.line_items && invoice.line_items.length > 0 ? (
 
-                        invoice.line_items.map((item: InvoiceLineItem) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="align-top py-3">
-                              <div className="font-medium text-foreground">{item.description}</div>
-                              {(item.part_number || item.item_type === 'part') && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  {item.part_number && <Badge variant="outline" className="text-[10px] h-4 px-1">{item.part_number}</Badge>}
-                                  <span className="text-xs text-muted-foreground capitalize">{item.item_type}</span>
-                                </div>
-                              )}
-                              {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
-                            </TableCell>
-                            <TableCell className="text-right align-top py-3">{item.quantity}</TableCell>
-                            <TableCell className="text-right align-top py-3">
-                              {item.unit_price ? formatCurrency(parseFloat(item.unit_price)) : "-"}
-                            </TableCell>
-                            <TableCell className="text-right align-top py-3">
-                              {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-success ml-auto" /> : <span className="text-gray-300">-</span>}
-                            </TableCell>
-                            <TableCell className="text-right font-medium align-top py-3">
-                              {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        invoice.line_items.map((item: InvoiceLineItem) => {
+                          const lineDiscountPercentage = parseAmount(item.discount_percentage);
+                          const lineDiscountAmount = parseAmount(item.discount_amount);
+                          const hasLineDiscount = lineDiscountPercentage > 0 || lineDiscountAmount > 0;
+
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell className="align-top py-3">
+                                <div className="font-medium text-foreground">{item.description}</div>
+                                {(item.part_number || item.item_type === 'part') && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {item.part_number && <Badge variant="outline" className="text-[10px] h-4 px-1">{item.part_number}</Badge>}
+                                    <span className="text-xs text-muted-foreground capitalize">{item.item_type}</span>
+                                  </div>
+                                )}
+                                {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
+                              </TableCell>
+                              <TableCell className="text-right align-top py-3">{item.quantity}</TableCell>
+                              <TableCell className="text-right align-top py-3">
+                                {item.unit_price ? formatCurrency(parseFloat(item.unit_price)) : "-"}
+                              </TableCell>
+                              <TableCell className="text-right align-top py-3">
+                                {hasLineDiscount ? (
+                                  <div className="space-y-0.5">
+                                    {lineDiscountPercentage > 0 && (
+                                      <div>{lineDiscountPercentage.toFixed(1)}%</div>
+                                    )}
+                                    {lineDiscountAmount > 0 && (
+                                      <div className="text-xs text-destructive">
+                                        -{formatCurrency(lineDiscountAmount)}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right align-top py-3">
+                                {item.is_taxable ? <CheckCircle2 className="w-4 h-4 text-success ml-auto" /> : <span className="text-gray-300">-</span>}
+                              </TableCell>
+                              <TableCell className="text-right font-medium align-top py-3">
+                                {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                             No line items found.
                           </TableCell>
                         </TableRow>

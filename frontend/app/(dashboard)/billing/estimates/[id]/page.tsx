@@ -27,6 +27,15 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+
+const parseAmount = (value?: string | number | null) => {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+  const num = typeof value === "number" ? value : parseFloat(value);
+  return Number.isNaN(num) ? 0 : num;
+};
+
 export default function EstimateDetailPage() {
   const { formatCurrency } = useCurrency();
   const params = useParams();
@@ -689,36 +698,59 @@ export default function EstimateDetailPage() {
                         <TableHead className="w-[40%] py-2">Item / Description</TableHead>
                         <TableHead className="text-right py-2">Qty/Hrs</TableHead>
                         <TableHead className="text-right py-2">Rate</TableHead>
+                        <TableHead className="text-right py-2">Discount</TableHead>
                         <TableHead className="text-right py-2">Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {estimate.line_items && estimate.line_items.length > 0 ? (
 
-                        estimate.line_items.map((item: EstimateLineItem, index: number) => (
-                          <TableRow key={item.id || index}>
-                            <TableCell className="align-top py-3">
-                              <div className="flex flex-col">
-                                <span className="font-medium text-foreground">{item.description}</span>
-                                <span className="text-xs text-muted-foreground capitalize mt-0.5">{item.item_type?.replace("_", " ")}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right align-top py-3">
-                              {item.item_type === "labor" ? `${item.labor_hours || 0}h` : (item.quantity || "-")}
-                            </TableCell>
-                            <TableCell className="text-right align-top py-3">
-                              {item.item_type === "labor"
-                                ? (item.labor_rate ? `${formatCurrency(parseFloat(item.labor_rate))}/hr` : "-")
-                                : (item.unit_price ? `${formatCurrency(parseFloat(item.unit_price))}` : "-")}
-                            </TableCell>
-                            <TableCell className="text-right font-medium align-top py-3">
-                              {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        estimate.line_items.map((item: EstimateLineItem, index: number) => {
+                          const lineDiscountPercentage = parseAmount(item.discount_percentage);
+                          const lineDiscountAmount = parseAmount(item.discount_amount);
+                          const hasLineDiscount = lineDiscountPercentage > 0 || lineDiscountAmount > 0;
+
+                          return (
+                            <TableRow key={item.id || index}>
+                              <TableCell className="align-top py-3">
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-foreground">{item.description}</span>
+                                  <span className="text-xs text-muted-foreground capitalize mt-0.5">{item.item_type?.replace("_", " ")}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right align-top py-3">
+                                {item.item_type === "labor" ? `${item.labor_hours || 0}h` : (item.quantity || "-")}
+                              </TableCell>
+                              <TableCell className="text-right align-top py-3">
+                                {item.item_type === "labor"
+                                  ? (item.labor_rate ? `${formatCurrency(parseFloat(item.labor_rate))}/hr` : "-")
+                                  : (item.unit_price ? `${formatCurrency(parseFloat(item.unit_price))}` : "-")}
+                              </TableCell>
+                              <TableCell className="text-right align-top py-3">
+                                {hasLineDiscount ? (
+                                  <div className="space-y-0.5">
+                                    {lineDiscountPercentage > 0 && (
+                                      <div>{lineDiscountPercentage.toFixed(1)}%</div>
+                                    )}
+                                    {lineDiscountAmount > 0 && (
+                                      <div className="text-xs text-destructive">
+                                        -{formatCurrency(lineDiscountAmount)}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-medium align-top py-3">
+                                {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             No line items found.
                           </TableCell>
                         </TableRow>
