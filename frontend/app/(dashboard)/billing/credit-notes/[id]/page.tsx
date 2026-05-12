@@ -2,12 +2,12 @@
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars 
 import { ArrowLeft, Printer, CheckCircle, Download, FileText } from "lucide-react";
@@ -24,16 +24,16 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { ApplyCreditToInvoiceDialog } from "@/components/billing/ApplyCreditToInvoiceDialog";
 
 export default function CreditNoteDetailPage() {
     const { formatCurrency } = useCurrency();
     const params = useParams();
-
-    const router = useRouter();
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const id = parseInt(params.id as string);
     const { openPrintWindow, isOpeningPrint } = usePrint();
+    const [applyDialogOpen, setApplyDialogOpen] = useState(false);
 
     // Validate ID to prevent NaN API calls
     const isValidId = !isNaN(id) && id > 0;
@@ -54,10 +54,15 @@ export default function CreditNoteDetailPage() {
             queryClient.invalidateQueries({ queryKey: ["creditNote", id] });
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
+            let description = "Failed to approve credit note";
+            if (error && typeof error === "object" && "response" in error) {
+                const d = (error as { response?: { data?: { error?: string } } }).response?.data;
+                if (d?.error) description = d.error;
+            }
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to approve credit note",
+                description,
                 variant: "destructive",
             });
         },
@@ -115,8 +120,21 @@ export default function CreditNoteDetailPage() {
         }
     };
 
+    const unusedNum = parseFloat(creditNote.unused_amount || "0");
+    const customerIdNum =
+        typeof creditNote.customer === "object" && creditNote.customer != null
+            ? creditNote.customer.id
+            : Number(creditNote.customer);
+
     return (
         <div className="space-y-6">
+            <ApplyCreditToInvoiceDialog
+                open={applyDialogOpen}
+                onOpenChange={setApplyDialogOpen}
+                creditNoteId={id}
+                customerId={customerIdNum}
+                unusedCredit={unusedNum}
+            />
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-4">
@@ -129,7 +147,7 @@ export default function CreditNoteDetailPage() {
                         <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
                             Credit Note #{creditNote.credit_note_number}
 
-                            <Badge variant={getStatusVariant(creditNote.status) as any} className="text-base">
+                            <Badge variant={getStatusVariant(creditNote.status) as BadgeProps["variant"]} className="text-base">
                                 {creditNote.status.toUpperCase()}
                             </Badge>
                         </h1>
@@ -147,6 +165,11 @@ export default function CreditNoteDetailPage() {
                         >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             {approveMutation.isPending ? "Approving..." : "Approve & Issue"}
+                        </Button>
+                    )}
+                    {creditNote.status === "issued" && unusedNum > 0.001 && Number.isFinite(customerIdNum) && customerIdNum > 0 && (
+                        <Button variant="default" onClick={() => setApplyDialogOpen(true)}>
+                            Apply to invoice
                         </Button>
                     )}
                     <Button variant="outline" onClick={() => openPrintWindow({ documentType: 'credit_note', documentId: id })} disabled={isOpeningPrint}>
@@ -193,6 +216,47 @@ export default function CreditNoteDetailPage() {
                             </Table>
                         </CardContent>
                     </Card>
+
+                    {(creditNote.applications?.length ?? 0) > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Applied to invoices</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Invoice</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                            <TableHead>Date</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {creditNote.applications?.map((a) => (
+                                            <TableRow key={a.id}>
+                                                <TableCell>
+                                                    <Link
+                                                        href={`/billing/invoices/${a.invoice}`}
+                                                        className="text-primary hover:underline font-medium"
+                                                    >
+                                                        #{a.invoice_number ?? a.invoice}
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono">
+                                                    {formatCurrency(parseFloat(a.amount))}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {a.applied_at
+                                                        ? format(new Date(a.applied_at), "MMM d, yyyy h:mm a")
+                                                        : "—"}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Activity/Notes could go here */}
                 </div>

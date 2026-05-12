@@ -23,18 +23,23 @@ class CustomerInvoiceFilterTests(APITestCase):
             password="testpass",
             role="admin",
             is_staff=True,
+            is_superuser=True,
         )
         self.customer_user = User.objects.create_user(
             username="invoice-customer",
             email="invoice-customer@example.com",
             password="testpass",
             role="customer",
+            first_name="Olivia",
+            last_name="Owner",
         )
         self.other_user = User.objects.create_user(
             username="other-invoice-customer",
             email="other-invoice-customer@example.com",
             password="testpass",
             role="customer",
+            first_name="Miles",
+            last_name="Other",
         )
         self.customer = Customer.objects.create(user=self.customer_user)
         self.other_customer = Customer.objects.create(user=self.other_user)
@@ -74,3 +79,14 @@ class CustomerInvoiceFilterTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([row["id"] for row in response.data["results"]], [self.sent_invoice.id])
+
+    def test_invoice_search_matches_customer_user_fields(self):
+        self.client.force_authenticate(self.staff_user)
+
+        response = self.client.get("/api/billing/invoices/", {"page": 1, "search": "olivia"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        invoice_ids = {row["id"] for row in response.data["results"]}
+        self.assertIn(self.sent_invoice.id, invoice_ids)
+        self.assertIn(self.viewed_invoice.id, invoice_ids)
+        self.assertNotIn(self.other_invoice.id, invoice_ids)

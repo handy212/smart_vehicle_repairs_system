@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function RefundsPage() {
     const [search, setSearch] = useState("");
@@ -21,6 +22,7 @@ export default function RefundsPage() {
     const queryClient = useQueryClient();
     const router = useRouter();
     const { toast } = useToast();
+    const { formatCurrency } = useCurrency();
 
     const { data, isLoading } = useQuery({
         queryKey: ['refunds', statusFilter, search],
@@ -180,7 +182,7 @@ export default function RefundsPage() {
                                                 {refund.customer_name}
                                             </TableCell>
                                             <TableCell className="px-4 py-2 font-mono font-semibold text-sm text-foreground">
-                                                ${parseFloat(refund.amount).toLocaleString()}
+                                                {formatCurrency(parseFloat(refund.amount))}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
                                                 <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-transparent shadow-none border">{refund.refund_method}</Badge>

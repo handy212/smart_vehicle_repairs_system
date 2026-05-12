@@ -433,7 +433,7 @@ class SubscriptionUsageService:
             except Exception as e:
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to send low allowance notification: {e}")
+                logger.warning(f"Failed to send low allowance notification: {e}", exc_info=True)
         
         return usage
     
@@ -641,7 +641,7 @@ class SubscriptionNotificationService:
                     data={
                         'subscription_id': subscription.id,
                         'feature': feature_type,
-                        'remaining': remaining
+                        'remaining': float(remaining)
                     },
                     related_object_type='subscription',
                     related_object_id=subscription.id,
@@ -651,4 +651,4 @@ class SubscriptionNotificationService:
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to send low allowance notification: {e}")
+            logger.warning(f"Failed to send low allowance notification: {e}", exc_info=True)

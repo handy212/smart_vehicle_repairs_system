@@ -28,6 +28,7 @@ export function getApiErrorMessage(error: unknown, fallback = "Something went wr
     if (errorData.error) return String(errorData.error);
 
     const messages = Object.entries(errorData)
+      .filter(([field]) => !["pay_as_you_go_available"].includes(field))
       .flatMap(([field, value]) => {
         const values = Array.isArray(value) ? value : [value];
         return values.map((message) => `${field}: ${String(message)}`);

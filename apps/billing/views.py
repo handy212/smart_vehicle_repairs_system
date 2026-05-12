@@ -7,7 +7,8 @@ from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
-from django.db.models import Sum, Q, F
+from django.db.models import Sum, Q, F, Prefetch
+from django.db import transaction
 from decimal import Decimal
 from datetime import timedelta
 import logging
@@ -28,12 +29,12 @@ from apps.billing.models import (
     Payment,
     CashierTill,
     CashCount,
+    TillCashMovement,
     PaymentAllocation,
     Refund,
     CreditNote,
     CreditNoteLineItem,
-    CreditNote,
-    CreditNoteLineItem,
+    CreditNoteApplication,
     Bill,
     BillLineItem,
     BillPayment,
@@ -48,25 +49,40 @@ from apps.billing.filters import InvoiceFilter_branch, EstimateFilter_branch, Cr
 from apps.branches.utils import filter_queryset_for_user_branches, resolve_branch
 from apps.core.services.ai_service import AIService
 from apps.billing.serializers import (
-    TaxRateSerializer, TaxRateCreateSerializer,
-    EstimateListSerializer, EstimateDetailSerializer, EstimateCreateSerializer, EstimateUpdateSerializer,
-    EstimateLineItemSerializer, EstimateLineItemCreateSerializer,
-    InvoiceListSerializer, InvoiceDetailSerializer, InvoiceCreateSerializer, InvoiceUpdateSerializer,
-    PaymentSerializer, PaymentCreateSerializer, RefundPaymentSerializer,
+    TaxRateSerializer,
+    TaxRateCreateSerializer,
+    EstimateListSerializer,
+    EstimateDetailSerializer,
+    EstimateCreateSerializer,
+    EstimateUpdateSerializer,
+    EstimateLineItemSerializer,
+    EstimateLineItemCreateSerializer,
+    InvoiceListSerializer,
+    InvoiceDetailSerializer,
+    InvoiceCreateSerializer,
+    InvoiceUpdateSerializer,
+    PaymentSerializer,
+    PaymentCreateSerializer,
+    RefundPaymentSerializer,
     PaymentAllocationSerializer,
     CreditNoteListSerializer,
     CreditNoteDetailSerializer,
     CreditNoteCreateSerializer,
-    CreditNoteListSerializer,
-    CreditNoteDetailSerializer,
-    CreditNoteCreateSerializer,
+    CreditNoteApplySerializer,
     BillSerializer,
     BillCreateSerializer,
     BillLineItemSerializer,
     BillPaymentSerializer,
     BillPaymentCreateSerializer,
+    CashierTillSerializer,
+    CashCountSerializer,
+    OpenTillSerializer,
+    CloseTillSerializer,
+    TillCashMovementSerializer,
+    RecordTillMovementSerializer,
+    RefundSerializer,
+    RefundCreateSerializer,
 )
-from apps.billing.models import TaxRate, Estimate, EstimateLineItem, Invoice, Payment, PaymentAllocation
 from apps.billing.tax_service import TaxService
 
 
@@ -213,7 +229,12 @@ class EstimateViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepo
         return [IsAuthenticated(), IsModuleEnabled('billing')]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'estimate_date']
-    search_fields = ['estimate_number', 'title', 'description', 'customer__first_name', 'customer__last_name']
+    search_fields = [
+        'estimate_number', 'title', 'description',
+        'customer__customer_number', 'customer__company_name',
+        'customer__user__first_name', 'customer__user__last_name',
+        'customer__user__email',
+    ]
     ordering_fields = [
         'estimate_number', 'estimate_date', 'valid_until', 'total', 'created_at',
         'customer__user__last_name', 'customer__user__first_name', 'status'
@@ -620,7 +641,13 @@ class InvoiceViewSet(BillingStatusMixin, BillingCommunicationMixin, BillingRepor
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
-    search_fields = ['invoice_number', 'description', 'customer__first_name', 'customer__last_name', 'work_order__work_order_number']
+    search_fields = [
+        'invoice_number', 'description',
+        'customer__customer_number', 'customer__company_name',
+        'customer__user__first_name', 'customer__user__last_name',
+        'customer__user__email',
+        'work_order__work_order_number',
+    ]
     ordering_fields = [
         'invoice_number', 'invoice_date', 'due_date', 'total', 'amount_due', 'created_at',
         'customer__user__last_name', 'customer__user__first_name', 'status',
@@ -731,7 +758,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
     
     queryset = Payment.objects.select_related(
         'invoice', 'customer', 'processed_by', 'refunded_by'
-    )
+    ).prefetch_related('allocations')
     permission_classes = [IsAuthenticated, IsModuleEnabled('billing')]
 
     def get_permissions(self):
@@ -751,7 +778,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['invoice', 'customer', 'payment_method', 'status', 'payment_date']
-    search_fields = ['payment_number', 'reference_number', 'invoice__invoice_number', 'customer__first_name', 'customer__last_name']
+    search_fields = [
+        'payment_number', 'reference_number', 'invoice__invoice_number',
+        'customer__customer_number', 'customer__company_name',
+        'customer__user__first_name', 'customer__user__last_name',
+        'customer__user__email',
+    ]
     ordering_fields = ['payment_number', 'payment_date', 'amount', 'created_at']
     ordering = ['-payment_date']
     
@@ -1109,18 +1141,18 @@ class PaymentViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def unallocated_amount(self, request, pk=None):
-        """Get the unallocated amount for this payment"""
+        """Get the unallocated amount for this payment (sum of allocation rows only)."""
         payment = self.get_object()
         allocated = payment.allocations.aggregate(
             total=Sum('amount')
         )['total'] or Decimal('0')
-        if allocated == 0 and payment.invoice_id:
-            allocated = payment.amount
-        unallocated = payment.amount - allocated
+        unallocated = (payment.amount - allocated).quantize(Decimal('0.01'))
+        if unallocated < 0:
+            unallocated = Decimal('0')
         return Response({
             'payment_amount': str(payment.amount),
             'allocated': str(allocated),
-            'unallocated': str(unallocated)
+            'unallocated': str(unallocated),
         })
 
     @action(detail=True, methods=['get'])
@@ -1164,18 +1196,6 @@ class TaxConfigurationView(APIView):
             'nhil_rate': str(config.nhil_rate),
             'getfund_rate': str(config.getfund_rate),
         })
-# Removed AccountingViewSet garbage
-
-# Phase 2: Till Management ViewSet
-# Add this to apps/billing/views.py after AccountingViewSet
-
-from apps.billing.models import CashierTill, CashCount, Refund, PaymentAllocation
-from apps.billing.serializers import (
-    CashierTillSerializer, CashCountSerializer,
-    OpenTillSerializer, CloseTillSerializer,
-    RefundSerializer, RefundCreateSerializer,
-    PaymentAllocationSerializer
-)
 
 
 class TillViewSet(viewsets.ModelViewSet):
@@ -1183,7 +1203,16 @@ class TillViewSet(viewsets.ModelViewSet):
     
     queryset = CashierTill.objects.all()
     serializer_class = CashierTillSerializer
-    permission_classes = [IsAuthenticated, HasPermission('view_billing')]
+    permission_classes = [IsAuthenticated, IsModuleEnabled('billing'), HasPermission('view_billing')]
+
+    def get_permissions(self):
+        """Open/close tills require payment privileges; read uses view_billing."""
+        base = [IsAuthenticated(), IsModuleEnabled('billing')]
+        if self.action in ('open', 'close', 'record_movement'):
+            return base + [HasPermission('create_payments')]
+        if self.action in ('list', 'retrieve', 'current', 'movements'):
+            return base + [HasPermission('view_billing')]
+        return base + [HasPermission('manage_billing')]
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1208,7 +1237,13 @@ class TillViewSet(viewsets.ModelViewSet):
         if date:
             queryset = queryset.filter(opened_at__date=date)
         
-        return queryset.select_related('branch', 'cashier').prefetch_related('cash_counts')
+        return queryset.select_related('branch', 'cashier').prefetch_related(
+            'cash_counts',
+            Prefetch(
+                'cash_movements',
+                queryset=TillCashMovement.objects.select_related('recorded_by').order_by('-created_at'),
+            ),
+        )
     
     @action(detail=False, methods=['post'])
     def open(self, request):
@@ -1228,17 +1263,28 @@ class TillViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get user's branch
-        from apps.branches.utils import resolve_branch
         branch = resolve_branch(request)
-        
-        # Create till
-        till = CashierTill.objects.create(
-            branch=branch,
-            cashier=request.user,
-            opening_balance=serializer.validated_data['opening_balance'],
-            status='open'
-        )
+        if branch is None:
+            return Response(
+                {'error': 'A branch context is required to open a till. Select a branch and try again.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            till = CashierTill.objects.create(
+                branch=branch,
+                cashier=request.user,
+                opening_balance=serializer.validated_data['opening_balance'],
+                status='open'
+            )
+
+            for count_data in serializer.validated_data.get('cash_counts', []):
+                CashCount.objects.create(
+                    till=till,
+                    count_type='opening',
+                    denomination=Decimal(str(count_data['denomination'])),
+                    quantity=int(count_data['quantity'])
+                )
         
         return Response(
             CashierTillSerializer(till).data,
@@ -1265,35 +1311,29 @@ class TillViewSet(viewsets.ModelViewSet):
         serializer = CloseTillSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        # Create cash counts
-        total_counted = Decimal('0')
-        for count_data in serializer.validated_data['cash_counts']:
-            cash_count = CashCount.objects.create(
-                till=till,
-                count_type='closing',
-                denomination=Decimal(str(count_data['denomination'])),
-                quantity=int(count_data['quantity'])
-            )
-            total_counted += cash_count.total
-        
-        # Calculate expected balance
-        # Expected = opening + all cash payments received through this till
-        cash_payments = Payment.objects.filter(
-            payment_method='cash',
-            payment_date__gte=till.opened_at,
-            payment_date__lte=timezone.now()
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        
-        expected_balance = till.opening_balance + cash_payments
-        
-        # Update till
-        till.closing_balance = total_counted
-        till.expected_balance = expected_balance
-        till.variance = total_counted - expected_balance
-        till.closed_at = timezone.now()
-        till.status = 'closed'
-        till.notes = serializer.validated_data.get('notes', '')
-        till.save()
+        with transaction.atomic():
+            # Replace any previous closing count attempt before final close.
+            till.cash_counts.filter(count_type='closing').delete()
+
+            total_counted = Decimal('0')
+            for count_data in serializer.validated_data['cash_counts']:
+                cash_count = CashCount.objects.create(
+                    till=till,
+                    count_type='closing',
+                    denomination=Decimal(str(count_data['denomination'])),
+                    quantity=int(count_data['quantity'])
+                )
+                total_counted += cash_count.total
+
+            expected_balance = till.calculate_expected_balance()
+
+            till.closing_balance = total_counted
+            till.expected_balance = expected_balance
+            till.variance = total_counted - expected_balance
+            till.closed_at = timezone.now()
+            till.status = 'closed'
+            till.notes = serializer.validated_data.get('notes', '')
+            till.save()
         
         return Response({
             'message': 'Till closed successfully',
@@ -1302,6 +1342,46 @@ class TillViewSet(viewsets.ModelViewSet):
             'variance': str(till.variance),
             'is_balanced': abs(till.variance) < Decimal('0.01')
         })
+
+    @action(detail=True, methods=['get'])
+    def movements(self, request, pk=None):
+        """List pay-in / pay-out movements for this till (audit trail)."""
+        till = self.get_object()
+        qs = till.cash_movements.select_related('recorded_by').order_by('-created_at')
+        serializer = TillCashMovementSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def record_movement(self, request, pk=None):
+        """Record pay-in or pay-out against an open till you own."""
+        till = self.get_object()
+        if till.status != 'open':
+            return Response(
+                {'error': 'Till is not open'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if till.cashier_id != request.user.id:
+            return Response(
+                {'error': 'You can only record movements on your own till'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = RecordTillMovementSerializer(
+            data=request.data,
+            context={'till': till, 'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            movement = TillCashMovement.objects.create(
+                till=till,
+                movement_type=serializer.validated_data['movement_type'],
+                amount=serializer.validated_data['amount'],
+                reason=serializer.validated_data.get('reason') or '',
+                recorded_by=request.user,
+            )
+        return Response(
+            TillCashMovementSerializer(movement).data,
+            status=status.HTTP_201_CREATED,
+        )
     
     @action(detail=False, methods=['get'])
     def current(self, request):
@@ -1309,7 +1389,13 @@ class TillViewSet(viewsets.ModelViewSet):
         till = CashierTill.objects.filter(
             cashier=request.user,
             status='open'
-        ).select_related('branch').prefetch_related('cash_counts').first()
+        ).select_related('branch').prefetch_related(
+            'cash_counts',
+            Prefetch(
+                'cash_movements',
+                queryset=TillCashMovement.objects.select_related('recorded_by').order_by('-created_at'),
+            ),
+        ).first()
         
         if not till:
             return Response(
@@ -1404,16 +1490,41 @@ class RefundViewSet(viewsets.ModelViewSet):
                 {'error': 'Only approved refunds can be completed'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        refund.status = 'completed'
-        refund.processed_by = request.user
-        refund.processed_at = timezone.now()
-        refund.save()
-        
-        # Update original payment refund amount
-        payment = refund.original_payment
-        payment.refund_amount = (payment.refund_amount or Decimal('0')) + refund.amount
-        payment.save()
+
+        is_cash_refund = (
+            refund.refund_method == 'cash'
+            or (
+                refund.refund_method == 'original_method'
+                and refund.original_payment.payment_method == 'cash'
+            )
+        )
+        if is_cash_refund:
+            till = CashierTill.objects.filter(
+                cashier=request.user,
+                status='open',
+            ).first()
+            if not till:
+                return Response(
+                    {'error': 'Open a till before completing a cash refund'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if refund.invoice.branch_id and till.branch_id != refund.invoice.branch_id:
+                return Response(
+                    {'error': 'Your open till must belong to the refund invoice branch'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            refund.till = till
+
+        with transaction.atomic():
+            refund.status = 'completed'
+            refund.processed_by = request.user
+            refund.processed_at = timezone.now()
+            refund.save()
+
+            # Update original payment refund amount
+            payment = refund.original_payment
+            payment.refund_amount = (payment.refund_amount or Decimal('0')) + refund.amount
+            payment.save()
         
         return Response({'message': 'Refund completed'})
 
@@ -1648,9 +1759,8 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
         # Get unpaid invoices for this customer, ordered by invoice date (oldest first)
         unpaid_invoices = Invoice.objects.filter(
             customer=customer,
-            status__in=['finalized', 'sent', 'viewed', 'partial']
-        ).filter(
-            Q(amount_due__gt=0)
+            status__in=['sent', 'viewed', 'partial', 'overdue', 'proforma'],
+            amount_due__gt=0,
         ).order_by('invoice_date', 'id')
         
         logger.info(f"Found {unpaid_invoices.count()} unpaid invoices for customer {customer.id}")
@@ -1730,14 +1840,19 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('view_billing')]
         elif self.action in ['create']:
             return [IsAuthenticated(), HasPermission('create_credit_notes')]
-        elif self.action in ['update', 'partial_update']:
+        elif self.action in ['update', 'partial_update', 'apply']:
             return [IsAuthenticated(), HasPermission('edit_credit_notes')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('manage_billing')]
         return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'invoice', 'credit_date']
-    search_fields = ['credit_note_number', 'customer__first_name', 'customer__last_name', 'customer__company_name']
+    search_fields = [
+        'credit_note_number',
+        'customer__customer_number', 'customer__company_name',
+        'customer__user__first_name', 'customer__user__last_name',
+        'customer__user__email',
+    ]
     ordering_fields = ['credit_date', 'credit_note_number', 'amount', 'created_at']
     ordering = ['-credit_date']
     
@@ -1745,6 +1860,12 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = CreditNote.objects.all().select_related(
             'customer', 'invoice', 'created_by'
+        ).prefetch_related(
+            'line_items',
+            Prefetch(
+                'applications',
+                queryset=CreditNoteApplication.objects.select_related('invoice', 'applied_by'),
+            ),
         )
         
         # Filter by branch
@@ -1780,6 +1901,105 @@ class CreditNoteViewSet(viewsets.ModelViewSet):
         credit_note.save()
         
         return Response({"status": "Credit note issued"})
+
+    @action(detail=True, methods=['post'])
+    def apply(self, request, pk=None):
+        """
+        Apply unused credit from an issued note toward an open invoice (same customer).
+        Body: { "invoice": <id>, "amount": "<optional decimal>" }
+        If amount is omitted, applies min(unused credit, invoice balance due).
+        """
+        serializer = CreditNoteApplySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invoice_id = serializer.validated_data['invoice']
+        requested_amount = serializer.validated_data.get('amount')
+
+        credit_note = self.get_object()
+
+        try:
+            with transaction.atomic():
+                cn = CreditNote.objects.select_for_update().get(pk=credit_note.pk)
+                invoice = Invoice.objects.select_for_update().get(pk=invoice_id)
+
+                if cn.status != 'issued':
+                    return Response(
+                        {'error': 'Only issued credit notes can be applied. Approve the note first, or it is already fully applied.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if cn.unused_amount <= 0:
+                    return Response(
+                        {'error': 'This credit note has no remaining balance.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if invoice.customer_id != cn.customer_id:
+                    return Response(
+                        {'error': 'Invoice must belong to the same customer as the credit note.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if cn.branch_id and invoice.branch_id and cn.branch_id != invoice.branch_id:
+                    return Response(
+                        {'error': 'Credit note and invoice must be for the same branch.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if invoice.status in ('void', 'refunded'):
+                    return Response(
+                        {'error': 'Cannot apply credit to a void or refunded invoice.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                request_branch = resolve_branch(request)
+                if request_branch:
+                    if cn.branch_id and cn.branch_id != request_branch.id:
+                        return Response(
+                            {'error': 'Credit note is not in your current branch context.'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    if invoice.branch_id and invoice.branch_id != request_branch.id:
+                        return Response(
+                            {'error': 'Invoice is not in your current branch context.'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
+                invoice.refresh_from_db()
+                amount_due = (invoice.total - invoice.amount_paid).quantize(Decimal('0.01'))
+                if amount_due <= 0:
+                    return Response(
+                        {'error': 'This invoice has no open balance.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                cap = min(cn.unused_amount, amount_due).quantize(Decimal('0.01'))
+                if requested_amount is None:
+                    apply_amt = cap
+                else:
+                    apply_amt = min(cap, requested_amount.quantize(Decimal('0.01')))
+                if apply_amt <= 0:
+                    return Response(
+                        {'error': 'Nothing to apply (check invoice balance and credit availability).'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if requested_amount is not None and requested_amount > cap:
+                    return Response(
+                        {'error': 'Requested amount exceeds unused credit or invoice balance due.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                CreditNoteApplication.objects.create(
+                    credit_note=cn,
+                    invoice=invoice,
+                    amount=apply_amt,
+                    applied_by=request.user,
+                )
+                cn.calculate_totals()
+                invoice.refresh_from_db()
+                invoice.recalculate_amount_paid_from_collections()
+                cn.refresh_from_db()
+
+        except Invoice.DoesNotExist:
+            return Response({'error': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        out = CreditNoteDetailSerializer(cn, context={'request': request})
+        return Response(out.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
     def pdf(self, request, pk=None):

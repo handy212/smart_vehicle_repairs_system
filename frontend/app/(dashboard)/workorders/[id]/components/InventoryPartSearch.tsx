@@ -6,6 +6,7 @@ import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { inventoryApi, Part } from "@/lib/api/inventory";
 import { cn } from "@/lib/utils/cn"; // Assuming this exists, based on select.tsx
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface InventoryPartSearchProps {
     onSelect: (part: Part) => void;
@@ -13,6 +14,7 @@ interface InventoryPartSearchProps {
 }
 
 export default function InventoryPartSearch({ onSelect, className }: InventoryPartSearchProps) {
+    const { formatCurrency } = useCurrency();
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [isOpen, setIsOpen] = useState(false);
@@ -93,7 +95,7 @@ export default function InventoryPartSearch({ onSelect, className }: InventoryPa
                                     </div>
                                     <div className="flex justify-between w-full text-xs text-muted-foreground">
                                         <span>{part.description ? part.description.substring(0, 50) + (part.description.length > 50 ? '...' : '') : 'No description'}</span>
-                                        <span>${part.selling_price || '0.00'}</span>
+                                        <span>{formatCurrency(parseFloat(String(part.selling_price || "0")))}</span>
                                     </div>
                                 </button>
                             ))}

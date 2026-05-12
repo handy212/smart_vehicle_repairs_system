@@ -1,21 +1,20 @@
 "use client";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { tillApi, type Till } from "@/lib/api/till-refund";
+import { RecordTillMovementDialog } from "@/components/billing/RecordTillMovementDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Clock, CheckCircle, AlertCircle, Plus, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { DollarSign, Clock, CheckCircle, AlertCircle, Plus, X, ArrowDownUp } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function TillDashboardPage() {
-    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-    const router = useRouter();
-    {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-    const queryClient = useQueryClient();
+    const { formatCurrency } = useCurrency();
+    const [movementDialogOpen, setMovementDialogOpen] = useState(false);
 
     const { data: currentTill, isLoading: currentLoading } = useQuery({
         queryKey: ['current-till'],
@@ -75,29 +74,65 @@ export default function TillDashboardPage() {
                                     Opened {format(new Date(currentTill.opened_at), 'MMM dd, yyyy h:mm a')}
                                 </p>
                             </div>
-                            <Link href={`/billing/tills/${currentTill.id}/close`}>
-                                <Button variant="destructive">
-                                    <X className="mr-2 h-4 w-4" />
-                                    Close Till
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setMovementDialogOpen(true)}
+                                >
+                                    <ArrowDownUp className="mr-2 h-4 w-4" />
+                                    Pay in / Pay out
                                 </Button>
-                            </Link>
+                                <Link href={`/billing/tills/${currentTill.id}/close`}>
+                                    <Button variant="destructive">
+                                        <X className="mr-2 h-4 w-4" />
+                                        Close Till
+                                    </Button>
+                                </Link>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <p className="text-sm text-muted-foreground">Opening Balance</p>
-                                <p className="text-2xl font-bold">${parseFloat(currentTill.opening_balance).toLocaleString()}</p>
+                                <p className="text-2xl font-bold">{formatCurrency(parseFloat(currentTill.opening_balance))}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Expected Cash</p>
+                                <p className="text-2xl font-bold">{formatCurrency(parseFloat(currentTill.current_expected_balance || currentTill.opening_balance))}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Duration</p>
                                 <p className="text-2xl font-bold">{currentTill.duration || '0h 0m'}</p>
                             </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-1 gap-3 border-t pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                             <div>
-                                <p className="text-sm text-muted-foreground">Branch</p>
-                                <p className="text-lg font-semibold">{currentTill.branch_name}</p>
+                                <p className="text-muted-foreground">Cash Collected</p>
+                                <p className="font-mono font-semibold">{formatCurrency(parseFloat(currentTill.cash_payments_total || "0"))}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">Cash Refunds</p>
+                                <p className="font-mono font-semibold">{formatCurrency(parseFloat(currentTill.cash_refunds_total || "0"))}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">Net pay in / pay out</p>
+                                <p className={`font-mono font-semibold ${parseFloat(currentTill.till_cash_movements_net || "0") < 0 ? "text-destructive" : ""}`}>
+                                    {parseFloat(currentTill.till_cash_movements_net || "0") > 0 ? "+" : ""}
+                                    {formatCurrency(parseFloat(currentTill.till_cash_movements_net || "0"))}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">Branch</p>
+                                <p className="font-semibold">{currentTill.branch_name}</p>
                             </div>
                         </div>
+                        <RecordTillMovementDialog
+                            tillId={currentTill.id}
+                            open={movementDialogOpen}
+                            onOpenChange={setMovementDialogOpen}
+                        />
                     </CardContent>
                 </Card>
             ) : (
@@ -122,10 +157,10 @@ export default function TillDashboardPage() {
                 </Card>
             )}
 
-            {/* Today's Tills */}
+            {/* Today&apos;s Tills */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Today's Tills</CardTitle>
+                    <CardTitle>Today&apos;s Tills</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {todayTills && todayTills.results && todayTills.results.length > 0 ? (
@@ -147,19 +182,20 @@ export default function TillDashboardPage() {
                                     <div className="flex items-center gap-6">
                                         <div className="text-right">
                                             <p className="text-sm text-muted-foreground">Opening</p>
-                                            <p className="font-mono font-semibold">${parseFloat(till.opening_balance).toLocaleString()}</p>
+                                            <p className="font-mono font-semibold">{formatCurrency(parseFloat(till.opening_balance))}</p>
                                         </div>
                                         {till.status === 'closed' && (
                                             <>
                                                 <div className="text-right">
                                                     <p className="text-sm text-muted-foreground">Closing</p>
-                                                    <p className="font-mono font-semibold">${parseFloat(till.closing_balance || '0').toLocaleString()}</p>
+                                                    <p className="font-mono font-semibold">{formatCurrency(parseFloat(till.closing_balance || "0"))}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-sm text-muted-foreground">Variance</p>
                                                     <p className={`font-mono font-semibold ${till.is_balanced ? 'text-success' : 'text-destructive'
                                                         }`}>
-                                                        {till.variance && parseFloat(till.variance) >= 0 ? '+' : ''}{till.variance || '0.00'}
+                                                        {parseFloat(till.variance || "0") >= 0 ? "+" : ""}
+                                                        {formatCurrency(parseFloat(till.variance || "0"))}
                                                     </p>
                                                 </div>
                                             </>

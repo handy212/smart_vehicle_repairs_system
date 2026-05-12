@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from apps.billing.models import (
     TaxRate, Estimate, EstimateLineItem, Invoice, Payment,
-    CashierTill, CashCount, PaymentAllocation, Refund
+    CashierTill, CashCount, TillCashMovement, PaymentAllocation, Refund
 )
 
 
@@ -70,7 +70,9 @@ class EstimateAdmin(admin.ModelAdmin):
     list_filter = ['status', 'estimate_date', 'valid_until', 'created_at']
     search_fields = [
         'estimate_number', 'title', 'description',
-        'customer__first_name', 'customer__last_name',
+        'customer__customer_number', 'customer__company_name',
+        'customer__user__first_name', 'customer__user__last_name',
+        'customer__user__email',
         'vehicle__vin', 'vehicle__license_plate'
     ]
     readonly_fields = [
@@ -142,9 +144,11 @@ class InvoiceAdmin(admin.ModelAdmin):
     list_filter = ['status', 'invoice_date', 'due_date', 'created_at']
     search_fields = [
         'invoice_number',
-        'customer__first_name', 'customer__last_name',
+        'customer__customer_number', 'customer__company_name',
+        'customer__user__first_name', 'customer__user__last_name',
+        'customer__user__email',
         'vehicle__vin', 'vehicle__license_plate',
-        'work_order__wo_number'
+        'work_order__work_order_number'
     ]
     readonly_fields = [
         'invoice_number', 'labor_subtotal', 'parts_subtotal', 'sublet_subtotal',
@@ -322,6 +326,13 @@ class CashCountInline(admin.TabularInline):
     readonly_fields = ['total']
 
 
+class TillCashMovementInline(admin.TabularInline):
+    model = TillCashMovement
+    extra = 0
+    readonly_fields = ['movement_type', 'amount', 'reason', 'recorded_by', 'created_at']
+    can_delete = False
+
+
 @admin.register(CashierTill)
 class CashierTillAdmin(admin.ModelAdmin):
     list_display = [
@@ -331,7 +342,7 @@ class CashierTillAdmin(admin.ModelAdmin):
     list_filter = ['status', 'branch', 'opened_at']
     search_fields = ['cashier__first_name', 'cashier__last_name']
     readonly_fields = ['opened_at', 'created_at', 'updated_at', 'duration', 'is_balanced']
-    inlines = [CashCountInline]
+    inlines = [CashCountInline, TillCashMovementInline]
     
     fieldsets = [
         ('Till Info', {

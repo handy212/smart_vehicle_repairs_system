@@ -19,7 +19,7 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ customer }: ProfileViewProps) {
-    const { currency } = useCurrency();
+    const { currency, formatCurrency } = useCurrency();
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -193,7 +193,7 @@ export function ProfileView({ customer }: ProfileViewProps) {
                         </div>
                         <div className="space-y-1 text-right">
                             <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Credit Limit</p>
-                            <p className="text-sm font-black text-foreground">{customer.available_credit ? `${currency} ${parseFloat(customer.available_credit).toLocaleString()}` : "-"}</p>
+                            <p className="text-sm font-black text-foreground">{customer.available_credit ? formatCurrency(parseFloat(customer.available_credit)) : "-"}</p>
                         </div>
                     </CardContent>
                 </Card>

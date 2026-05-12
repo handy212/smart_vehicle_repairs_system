@@ -1,4 +1,5 @@
 from django.test import TestCase, override_settings
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from decimal import Decimal
@@ -33,6 +34,22 @@ class AccountingServiceTests(TestCase):
             zip_code='12345',
             created_by=self.user,
         )
+
+    def test_create_journal_entry_requires_at_least_two_lines(self):
+        with self.assertRaises(ValidationError):
+            AccountingService.create_journal_entry(
+                user=self.user,
+                date=timezone.now().date(),
+                description='One line',
+                lines=[
+                    {
+                        'account_id': self.expense_account.id,
+                        'type': 'debit',
+                        'amount': Decimal('50.00'),
+                    },
+                ],
+                posted=True,
+            )
 
     def test_create_journal_entry(self):
         date = timezone.now().date()
@@ -248,7 +265,7 @@ class AccountingServiceTests(TestCase):
             'debit',
         )
 
-        with self.assertRaisesMessage(Exception, 'already been reversed'):
+        with self.assertRaisesMessage(ValidationError, 'already been reversed'):
             AccountingService.reverse_journal_entry(original, self.user)
 
     def test_close_income_statement_period_posts_to_retained_earnings_once(self):
@@ -300,6 +317,10 @@ class AccountingServiceTests(TestCase):
 
     @override_settings(SKIP_MODULE_PERMISSION_CHECKS=True)
     def test_bank_statement_match_enforces_account_amount_side_and_reconciled_state(self):
+        # Banking endpoints require HasPermission('manage_banking'); superuser bypasses code checks.
+        self.user.is_superuser = True
+        self.user.save(update_fields=['is_superuser'])
+
         client = APIClient()
         client.force_authenticate(user=self.user)
         bank_account = AccountingService.get_or_create_account('1010', 'Operating Bank', 'asset', 'debit')

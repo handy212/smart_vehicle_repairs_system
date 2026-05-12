@@ -50,6 +50,8 @@ export default function MyRoadsideRequestsPage() {
       emergency_fuel: "Emergency Fuel",
       extrication: "Extrication",
       mechanical_first_aid: "Mechanical First Aid",
+      accident_estimate: "Accident Estimate",
+      pre_purchase_inspection: "Pre-Purchase Insp.",
       other: "Other",
     };
     return types[type] || type;

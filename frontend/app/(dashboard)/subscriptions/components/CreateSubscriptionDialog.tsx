@@ -328,7 +328,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
                                         </div>
                                         <div className="flex justify-between text-sm text-muted-foreground">
                                             <span>Tax (0%)</span>
-                                            <span>$0.00</span>
+                                            <span>{formatCurrency(0)}</span>
                                         </div>
                                         <div className="flex justify-between items-center pt-2 text-lg font-black text-foreground">
                                             <span>Total</span>

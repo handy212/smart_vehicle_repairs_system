@@ -15,9 +15,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function TillHistoryPage() {
     const router = useRouter();
+    const { formatCurrency } = useCurrency();
     const searchParams = useSearchParams();
     const initialStatus = (searchParams.get("status") as 'open' | 'closed') || undefined;
 
@@ -118,13 +120,21 @@ export default function TillHistoryPage() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell>{format(new Date(till.opened_at), 'MMM dd, yyyy HH:mm')}</TableCell>
-                                        <TableCell className="text-right font-mono">${till.opening_balance}</TableCell>
+                                        <TableCell className="text-right font-mono">{formatCurrency(parseFloat(String(till.opening_balance || "0")))}</TableCell>
                                         <TableCell className="text-right font-mono">
-                                            {till.closing_balance ? `$${till.closing_balance}` : '-'}
+                                            {till.closing_balance != null && till.closing_balance !== ""
+                                                ? formatCurrency(parseFloat(String(till.closing_balance)))
+                                                : "—"}
                                         </TableCell>
-                                        <TableCell className={`text-right font-mono ${till.variance && parseFloat(till.variance) < 0 ? 'text-destructive' : ''
-                                            }`}>
-                                            {till.variance || '-'}
+                                        <TableCell className={`text-right font-mono ${till.variance != null && String(till.variance).trim() !== "" && parseFloat(String(till.variance)) < 0 ? "text-destructive" : ""}`}>
+                                            {till.variance != null && String(till.variance).trim() !== "" ? (
+                                                <>
+                                                    {parseFloat(String(till.variance)) >= 0 ? "+" : ""}
+                                                    {formatCurrency(parseFloat(String(till.variance)))}
+                                                </>
+                                            ) : (
+                                                "—"
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <Link href={`/billing/tills/${till.id}`}>

@@ -1,4 +1,8 @@
-from django.db.models.signals import post_save
+import os
+import sys
+
+from django.db import transaction
+from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
 from apps.billing.models import Invoice
 from .services import AccountingService
@@ -38,24 +42,62 @@ def post_bill_to_ledger(sender, instance, created, **kwargs):
 
 from apps.billing.models import Payment, BillPayment
 
+
+def _schedule_post_payment_ledger(payment_pk: int):
+    def _post():
+        from apps.billing.models import Payment as PaymentModel
+
+        payment = (
+            PaymentModel.objects.filter(pk=payment_pk, status='completed')
+            .prefetch_related('allocations__invoice__branch')
+            .select_related('invoice', 'invoice__branch', 'customer', 'customer__user', 'processed_by')
+            .first()
+        )
+        if payment:
+            AccountingService.post_payment(payment)
+
+    # Django TestCase wraps tests in atomic; on_commit runs too late for assertions.
+    # Pytest similarly — post synchronously in those environments only.
+    in_django_manage_test = len(sys.argv) >= 2 and sys.argv[1] == 'test'
+    in_pytest = 'pytest' in sys.modules or bool(os.environ.get('PYTEST_CURRENT_TEST'))
+    if in_django_manage_test or in_pytest:
+        _post()
+    else:
+        transaction.on_commit(_post)
+
+
+def _schedule_post_bill_payment_ledger(bill_payment_pk: int):
+    def _post():
+        from apps.billing.models import BillPayment as BillPaymentModel
+
+        bp = BillPaymentModel.objects.filter(pk=bill_payment_pk).select_related(
+            'bill', 'bill__branch', 'paid_by'
+        ).first()
+        if bp:
+            AccountingService.post_bill_payment(bp)
+
+    in_django_manage_test = len(sys.argv) >= 2 and sys.argv[1] == 'test'
+    in_pytest = 'pytest' in sys.modules or bool(os.environ.get('PYTEST_CURRENT_TEST'))
+    if in_django_manage_test or in_pytest:
+        _post()
+    else:
+        transaction.on_commit(_post)
+
+
 @receiver(post_save, sender=Payment)
 def post_payment_to_ledger(sender, instance, created, **kwargs):
-    """
-    Automated posting when Customer Payment is completed
-    """
-    if instance.status == 'completed':
-        AccountingService.post_payment(instance)
+    """Post cash receipt; defer until commit in production so same-request allocations apply."""
+
+    if instance.status != 'completed':
+        return
+    _schedule_post_payment_ledger(instance.pk)
+
 
 @receiver(post_save, sender=BillPayment)
 def post_bill_payment_to_ledger(sender, instance, created, **kwargs):
-    """
-    Automated posting when Vendor Bill Payment is created
-    """
-    # BillPayment is typically 'completed' upon creation usually, or has no status field yet
-    # Assuming it's valid if created
-    AccountingService.post_bill_payment(instance)
+    """Post AP clearing entry; defer until commit in production."""
+    _schedule_post_bill_payment_ledger(instance.pk)
 
-from django.db.models.signals import pre_save, pre_delete
 from django.core.exceptions import ValidationError
 from .models import JournalEntry, AccountingControl, AuditLog
 
@@ -153,7 +195,7 @@ def post_transfer_to_ledger(sender, instance, created, **kwargs):
 # PHASE 8: CASH & BANKING SIGNALS
 # ========================================================================
 
-from apps.billing.models import CashierTill
+from apps.billing.models import CashierTill, TillCashMovement
 from apps.accounting.models import FundTransfer
 
 @receiver(post_save, sender=CashierTill)
@@ -168,6 +210,31 @@ def post_till_to_ledger(sender, instance, created, **kwargs):
         existing = JournalEntry.objects.filter(reference=f"TILL-{instance.id}-CLOSE").exists()
         if not existing:
             AccountingService.post_till_close(instance)
+
+
+def _schedule_post_till_cash_movement_ledger(movement_pk: int):
+    def _post():
+        m = (
+            TillCashMovement.objects.filter(pk=movement_pk)
+            .select_related('till', 'till__branch', 'recorded_by')
+            .first()
+        )
+        if m:
+            AccountingService.post_till_cash_movement(m)
+
+    in_django_manage_test = len(sys.argv) >= 2 and sys.argv[1] == 'test'
+    in_pytest = 'pytest' in sys.modules or bool(os.environ.get('PYTEST_CURRENT_TEST'))
+    if in_django_manage_test or in_pytest:
+        _post()
+    else:
+        transaction.on_commit(_post)
+
+
+@receiver(post_save, sender=TillCashMovement)
+def post_till_cash_movement_to_ledger(sender, instance, created, **kwargs):
+    if created:
+        _schedule_post_till_cash_movement_ledger(instance.pk)
+
 
 @receiver(post_save, sender=FundTransfer)
 def post_fund_transfer_to_ledger(sender, instance, created, **kwargs):

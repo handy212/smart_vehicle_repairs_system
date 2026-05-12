@@ -119,6 +119,7 @@ class RoadsideRequestSerializer(serializers.ModelSerializer):
 
 class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating roadside requests"""
+    pay_as_you_go = serializers.BooleanField(required=False, write_only=True, default=False)
     
     class Meta:
         model = RoadsideRequest
@@ -127,18 +128,23 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
             'breakdown_location', 'latitude', 'longitude',
             'description', 'customer_phone',
             'tow_distance_km', 'destination',
-            'notes',
+            'notes', 'charge_amount', 'pay_as_you_go',
         ]
         read_only_fields = ['id', 'request_number']
         extra_kwargs = {
             'customer': {'required': False},
         }
+
+    def get_service_type_label(self, service_type):
+        return dict(RoadsideRequest.SERVICE_TYPE_CHOICES).get(service_type, service_type or 'Selected service')
     
     def validate(self, data):
         request = self.context.get('request')
         user = getattr(request, 'user', None)
         customer = data.get('customer')
         vehicle = data.get('vehicle')
+        pay_as_you_go = data.get('pay_as_you_go', False)
+        charge_amount = data.get('charge_amount')
         
         # Log the incoming request data for debugging
         logger.debug(
@@ -198,10 +204,18 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"breakdown_location": "Breakdown location is required"}
             )
+
+        if pay_as_you_go and (charge_amount is None or charge_amount <= 0):
+            raise serializers.ValidationError(
+                {
+                    "charge_amount": "Enter the pay-as-you-go charge amount before continuing.",
+                    "pay_as_you_go_available": True,
+                }
+            )
             
         # Strict Restriction: Check subscription allowance
         # Only if we have both customer and vehicle
-        if customer and vehicle:
+        if customer and vehicle and not pay_as_you_go:
             from apps.subscriptions.services import SubscriptionUsageService
             
             # Map service types to subscription feature keys
@@ -213,10 +227,13 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
                 'emergency_fuel': 'emergency_fuel',
                 'extrication': 'extrication',
                 'mechanical_first_aid': 'roadside_first_aid',
+                'accident_estimate': 'accident_estimate',
+                'pre_purchase_inspection': 'pre_purchase_inspection',
             }
             
             service_type = data.get('service_type')
             feature_key = service_to_feature.get(service_type)
+            service_label = self.get_service_type_label(service_type)
             
             if feature_key:
                 # Check allowance
@@ -233,8 +250,8 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
                 # This implies: If they satisfy "active subscription" criteria, but run out of allowance, we block.
                 
                 if subscription:
-                    # Case 1: Service not covered (remaining=0 usually if key missing in logic or actually 0)
-                    # Case 2: Insufficient allowance
+                    # Check the selected service first. Global call-out limits only matter
+                    # after we know the package actually covers this service.
                     if not has_allowance:
                         logger.debug(
                             "Subscription allowance check failed. Customer: %s, Service: %s, Has allowance: %s, Remaining: %s, Subscription: %s",
@@ -244,13 +261,39 @@ class RoadsideRequestCreateSerializer(serializers.ModelSerializer):
                             remaining,
                             subscription,
                         )
+                        if feature_key not in subscription.package.features:
+                            message = f"{service_label} is not available under this subscription."
+                        elif remaining <= 0:
+                            message = f"{service_label} allowance is finished for this subscription. Remaining: {remaining}."
+                        else:
+                            message = f"{service_label} allowance is not enough for this request. Remaining: {remaining}."
                         raise serializers.ValidationError(
-                            {
-                                "service_type": f"Service '{service_type}' is not available under your current subscription (Remaining: {remaining})."
-                            }
+                            {"detail": message, "pay_as_you_go_available": True}
                         )
+
+                    # Check the package-wide service call count. `call_out_charges`
+                    # is a legacy feature and must not block every roadside service.
+                    for global_feat, global_name in [('total_service_calls', 'Service Calls')]:
+                        if subscription.package.features.get(global_feat) is not None:
+                            g_has, _, g_rem = SubscriptionUsageService.check_allowance(
+                                customer, global_feat, quantity_needed=1, vehicle=vehicle
+                            )
+                            if not g_has:
+                                raise serializers.ValidationError(
+                                    {
+                                        "detail": (
+                                            f"{global_name} limit is finished for {service_label}. "
+                                            f"Remaining: {g_rem}."
+                                        ),
+                                        "pay_as_you_go_available": True,
+                                    }
+                                )
         
         return data
+
+    def create(self, validated_data):
+        validated_data.pop('pay_as_you_go', None)
+        return super().create(validated_data)
 
 
 class RoadsideRequestUpdateSerializer(serializers.ModelSerializer):

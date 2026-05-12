@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { tillApi } from "@/lib/api/till-refund";
+import { tillApi, type CloseTillRequest } from "@/lib/api/till-refund";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 const DENOMINATIONS = [200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.25, 0.10, 0.05];
 
+function getApiErrorMessage(error: unknown, fallback: string) {
+    const response = (error as { response?: { data?: { error?: string } } }).response;
+    return response?.data?.error || fallback;
+}
+
 export default function CloseTillPage() {
     const { formatCurrency } = useCurrency();
     const params = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
     const { toast } = useToast();
-    const tillId = parseInt(params.id as string);
+    const tillId = parseInt(params.id as string, 10);
+    const isValidTillId = Number.isFinite(tillId) && tillId > 0;
 
     const [counts, setCounts] = useState<Record<string, number>>(
         DENOMINATIONS.reduce((acc, denom) => ({ ...acc, [denom.toString()]: 0 }), {})
@@ -32,26 +38,28 @@ export default function CloseTillPage() {
     const { data: till, isLoading } = useQuery({
         queryKey: ['till-detail', tillId],
         queryFn: () => tillApi.get(tillId),
-        enabled: !!tillId,
+        enabled: isValidTillId,
     });
 
     const closeMutation = useMutation({
 
-        mutationFn: (data: any) => tillApi.close(tillId, data),
+        mutationFn: (data: CloseTillRequest) => tillApi.close(tillId, data),
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['current-till'] });
             queryClient.invalidateQueries({ queryKey: ['today-tills'] });
+            queryClient.invalidateQueries({ queryKey: ['till-detail', tillId] });
+            queryClient.invalidateQueries({ queryKey: ['till-movements', tillId] });
             toast({
                 title: "Till Closed",
-                description: `Variance: $${data.variance} ${data.is_balanced ? '✓ Balanced' : '✗ Not Balanced'}`
+                description: `Variance: ${formatCurrency(parseFloat(String(data.variance)))} ${data.is_balanced ? "✓ Balanced" : "✗ Not Balanced"}`,
             });
             router.push('/billing/tills');
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to close till",
+                description: getApiErrorMessage(error, "Failed to close till"),
                 variant: "destructive",
             });
         },
@@ -90,6 +98,18 @@ export default function CloseTillPage() {
         closeMutation.mutate({ cash_counts, notes });
     };
 
+    if (!isValidTillId) {
+        return (
+            <div className="p-8">
+                <Card>
+                    <CardContent className="pt-6">
+                        <p className="text-center text-muted-foreground">Invalid till ID</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     if (isLoading) {
         return (
             <div className="p-8 space-y-6">
@@ -112,6 +132,9 @@ export default function CloseTillPage() {
     }
 
     const total = calculateTotal();
+    const expectedBook = parseFloat(till.current_expected_balance || till.opening_balance);
+    const provisionalVariance = total - expectedBook;
+    const netMove = parseFloat(till.till_cash_movements_net || "0");
 
     return (
         <div className="p-8 space-y-6">
@@ -123,19 +146,19 @@ export default function CloseTillPage() {
 
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold">Close Till #{till.id}</h1>
-                <p className="text-muted-foreground mt-1">Count cash and close register</p>
+                <h1 className="text-2xl font-bold tracking-tight">Close Till #{till.id}</h1>
+                <p className="text-sm text-muted-foreground mt-1">Count cash and close register</p>
             </div>
 
             <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Cash Counter */}
                     <div className="lg:col-span-2">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Calculator className="h-5 w-5" />
-                                    Cash Count
+                        <Card className="border shadow-sm">
+                            <CardHeader className="pb-3 border-b">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Calculator className="h-4 w-4" />
+                                    Cash count
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -177,23 +200,71 @@ export default function CloseTillPage() {
                     </div>
 
                     {/* Summary */}
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Summary</CardTitle>
+                    <div className="space-y-4">
+                        <Card className="border shadow-sm">
+                            <CardHeader className="pb-3 border-b">
+                                <CardTitle className="text-base">Summary</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Opening Balance</p>
-                                    <p className="text-2xl font-bold">{formatCurrency(parseFloat(till.opening_balance))}</p>
+                            <CardContent className="space-y-4 pt-4">
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Opening</p>
+                                        <p className="mt-1 text-sm font-semibold tabular-nums">
+                                            {formatCurrency(parseFloat(till.opening_balance))}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Expected</p>
+                                        <p className="mt-1 text-sm font-semibold tabular-nums">
+                                            {formatCurrency(expectedBook)}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3 col-span-2 sm:col-span-1">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Counted</p>
+                                        <p className="mt-1 text-sm font-semibold tabular-nums text-primary">
+                                            {formatCurrency(total)}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Collected</p>
+                                        <p className="mt-1 text-sm font-semibold tabular-nums">
+                                            {formatCurrency(parseFloat(till.cash_payments_total || "0"))}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Refunded</p>
+                                        <p className="mt-1 text-sm font-semibold tabular-nums">
+                                            {formatCurrency(parseFloat(till.cash_refunds_total || "0"))}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border bg-muted/30 p-3">
+                                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Net in/out</p>
+                                        <p className={`mt-1 text-sm font-semibold tabular-nums ${netMove < 0 ? "text-destructive" : ""}`}>
+                                            {netMove > 0 ? "+" : ""}
+                                            {formatCurrency(netMove)}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Counted Total</p>
-                                    <p className="text-3xl font-bold text-primary">{formatCurrency(total)}</p>
+                                <div className="rounded-md border border-dashed p-3 text-xs">
+                                    <p className="text-muted-foreground">Provisional variance (counted − expected)</p>
+                                    <p
+                                        className={`mt-1 text-sm font-semibold tabular-nums ${
+                                            Math.abs(provisionalVariance) < 0.01
+                                                ? "text-success"
+                                                : provisionalVariance > 0
+                                                  ? "text-foreground"
+                                                  : "text-destructive"
+                                        }`}
+                                    >
+                                        {provisionalVariance > 0 ? "+" : ""}
+                                        {formatCurrency(provisionalVariance)}
+                                    </p>
                                 </div>
-                                <div className="pt-4 border-t">
-                                    <p className="text-sm text-muted-foreground">Duration</p>
-                                    <p className="font-semibold">{till.duration || 'N/A'}</p>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
+                                    <span>
+                                        Duration{" "}
+                                        <span className="font-medium text-foreground">{till.duration || "—"}</span>
+                                    </span>
                                 </div>
                             </CardContent>
                         </Card>

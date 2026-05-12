@@ -32,6 +32,8 @@ const roadsideRequestSchema = z.object({
     'emergency_fuel',
     'extrication',
     'mechanical_first_aid',
+    'accident_estimate',
+    'pre_purchase_inspection',
     'other'
   ]),
   breakdown_location: z.string().min(1, "Breakdown location is required"),
@@ -211,6 +213,8 @@ export default function NewRoadsideRequestPage() {
     { value: 'emergency_fuel', label: 'Emergency Fuel', icon: Droplet },
     { value: 'extrication', label: 'Extrication', icon: AlertTriangle },
     { value: 'mechanical_first_aid', label: 'Mechanical', icon: Wrench },
+    { value: 'accident_estimate', label: 'Accident Estimate', icon: AlertCircle },
+    { value: 'pre_purchase_inspection', label: 'Pre-Purchase Insp.', icon: AlertCircle },
     { value: 'other', label: 'Other', icon: MoreHorizontal },
   ];
 
@@ -222,6 +226,8 @@ export default function NewRoadsideRequestPage() {
     emergency_fuel: 'emergency_fuel',
     extrication: 'extrication',
     mechanical_first_aid: 'roadside_first_aid',
+    accident_estimate: 'accident_estimate',
+    pre_purchase_inspection: 'pre_purchase_inspection',
   };
 
   return (

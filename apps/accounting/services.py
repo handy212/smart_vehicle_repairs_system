@@ -1,4 +1,6 @@
 from decimal import Decimal
+from collections import defaultdict
+
 from django.db import transaction
 from django.db import models
 from django.db.models import Sum, Q
@@ -11,6 +13,39 @@ from apps.billing.models import Invoice, Bill
 class AccountingService:
     FINALIZED_INVOICE_STATUSES = {'sent', 'viewed', 'partial', 'paid', 'overdue', 'open'}
     MONEY_QUANT = Decimal('0.01')
+
+    @staticmethod
+    def _journal_user_for_payment(payment):
+        """Prefer processed_by, then customer.user, then first active user (gateway edge cases)."""
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        if getattr(payment, 'processed_by_id', None):
+            return payment.processed_by
+        customer = getattr(payment, 'customer', None)
+        if customer is not None and getattr(customer, 'user_id', None):
+            return customer.user
+        user = User.objects.filter(is_active=True).order_by('-is_superuser', 'pk').first()
+        if user is None:
+            raise ValidationError(
+                'Cannot post payment to the ledger: processed_by is unset and no active fallback user exists.'
+            )
+        return user
+
+    @staticmethod
+    def _payment_journal_date(payment):
+        pd = getattr(payment, 'payment_date', None)
+        if pd is None:
+            return timezone.now().date()
+        if hasattr(pd, 'date') and callable(pd.date):
+            return pd.date()
+        if isinstance(pd, str):
+            from django.utils.dateparse import parse_datetime, parse_date
+
+            dt = parse_datetime(pd) or parse_date(pd)
+            if dt:
+                return dt.date() if hasattr(dt, 'date') else dt
+        return timezone.now().date()
 
     @staticmethod
     def get_or_create_account(code, name, account_type, balance_type):
@@ -27,11 +62,32 @@ class AccountingService:
         return account
 
     @classmethod
+    def _create_posted_journal_header(cls, *, user, date, description, reference='', branch=None, content_object=None):
+        """Save a posted journal header and allow Transaction lines on the initial save."""
+        je = JournalEntry(
+            date=date,
+            description=description,
+            reference=reference or '',
+            posted=True,
+            created_by=user,
+            branch=branch,
+        )
+        if content_object is not None:
+            je.content_object = content_object
+        je._current_user = user
+        je.save()
+        return je
+
+    @classmethod
     def create_journal_entry(cls, user, date, description, lines, posted=True, reference='', branch=None, content_object=None):
         """
         Helper method to create a Journal Entry with lines.
         lines: list of dicts with keys: 'account_id', 'type' ('debit'/'credit'), 'amount', 'description'
         """
+        if not lines or len(lines) < 2:
+            raise ValidationError(
+                "A journal entry needs at least two lines (minimum one debit and one credit)."
+            )
         with transaction.atomic():
             debits = sum(Decimal(str(line['amount'])) for line in lines if line['type'] == 'debit')
             credits = sum(Decimal(str(line['amount'])) for line in lines if line['type'] == 'credit')
@@ -40,32 +96,37 @@ class AccountingService:
                     f"Journal Entry '{description}' is not balanced. Debits: {debits}, Credits: {credits}."
                 )
 
-            je = JournalEntry.objects.create(
+            je = JournalEntry(
                 date=date,
                 description=description,
-                reference=reference,
+                reference=reference or '',
                 posted=False,
                 created_by=user,
                 branch=branch,
-                content_object=content_object
             )
+            if content_object is not None:
+                je.content_object = content_object
+            je._current_user = user
+            je.save()
 
             for line in lines:
-                Transaction.objects.create(
+                tx = Transaction(
                     journal_entry=je,
                     account_id=line['account_id'],
                     amount=line['amount'],
                     transaction_type=line['type'],
-                    description=line.get('description', '')
+                    description=line.get('description', ''),
                 )
-            
+                tx.save()
+
             if not je.validate_balanced():
                 raise ValidationError(f"Journal Entry '{description}' is not balanced.")
 
             if posted:
                 je.posted = True
+                je._current_user = user
                 je.save(update_fields=['posted', 'updated_at'])
-            
+
             return je
 
     @classmethod
@@ -216,15 +277,13 @@ class AccountingService:
             sales_account = cls.get_or_create_account('4000', 'Sales Revenue', 'income', 'credit')
             tax_account = cls.get_or_create_account('2100', 'Sales Tax Payable', 'liability', 'credit')
 
-            # 2. Create Header
-            je = JournalEntry.objects.create(
+            je = cls._create_posted_journal_header(
+                user=invoice.created_by,
                 date=invoice.invoice_date if invoice.invoice_date else timezone.now().date(),
                 description=f"Invoice #{invoice_reference} for {str(invoice.customer)}",
                 reference=invoice_reference,
-                posted=True,
-                created_by=invoice.created_by,
                 branch=invoice.branch,
-                content_object=invoice
+                content_object=invoice,
             )
 
             # 3. Create Transactions
@@ -320,14 +379,13 @@ class AccountingService:
             # Or could be same JE? Usually separate or same. Let's make it separate usually for clarity
             # "COGS Recognition for Invoice ..."
             
-            je = JournalEntry.objects.create(
+            je = cls._create_posted_journal_header(
+                user=invoice.created_by,
                 date=invoice.invoice_date if invoice.invoice_date else timezone.now().date(),
                 description=f"COGS for Invoice #{invoice_reference}",
                 reference=cogs_reference,
-                posted=True,
-                created_by=invoice.created_by,
                 branch=invoice.branch,
-                content_object=invoice
+                content_object=invoice,
             )
             
             # Debit COGS (Total)
@@ -378,15 +436,13 @@ class AccountingService:
             inventory_account = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
             input_tax_account = cls.get_or_create_account('2200', 'Input Sales Tax', 'asset', 'debit') 
 
-            # 2. Create Header
-            je = JournalEntry.objects.create(
+            je = cls._create_posted_journal_header(
+                user=bill.created_by,
                 date=bill.bill_date if bill.bill_date else timezone.now().date(),
                 description=f"Bill #{bill.bill_number} from {str(bill.vendor)}",
                 reference=bill.reference_number or bill.bill_number,
-                posted=True,
-                created_by=bill.created_by,
                 branch=bill.branch,
-                content_object=bill
+                content_object=bill,
             )
 
             # 3. Create Transactions
@@ -467,7 +523,7 @@ class AccountingService:
     def post_payment(cls, payment):
         """
         Creates a Journal Entry for an Inbound Customer Payment.
-        Debit: Cash/Undeposited Funds (1000)
+        Debit: Cash/Undeposited Funds (1000) or Cash in Drawer (1020)
         Credit: Accounts Receivable (1200)
         """
         if payment.status != 'completed':
@@ -479,44 +535,101 @@ class AccountingService:
             return None
 
         with transaction.atomic():
-            # 1. Get Accounts
-            cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
+            from apps.branches.models import Branch
+
+            if payment.payment_method == 'cash' and payment.till_id:
+                cash_account = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
+            else:
+                cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
             ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
 
-            # 2. Create Header
-            je = JournalEntry.objects.create(
-                date=payment.payment_date.date() if payment.payment_date and hasattr(payment.payment_date, 'date') else timezone.now().date(),
+            allocations = list(
+                payment.allocations.select_related('invoice', 'invoice__branch').order_by('id')
+            )
+            branch_credits = defaultdict(lambda: Decimal('0'))
+
+            for alloc in allocations:
+                inv = alloc.invoice
+                bid = inv.branch_id if inv and getattr(inv, 'branch_id', None) else None
+                branch_credits[bid] += Decimal(str(alloc.amount)).quantize(cls.MONEY_QUANT)
+
+            allocated_sum = sum(branch_credits.values(), Decimal('0')).quantize(cls.MONEY_QUANT)
+            total_pay = Decimal(str(payment.amount)).quantize(cls.MONEY_QUANT)
+            remainder = (total_pay - allocated_sum).quantize(cls.MONEY_QUANT)
+
+            if remainder < 0:
+                raise ValidationError(
+                    f"Payment {payment.payment_number} allocations ({allocated_sum}) exceed payment amount ({total_pay})."
+                )
+
+            if remainder > 0:
+                inv = payment.invoice
+                bid = inv.branch_id if inv and getattr(inv, 'branch_id', None) else None
+                branch_credits[bid] += remainder
+
+            positive_branches = {k: v for k, v in branch_credits.items() if v > 0}
+            if not positive_branches:
+                positive_branches = {None: total_pay}
+
+            branch_keys = {k for k in positive_branches if k is not None}
+            if len(branch_keys) <= 1:
+                single_branch_id = next(iter(branch_keys), None)
+                if single_branch_id is not None:
+                    branch_obj = Branch.objects.filter(pk=single_branch_id).first()
+                else:
+                    branch_obj = None
+            else:
+                branch_obj = None
+
+            je = cls._create_posted_journal_header(
+                user=cls._journal_user_for_payment(payment),
+                date=cls._payment_journal_date(payment),
                 description=f"Payment {payment.payment_number} from {str(payment.customer)}",
                 reference=payment.reference_number or payment.payment_number,
-                posted=True,
-                created_by=payment.processed_by,
-                branch=payment.invoice.branch if payment.invoice and payment.invoice.branch else None,
-                content_object=payment
+                branch=branch_obj,
+                content_object=payment,
             )
 
-            # 3. Create Transactions
-            
-            # Debit Cash (Total Amount)
             Transaction.objects.create(
                 journal_entry=je,
                 account=cash_account,
-                amount=payment.amount,
+                amount=total_pay,
                 transaction_type='debit',
-                description=f'Payment Received ({payment.payment_method})'
+                description=f'Payment Received ({payment.payment_method})',
             )
 
-            # Credit AR (Total Amount)
-            Transaction.objects.create(
-                journal_entry=je,
-                account=ar_account,
-                amount=payment.amount,
-                transaction_type='credit',
-                description='Payment applied to Invoice'
-            )
+            for bid, credit_amt in sorted(
+                positive_branches.items(),
+                key=lambda x: (x[0] is None, x[0] or 0),
+            ):
+                labels = []
+                if bid is not None:
+                    bname = Branch.objects.filter(pk=bid).values_list('name', flat=True).first()
+                    if bname:
+                        labels.append(str(bname))
+                for alloc in allocations:
+                    inv = alloc.invoice
+                    if not inv:
+                        continue
+                    ib = inv.branch_id
+                    if (bid is None and ib is None) or (bid == ib):
+                        labels.append(inv.invoice_number or f'#{inv.pk}')
+                if not labels and payment.invoice_id and (bid == payment.invoice.branch_id or (bid is None and payment.invoice.branch_id is None)):
+                    labels.append(payment.invoice.invoice_number or f'#{payment.invoice_id}')
+                desc = 'AR ' + ', '.join(dict.fromkeys(labels)) if labels else 'AR application'
+                Transaction.objects.create(
+                    journal_entry=je,
+                    account=ar_account,
+                    amount=credit_amt,
+                    transaction_type='credit',
+                    description=desc[:255],
+                )
 
-            # Validate
             if not je.validate_balanced():
-                raise ValidationError(f"Journal Entry for Payment {payment.payment_number} is not balanced.")
+                raise ValidationError(
+                    f"Journal Entry for Payment {payment.payment_number} is not balanced."
+                )
+
             return je
 
     @classmethod
@@ -533,15 +646,13 @@ class AccountingService:
             cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
             ap_account = cls.get_or_create_account('2000', 'Accounts Payable', 'liability', 'credit')
 
-            # 2. Create Header
-            je = JournalEntry.objects.create(
+            je = cls._create_posted_journal_header(
+                user=bill_payment.paid_by,
                 date=bill_payment.payment_date,
                 description=f"Bill Payment {bill_payment.payment_number} to {str(bill_payment.bill.vendor)}",
                 reference=bill_payment.reference_number or bill_payment.payment_number,
-                posted=True,
-                created_by=bill_payment.paid_by,
                 branch=bill_payment.bill.branch,
-                content_object=bill_payment
+                content_object=bill_payment,
             )
 
             # 3. Create Transactions
@@ -581,66 +692,71 @@ class AccountingService:
         Only posts for adjustment-type transactions (adjustment, damage, count).
         """
         from apps.inventory.models import InventoryTransaction
-        
+
         # Only process adjustment types
         if inventory_transaction.transaction_type not in ['adjustment', 'damage', 'count']:
             return
-        
+
+        adj_ref = f"INVADJ-{inventory_transaction.pk}"
+        if JournalEntry.objects.filter(reference=adj_ref).exists():
+            return
+
         inventory_asset = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
         shrinkage_expense = cls.get_or_create_account('5900', 'Inventory Shrinkage Expense', 'expense', 'debit')
-        
-        # Calculate value of adjustment
+
         quantity = Decimal(str(abs(inventory_transaction.quantity or 0)))
         unit_cost = Decimal(str(inventory_transaction.unit_cost or 0))
         amount = (quantity * unit_cost).quantize(cls.MONEY_QUANT)
-        
+
         if amount == 0:
             return
-        
-        # Create Journal Entry
-        description = f"Inventory {inventory_transaction.get_transaction_type_display()}: {inventory_transaction.part.part_number}"
-        je = JournalEntry.objects.create(
+
+        description = (
+            f"Inventory {inventory_transaction.get_transaction_type_display()}: "
+            f"{inventory_transaction.part.part_number}"
+        )
+
+        lines = []
+        if inventory_transaction.quantity < 0:
+            lines = [
+                {
+                    'account_id': shrinkage_expense.id,
+                    'type': 'debit',
+                    'amount': amount,
+                    'description': inventory_transaction.part.name,
+                },
+                {
+                    'account_id': inventory_asset.id,
+                    'type': 'credit',
+                    'amount': amount,
+                    'description': inventory_transaction.part.name,
+                },
+            ]
+        else:
+            lines = [
+                {
+                    'account_id': inventory_asset.id,
+                    'type': 'debit',
+                    'amount': amount,
+                    'description': inventory_transaction.part.name,
+                },
+                {
+                    'account_id': shrinkage_expense.id,
+                    'type': 'credit',
+                    'amount': amount,
+                    'description': f"{inventory_transaction.part.name} (recovery)",
+                },
+            ]
+
+        cls.create_journal_entry(
+            user=inventory_transaction.created_by,
             date=inventory_transaction.transaction_date.date(),
             description=description,
-            reference=f"INV-{inventory_transaction.id}",
+            reference=adj_ref,
+            lines=lines,
             posted=True,
-            created_by=inventory_transaction.created_by
+            branch=getattr(inventory_transaction, 'branch', None),
         )
-        
-        # If quantity is negative (removal/loss)
-        if inventory_transaction.quantity < 0:
-            # Debit: Shrinkage Expense, Credit: Inventory Asset
-            Transaction.objects.create(
-                journal_entry=je,
-                account=shrinkage_expense,
-                amount=amount,
-                transaction_type='debit',
-                description=f"{inventory_transaction.part.name}"
-            )
-            Transaction.objects.create(
-                journal_entry=je,
-                account=inventory_asset,
-                amount=amount,
-                transaction_type='credit',
-                description=f"{inventory_transaction.part.name}"
-            )
-        # If quantity is positive (found stock / count correction)
-        else:
-            # Debit: Inventory Asset, Credit: Shrinkage Expense (recovery)
-            Transaction.objects.create(
-                journal_entry=je,
-                account=inventory_asset,
-                amount=amount,
-                transaction_type='debit',
-                description=f"{inventory_transaction.part.name}"
-            )
-            Transaction.objects.create(
-                journal_entry=je,
-                account=shrinkage_expense,
-                amount=amount,
-                transaction_type='credit',
-                description=f"{inventory_transaction.part.name} (recovery)"
-            )
 
     @classmethod
     def post_credit_note(cls, credit_note):
@@ -649,40 +765,47 @@ class AccountingService:
         Debit: Sales Returns & Allowances
         Credit: Accounts Receivable
         """
-        from apps.billing.models import CreditNote
-        
         if credit_note.status != 'issued':
             return
-        
+
+        credit_note_type = ContentType.objects.get_for_model(credit_note)
+        if JournalEntry.objects.filter(
+            content_type=credit_note_type,
+            object_id=credit_note.id,
+            reference=credit_note.credit_note_number,
+        ).exists():
+            return
+
         sales_returns = cls.get_or_create_account('4100', 'Sales Returns & Allowances', 'income', 'debit')
         ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
-        
-        amount = credit_note.amount
-        
-        je = JournalEntry.objects.create(
-            date=credit_note.issue_date,
+
+        amount = Decimal(str(credit_note.total or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        if amount <= 0:
+            return
+
+        desc_customer = credit_note.customer.full_name
+        return cls.create_journal_entry(
+            user=credit_note.created_by,
+            date=credit_note.credit_date,
             description=f"Credit Note {credit_note.credit_note_number}",
             reference=credit_note.credit_note_number,
+            lines=[
+                {
+                    'account_id': sales_returns.id,
+                    'type': 'debit',
+                    'amount': amount,
+                    'description': f'Credit Note for {desc_customer}',
+                },
+                {
+                    'account_id': ar_account.id,
+                    'type': 'credit',
+                    'amount': amount,
+                    'description': f'Credit Note for {desc_customer}',
+                },
+            ],
             posted=True,
-            created_by=credit_note.created_by
-        )
-        
-        # Debit: Sales Returns
-        Transaction.objects.create(
-            journal_entry=je,
-            account=sales_returns,
-            amount=amount,
-            transaction_type='debit',
-            description=f"Credit Note for {credit_note.customer.full_name}"
-        )
-        
-        # Credit: AR
-        Transaction.objects.create(
-            journal_entry=je,
-            account=ar_account,
-            amount=amount,
-            transaction_type='credit',
-            description=f"Credit Note for {credit_note.customer.full_name}"
+            branch=credit_note.branch,
+            content_object=credit_note,
         )
 
     @classmethod
@@ -692,40 +815,50 @@ class AccountingService:
         Debit: Accounts Receivable (or Sales Returns if CN applied)
         Credit: Cash
         """
-        from apps.billing.models import Refund
-        
         if refund.status != 'completed':
             return
-        
+
+        refund_type = ContentType.objects.get_for_model(refund)
+        if JournalEntry.objects.filter(
+            content_type=refund_type,
+            object_id=refund.id,
+            reference=refund.refund_number,
+        ).exists():
+            return
+
         ar_account = cls.get_or_create_account('1200', 'Accounts Receivable', 'asset', 'debit')
-        cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
-        
-        amount = refund.amount
-        
-        je = JournalEntry.objects.create(
+        if refund.till_id:
+            cash_account = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
+        else:
+            cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
+
+        amount = Decimal(str(refund.amount or Decimal('0'))).quantize(cls.MONEY_QUANT)
+        if amount <= 0:
+            return
+
+        who = refund.customer.full_name
+        return cls.create_journal_entry(
+            user=refund.processed_by,
             date=refund.processed_at.date() if refund.processed_at else timezone.now().date(),
             description=f"Refund {refund.refund_number}",
             reference=refund.refund_number,
+            lines=[
+                {
+                    'account_id': ar_account.id,
+                    'type': 'debit',
+                    'amount': amount,
+                    'description': f'Refund to {who}',
+                },
+                {
+                    'account_id': cash_account.id,
+                    'type': 'credit',
+                    'amount': amount,
+                    'description': f'Refund to {who}',
+                },
+            ],
             posted=True,
-            created_by=refund.processed_by
-        )
-        
-        # Debit: AR
-        Transaction.objects.create(
-            journal_entry=je,
-            account=ar_account,
-            amount=amount,
-            transaction_type='debit',
-            description=f"Refund to {refund.customer.full_name}"
-        )
-        
-        # Credit: Cash
-        Transaction.objects.create(
-            journal_entry=je,
-            account=cash_account,
-            amount=amount,
-            transaction_type='credit',
-            description=f"Refund to {refund.customer.full_name}"
+            branch=refund.invoice.branch if refund.invoice else None,
+            content_object=refund,
         )
 
     @classmethod
@@ -734,16 +867,18 @@ class AccountingService:
         Post GL entries for inter-branch inventory transfer.
         Creates intercompany clearing accounts (Due To / Due From).
         """
-        from apps.inventory.models import Transfer
-        
         if transfer.status != 'received':
-            return  # Only post when received
-        
+            return
+
+        src_ref = f"IBT-{transfer.pk}-SOURCE"
+        dst_ref = f"IBT-{transfer.pk}-DEST"
+        if JournalEntry.objects.filter(reference=src_ref).exists():
+            return
+
         inventory_asset = cls.get_or_create_account('1500', 'Inventory Asset', 'asset', 'debit')
         due_from = cls.get_or_create_account('1900', 'Due From Other Branches', 'asset', 'debit')
         due_to = cls.get_or_create_account('2900', 'Due To Other Branches', 'liability', 'credit')
-        
-        # Calculate total value of transfer
+
         total_value = sum(
             (
                 Decimal(str(item.quantity_received or item.quantity_sent or item.quantity_requested or 0))
@@ -752,58 +887,58 @@ class AccountingService:
             ),
             Decimal('0.00'),
         ).quantize(cls.MONEY_QUANT)
-        
+
         if total_value == 0:
             return
-        
-        # Source Branch Entry: Debit Due From, Credit Inventory
-        je_source = JournalEntry.objects.create(
+
+        recv_user = transfer.received_by or transfer.created_by
+        cls.create_journal_entry(
+            user=transfer.created_by,
             date=transfer.shipped_date.date() if transfer.shipped_date else timezone.now().date(),
-            description=f"Transfer Out {transfer.transfer_number} to {transfer.destination_branch.name}",
-            reference=transfer.transfer_number,
+            description=(
+                f"Transfer Out {transfer.transfer_number} to {transfer.destination_branch.name}"
+            ),
+            reference=src_ref,
+            lines=[
+                {
+                    'account_id': due_from.id,
+                    'type': 'debit',
+                    'amount': total_value,
+                    'description': f"Due from {transfer.destination_branch.name}",
+                },
+                {
+                    'account_id': inventory_asset.id,
+                    'type': 'credit',
+                    'amount': total_value,
+                    'description': f"Transfer to {transfer.destination_branch.name}",
+                },
+            ],
             posted=True,
-            created_by=transfer.created_by,
-            branch=transfer.source_branch
+            branch=transfer.source_branch,
         )
-        
-        Transaction.objects.create(
-            journal_entry=je_source,
-            account=due_from,
-            amount=total_value,
-            transaction_type='debit',
-            description=f"Due from {transfer.destination_branch.name}"
-        )
-        Transaction.objects.create(
-            journal_entry=je_source,
-            account=inventory_asset,
-            amount=total_value,
-            transaction_type='credit',
-            description=f"Transfer to {transfer.destination_branch.name}"
-        )
-        
-        # Destination Branch Entry: Debit Inventory, Credit Due To
-        je_dest = JournalEntry.objects.create(
+        cls.create_journal_entry(
+            user=recv_user,
             date=transfer.received_date.date() if transfer.received_date else timezone.now().date(),
-            description=f"Transfer In {transfer.transfer_number} from {transfer.source_branch.name}",
-            reference=transfer.transfer_number,
+            description=(
+                f"Transfer In {transfer.transfer_number} from {transfer.source_branch.name}"
+            ),
+            reference=dst_ref,
+            lines=[
+                {
+                    'account_id': inventory_asset.id,
+                    'type': 'debit',
+                    'amount': total_value,
+                    'description': f"Transfer from {transfer.source_branch.name}",
+                },
+                {
+                    'account_id': due_to.id,
+                    'type': 'credit',
+                    'amount': total_value,
+                    'description': f"Due to {transfer.source_branch.name}",
+                },
+            ],
             posted=True,
-            created_by=transfer.received_by,
-            branch=transfer.destination_branch
-        )
-        
-        Transaction.objects.create(
-            journal_entry=je_dest,
-            account=inventory_asset,
-            amount=total_value,
-            transaction_type='debit',
-            description=f"Transfer from {transfer.source_branch.name}"
-        )
-        Transaction.objects.create(
-            journal_entry=je_dest,
-            account=due_to,
-            amount=total_value,
-            transaction_type='credit',
-            description=f"Due to {transfer.source_branch.name}"
+            branch=transfer.destination_branch,
         )
 
     # ========================================================================
@@ -817,22 +952,22 @@ class AccountingService:
         Transfers opening float from safe to drawer.
         Debit: Cash Drawer (1020), Credit: Cash in Safe (1010)
         """
-        from apps.billing.models import CashierTill
-        
         if till.status != 'open' or till.opening_balance == 0:
             return
-        
+
+        till_ref_open = f"TILL-{till.id}-OPEN"
+        if till.opened_at and JournalEntry.objects.filter(reference=till_ref_open).exists():
+            return
+
         cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
         cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
-        
-        # Create Journal Entry
-        je = JournalEntry.objects.create(
-            date=till.opened_at.date(),
+
+        je = cls._create_posted_journal_header(
+            user=till.cashier,
+            date=till.opened_at.date() if till.opened_at else timezone.now().date(),
             description=f"Till Open #{till.id} - {till.cashier.get_full_name()}",
-            reference=f"TILL-{till.id}-OPEN",
-            posted=True,
-            created_by=till.cashier,
-            branch=till.branch
+            reference=till_ref_open,
+            branch=till.branch,
         )
         
         # Debit: Cash Drawer
@@ -859,23 +994,21 @@ class AccountingService:
         Post GL entry for cashier till closing.
         Handles deposit back to safe and variance (over/short).
         """
-        from apps.billing.models import CashierTill
-        
         if till.status != 'closed' or not till.closing_balance:
             return
-        
+
         cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
         cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
         cash_over_short = cls.get_or_create_account('5950', 'Cash Over/Short Expense', 'expense', 'debit')
-        
-        # Base entry: deposit closing balance back to safe
-        je = JournalEntry.objects.create(
-            date=till.closed_at.date() if till.closed_at else timezone.now().date(),
+
+        close_dt = till.closed_at.date() if till.closed_at else timezone.now().date()
+
+        je = cls._create_posted_journal_header(
+            user=till.cashier,
+            date=close_dt,
             description=f"Till Close #{till.id} - {till.cashier.get_full_name()}",
             reference=f"TILL-{till.id}-CLOSE",
-            posted=True,
-            created_by=till.cashier,
-            branch=till.branch
+            branch=till.branch,
         )
         
         # Debit: Cash in Safe
@@ -898,13 +1031,12 @@ class AccountingService:
         
         # Handle Variance (Cash Over/Short)
         if till.variance and till.variance != 0:
-            variance_je = JournalEntry.objects.create(
-                date=till.closed_at.date() if till.closed_at else timezone.now().date(),
+            variance_je = cls._create_posted_journal_header(
+                user=till.cashier,
+                date=close_dt,
                 description=f"Till Variance #{till.id} - {till.cashier.get_full_name()}",
                 reference=f"TILL-{till.id}-VAR",
-                posted=True,
-                created_by=till.cashier,
-                branch=till.branch
+                branch=till.branch,
             )
             
             if till.variance < 0:
@@ -941,23 +1073,80 @@ class AccountingService:
                 )
 
     @classmethod
+    def post_till_cash_movement(cls, movement):
+        """
+        Post GL for till pay-in / pay-out (non-sale cash).
+        Pay-in: Dr Cash in Drawer, Cr Cash in Safe (same economic story as extra float from safe).
+        Pay-out: Dr Cash in Safe, Cr Cash in Drawer (safe drop / cash leaving drawer).
+        """
+        ref = f"TILL-{movement.till_id}-MOV-{movement.id}"
+        if JournalEntry.objects.filter(reference=ref).exists():
+            return
+
+        till = movement.till
+        if till.status != 'open':
+            return
+
+        cash_drawer = cls.get_or_create_account('1020', 'Cash in Drawer', 'asset', 'debit')
+        cash_safe = cls.get_or_create_account('1010', 'Cash in Safe', 'asset', 'debit')
+        amt = movement.amount
+        user = movement.recorded_by
+        date = movement.created_at.date() if movement.created_at else timezone.now().date()
+        desc_reason = (movement.reason or '').strip()[:200]
+
+        je = cls._create_posted_journal_header(
+            user=user,
+            date=date,
+            description=f"Till {movement.get_movement_type_display()} #{movement.id} (Till #{till.id})",
+            reference=ref,
+            branch=till.branch,
+        )
+
+        if movement.movement_type == 'pay_in':
+            Transaction.objects.create(
+                journal_entry=je,
+                account=cash_drawer,
+                amount=amt,
+                transaction_type='debit',
+                description=desc_reason or 'Pay in to drawer',
+            )
+            Transaction.objects.create(
+                journal_entry=je,
+                account=cash_safe,
+                amount=amt,
+                transaction_type='credit',
+                description=desc_reason or 'Pay in to drawer',
+            )
+        else:
+            Transaction.objects.create(
+                journal_entry=je,
+                account=cash_safe,
+                amount=amt,
+                transaction_type='debit',
+                description=desc_reason or 'Pay out from drawer',
+            )
+            Transaction.objects.create(
+                journal_entry=je,
+                account=cash_drawer,
+                amount=amt,
+                transaction_type='credit',
+                description=desc_reason or 'Pay out from drawer',
+            )
+
+    @classmethod
     def post_fund_transfer(cls, transfer):
         """
         Post GL entry for fund transfer.
         Debit: To Account, Credit: From Account
         """
-        from apps.accounting.models import FundTransfer
-        
         if transfer.status != 'completed' or transfer.journal_entry:
-            return  # Already posted or not completed
-        
-        # Create Journal Entry
-        je = JournalEntry.objects.create(
+            return
+
+        je = cls._create_posted_journal_header(
+            user=transfer.approved_by or transfer.created_by,
             date=transfer.transfer_date,
             description=transfer.description,
             reference=transfer.transfer_number,
-            posted=True,
-            created_by=transfer.approved_by or transfer.created_by
         )
         
         # Debit: To Account
@@ -999,7 +1188,6 @@ class AccountingService:
             CR  2310  Payroll Deductions    (sum of all deduction values)
             CR  1000  Cash/Bank             (sum of net_pay)
         """
-        from apps.hr.models import PayrollPeriod
         from django.contrib.contenttypes.models import ContentType
 
         if payroll_period.status != 'paid':
@@ -1061,13 +1249,11 @@ class AccountingService:
             deductions_payable = cls.get_or_create_account('2310', 'Payroll Deductions Payable', 'liability', 'credit')
             cash_account = cls.get_or_create_account('1000', 'Cash/Bank', 'asset', 'debit')
 
-            # 2. Create Journal Entry header
-            je = JournalEntry.objects.create(
+            je = cls._create_posted_journal_header(
+                user=payroll_period.approved_by or payroll_period.created_by,
                 date=payroll_period.end_date,
                 description=f"Payroll: {payroll_period.name}",
                 reference=f"PAY-{payroll_period.id}",
-                posted=True,
-                created_by=payroll_period.approved_by or payroll_period.created_by,
                 branch=payroll_period.branch,
                 content_object=payroll_period,
             )

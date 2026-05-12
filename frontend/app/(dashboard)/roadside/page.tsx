@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi } from "@/lib/api/roadside";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
     Download,
     MoreVertical,
     ChevronDown,
+    Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { useDebounce } from "@/lib/hooks/useDebounce";
@@ -35,10 +36,12 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/lib/hooks/useToast";
 import type { RoadsideDashboardStats } from "@/lib/api/roadside";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 type RoadsideFilterValue = string | boolean | undefined;
 type RoadsideFilters = Record<string, RoadsideFilterValue>;
@@ -80,6 +83,7 @@ function StatsGrid({ stats }: { stats?: RoadsideDashboardStats }) {
 
 export default function RoadsidePage() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
     const [page, setPage] = useState(1);
@@ -117,6 +121,8 @@ export default function RoadsidePage() {
                 { value: "emergency_fuel", label: "Emergency Fuel" },
                 { value: "extrication", label: "Extrication" },
                 { value: "mechanical_first_aid", label: "Mechanical/Electrical" },
+                { value: "accident_estimate", label: "Accident Estimate" },
+                { value: "pre_purchase_inspection", label: "Pre-Purchase Insp." },
                 { value: "other", label: "Other" },
             ],
         },
@@ -182,6 +188,25 @@ export default function RoadsidePage() {
 
     const requests = requestsData?.results || [];
 
+    const deleteMutation = useMutation({
+        mutationFn: (request: { id: number; request_number: string }) => roadsideApi.remove(request.id),
+        onSuccess: (_, request) => {
+            queryClient.invalidateQueries({ queryKey: ["roadside"] });
+            queryClient.invalidateQueries({ queryKey: ["roadside-stats"] });
+            toast({
+                title: "Request Deleted",
+                description: `${request.request_number} has been deleted.`,
+            });
+        },
+        onError: (error: unknown) => {
+            toast({
+                title: "Delete Failed",
+                description: getApiErrorMessage(error, "Could not delete this roadside request."),
+                variant: "destructive",
+            });
+        },
+    });
+
     const getStatusVariant = (status: string): "default" | "success" | "warning" | "info" | "secondary" | "danger" => {
         switch (status) {
             case "completed": return "success";
@@ -198,6 +223,13 @@ export default function RoadsidePage() {
 
     const handleExport = () => {
         toast({ title: "Export", description: "Export functionality coming soon" });
+    };
+
+    const handleDelete = (request: { id: number; request_number: string }) => {
+        if (!window.confirm(`Delete roadside request ${request.request_number}? This can only be done before dispatch.`)) {
+            return;
+        }
+        deleteMutation.mutate(request);
     };
 
     if (error) {
@@ -460,6 +492,22 @@ export default function RoadsidePage() {
                                                                 <DropdownMenuItem onClick={() => router.push(`/roadside/${request.id}?action=dispatch`)}>
                                                                     <Truck className="mr-2 h-4 w-4" />
                                                                     Dispatch
+                                                                </DropdownMenuItem>
+                                                            </PermissionGuard>
+                                                        )}
+                                                        {request.status === 'requested' && (
+                                                            <PermissionGuard permission="manage_roadside">
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    disabled={deleteMutation.isPending}
+                                                                    onClick={() => handleDelete({
+                                                                        id: request.id,
+                                                                        request_number: request.request_number,
+                                                                    })}
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Delete
                                                                 </DropdownMenuItem>
                                                             </PermissionGuard>
                                                         )}

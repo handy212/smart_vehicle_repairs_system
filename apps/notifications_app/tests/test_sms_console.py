@@ -109,6 +109,20 @@ class SMSConsoleViewSetTest(TestCase):
         response = self.client.post(self.url_single, {})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    @patch('apps.notifications_app.hubtel_sms.requests.get')
+    @patch('apps.notifications_app.hubtel_sms.is_hubtel_available')
+    def test_hubtel_balance_is_unsupported_without_http_call(self, mock_available, mock_get):
+        mock_available.return_value = True
+
+        from apps.notifications_app.hubtel_sms import get_sms_balance
+
+        balance = get_sms_balance()
+
+        self.assertFalse(balance['success'])
+        self.assertFalse(balance['supported'])
+        self.assertIn('not supported', balance['error'])
+        mock_get.assert_not_called()
+
     def test_schedule_sms(self):
         # Scheduling works best with User recipients as it uses Notification model
         scheduled_time = '2026-12-25T10:00:00Z'

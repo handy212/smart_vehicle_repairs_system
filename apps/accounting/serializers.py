@@ -17,27 +17,13 @@ class AccountSimpleSerializer(serializers.ModelSerializer):
         fields = ['id', 'code', 'name', 'account_type', 'balance_type', 'is_active', 'balance']
     
     def get_balance(self, obj):
-        """Calculate current account balance from transactions"""
-        from django.db.models import Sum, Q
-        from .models import Transaction
-        
-        # Get sum of debit transactions
-        debits = Transaction.objects.filter(
-            account=obj,
-            transaction_type='debit'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Get sum of credit transactions
-        credits = Transaction.objects.filter(
-            account=obj,
-            transaction_type='credit'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Calculate balance based on account's balance type
-        if obj.balance_type == 'debit':
-            return float(debits - credits)
-        else:
-            return float(credits - debits)
+        """Ending balance through today from posted journals only."""
+        from django.utils import timezone
+        from .services import ReportingService
+
+        return float(
+            ReportingService.get_account_balance(obj, date=timezone.now().date())
+        )
 
 class AccountSerializer(serializers.ModelSerializer):
     """Full serializer for creating and updating accounts"""
@@ -50,10 +36,40 @@ class TransactionSerializer(serializers.ModelSerializer):
     account = AccountSimpleSerializer(read_only=True)
     date = serializers.DateField(source='journal_entry.date', read_only=True)
     reference = serializers.CharField(source='journal_entry.reference', read_only=True)
-    
+
     class Meta:
         model = Transaction
         fields = ['id', 'account', 'amount', 'transaction_type', 'description', 'date', 'reference']
+
+
+class GeneralLedgerLineSerializer(serializers.ModelSerializer):
+    """Posted journal lines for general ledger drill-down."""
+
+    journal_entry_id = serializers.IntegerField(source='journal_entry.id', read_only=True)
+    date = serializers.DateField(source='journal_entry.date', read_only=True)
+    reference = serializers.CharField(source='journal_entry.reference', read_only=True)
+    posted = serializers.BooleanField(source='journal_entry.posted', read_only=True)
+    branch_id = serializers.IntegerField(
+        source='journal_entry.branch_id', read_only=True, allow_null=True
+    )
+    account_code = serializers.CharField(source='account.code', read_only=True)
+    account_name = serializers.CharField(source='account.name', read_only=True)
+
+    class Meta:
+        model = Transaction
+        fields = [
+            'id',
+            'journal_entry_id',
+            'date',
+            'reference',
+            'posted',
+            'branch_id',
+            'account_code',
+            'account_name',
+            'amount',
+            'transaction_type',
+            'description',
+        ]
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
     account_id = serializers.PrimaryKeyRelatedField(queryset=Account.objects.all(), source='account')

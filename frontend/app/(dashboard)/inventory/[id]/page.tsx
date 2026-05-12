@@ -402,7 +402,7 @@ export default function PartDetailPage() {
           <Card className="bg-primary/5 border-primary/10">
             <CardContent className="p-6">
               <p className="text-sm font-medium text-muted-foreground">Total Value</p>
-              <p className="text-2xl font-bold text-primary">{part.total_value ? formatCurrency(parseFloat(part.total_value)) : "$0.00"}</p>
+              <p className="text-2xl font-bold text-primary">{part.total_value ? formatCurrency(parseFloat(part.total_value)) : formatCurrency(0)}</p>
               <p className="text-xs text-muted-foreground mt-1">Based on cost price</p>
             </CardContent>
           </Card>

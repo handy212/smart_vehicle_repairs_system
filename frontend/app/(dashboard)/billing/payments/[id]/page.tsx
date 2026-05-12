@@ -231,7 +231,7 @@ export default function PaymentDetailPage() {
                         <CardContent className="grid grid-cols-2 gap-6">
                             <div>
                                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Amount</h3>
-                                <p className="text-2xl font-bold">${parseFloat(payment.amount).toLocaleString()}</p>
+                                <p className="text-2xl font-bold">{formatCurrency(parseFloat(payment.amount))}</p>
                             </div>
                             <div>
                                 <h3 className="text-sm font-medium text-muted-foreground mb-1">Method</h3>
@@ -289,7 +289,7 @@ export default function PaymentDetailPage() {
                                                     </Link>
                                                 </TableCell>
                                                 <TableCell>{format(new Date(alloc.allocated_at), 'MMM dd, yyyy')}</TableCell>
-                                                <TableCell className="text-right font-mono">${parseFloat(alloc.amount).toLocaleString()}</TableCell>
+                                                <TableCell className="text-right font-mono">{formatCurrency(parseFloat(alloc.amount))}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (

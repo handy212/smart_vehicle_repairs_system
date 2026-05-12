@@ -6,8 +6,10 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { billingApi } from "@/lib/api/billing";
-import { customersApi } from "@/lib/api/customers";
+import { billingApi, type CreditNote } from "@/lib/api/billing";
+import { customersApi, type Customer } from "@/lib/api/customers";
+import { useDebounce } from "@/lib/hooks/useDebounce";
+import { getCustomerSelectLabel } from "@/lib/utils/customer-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,6 +45,7 @@ export default function NewCreditNotePage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
+    const debouncedSearch = useDebounce(searchTerm, 350);
 
     // Check for pre-selected customer or invoice from URL
     const customerId = searchParams.get("customer") ? parseInt(searchParams.get("customer")!) : undefined;
@@ -69,9 +72,12 @@ export default function NewCreditNotePage() {
 
     // Search customers
     const { data: customers } = useQuery({
-        queryKey: ["customers", searchTerm],
-        queryFn: () => customersApi.list({ search: searchTerm }),
-        enabled: true,
+        queryKey: ["customers", "credit-note-new", debouncedSearch],
+        queryFn: () =>
+            customersApi.list({
+                page: 1,
+                search: debouncedSearch || undefined,
+            }),
     });
 
     // Fetch invoices for selected customer
@@ -79,7 +85,7 @@ export default function NewCreditNotePage() {
     const { data: customerInvoices } = useQuery({
         queryKey: ["customer-invoices", selectedCustomerId],
         queryFn: () => billingApi.invoices.list({ customer: selectedCustomerId }),
-        enabled: !!selectedCustomerId,
+        enabled: selectedCustomerId > 0,
     });
 
     const createMutation = useMutation({
@@ -95,7 +101,7 @@ export default function NewCreditNotePage() {
                 }))
             };
 
-            return billingApi.creditNotes.create(apiData as any);
+            return billingApi.creditNotes.create(apiData as Partial<CreditNote>);
         },
         onSuccess: (data) => {
             toast({
@@ -103,13 +109,23 @@ export default function NewCreditNotePage() {
                 description: "Credit note created successfully",
             });
             queryClient.invalidateQueries({ queryKey: ["creditNotes"] });
-            router.push(`/billing/credit-notes/${data.id}`);
+            const newId = data?.id;
+            if (newId != null && Number.isFinite(Number(newId))) {
+                router.push(`/billing/credit-notes/${newId}`);
+            } else {
+                router.push("/billing/credit-notes");
+            }
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
+            let description = "Failed to create credit note";
+            if (error && typeof error === "object" && "response" in error) {
+                const d = (error as { response?: { data?: { error?: string } } }).response?.data;
+                if (d?.error) description = d.error;
+            }
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to create credit note",
+                description,
                 variant: "destructive",
             });
         },
@@ -141,56 +157,72 @@ export default function NewCreditNotePage() {
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <Label>Customer</Label>
-                                    {/* Very basic search input since Select is simple */}
-                                    <input
-                                        className="text-xs border rounded p-1"
-                                        placeholder="Search..."
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                                    <Label>Customer *</Label>
+                                    <Input
+                                        className="h-8 sm:max-w-[220px]"
+                                        placeholder="Search customers…"
                                         value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                {/* Fallback to simple Select for customers */}
                                 <Select
-                                    value={selectedCustomerId?.toString() || ""}
+                                    value={
+                                        selectedCustomerId > 0
+                                            ? String(selectedCustomerId)
+                                            : undefined
+                                    }
                                     onValueChange={(val) => {
-                                        setValue("customer", val ? parseInt(val) : 0);
-                                        setValue("invoice", null); // Reset invoice when customer changes
+                                        setValue("customer", parseInt(val, 10), {
+                                            shouldValidate: true,
+                                        });
+                                        setValue("invoice", null);
                                     }}
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Customer" />
+                                    <SelectTrigger
+                                        className={errors.customer ? "border-destructive" : ""}
+                                    >
+                                        <SelectValue placeholder="Select customer…" />
                                     </SelectTrigger>
-                                    <SelectContent>
-
-                                        {customers?.results?.map((c: any) => (
-                                            <SelectItem key={c.id} value={c.id.toString()}>
-                                                {c.first_name} {c.last_name} {c.company_name ? `(${c.company_name})` : ''}
+                                    <SelectContent className="max-h-72 z-[200]">
+                                        {(customers?.results ?? []).map((c: Customer) => (
+                                            <SelectItem key={c.id} value={String(c.id)}>
+                                                {getCustomerSelectLabel(c)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {errors.customer && <p className="text-sm text-destructive">{errors.customer.message}</p>}
+                                {errors.customer && (
+                                    <p className="text-sm text-destructive">{errors.customer.message}</p>
+                                )}
                             </div>
 
                             <div className="space-y-2">
                                 <Label>Original Invoice (Optional)</Label>
                                 <Select
-                                    value={watch("invoice")?.toString() || ""}
+                                    value={
+                                        watch("invoice") != null && watch("invoice")! > 0
+                                            ? String(watch("invoice"))
+                                            : "none"
+                                    }
                                     onValueChange={(val) => {
-                                        setValue("invoice", val ? parseInt(val) : null);
+                                        setValue(
+                                            "invoice",
+                                            val === "none" ? null : parseInt(val, 10),
+                                            { shouldValidate: true }
+                                        );
                                     }}
                                     disabled={!selectedCustomerId}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="None" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="max-h-72 z-[200]">
                                         <SelectItem value="none">None</SelectItem>
-                                        {customerInvoices?.results.map((inv) => (
-                                            <SelectItem key={inv.id} value={inv.id.toString()}>
-                                                #{inv.invoice_number} - {inv.invoice_date} (${inv.total})
+                                        {(customerInvoices?.results ?? []).map((inv) => (
+                                            <SelectItem key={inv.id} value={String(inv.id)}>
+                                                #{inv.invoice_number} - {inv.invoice_date} —{" "}
+                                                {formatCurrency(parseFloat(String(inv.total)))}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -256,7 +288,7 @@ export default function NewCreditNotePage() {
                                 <div className="col-span-4 md:col-span-3 space-y-2">
                                     <Label className={index !== 0 ? "sr-only" : ""}>Price</Label>
                                     <div className="relative">
-                                        <span className="absolute left-2.5 top-2.5 text-muted-foreground">{currencySymbol || '$'}</span>
+                                        <span className="absolute left-2.5 top-2.5 text-muted-foreground">{currencySymbol}</span>
                                         <Input
                                             type="number"
                                             step="0.01"

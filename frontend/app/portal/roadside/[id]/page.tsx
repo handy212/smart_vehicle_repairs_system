@@ -144,6 +144,8 @@ export default function RoadsideRequestDetailPage() {
       emergency_fuel: "Emergency Fuel Delivery",
       extrication: "Extrication Service",
       mechanical_first_aid: "Mechanical & Electrical First Aid",
+      accident_estimate: "Accident Estimate",
+      pre_purchase_inspection: "Pre-Purchase Inspection",
       other: "Other",
     };
     return types[type] || type;

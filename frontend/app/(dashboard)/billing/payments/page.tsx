@@ -15,12 +15,14 @@ import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { exportToCSV, exportToPDF } from "@/lib/utils/export";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function PaymentsPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [methodFilter, setMethodFilter] = useState("");
     const { toast } = useToast();
+    const { formatCurrency } = useCurrency();
 
     const { data: payments, isLoading } = useQuery({
         queryKey: ['payments', search, statusFilter, methodFilter],
@@ -237,7 +239,7 @@ export default function PaymentsPage() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-right font-mono font-medium">
-                                            ${parseFloat(payment.amount).toLocaleString()}
+                                            {formatCurrency(parseFloat(payment.amount))}
                                         </TableCell>
                                         <TableCell className="px-4 py-2 text-right">
                                             <Link href={`/billing/payments/${payment.id}`}>

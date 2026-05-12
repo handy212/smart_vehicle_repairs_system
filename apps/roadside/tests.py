@@ -160,7 +160,131 @@ class RoadsideRequestTests(TestCase):
         response = self.client.post(self.url, data)
         # Should raise validation error
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Service 'battery_boost' is not available under your current subscription", str(response.data))
+        self.assertIn("Battery Boost allowance is finished", str(response.data))
+        self.assertNotIn("service_type", response.data)
+        self.assertTrue(response.data.get("pay_as_you_go_available"))
+
+    def test_create_request_pay_as_you_go_when_allowance_finished(self):
+        """A finished subscription allowance can be bypassed as pay-as-you-go"""
+        SubscriptionUsage.objects.create(
+            subscription=self.subscription,
+            usage_type='battery_boosts',
+            quantity_used=5,
+            service_date=timezone.now().date()
+        )
+
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'service_type': 'battery_boost',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890',
+            'pay_as_you_go': True,
+            'charge_amount': '75.00',
+            'branch': self.branch.id
+        }
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        request_obj = RoadsideRequest.objects.get(pk=response.data['id'])
+        self.assertFalse(request_obj.is_covered_by_subscription)
+        self.assertFalse(request_obj.subscription_allowance_deducted)
+        self.assertIsNone(request_obj.subscription_used)
+        self.assertEqual(request_obj.charge_amount, Decimal('75.00'))
+        self.assertEqual(
+            SubscriptionUsage.objects.filter(subscription=self.subscription, reference_id=request_obj.id).count(),
+            0
+        )
+
+    def test_pay_as_you_go_requires_charge_amount(self):
+        """Pay-as-you-go override must carry an amount for invoicing"""
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'service_type': 'battery_boost',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890',
+            'pay_as_you_go': True,
+            'branch': self.branch.id
+        }
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('pay-as-you-go charge amount', str(response.data))
+
+    def test_global_subscription_limit_message_names_service(self):
+        """Global limit failures should be friendly and include the requested service"""
+        self.package.features = {
+            **self.package.features,
+            "total_service_calls": 0,
+        }
+        self.package.save(update_fields=['features'])
+
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'service_type': 'battery_boost',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890'
+        }
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "Service Calls limit is finished for Battery Boost. Remaining: 0.",
+            str(response.data.get('detail'))
+        )
+        self.assertTrue(response.data.get("pay_as_you_go_available"))
+
+    def test_call_out_charges_do_not_block_available_services(self):
+        """Legacy call-out charges should not block services with their own allowance"""
+        self.package.features = {
+            **self.package.features,
+            "emergency_fuel": 1,
+            "call_out_charges": 0,
+            "total_service_calls": 8,
+        }
+        self.package.save(update_fields=['features'])
+
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'service_type': 'emergency_fuel',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890'
+        }
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        request_obj = RoadsideRequest.objects.get(pk=response.data['id'])
+        self.assertTrue(request_obj.is_covered_by_subscription)
+        self.assertEqual(self.subscription.get_remaining_allowance('emergency_fuel'), Decimal('0'))
+        self.assertEqual(self.subscription.get_remaining_allowance('total_service_calls'), Decimal('7'))
+        self.assertEqual(SubscriptionUsage.objects.filter(subscription=self.subscription, usage_type='call_out_charges').count(), 0)
+
+    def test_unavailable_service_message_takes_priority_over_global_limit(self):
+        """Unavailable service failures should not be masked by package-wide limits"""
+        self.package.features = {
+            "battery_boosts": 5,
+            "total_service_calls": 0,
+        }
+        self.package.save(update_fields=['features'])
+
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'service_type': 'emergency_fuel',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890'
+        }
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "Emergency Fuel Delivery is not available under this subscription.",
+            str(response.data.get('detail'))
+        )
+        self.assertNotIn("Service Calls", str(response.data))
 
     def test_create_towing_request_distance_validation(self):
         """Test towing request requires distance and checks allowance"""
@@ -179,7 +303,7 @@ class RoadsideRequestTests(TestCase):
         data['tow_distance_km'] = 120
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("not available under your current subscription", str(response.data))
+        self.assertIn("Towing Service allowance is not enough", str(response.data))
         
         # Valid distance
         data['tow_distance_km'] = 50
@@ -257,6 +381,37 @@ class RoadsideRequestTests(TestCase):
         self.assertIsNotNone(request_obj.invoice)
         self.assertEqual(request_obj.invoice.total, Decimal('50.00'))
         self.assertEqual(request_obj.invoice.customer, self.customer)
+
+    def test_non_subscription_request_requires_charge_before_completion(self):
+        """Pay-per-use requests cannot complete without a charge amount"""
+        vehicle_no_sub = Vehicle.objects.create(
+            owner=self.customer, license_plate="NOCHG-1", make="Honda", model="Civic", year=2019,
+            current_mileage=30000,
+            vin="VINNOCHARGE001"
+        )
+
+        response = self.client.post(self.url, {
+            'customer': self.customer.id,
+            'vehicle': vehicle_no_sub.id,
+            'service_type': 'flat_tyre',
+            'breakdown_location': 'Home',
+            'customer_phone': '1234567890',
+            'branch': self.branch.id
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        request_id = response.data['id']
+
+        self.client.force_authenticate(user=self.manager)
+        self.client.post(f"{self.url}{request_id}/assign_dispatch/", {'technician_id': self.technician.id})
+        self.client.post(f"{self.url}{request_id}/en_route/")
+        self.client.post(f"{self.url}{request_id}/arrive/")
+        self.client.post(f"{self.url}{request_id}/in_progress/")
+
+        response = self.client.post(f"{self.url}{request_id}/complete/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Enter a charge amount', str(response.data))
+        request_obj = RoadsideRequest.objects.get(pk=request_id)
+        self.assertEqual(request_obj.status, 'in_progress')
         
     def test_cancellation(self):
         """Test cancellation logic"""
@@ -281,6 +436,53 @@ class RoadsideRequestTests(TestCase):
         self.client.force_authenticate(user=self.manager)
         resp = self.client.post(f"{self.url}{request_id}/assign_dispatch/", {'technician_id': self.technician.id})
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_requested_request_before_dispatch(self):
+        """Managers can delete a request before it has been dispatched"""
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'service_type': 'battery_boost',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890',
+            'branch': self.branch.id
+        }
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        request_id = response.data['id']
+
+        request_obj = RoadsideRequest.objects.get(pk=request_id)
+        self.assertTrue(request_obj.subscription_allowance_deducted)
+
+        self.client.force_authenticate(user=self.manager)
+        response = self.client.delete(f"{self.url}{request_id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(RoadsideRequest.objects.filter(pk=request_id).exists())
+        self.assertEqual(self.subscription.get_remaining_allowance('battery_boosts'), Decimal('5'))
+
+    def test_delete_dispatched_request_is_blocked(self):
+        """Requests with dispatch history cannot be deleted"""
+        data = {
+            'customer': self.customer.id,
+            'vehicle': self.vehicle.id,
+            'service_type': 'battery_boost',
+            'breakdown_location': '123 Main St',
+            'customer_phone': '1234567890',
+            'branch': self.branch.id
+        }
+
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        request_id = response.data['id']
+
+        self.client.force_authenticate(user=self.manager)
+        response = self.client.post(f"{self.url}{request_id}/assign_dispatch/", {'technician_id': self.technician.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.delete(f"{self.url}{request_id}/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(RoadsideRequest.objects.filter(pk=request_id).exists())
 
     def test_my_requests(self):
         """Test my_requests endpoint for customer"""

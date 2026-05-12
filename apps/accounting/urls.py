@@ -16,6 +16,7 @@ urlpatterns = [
     path('reports/balance-sheet/', views.BalanceSheetView.as_view(), name='balance-sheet'),
     path('reports/profit-loss/', views.ProfitLossView.as_view(), name='profit-loss'),
     path('reports/trial-balance/', views.TrialBalanceView.as_view(), name='trial-balance'),
+    path('reports/general-ledger/', views.GeneralLedgerView.as_view(), name='general-ledger'),
     path('reports/aging/', views.AgingReportView.as_view(), name='aging-report'),
     path('reports/cash-flow/', views.CashFlowView.as_view(), name='cash-flow'),
     path('reports/tax/', views.TaxReportView.as_view(), name='tax-report'),

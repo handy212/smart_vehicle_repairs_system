@@ -30,6 +30,7 @@ class CustomerEstimateActionTests(APITestCase):
             password="testpass",
             role="admin",
             is_staff=True,
+            is_superuser=True,
         )
         self.customer_user = User.objects.create_user(
             username="estimate-customer",

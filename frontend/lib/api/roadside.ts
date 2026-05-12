@@ -115,6 +115,8 @@ export interface RoadsideRequestCreate {
     tow_distance_km?: number;
     destination?: string;
     notes?: string;
+    charge_amount?: number;
+    pay_as_you_go?: boolean;
 }
 
 export const roadsideApi = {
@@ -227,7 +229,7 @@ export const roadsideApi = {
     /**
      * Admin: Update request details
      */
-    partialUpdate: async (id: number | string, data: Partial<RoadsideRequest>) => {
+    partialUpdate: async (id: number | string, data: Partial<RoadsideRequest> & { charge_amount?: number | string }) => {
         const response = await apiClient.patch<RoadsideRequest>(`/roadside/requests/${id}/`, data);
         return response.data;
     },
@@ -279,5 +281,12 @@ export const roadsideApi = {
     create: async (data: RoadsideRequestCreate) => {
         const response = await apiClient.post<RoadsideRequest>("/roadside/requests/", data);
         return response.data;
+    },
+
+    /**
+     * Admin: Delete a request that has not been dispatched
+     */
+    remove: async (id: number | string) => {
+        await apiClient.delete(`/roadside/requests/${id}/`);
     }
 };

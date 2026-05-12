@@ -132,9 +132,11 @@ def invoice_list(request):
     if search_query:
         invoices = invoices.filter(
             Q(invoice_number__icontains=search_query) |
-            Q(customer__first_name__icontains=search_query) |
-            Q(customer__last_name__icontains=search_query) |
-            Q(customer__email__icontains=search_query) |
+            Q(customer__customer_number__icontains=search_query) |
+            Q(customer__company_name__icontains=search_query) |
+            Q(customer__user__first_name__icontains=search_query) |
+            Q(customer__user__last_name__icontains=search_query) |
+            Q(customer__user__email__icontains=search_query) |
             Q(vehicle__make__icontains=search_query) |
             Q(vehicle__model__icontains=search_query)
         )
@@ -708,8 +710,11 @@ def payment_list(request):
         payments = payments.filter(
             Q(payment_number__icontains=search_query) |
             Q(reference_number__icontains=search_query) |
-            Q(customer__first_name__icontains=search_query) |
-            Q(customer__last_name__icontains=search_query)
+            Q(customer__customer_number__icontains=search_query) |
+            Q(customer__company_name__icontains=search_query) |
+            Q(customer__user__first_name__icontains=search_query) |
+            Q(customer__user__last_name__icontains=search_query) |
+            Q(customer__user__email__icontains=search_query)
         )
     
     # Pagination

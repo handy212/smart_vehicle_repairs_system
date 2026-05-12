@@ -98,7 +98,6 @@ class Estimate(models.Model):
     )
     
     # References
-    # References
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='estimates')
     vehicle = models.ForeignKey(
         Vehicle, 
@@ -907,6 +906,21 @@ class Invoice(models.Model):
             return Decimal('0')
         return ((self.amount_paid / self.total) * 100).quantize(Decimal('0.01'))
 
+    def recalculate_amount_paid_from_collections(self):
+        """
+        Set amount_paid from completed payments (net of refunds) plus
+        credit note applications. Then save() refreshes amount_due and status.
+        """
+        from django.db.models import Sum
+
+        total_payments = sum(
+            (p.amount - (p.refund_amount or Decimal('0')))
+            for p in self.payments.filter(status='completed')
+        ) or Decimal('0')
+        credit_total = self.credit_note_applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        self.amount_paid = (total_payments + credit_total).quantize(Decimal('0.01'))
+        self.save()
+
 
 class InvoiceLineItem(models.Model):
     """Line items recorded on an invoice (standalone invoices)"""
@@ -1022,6 +1036,14 @@ class Payment(models.Model):
     # References
     invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='payments')
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='payments')
+    till = models.ForeignKey(
+        'CashierTill',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payments',
+        help_text="Open cashier till used for cash payments"
+    )
     
     # Payment details
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
@@ -1134,12 +1156,7 @@ class Payment(models.Model):
     
     def update_invoice_payment(self):
         """Update the invoice's amount_paid"""
-        total_paid = sum(
-            payment.amount - payment.refund_amount
-            for payment in self.invoice.payments.filter(status='completed')
-        )
-        self.invoice.amount_paid = total_paid
-        self.invoice.save()
+        self.invoice.recalculate_amount_paid_from_collections()
     
     @property
     def net_amount(self):
@@ -1231,6 +1248,13 @@ class CashierTill(models.Model):
             models.Index(fields=['cashier', 'opened_at']),
             models.Index(fields=['status', 'opened_at']),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cashier'],
+                condition=models.Q(status='open'),
+                name='unique_open_till_per_cashier'
+            )
+        ]
     
     def __str__(self):
         return f"Till {self.id} - {self.cashier.get_full_name()} ({self.status})"
@@ -1238,6 +1262,8 @@ class CashierTill(models.Model):
     @property
     def duration(self):
         """Calculate how long till has been open"""
+        if self.opened_at is None:
+            return None
         if self.closed_at:
             return self.closed_at - self.opened_at
         return timezone.now() - self.opened_at
@@ -1248,6 +1274,37 @@ class CashierTill(models.Model):
         if self.variance is None:
             return None
         return abs(self.variance) < Decimal('0.01')
+
+    def cash_payments_total(self):
+        """Cash collected into this till, before any later refund adjustments."""
+        return self.payments.filter(
+            payment_method='cash',
+            status='completed',
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+
+    def cash_refunds_total(self):
+        """Cash paid out from this till for completed refunds."""
+        return self.refunds.filter(
+            status='completed',
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+
+    def till_cash_movements_net(self):
+        """Net effect of pay-in / pay-out movements on drawer (positive adds cash)."""
+        stats = self.cash_movements.aggregate(
+            pi=models.Sum('amount', filter=models.Q(movement_type='pay_in')),
+            po=models.Sum('amount', filter=models.Q(movement_type='pay_out')),
+        )
+        pi = stats['pi'] or Decimal('0')
+        po = stats['po'] or Decimal('0')
+        return (pi - po).quantize(Decimal('0.01'))
+
+    def calculate_expected_balance(self):
+        return (
+            self.opening_balance
+            + self.cash_payments_total()
+            - self.cash_refunds_total()
+            + self.till_cash_movements_net()
+        ).quantize(Decimal('0.01'))
 
 
 class CashCount(models.Model):
@@ -1296,6 +1353,47 @@ class CashCount(models.Model):
         # Auto-calculate total
         self.total = (self.denomination * self.quantity).quantize(Decimal('0.01'))
         super().save(*args, **kwargs)
+
+
+class TillCashMovement(models.Model):
+    """
+    Non-invoice cash into or out of the drawer while the till is open
+    (e.g. float from safe, safe drop, bank change, petty reimbursement).
+    """
+
+    MOVEMENT_TYPE_CHOICES = [
+        ('pay_in', 'Pay in'),
+        ('pay_out', 'Pay out'),
+    ]
+
+    till = models.ForeignKey(
+        CashierTill,
+        on_delete=models.CASCADE,
+        related_name='cash_movements',
+    )
+    movement_type = models.CharField(max_length=10, choices=MOVEMENT_TYPE_CHOICES)
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    reason = models.CharField(max_length=500, blank=True)
+    recorded_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='till_cash_movements',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['till', '-created_at']),
+            models.Index(fields=['till', 'movement_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_movement_type_display()} {self.amount} on till {self.till_id}"
 
 
 class PaymentAllocation(models.Model):
@@ -1534,10 +1632,18 @@ class CreditNote(models.Model):
         self.tax_amount = 0 
         self.total = self.subtotal + self.tax_amount
         
-        # If still draft or issued (not applied/refunded), unused amount tracks total
-        if self.status in ['draft', 'issued']:
+        if self.status == 'draft':
             self.unused_amount = self.total
-            
+        elif self.status in ('issued', 'applied') and self.pk:
+            from django.db.models import Sum
+
+            applied_sum = self.applications.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+            self.unused_amount = max(
+                Decimal('0'),
+                (self.total - applied_sum).quantize(Decimal('0.01')),
+            )
+            if self.status == 'issued' and self.unused_amount == 0 and self.total > 0:
+                self.status = 'applied'
         self.save()
 
 
@@ -1552,6 +1658,44 @@ class CreditNoteLineItem(models.Model):
     def save(self, *args, **kwargs):
         self.total = self.quantity * self.unit_price
         super().save(*args, **kwargs)
+
+
+class CreditNoteApplication(models.Model):
+    """
+    Applies issued credit note balance toward a customer invoice (reduces amount due).
+    Operational allocation; GL for the note is posted when the credit note is issued.
+    """
+
+    credit_note = models.ForeignKey(
+        CreditNote,
+        on_delete=models.CASCADE,
+        related_name='applications',
+    )
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.PROTECT,
+        related_name='credit_note_applications',
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    applied_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='credit_note_applications_recorded',
+    )
+    applied_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-applied_at']
+        indexes = [
+            models.Index(fields=['credit_note', '-applied_at']),
+            models.Index(fields=['invoice', '-applied_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.credit_note_id} → Inv {self.invoice_id}: {self.amount}"
+
 
 auditlog.register(CreditNote)
 

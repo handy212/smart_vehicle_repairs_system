@@ -2,6 +2,7 @@ from rest_framework import serializers
 from decimal import Decimal
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Sum
 from django.core.validators import MinValueValidator
 from drf_spectacular.utils import extend_schema_field, inline_serializer
 from drf_spectacular.types import OpenApiTypes
@@ -14,11 +15,12 @@ from apps.billing.models import (
     Payment,
     CashierTill,
     CashCount,
-    PaymentAllocation,
+    TillCashMovement,
     PaymentAllocation,
     Refund,
     CreditNote,
     CreditNoteLineItem,
+    CreditNoteApplication,
     Bill,
     BillLineItem,
     BillPayment,
@@ -1029,22 +1031,37 @@ class PaymentSerializer(serializers.ModelSerializer):
     net_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     is_refunded = serializers.BooleanField(read_only=True)
     is_partially_refunded = serializers.BooleanField(read_only=True)
+    allocated_total = serializers.SerializerMethodField()
+    unallocated_balance = serializers.SerializerMethodField()
     
     class Meta:
         model = Payment
         fields = [
             'id', 'payment_number', 'invoice', 'invoice_number',
             'customer', 'customer_name',
+            'till',
             'payment_method', 'status', 'amount', 'payment_date',
             'reference_number', 'card_last_four', 'card_type',
             'notes',
             'refund_amount', 'refund_date', 'refund_reason',
             'refunded_by', 'refunded_by_name',
             'net_amount', 'is_refunded', 'is_partially_refunded',
+            'allocated_total', 'unallocated_balance',
             'processed_by', 'processed_by_name',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def get_allocated_total(self, obj):
+        total = obj.allocations.aggregate(t=Sum('amount'))['t']
+        return str(total or Decimal('0'))
+
+    def get_unallocated_balance(self, obj):
+        allocated = obj.allocations.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        left = (obj.amount - allocated).quantize(Decimal('0.01'))
+        if left < 0:
+            left = Decimal('0')
+        return str(left)
 
 
 class PaymentCreateSerializer(serializers.ModelSerializer):
@@ -1078,6 +1095,26 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"invoice": f"Invoice {inv_num} is already fully paid. Cannot record additional payments."}
             )
+
+        if data.get('payment_method') == 'cash':
+            request = self.context.get('request')
+            open_till = CashierTill.objects.filter(
+                cashier=request.user,
+                status='open',
+            ).select_related('branch').first() if request else None
+
+            if not open_till:
+                raise serializers.ValidationError({
+                    "payment_method": "Open a till before recording a cash payment."
+                })
+
+            invoice_branch_id = getattr(invoice, 'branch_id', None)
+            if invoice_branch_id and open_till.branch_id != invoice_branch_id:
+                raise serializers.ValidationError({
+                    "payment_method": "Your open till must belong to the invoice branch."
+                })
+
+            data['till'] = open_till
         
         return data
     
@@ -1122,11 +1159,8 @@ class RefundPaymentSerializer(serializers.Serializer):
         if value > (payment.amount - payment.refund_amount):
             raise serializers.ValidationError("Refund amount cannot exceed remaining payment amount")
         return value
-# Phase 2 Till Management Serializers
-# Add to apps/billing/serializers.py
-
-from apps.billing.models import CashierTill, CashCount, PaymentAllocation, Refund
-
+    
+# Till management serializers (CashierTill, CashCount, …)
 
 class CashCountSerializer(serializers.ModelSerializer):
     """Serializer for cash count"""
@@ -1144,6 +1178,10 @@ class CashierTillSerializer(serializers.ModelSerializer):
     branch_name = serializers.CharField(source='branch.name', read_only=True)
     cash_counts = CashCountSerializer(many=True, read_only=True)
     duration = serializers.SerializerMethodField()
+    cash_payments_total = serializers.SerializerMethodField()
+    cash_refunds_total = serializers.SerializerMethodField()
+    till_cash_movements_net = serializers.SerializerMethodField()
+    current_expected_balance = serializers.SerializerMethodField()
     
     class Meta:
         model = CashierTill
@@ -1151,7 +1189,9 @@ class CashierTillSerializer(serializers.ModelSerializer):
             'id', 'branch', 'branch_name', 'cashier', 'cashier_name',
             'opened_at', 'closed_at', 'status',
             'opening_balance', 'closing_balance', 'expected_balance', 'variance',
-            'is_balanced', 'duration', 'notes', 'cash_counts'
+            'is_balanced', 'duration', 'notes', 'cash_counts',
+            'cash_payments_total', 'cash_refunds_total', 'till_cash_movements_net',
+            'current_expected_balance'
         ]
         read_only_fields = ['opened_at', 'created_at', 'updated_at']
     
@@ -1163,6 +1203,18 @@ class CashierTillSerializer(serializers.ModelSerializer):
             return f"{int(hours)}h {int(minutes)}m"
         return None
 
+    def get_cash_payments_total(self, obj):
+        return obj.cash_payments_total()
+
+    def get_cash_refunds_total(self, obj):
+        return obj.cash_refunds_total()
+
+    def get_till_cash_movements_net(self, obj):
+        return obj.till_cash_movements_net()
+
+    def get_current_expected_balance(self, obj):
+        return obj.calculate_expected_balance()
+
 
 class OpenTillSerializer(serializers.Serializer):
     """Serializer for opening a till"""
@@ -1172,6 +1224,23 @@ class OpenTillSerializer(serializers.Serializer):
         default=Decimal('0'),
         validators=[MinValueValidator(Decimal('0'))]
     )
+    cash_counts = serializers.ListField(
+        child=serializers.DictField(),
+        required=False
+    )
+
+    def validate_cash_counts(self, value):
+        return _validate_cash_count_lines(value)
+
+    def validate(self, data):
+        counts = data.get('cash_counts') or []
+        if counts:
+            counted_total = _sum_cash_count_lines(counts)
+            if counted_total != data['opening_balance']:
+                raise serializers.ValidationError({
+                    "cash_counts": "Opening denomination counts must equal the opening balance."
+                })
+        return data
 
 
 class CloseTillSerializer(serializers.Serializer):
@@ -1181,6 +1250,78 @@ class CloseTillSerializer(serializers.Serializer):
         required=True
     )
     notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_cash_counts(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one cash count line is required.")
+        return _validate_cash_count_lines(value)
+
+
+class TillCashMovementSerializer(serializers.ModelSerializer):
+    recorded_by_name = serializers.CharField(source='recorded_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = TillCashMovement
+        fields = [
+            'id', 'till', 'movement_type', 'amount', 'reason',
+            'recorded_by', 'recorded_by_name', 'created_at',
+        ]
+        read_only_fields = ['id', 'till', 'recorded_by', 'created_at']
+
+
+class RecordTillMovementSerializer(serializers.Serializer):
+    movement_type = serializers.ChoiceField(choices=['pay_in', 'pay_out'])
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.01')
+    )
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+    def validate(self, data):
+        till = self.context['till']
+        if till.status != 'open':
+            raise serializers.ValidationError(
+                {'non_field_errors': ['Till is not open.']}
+            )
+        if data['movement_type'] == 'pay_out':
+            book = till.calculate_expected_balance()
+            if book < data['amount']:
+                raise serializers.ValidationError({
+                    'amount': (
+                        f'Pay out exceeds expected drawer balance ({book}). '
+                        'Record sales/refunds and pay-ins first, or reduce the amount.'
+                    ),
+                })
+        return data
+
+
+def _validate_cash_count_lines(lines):
+    cleaned = []
+    for line in lines:
+        try:
+            denomination = Decimal(str(line['denomination']))
+            quantity = int(line['quantity'])
+        except (KeyError, TypeError, ValueError):
+            raise serializers.ValidationError(
+                "Each cash count line requires a valid denomination and quantity."
+            )
+
+        if denomination <= 0:
+            raise serializers.ValidationError("Denomination must be greater than 0.")
+        if quantity < 0:
+            raise serializers.ValidationError("Quantity cannot be negative.")
+
+        cleaned.append({
+            'denomination': denomination,
+            'quantity': quantity,
+        })
+    return cleaned
+
+
+def _sum_cash_count_lines(lines):
+    return sum(
+        (line['denomination'] * line['quantity'] for line in lines),
+        Decimal('0'),
+    ).quantize(Decimal('0.01'))
 
 
 class PaymentAllocationSerializer(serializers.ModelSerializer):
@@ -1251,6 +1392,15 @@ class CreditNoteLineItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['total']
 
 
+class CreditNoteApplicationSerializer(serializers.ModelSerializer):
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+
+    class Meta:
+        model = CreditNoteApplication
+        fields = ['id', 'invoice', 'invoice_number', 'amount', 'applied_by', 'applied_at']
+        read_only_fields = ['id', 'invoice_number', 'applied_by', 'applied_at']
+
+
 class CreditNoteListSerializer(serializers.ModelSerializer):
     """Serializer for listing credit notes"""
     
@@ -1277,7 +1427,8 @@ class CreditNoteDetailSerializer(serializers.ModelSerializer):
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     line_items = CreditNoteLineItemSerializer(many=True, read_only=True)
-    
+    applications = CreditNoteApplicationSerializer(many=True, read_only=True)
+
     class Meta:
         model = CreditNote
         fields = [
@@ -1285,7 +1436,7 @@ class CreditNoteDetailSerializer(serializers.ModelSerializer):
             'customer', 'customer_name', 'invoice', 'invoice_number',
             'subtotal', 'tax_amount', 'total', 'unused_amount',
             'reason', 'notes', 'internal_notes',
-            'line_items',
+            'line_items', 'applications',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
 
@@ -1298,10 +1449,18 @@ class CreditNoteCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CreditNote
         fields = [
-            'customer', 'invoice', 'credit_date', 
-            'reason', 'notes', 'internal_notes',
-            'line_items'
+            'id',
+            'credit_note_number',
+            'status',
+            'customer',
+            'invoice',
+            'credit_date',
+            'reason',
+            'notes',
+            'internal_notes',
+            'line_items',
         ]
+        read_only_fields = ['id', 'credit_note_number', 'status']
     
     @transaction.atomic
     def create(self, validated_data):
@@ -1326,6 +1485,24 @@ class CreditNoteCreateSerializer(serializers.ModelSerializer):
         credit_note.calculate_totals()
         
         return credit_note
+
+
+class CreditNoteApplySerializer(serializers.Serializer):
+    """Apply issued credit note balance to an open invoice (same customer)."""
+
+    invoice = serializers.IntegerField(min_value=1)
+    amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        min_value=Decimal('0.01'),
+    )
+
+    def validate_invoice(self, value):
+        if not Invoice.objects.filter(pk=value).exists():
+            raise serializers.ValidationError('Invalid invoice.')
+        return value
+
 
 # ============================================================================
 # BILL SERIALIZERS

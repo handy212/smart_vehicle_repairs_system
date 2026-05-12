@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,25 +31,77 @@ import { useEffect } from "react";
 import { CustomerSelector } from "@/components/customers/CustomerSelector";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
+const serviceTypeValues = [
+    'towing',
+    'battery_boost',
+    'flat_tyre',
+    'key_lockout',
+    'emergency_fuel',
+    'extrication',
+    'mechanical_first_aid',
+    'accident_estimate',
+    'pre_purchase_inspection',
+    'other'
+] as const;
+
+const serviceTypes: Array<{ value: (typeof serviceTypeValues)[number]; label: string }> = [
+    { value: 'towing', label: 'Towing Service' },
+    { value: 'battery_boost', label: 'Battery Boost' },
+    { value: 'flat_tyre', label: 'Flat Tyre Service' },
+    { value: 'key_lockout', label: 'Key Lock Out' },
+    { value: 'emergency_fuel', label: 'Emergency Fuel Delivery' },
+    { value: 'extrication', label: 'Extrication Service' },
+    { value: 'mechanical_first_aid', label: 'Mechanical & Electrical First Aid' },
+    { value: 'accident_estimate', label: 'Accident Estimate' },
+    { value: 'pre_purchase_inspection', label: 'Pre-Purchase Inspection' },
+    { value: 'other', label: 'Other' },
+];
+
+const emptyToUndefined = (value: unknown) => {
+    if (value === "" || value === null || value === undefined) return undefined;
+    if (typeof value === "number" && Number.isNaN(value)) return undefined;
+    return value;
+};
+
+const numberFromInput = (value: unknown) => {
+    const normalized = emptyToUndefined(value);
+    if (normalized === undefined) return undefined;
+    return typeof normalized === "number" ? normalized : Number(normalized);
+};
+
+const requiredId = (fieldName: string) =>
+    z.preprocess(
+        numberFromInput,
+        z.number({ error: `${fieldName} is required` })
+            .int(`${fieldName} must be valid`)
+            .min(1, `${fieldName} is required`)
+    );
+
+const optionalNumber = (message: string) =>
+    z.preprocess(
+        numberFromInput,
+        z.number({ error: message }).optional()
+    );
+
 const roadsideRequestSchema = z.object({
-    customer: z.number().min(1, "Customer is required"),
-    vehicle: z.number().min(1, "Vehicle is required"),
-    service_type: z.enum([
-        'towing',
-        'battery_boost',
-        'flat_tyre',
-        'key_lockout',
-        'emergency_fuel',
-        'extrication',
-        'mechanical_first_aid',
-        'other'
-    ]),
+    customer: requiredId("Customer"),
+    vehicle: requiredId("Vehicle"),
+    service_type: z.preprocess(
+        emptyToUndefined,
+        z.enum(serviceTypeValues, { error: "Service type is required" })
+    ),
     breakdown_location: z.string().min(1, "Breakdown location is required"),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
+    latitude: optionalNumber("Latitude must be a valid number"),
+    longitude: optionalNumber("Longitude must be a valid number"),
     description: z.string().optional(),
     customer_phone: z.string().min(1, "Phone number is required"),
-    tow_distance_km: z.number().min(0).optional(),
+    tow_distance_km: z.preprocess(
+        numberFromInput,
+        z.number({ error: "Tow distance is required for towing service" })
+            .min(0, "Tow distance cannot be negative")
+            .optional()
+    ),
+    charge_amount: optionalNumber("Charge amount must be a valid number"),
     destination: z.string().optional(),
     notes: z.string().optional(),
 }).refine((data) => {
@@ -63,6 +115,15 @@ const roadsideRequestSchema = z.object({
 });
 
 type RoadsideRequestFormData = z.infer<typeof roadsideRequestSchema>;
+type RoadsideRequestSubmissionData = RoadsideRequestFormData & { pay_as_you_go?: boolean };
+
+type ApiErrorResponse = {
+    response?: {
+        data?: {
+            pay_as_you_go_available?: boolean;
+        };
+    };
+};
 
 export default function NewRoadsideRequestDashboardPage() {
     const router = useRouter();
@@ -73,6 +134,7 @@ export default function NewRoadsideRequestDashboardPage() {
     const { toast } = useToast();
 
     const [serverError, setServerError] = useState<string | null>(null);
+    const [payAsYouGoDraft, setPayAsYouGoDraft] = useState<RoadsideRequestSubmissionData | null>(null);
     const [isLocating, setIsLocating] = useState(false);
     // 'branch' = user selected a branch, 'custom' = manual text entry
     const [destinationMode, setDestinationMode] = useState<'branch' | 'custom'>('branch');
@@ -81,9 +143,9 @@ export default function NewRoadsideRequestDashboardPage() {
         register,
         handleSubmit,
         formState: { errors, isSubmitting },
-        watch,
         setValue,
         resetField,
+        control,
     } = useForm<RoadsideRequestFormData>({
         resolver: zodResolver(roadsideRequestSchema),
         defaultValues: {
@@ -92,9 +154,10 @@ export default function NewRoadsideRequestDashboardPage() {
         },
     });
 
-    const selectedCustomerId = watch("customer");
-    const selectedVehicleId = watch("vehicle");
-    const serviceType = watch("service_type");
+    const selectedCustomerId = useWatch({ control, name: "customer" });
+    const selectedVehicleId = useWatch({ control, name: "vehicle" });
+    const serviceType = useWatch({ control, name: "service_type" });
+    const selectedDestination = useWatch({ control, name: "destination" });
 
     const { data: selectedCustomer } = useQuery({
         queryKey: ["customer", selectedCustomerId],
@@ -130,11 +193,13 @@ export default function NewRoadsideRequestDashboardPage() {
 
     const activeSubscription = activeSubscriptionData?.results?.find((subscription) => subscription.is_active_status) || null;
     const pendingActivationSubscription = activeSubscriptionData?.results?.find((subscription) => !subscription.is_active_status) || null;
+    const shouldShowChargeAmount = !!payAsYouGoDraft || (!!selectedCustomerId && !!selectedVehicleId && !isLoadingSubscription && !activeSubscription);
 
     const createMutation = useMutation({
-        mutationFn: (data: RoadsideRequestFormData) => roadsideApi.create(data),
+        mutationFn: (data: RoadsideRequestSubmissionData) => roadsideApi.create(data),
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["roadside"] });
+            setPayAsYouGoDraft(null);
             toast({
                 title: "Request Created",
                 description: `Roadside request ${data.request_number} has been created successfully.`,
@@ -144,7 +209,11 @@ export default function NewRoadsideRequestDashboardPage() {
 
         onError: (error: unknown) => {
             const errorMessage = getApiErrorMessage(error, "Failed to create request");
+            const payAsYouGoAvailable = Boolean((error as ApiErrorResponse)?.response?.data?.pay_as_you_go_available);
             setServerError(errorMessage);
+            if (!payAsYouGoAvailable) {
+                setPayAsYouGoDraft(null);
+            }
         },
     });
 
@@ -192,33 +261,33 @@ export default function NewRoadsideRequestDashboardPage() {
         }
     }, [initialCustomerId, setValue]);
 
+    const buildSubmissionData = (data: RoadsideRequestFormData, payAsYouGo = false): RoadsideRequestSubmissionData => ({
+        ...data,
+        pay_as_you_go: payAsYouGo || undefined,
+        latitude: (typeof data.latitude === 'number' && !isNaN(data.latitude))
+            ? parseFloat(data.latitude.toFixed(6))
+            : undefined,
+        longitude: (typeof data.longitude === 'number' && !isNaN(data.longitude))
+            ? parseFloat(data.longitude.toFixed(6))
+            : undefined,
+    });
+
     const onSubmit = (data: RoadsideRequestFormData) => {
         setServerError(null);
+        setPayAsYouGoDraft(null);
 
-        // Final check: round coordinates to 6 decimal places to satisfy backend DecimalField(9, 6)
-        const submissionData = {
-            ...data,
-            latitude: (typeof data.latitude === 'number' && !isNaN(data.latitude))
-                ? parseFloat(data.latitude.toFixed(6))
-                : undefined,
-            longitude: (typeof data.longitude === 'number' && !isNaN(data.longitude))
-                ? parseFloat(data.longitude.toFixed(6))
-                : undefined,
-        };
-
+        const submissionData = buildSubmissionData(data);
+        setPayAsYouGoDraft(submissionData);
         createMutation.mutate(submissionData);
     };
 
-    const serviceTypes = [
-        { value: 'towing', label: 'Towing Service' },
-        { value: 'battery_boost', label: 'Battery Boost' },
-        { value: 'flat_tyre', label: 'Flat Tyre Service' },
-        { value: 'key_lockout', label: 'Key Lock Out' },
-        { value: 'emergency_fuel', label: 'Emergency Fuel Delivery' },
-        { value: 'extrication', label: 'Extrication Service' },
-        { value: 'mechanical_first_aid', label: 'Mechanical & Electrical First Aid' },
-        { value: 'other', label: 'Other' },
-    ];
+    const continueAsPayAsYouGo = () => {
+        if (!payAsYouGoDraft) return;
+        handleSubmit((data) => {
+            setServerError(null);
+            createMutation.mutate(buildSubmissionData(data, true));
+        })();
+    };
 
     return (
         <div className="space-y-6 pb-12">
@@ -242,9 +311,23 @@ export default function NewRoadsideRequestDashboardPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {serverError && (
-                    <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-200 p-4 rounded-lg flex items-start gap-2">
+                    <div className="bg-destructive/10 dark:bg-red-900/20 border border-destructive/20 dark:border-red-800 text-destructive dark:text-red-200 p-4 rounded-lg flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm">{serverError}</p>
+                        <div className="space-y-3">
+                            <p className="text-sm">{serverError}</p>
+                            {payAsYouGoDraft && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 border-destructive/30 bg-card text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    disabled={createMutation.isPending}
+                                    onClick={continueAsPayAsYouGo}
+                                >
+                                    Continue as Pay As You Go
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -546,7 +629,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                     ) : branches.map(branch => {
                                                         // Include branch name to guarantee uniqueness if multiple branches share an address
                                                         const destinationText = `${branch.name}${branch.address ? ` - ${branch.address}` : ''}${branch.city ? `, ${branch.city}` : ''}`;
-                                                        const isSelected = watch('destination') === destinationText;
+                                                        const isSelected = selectedDestination === destinationText;
                                                         return (
                                                             <button
                                                                 key={branch.id}
@@ -575,6 +658,24 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 />
                                             )}
                                         </div>
+                                    </div>
+                                )}
+
+                                {shouldShowChargeAmount && (
+                                    <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border">
+                                        <Label htmlFor="charge_amount" className="font-semibold">Pay As You Go Charge *</Label>
+                                        <Input
+                                            id="charge_amount"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            {...register("charge_amount", { valueAsNumber: true })}
+                                            placeholder="0.00"
+                                            className="h-11"
+                                        />
+                                        {errors.charge_amount && (
+                                            <p className="text-xs text-destructive font-medium">{errors.charge_amount.message}</p>
+                                        )}
                                     </div>
                                 )}
 

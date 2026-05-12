@@ -13,8 +13,17 @@ from django.db.models import Q
 from datetime import datetime
 from apps.accounts.permissions import IsModuleEnabled
 from .services import AccountingService, ReportingService, DashboardService, ExportService
-from .models import JournalEntry, Account, AccountingControl, AuditLog
-from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, JournalEntryReverseSerializer, PeriodCloseSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
+from .models import JournalEntry, Account, AccountingControl, AuditLog, Transaction
+from .serializers import (
+    JournalEntrySerializer,
+    JournalEntryCreateSerializer,
+    JournalEntryReverseSerializer,
+    PeriodCloseSerializer,
+    AccountSimpleSerializer,
+    AccountingControlSerializer,
+    AuditLogSerializer,
+    GeneralLedgerLineSerializer,
+)
 
 from django.http import HttpResponse
 from apps.accounts.permissions import HasPermission, IsModuleEnabled
@@ -79,6 +88,45 @@ class ProfitLossView(APIView):
         branch_id = get_report_branch_id(request)
         report = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch_id)
         return Response(report)
+
+class GeneralLedgerView(ListAPIView):
+    """Posted transaction lines with optional account and date filters (general ledger detail)."""
+
+    permission_classes = [
+        IsAuthenticated,
+        IsModuleEnabled('accounting'),
+        HasPermission('view_accounting'),
+    ]
+    serializer_class = GeneralLedgerLineSerializer
+
+    def get_queryset(self):
+        qs = (
+            Transaction.objects.filter(journal_entry__posted=True)
+            .select_related('journal_entry', 'account')
+            .order_by('-journal_entry__date', '-journal_entry_id', 'id')
+        )
+        account_id = self.request.query_params.get('account_id')
+        branch_id = self.request.query_params.get('branch_id')
+        reference = (self.request.query_params.get('reference') or '').strip()
+
+        start_raw = self.request.query_params.get('start_date')
+        end_raw = self.request.query_params.get('end_date')
+        start_date = parse_date(start_raw) if start_raw else None
+        end_date = parse_date(end_raw) if end_raw else None
+
+        if account_id:
+            qs = qs.filter(account_id=account_id)
+        if branch_id:
+            qs = qs.filter(journal_entry__branch_id=branch_id)
+        if start_date:
+            qs = qs.filter(journal_entry__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(journal_entry__date__lte=end_date)
+        if reference:
+            qs = qs.filter(journal_entry__reference__icontains=reference)
+
+        return qs
+
 
 class TrialBalanceView(APIView):
     permission_classes = [IsAuthenticated, IsModuleEnabled('accounting'), HasPermission('view_financial_reports')]
@@ -193,7 +241,7 @@ class ExpenseBreakdownView(APIView):
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from .models import BankStatement, BankStatementLine, FundTransfer, Transaction
+from .models import BankStatement, BankStatementLine, FundTransfer
 from .serializers import BankStatementSerializer, BankStatementLineSerializer, FundTransferSerializer, TransactionSerializer
 
 class BankStatementViewSet(viewsets.ModelViewSet):

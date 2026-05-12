@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { refundApi } from "@/lib/api/till-refund";
-import apiClient from "@/lib/api/client";
+import { billingApi, type Payment } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,253 +12,298 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, DollarSign } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/lib/hooks/useToast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDebounce } from "@/lib/hooks/useDebounce";
+import { customersApi, type Customer } from "@/lib/api/customers";
+import { getCustomerSelectLabel } from "@/lib/utils/customer-display";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function CreateRefundPage() {
-    const router = useRouter();
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-    const [formData, setFormData] = useState({
-        payment_id: "",
-        invoice_id: "",
-        customer_id: "",
-        amount: "",
-        reason: "",
-        refund_method: "cash",
-        reference_number: "",
+  const [paymentId, setPaymentId] = useState<string>("");
+  const [customerOverride, setCustomerOverride] = useState<string>("");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [refundMethod, setRefundMethod] = useState("cash");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const debouncedCustomerSearch = useDebounce(customerSearch, 350);
+
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ["payments", "refund-new"],
+    queryFn: () =>
+      billingApi.payments.list({
+        status: "completed",
+        ordering: "-payment_date",
+      }),
+  });
+
+  const { data: customersData } = useQuery({
+    queryKey: ["customers", "refund-new", debouncedCustomerSearch],
+    queryFn: () =>
+      customersApi.list({
+        page: 1,
+        page_size: 100,
+        search: debouncedCustomerSearch || undefined,
+      }),
+  });
+
+  const selectedPayment = useMemo(
+    () => payments.find((p) => String(p.id) === paymentId),
+    [payments, paymentId]
+  );
+
+  const customerIdFromPayment =
+    selectedPayment?.customer != null && Number(selectedPayment.customer) > 0
+      ? String(selectedPayment.customer)
+      : "";
+
+  const effectiveCustomerId = customerIdFromPayment || customerOverride;
+
+  const hasValidInvoice =
+    selectedPayment != null &&
+    selectedPayment.invoice != null &&
+    Number(selectedPayment.invoice) > 0;
+
+  const canSubmit =
+    Boolean(paymentId) &&
+    Boolean(effectiveCustomerId) &&
+    hasValidInvoice &&
+    Boolean(amount) &&
+    reason.trim().length > 0;
+
+  const createMutation = useMutation({
+    mutationFn: (data: {
+      original_payment: number;
+      invoice: number;
+      customer: number;
+      amount: string;
+      reason: string;
+      refund_method: string;
+      reference_number?: string;
+    }) => refundApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["refunds"] });
+      toast({ title: "Success", description: "Refund created successfully" });
+      router.push("/billing/refunds");
+    },
+    onError: (error: unknown) => {
+      let description = "Failed to create refund";
+      if (error && typeof error === "object" && "response" in error) {
+        const data = (error as { response?: { data?: { error?: string } } }).response?.data;
+        if (data?.error) description = data.error;
+      }
+      toast({
+        title: "Error",
+        description,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit || !selectedPayment?.invoice) {
+      toast({
+        title: "Error",
+        description: "Select a completed payment and complete all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate({
+      original_payment: parseInt(paymentId, 10),
+      invoice: selectedPayment.invoice,
+      customer: parseInt(effectiveCustomerId, 10),
+      amount,
+      reason: reason.trim(),
+      refund_method: refundMethod,
+      reference_number: referenceNumber.trim() || undefined,
     });
+  };
 
-    const [payments, setPayments] = useState([]);
-    const [invoices, setInvoices] = useState([]);
-    const [customers, setCustomers] = useState([]);
+  return (
+    <div className="p-8 space-y-6 max-w-2xl">
+      <Button variant="ghost" onClick={() => router.back()}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Refunds
+      </Button>
 
-    // Fetch payments, invoices, customers for dropdowns
-    useState(() => {
-        // Use apiClient or centralized APIs to ensure auth headers are included
-        const fetchData = async () => {
-            try {
-                // Using apiClient directly for now to match previous endpoints, but safely
-                const [paymentsRes, invoicesRes, customersRes] = await Promise.all([
-                    apiClient.get('/billing/payments/'),
-                    apiClient.get('/billing/invoices/'),
-                    apiClient.get('/customers/customers/')
-                ]);
-                setPayments(paymentsRes.data.results || []);
-                setInvoices(invoicesRes.data.results || []);
-                setCustomers(customersRes.data.results || []);
-            } catch (error) {
-                console.error("Failed to load form data", error);
-                toast({
-                    title: "Error",
-                    description: "Failed to load required data",
-                    variant: "destructive"
-                });
-            }
-        };
-        fetchData();
-    });
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Create Refund</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Choose the original payment; invoice and customer are taken from that payment when
+          available.
+        </p>
+      </div>
 
-    const createMutation = useMutation({
-
-        mutationFn: (data: any) => refundApi.create(data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['refunds'] });
-            toast({ title: "Success", description: "Refund created successfully" });
-            router.push('/billing/refunds');
-        },
-
-        onError: (error: any) => {
-            toast({
-                title: "Error",
-                description: error.response?.data?.error || "Failed to create refund",
-                variant: "destructive",
-            });
-        },
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.payment_id || !formData.invoice_id || !formData.customer_id || !formData.amount || !formData.reason) {
-            toast({
-                title: "Error",
-                description: "Please fill in all required fields",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        createMutation.mutate({
-            original_payment: parseInt(formData.payment_id),
-            invoice: parseInt(formData.invoice_id),
-            customer: parseInt(formData.customer_id),
-            amount: formData.amount,
-            reason: formData.reason,
-            refund_method: formData.refund_method,
-            reference_number: formData.reference_number,
-        });
-    };
-
-    return (
-        <div className="p-8 space-y-6">
-            <Button variant="ghost" onClick={() => router.back()}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Refunds
-            </Button>
-
-            <div>
-                <h1 className="text-3xl font-bold">Create Refund</h1>
-                <p className="text-muted-foreground mt-1">Request a refund for a payment</p>
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Refund details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment">Original payment *</Label>
+              <Select
+                value={paymentId || undefined}
+                onValueChange={(val) => {
+                  setPaymentId(val);
+                  setCustomerOverride("");
+                }}
+                disabled={paymentsLoading}
+              >
+                <SelectTrigger id="payment">
+                  <SelectValue
+                    placeholder={paymentsLoading ? "Loading payments…" : "Select payment…"}
+                  />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 z-[200]">
+                  {payments.map((p: Payment) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.payment_number ?? `#${p.id}`} — {p.customer_name ?? "Customer"} —{" "}
+                      {p.invoice_number ? `#${p.invoice_number}` : `Inv ${p.invoice}`} —{" "}
+                      {formatCurrency(parseFloat(String(p.amount)))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!paymentsLoading && payments.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No completed payments in scope. Record a payment first, or check branch filters.
+                </p>
+              )}
             </div>
 
-            <form onSubmit={handleSubmit}>
-                <div className="max-w-2xl space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Refund Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="payment">Original Payment *</Label>
-                                    <select
-                                        id="payment"
-                                        value={formData.payment_id}
-                                        onChange={(e) => setFormData({ ...formData, payment_id: e.target.value })}
-                                        className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
-                                        required
-                                    >
-                                        <option value="">Select payment...</option>
+            {selectedPayment && (
+              <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                <p>
+                  <span className="text-muted-foreground">Invoice: </span>
+                  <span className="font-medium">
+                    {selectedPayment.invoice_number ?? `#${selectedPayment.invoice}`}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Customer: </span>
+                  <span className="font-medium">
+                    {selectedPayment.customer_name ?? "—"}
+                  </span>
+                </p>
+              </div>
+            )}
 
-                                        {payments.map((p: any) => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.payment_number} - ${p.amount}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="invoice">Invoice *</Label>
-                                    <select
-                                        id="invoice"
-                                        value={formData.invoice_id}
-                                        onChange={(e) => setFormData({ ...formData, invoice_id: e.target.value })}
-                                        className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
-                                        required
-                                    >
-                                        <option value="">Select invoice...</option>
-
-                                        {invoices.map((inv: any) => (
-                                            <option key={inv.id} value={inv.id}>
-                                                {inv.invoice_number} - ${inv.total}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="customer">Customer *</Label>
-                                <select
-                                    id="customer"
-                                    value={formData.customer_id}
-                                    onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                                    className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
-                                    required
-                                >
-                                    <option value="">Select customer...</option>
-
-                                    {customers.map((c: any) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.user?.first_name} {c.user?.last_name} {c.company_name ? `(${c.company_name})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="amount">Refund Amount *</Label>
-                                    <div className="relative mt-1">
-                                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                                        <Input
-                                            id="amount"
-                                            type="number"
-                                            step="0.01"
-                                            min="0.01"
-                                            value={formData.amount}
-                                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                            className="pl-9"
-                                            placeholder="0.00"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="method">Refund Method *</Label>
-                                    <select
-                                        id="method"
-                                        value={formData.refund_method}
-                                        onChange={(e) => setFormData({ ...formData, refund_method: e.target.value })}
-                                        className="w-full px-3 py-2 border border-border rounded-md bg-card mt-1"
-                                    >
-                                        <option value="cash">Cash</option>
-                                        <option value="cheque">Cheque</option>
-                                        <option value="bank_transfer">Bank Transfer</option>
-                                        <option value="pos">POS/Card</option>
-                                        <option value="mobile_money">Mobile Money</option>
-                                        <option value="original_method">Original Payment Method</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="reference">Reference Number (Optional)</Label>
-                                <Input
-                                    id="reference"
-                                    value={formData.reference_number}
-                                    onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
-                                    placeholder="Transaction ID, cheque number, etc."
-                                    className="mt-1"
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="reason">Reason *</Label>
-                                <Textarea
-                                    id="reason"
-                                    value={formData.reason}
-                                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                                    placeholder="Explain why this refund is being requested..."
-                                    className="mt-1"
-                                    rows={4}
-                                    required
-                                />
-                            </div>
-
-                            <div className="flex gap-3 pt-4">
-                                <Button
-                                    type="submit"
-                                    disabled={createMutation.isPending}
-                                    className="flex-1"
-                                >
-                                    {createMutation.isPending ? 'Creating...' : 'Create Refund'}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => router.back()}
-                                    className="flex-1"
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {selectedPayment && !customerIdFromPayment && (
+              <div className="space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <Label>Customer *</Label>
+                  <Input
+                    className="h-8 sm:max-w-xs"
+                    placeholder="Search customers…"
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                  />
                 </div>
-            </form>
-        </div>
-    );
+                <Select
+                  value={customerOverride || undefined}
+                  onValueChange={setCustomerOverride}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select customer…" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 z-[200]">
+                    {(customersData?.results ?? []).map((c: Customer) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {getCustomerSelectLabel(c)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  This payment had no linked customer id; pick the customer manually.
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Refund amount *</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="pl-9"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Refund method *</Label>
+                <Select value={refundMethod} onValueChange={setRefundMethod}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="cheque">Cheque</SelectItem>
+                    <SelectItem value="bank_transfer">Bank transfer</SelectItem>
+                    <SelectItem value="pos">POS / card</SelectItem>
+                    <SelectItem value="mobile_money">Mobile money</SelectItem>
+                    <SelectItem value="original_method">Original payment method</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reference">Reference (optional)</Label>
+              <Input
+                id="reference"
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
+                placeholder="Transaction ID, cheque no., etc."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason *</Label>
+              <Textarea
+                id="reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Why is this refund being issued?"
+                rows={4}
+                required
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button type="submit" disabled={createMutation.isPending || !canSubmit} className="flex-1">
+                {createMutation.isPending ? "Creating…" : "Create refund"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
+    </div>
+  );
 }

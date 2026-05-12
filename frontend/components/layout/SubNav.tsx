@@ -324,12 +324,13 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   ],
   billing: [
     { name: "Invoices", href: "/billing/invoices", permission: "view_billing", icon: Receipt },
-    { name: "Proforma Invoices", href: "/billing/proformas", permission: "view_billing", icon: ClipboardList },
     { name: "Estimates", href: "/billing/estimates", permission: "view_billing", icon: Calculator },
+    { name: "Proforma Invoices", href: "/billing/proformas", permission: "view_billing", icon: ClipboardList },
     { name: "Credit Notes", href: "/billing/credit-notes", permission: "view_billing", icon: MinusSquare },
     { name: "Till Management", href: "/billing/tills", permission: "view_billing", icon: Banknote },
     { name: "Refunds", href: "/billing/refunds", permission: "view_billing", icon: Undo2 },
     { name: "Bills", href: "/billing/bills", permission: "view_billing", icon: CreditCard },
+    { name: "Payments", href: "/billing/payments", permission: "view_billing", icon: Wallet },
   ],
 
   admin: [

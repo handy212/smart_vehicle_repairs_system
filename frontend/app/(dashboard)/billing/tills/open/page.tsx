@@ -27,10 +27,16 @@ export default function OpenTillPage() {
             router.push('/billing/tills');
         },
 
-        onError: (error: any) => {
+        onError: (error: unknown) => {
+            let description = "Failed to open till";
+            if (error && typeof error === "object" && "response" in error) {
+                const data = (error as { response?: { data?: { error?: string } } }).response
+                    ?.data;
+                if (data?.error) description = data.error;
+            }
             toast({
                 title: "Error",
-                description: error.response?.data?.error || "Failed to open till",
+                description,
                 variant: "destructive",
             });
         },
@@ -64,6 +70,11 @@ export default function OpenTillPage() {
             <div>
                 <h1 className="text-3xl font-bold">Open Till</h1>
                 <p className="text-muted-foreground mt-1">Start a new cash register session</p>
+                <p className="mt-3 text-sm text-muted-foreground max-w-2xl">
+                    After opening, use <strong>Till Management</strong> to record <strong>pay in</strong> and{" "}
+                    <strong>pay out</strong> (float, safe drops, bank change). Those movements update expected
+                    cash and appear on the till detail export.
+                </p>
             </div>
 
             {/* Form */}

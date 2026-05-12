@@ -1,9 +1,25 @@
-
+import type { LucideIcon } from "lucide-react";
 import {
-    ClipboardList, Package, CreditCard, Users, Car, Calendar,
-    BarChart3, Settings, Truck, Wrench, Search, LayoutDashboard, FileCheck,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    Bell, Ticket, FileBarChart, MessageSquare, ShieldAlert, UserCog
+    Bell,
+    Calculator,
+    Calendar,
+    Car,
+    ClipboardList,
+    CreditCard,
+    FileBarChart,
+    FileCheck,
+    Landmark,
+    LayoutDashboard,
+    MessageSquare,
+    Package,
+    Search,
+    Settings,
+    ShieldAlert,
+    Ticket,
+    Truck,
+    UserCog,
+    Users,
+    Wrench,
 } from "lucide-react";
 
 export type HelpTopic = {
@@ -11,819 +27,712 @@ export type HelpTopic = {
     steps: string[];
     actionLink?: string;
     actionLabel?: string;
+    keywords?: string[];
 };
 
 export type HelpModule = {
     id: string;
     title: string;
     description: string;
-
-    icon: any;
+    icon: LucideIcon;
     topics: HelpTopic[];
+    keywords?: string[];
 };
 
 export const helpContent: Record<string, HelpModule> = {
+    admin: {
+        id: "admin",
+        title: "Admin & Configuration",
+        description: "Settings, users, roles, branches, modules, audit logs, backups, integrations, and feedback.",
+        icon: Settings,
+        keywords: ["configuration", "settings", "admin", "security", "roles", "users", "branches"],
+        topics: [
+            {
+                title: "System settings and integrations",
+                steps: [
+                    "Open Settings to edit grouped system values such as branding, email, business defaults, and other configuration keys.",
+                    "Use Save Changes after editing settings. The button shows a count when unsaved values are present.",
+                    "Use Email Templates from Settings when you need to manage message templates.",
+                    "Open Integrations to edit integration settings in grouped rows, then use Save Changes for pending edits.",
+                    "Use Skills and Asset Categories from the settings subpages when configuring staff skills or fixed-asset categories.",
+                ],
+                actionLink: "/admin/settings",
+                actionLabel: "Open Settings",
+                keywords: ["branding", "email templates", "integrations", "skills", "asset categories"],
+            },
+            {
+                title: "Users, roles, and permissions",
+                steps: [
+                    "Open User Management to search and filter users by role, status, branch, and two-factor authentication state.",
+                    "New staff users are added through HR by using Add via HR, which opens the staff creation flow.",
+                    "Use the user row menu to view, edit, activate or deactivate, manage two-factor authentication, or delete a user when permissions allow.",
+                    "Open Roles & Permissions to create custom roles, edit role metadata, and manage permission assignments by category.",
+                    "System roles cannot be deleted, and roles with assigned users must be reassigned before deletion.",
+                ],
+                actionLink: "/admin/users",
+                actionLabel: "Manage Users",
+                keywords: ["2fa", "activate", "deactivate", "permission", "rbac"],
+            },
+            {
+                title: "Branches and module control",
+                steps: [
+                    "Open Branch Management to create, view, edit, or archive branches.",
+                    "Branch archive uses a typed confirmation so the branch name must match before the action is accepted.",
+                    "Open Module Control to enable or disable system modules with the module switch.",
+                    "Module changes affect module availability for users who have the related permissions.",
+                    "Workflow Builder is currently parked. The page says work orders continue to use the validated repair flow instead of the workflow engine.",
+                ],
+                actionLink: "/admin/modules",
+                actionLabel: "Open Module Control",
+                keywords: ["branches", "modules", "workflow builder", "disabled"],
+            },
+            {
+                title: "Audit logs, backups, imports, and feedback",
+                steps: [
+                    "Open Audit Log to filter by action, search text, and date range, then view detail changes for individual audit events.",
+                    "Use audit export buttons to download CSV or Excel log files, or delete old logs after choosing an age threshold.",
+                    "Open System Backups to create full backups, filter backup history, download completed files, or delete backup records.",
+                    "Open Import History to review import audit entries and export the current import history list.",
+                    "Open Customer Feedback to review feedback by type/status, print branch QR posters, and update feedback status or internal notes.",
+                ],
+                actionLink: "/admin/audit-log",
+                actionLabel: "View Audit Log",
+                keywords: ["backup", "import history", "feedback", "qr", "audit"],
+            },
+        ],
+    },
     dashboard: {
         id: "dashboard",
-        title: "Getting Started",
-        description: "Overview of the main dashboard and navigation.",
+        title: "Dashboard",
+        description: "Action-first overview of operational, cash, recurring revenue, and workflow health.",
         icon: LayoutDashboard,
+        keywords: ["home", "overview", "snapshot", "workflow health"],
         topics: [
             {
-                title: "Dashboard Overview",
+                title: "Reading the dashboard",
                 steps: [
-                    "The Home Dashboard gives you a high-level view of your shop's performance.",
-                    "Check 'Daily Sales' and 'Car Count' widgets for immediate activity.",
-                    "View 'Recent Activity' for the latest system updates.",
-                    "Use the sidebar navigation to access all modules (Work Orders, Inventory, etc.).",
+                    "Use What needs action first to jump into urgent work such as approvals, overdue items, or operational exceptions.",
+                    "Use Operator snapshot for current shop activity such as work orders, appointments, stock alerts, and roadside activity.",
+                    "Use Cash and recurring revenue for billing and subscription indicators, with quick links to Billing and Reports.",
+                    "Use Workflow health to review recent work-order status movement across the last 30 days.",
                 ],
                 actionLink: "/dashboard",
-                actionLabel: "Go to Dashboard"
+                actionLabel: "Open Dashboard",
             },
             {
-                title: "Search",
+                title: "Finding records quickly",
                 steps: [
-                    "Use the search bar in the top navigation or press 'Cmd+K' / 'Ctrl+K'.",
-                    "Search for Customers, Vehicles, Work Orders, or Inventory parts.",
-                    "Select a result to jump directly to that record.",
+                    "Use the global search trigger in the top navigation or press Ctrl+K.",
+                    "Search can route you to supported records such as customers, vehicles, work orders, and inventory.",
+                    "Use the sidebar for module navigation. Items are permission-gated, so unavailable modules may be hidden.",
                 ],
-            }
-        ]
-    },
-    workorders: {
-        id: "workorders",
-        title: "Work Orders",
-        description: "Manage repair jobs, assignments, and tracking.",
-        icon: ClipboardList,
-        topics: [
-            {
-                title: "Creating a Work Order",
-                steps: [
-                    "Click 'New Work Order' from the dashboard",
-                    "Select an existing customer or create a new one",
-                    "Select the vehicle for service and reported issues",
-                    "Save as 'Draft' to prepare or 'Pending' to start workflow"
-                ],
-                actionLink: "/workorders/new",
-                actionLabel: "Create Work Order"
-            },
-            {
-                title: "Workflow & Lifecycle",
-                steps: [
-                    "**Draft**: Initial creation, not yet active.",
-                    "**Inspection/Intake**: Vehicle check-in and DVI.",
-                    "**Diagnosis**: Identifying root cause.",
-                    "**Awaiting Approval**: Estimate sent to customer.",
-                    "**Approved**: Work authorized by customer.",
-                    "**In Progress**: Repairs underway.",
-                    "**Quality Check**: Final verification.",
-                    "**Completed**: Work done, ready for pickup.",
-                    "**Invoiced**: Final invoice generated.",
-                    "**Closed**: Transaction finalized."
-                ]
-            },
-            {
-                title: "Tech Mode",
-                steps: [
-                    "Technicians can use 'Tech Mode' for a focused view",
-                    "View assigned tasks, parts, and labor hours",
-                    "Log time and update status"
-                ],
-                actionLink: "/workorders",
-                actionLabel: "View Work Orders"
-            }
-        ]
-    },
-    inspections: {
-        id: "inspections",
-        title: "Inspections (DVI)",
-        description: "Digital vehicle inspections and checklists.",
-        icon: FileCheck,
-        topics: [
-            {
-                title: "Performing an Inspection",
-                steps: [
-                    "Go to Inspections → 'New Inspection'",
-                    "Select the Work Order or Vehicle to inspect",
-                    "Choose an Inspection Template (e.g., 'Multipoint Inspection')",
-                    "Go through each checklist item, marking Green/Yellow/Red",
-                    "Add photos and notes to any flagged items",
-                    "Save and share the report with the customer via email/SMS",
-                ],
-                actionLink: "/inspections/new",
-                actionLabel: "Start Inspection"
-            },
-            {
-                title: "Managing Templates",
-                steps: [
-                    "Go to Inspections → Templates",
-                    "Create reusable checklists for different service types (Oil Change, Brake Check, etc.)",
-                    "Define categories (Under Hood, Tires, Interior) and items",
-                    "Set default 'Requires Photo' flags for critical items",
-                ],
-                actionLink: "/inspections/templates",
-                actionLabel: "Manage Templates"
-            }
-        ]
-    },
-    inventory: {
-        id: "inventory",
-        title: "Inventory",
-        description: "Track parts, stock levels, and purchase orders.",
-        icon: Package,
-        topics: [
-            {
-                title: "Managing Parts",
-                steps: [
-                    "Go to Inventory → Parts → 'New Part'",
-                    "Enter part details, cost, and selling price",
-                    "Set reorder points for automatic alerts",
-                    "View stock levels and adjust manually if needed"
-                ],
-                actionLink: "/inventory",
-                actionLabel: "Go to Inventory"
-            },
-            {
-                title: "Purchase Order Cycle",
-                steps: [
-                    "**Draft**: Create PO, add items, select supplier.",
-                    "**Submitted**: Finalize and send to supplier.",
-                    "**Confirm Receipt**: When goods arrive, click 'Confirm Receipt'. System automatically updates stock levels for all items.",
-                    "**Cancelled**: Orders can be cancelled if not yet received."
-                ],
-                actionLink: "/inventory/purchase-orders",
-                actionLabel: "Manage POs"
-            }
-        ]
-    },
-    billing: {
-        id: "billing",
-        title: "Billing",
-        description: "Invoices, payments, refunds, and estimates.",
-        icon: CreditCard,
-        topics: [
-            {
-                title: "Generating Invoices",
-                steps: [
-                    "Complete a work order (set status to 'Completed')",
-                    "Click 'Generate Invoice' button",
-                    "Review invoice preview: check customer info, line items, taxes",
-                    "Adjust discount or add late fees if needed",
-                    "Choose payment terms (Due on Receipt, Net 15, Net 30)",
-                    "Click 'Send Invoice' to email customer or 'Print' for hard copy",
-                ],
-            },
-            {
-                title: "Recording Payments",
-                steps: [
-                    "Navigate to Billing → Invoices",
-                    "Find unpaid/partially paid invoice",
-                    "Click 'Record Payment' button",
-                    "Select payment method (Cash, Check, Card, Bank Transfer)",
-                    "Enter amount received (can be partial payment)",
-                    "Add reference number (check #, transaction ID)",
-                    "Click 'Save' - remaining balance updates automatically",
-                ],
-            },
-            {
-                title: "Handling Refunds",
-                steps: [
-                    "Locate the original invoice",
-                    "Click 'Issue Refund' button",
-                    "Select refund reason and enter amount",
-                    "Choose refund method (same as original payment or different)",
-                    "Add notes explaining the refund",
-                    "Refund is recorded as a credit memo linked to original invoice",
-                ],
+                actionLink: "/search",
+                actionLabel: "Open Search",
+                keywords: ["ctrl k", "command palette", "global search"],
             },
         ],
     },
     customers: {
         id: "customers",
         title: "Customers",
-        description: "Client profiles, history, and communication.",
+        description: "Customer list, contacts, imports, exports, filters, and customer creation.",
         icon: Users,
+        keywords: ["contacts", "customer import", "customer export"],
         topics: [
             {
-                title: "Adding New Customers",
+                title: "Managing the customer list",
                 steps: [
-                    "Go to Customers → 'New Customer'",
-                    "Enter basic info: name, email, phone",
-                    "Add address details for invoicing",
-                    "Set customer type (Individual, Business, Fleet)",
-                    "Add payment terms and preferred contact method",
-                    "Save to create customer profile",
+                    "Open Customers to search by customer details and use advanced filters such as status, customer type, created date, and inactive period.",
+                    "Use quick filters to switch common customer segments without rebuilding filters manually.",
+                    "Use the row actions to view, edit, message, schedule, inspect work orders, or delete when your permissions allow.",
+                    "Open Contacts from the Customers page when you need the contacts-focused view.",
                 ],
-                actionLink: "/customers/new",
-                actionLabel: "Add Customer"
+                actionLink: "/customers",
+                actionLabel: "View Customers",
             },
             {
-                title: "Viewing Customer History",
+                title: "Creating and importing customers",
                 steps: [
-                    "Click on a customer from the list",
-                    "View dashboard showing: total spent, outstanding balance, number of visits",
-                    "Switch between tabs: Work Orders, Invoices, Vehicles, Appointments",
-                    "Filter by date range to see specific periods",
-                    "Export customer history as PDF report",
+                    "Use Add Customer to create a customer profile.",
+                    "The customer form supports account status, customer type, contact details, billing information, generated passwords, and welcome email options.",
+                    "Use Import Excel to upload a customer workbook that matches the provided template.",
+                    "Use Export Excel or Export PDF to export the current list results.",
                 ],
+                actionLink: "/customers/new",
+                actionLabel: "Add Customer",
+                keywords: ["welcome email", "password", "xlsx", "pdf"],
             },
         ],
     },
     vehicles: {
         id: "vehicles",
         title: "Vehicles",
-        description: "Fleet management, service history, and VIN decoding.",
+        description: "Fleet records, VIN decoding, VIN scanning, service-due filters, imports, and exports.",
         icon: Car,
+        keywords: ["fleet", "vin", "service due"],
         topics: [
             {
-                title: "Adding Vehicles",
+                title: "Using Fleet Management",
                 steps: [
-                    "Navigate to Vehicles → 'New Vehicle'",
-                    "Enter VIN and click 'Decode' to auto-fill details",
-                    "If decoder unavailable, manually enter make, model, year",
-                    "Link vehicle to owner (customer)",
-                    "Add license plate, color, mileage",
-                    "Upload vehicle photos if needed",
-                    "Save vehicle profile",
+                    "Open Vehicles to search fleet records and switch between quick filters such as active, inactive, and services due.",
+                    "Use Fleet Filters for status, make, model, year range, engine type, created date, days ahead, and due service type.",
+                    "Use row actions to view, edit, inspect history, or delete vehicles when your permissions allow.",
+                    "Use Export Excel or Export PDF to export fleet data, and Import Excel to upload vehicles from a workbook.",
+                ],
+                actionLink: "/vehicles",
+                actionLabel: "View Vehicles",
+            },
+            {
+                title: "Adding vehicles with VIN tools",
+                steps: [
+                    "Use Add Vehicle to create a vehicle profile.",
+                    "Enter the 17-character VIN and use Decode VIN to pull available make, model, year, trim, engine, transmission, and extra VIN data.",
+                    "Use the VIN scanner button to capture a VIN barcode from the camera when supported.",
+                    "The form checks duplicate VINs before saving a new vehicle.",
                 ],
                 actionLink: "/vehicles/new",
-                actionLabel: "Add Vehicle"
-            },
-            {
-                title: "Tracking Service History",
-                steps: [
-                    "Open vehicle profile",
-                    "View 'Service History' tab",
-                    "See chronological list of all work orders",
-                    "Filter by service type or date range",
-                    "View upcoming maintenance recommendations",
-                    "Export service history as PDF for customer",
-                ],
+                actionLabel: "Add Vehicle",
+                keywords: ["decode vin", "scan vin", "duplicate vin"],
             },
         ],
-    },
-    technicians: {
-        id: "technicians",
-        title: "Technicians",
-        description: "Manage staff, skills, and efficiency.",
-        icon: Wrench,
-        topics: [
-            {
-                title: "Onboarding Technicians",
-                steps: [
-                    "Go to Technicians → 'New Technician'",
-                    "Enter personal details and employment start date",
-                    "Assign 'Skills' (e.g., Electrical, Engine, Tire) to help with job scheduling",
-                    "Set hourly cost rate for profitability calculations",
-                ],
-                actionLink: "/technicians/new",
-                actionLabel: "Add Technician"
-            },
-            {
-                title: "Tracking Efficiency",
-                steps: [
-                    "View Technician profile to see Efficiency metrics (Billed Hours / Worked Hours)",
-                    "Monitor current active jobs and status",
-                    "Review historical job performance and warranty return rates",
-                ],
-            }
-        ]
-    },
-    roadside: {
-        id: "roadside",
-        title: "Roadside Assistance",
-        description: "Dispatch and manage emergency service requests.",
-        icon: Truck,
-        topics: [
-            {
-                title: "Dispatch Lifecycle",
-                steps: [
-                    "**Requested**: New request logged via phone or app.",
-                    "**Dispatched**: Technician assigned. Status -> 'Dispatched'.",
-                    "**En Route/On Site**: Technician travel and arrival updates.",
-                    "**In Progress**: Service being performed.",
-                    "**Completed**: Service done, invoice generated automatically.",
-                    "**Cancelled**: Request aborted."
-                ],
-                actionLink: "/roadside",
-                actionLabel: "View Requests"
-            },
-            {
-                title: "Technician View",
-                steps: [
-                    "Drivers use the mobile-friendly '/roadside/technician' view",
-                    "One-tap status updates (En Route, Arrived, Start, Complete)",
-                    "View customer details and map location",
-                    "Upload service photos"
-                ],
-                actionLink: "/roadside/technician",
-                actionLabel: "Driver View"
-            }
-        ]
     },
     appointments: {
         id: "appointments",
         title: "Appointments",
-        description: "Calendar scheduling and capacity planning.",
+        description: "Appointment list, calendar view, scheduling, filters, exports, and bulk status updates.",
         icon: Calendar,
+        keywords: ["calendar", "schedule", "bulk status"],
         topics: [
             {
-                title: "Scheduling Appointments",
+                title: "Scheduling and viewing appointments",
                 steps: [
-                    "Go to Appointments → 'New Appointment'",
-                    "Select customer and vehicle",
-                    "Choose date and time slot",
-                    "Assign technician (system shows availability)",
-                    "Select service type and estimated duration",
-                    "Add special instructions or customer requests",
-                    "Send confirmation email to customer",
+                    "Open Appointments to search and filter appointments by status, date range, service type, and branch-aware data.",
+                    "Use Calendar View to switch from the table view to the calendar page.",
+                    "Use New Appointment to create a scheduled appointment.",
+                    "Use row actions to view, edit, or delete an appointment when allowed.",
                 ],
-                actionLink: "/appointments/new",
-                actionLabel: "Book Appointment"
+                actionLink: "/appointments",
+                actionLabel: "View Appointments",
             },
             {
-                title: "Converting to Work Order",
+                title: "Bulk actions and exports",
                 steps: [
-                    "Open scheduled appointment",
-                    "When customer arrives, click 'Convert to Work Order'",
-                    "Pre-filled work order opens with appointment details",
-                    "Add any additional services discovered during inspection",
-                    "Save work order to begin service",
+                    "Select appointments in the table to reveal bulk actions.",
+                    "Use bulk status update to move selected appointments to a new status.",
+                    "Use bulk delete when selected appointments should be removed.",
+                    "Use Export Excel or Export PDF from the appointments header.",
                 ],
+                actionLink: "/appointments/calendar",
+                actionLabel: "Calendar View",
+            },
+        ],
+    },
+    workorders: {
+        id: "workorders",
+        title: "Work Orders",
+        description: "Repair jobs, list and Kanban views, filters, bulk status updates, printing, diagnosis, and repair pages.",
+        icon: ClipboardList,
+        keywords: ["repair", "kanban", "diagnosis", "repairs", "print"],
+        topics: [
+            {
+                title: "Managing work orders",
+                steps: [
+                    "Open Work Orders to search, sort, and filter jobs by status, priority, customer, technician, and created date.",
+                    "Use New Work Order to create a job from the staff dashboard.",
+                    "Use the row actions to view, edit, print, open diagnosis, or open repairs depending on status and permissions.",
+                    "Use Export Excel or Export PDF to export the current work-order list.",
+                ],
+                actionLink: "/workorders",
+                actionLabel: "View Work Orders",
+            },
+            {
+                title: "Kanban and bulk status updates",
+                steps: [
+                    "Open Kanban Board to drag work orders between implemented status columns.",
+                    "Filter Kanban by technician, priority, or My Tasks.",
+                    "From the list view, select work orders to update status or delete in bulk.",
+                    "Status options include draft/requested style intake states, assigned, diagnosis, awaiting approval, approved, in progress, quality check, completed, invoiced, closed, and cancelled states as configured in the page.",
+                ],
+                actionLink: "/workorders/kanban",
+                actionLabel: "Open Kanban",
+                keywords: ["drag", "bulk update", "status"],
+            },
+        ],
+    },
+    inspections: {
+        id: "inspections",
+        title: "Inspections",
+        description: "Digital vehicle inspections, templates, perform flow, status filters, and printable reports.",
+        icon: FileCheck,
+        keywords: ["dvi", "templates", "green", "yellow", "red"],
+        topics: [
+            {
+                title: "Running inspections",
+                steps: [
+                    "Open Vehicle Inspections to search inspections and filter by status or overall result.",
+                    "Use New Inspection to create an inspection record.",
+                    "Open an inspection to view it, or use the perform route to complete checklist items.",
+                    "Inspection item controls support good, attention, and critical style statuses, notes, and photos.",
+                ],
+                actionLink: "/inspections",
+                actionLabel: "View Inspections",
+            },
+            {
+                title: "Templates and reports",
+                steps: [
+                    "Open Templates from the inspections header to manage reusable inspection templates.",
+                    "Use New Template to create a checklist template.",
+                    "Use Print Report from an inspection row to open the printable inspection document.",
+                    "Implemented status filters include draft, in progress, completed, approved, and rejected.",
+                ],
+                actionLink: "/inspections/templates",
+                actionLabel: "Manage Templates",
+            },
+        ],
+    },
+    inventory: {
+        id: "inventory",
+        title: "Inventory",
+        description: "Parts, barcode scanning, imports, suppliers, purchase orders, transfers, categories, and bundles.",
+        icon: Package,
+        keywords: ["parts", "stock", "barcode", "supplier", "purchase order", "transfer", "bundle"],
+        topics: [
+            {
+                title: "Parts and stock list",
+                steps: [
+                    "Open Inventory to search parts, use inventory filters, and review stock-related columns.",
+                    "Use Scan Barcode to scan a barcode or QR code into inventory search.",
+                    "Use Add Part to create a new part.",
+                    "Use Import Excel, Export Excel, Export PDF, or Export for Import for the parts list.",
+                    "Select multiple parts to delete in bulk when allowed.",
+                ],
+                actionLink: "/inventory",
+                actionLabel: "Open Inventory",
+            },
+            {
+                title: "Suppliers, POs, transfers, and bundles",
+                steps: [
+                    "Open Suppliers to add, view, edit, or delete supplier records.",
+                    "Open Purchase Orders to create new POs, filter by status, view/edit records, and print purchase orders.",
+                    "Open Inter-Branch Transfers to create transfers between branches and track transfer status.",
+                    "Open Bundles to create service bundles that group parts and service items.",
+                    "Export buttons on some inventory subpages are present but currently show a coming-soon notification instead of downloading a file.",
+                ],
+                actionLink: "/inventory/purchase-orders",
+                actionLabel: "Purchase Orders",
+                keywords: ["suppliers", "po", "transfers", "bundles", "coming soon"],
+            },
+        ],
+    },
+    billing: {
+        id: "billing",
+        title: "Billing",
+        description: "Invoices, estimates, payments, refunds, bills, credit notes, proformas, and tills.",
+        icon: CreditCard,
+        keywords: ["invoice", "estimate", "payment", "refund", "till", "proforma", "bill"],
+        topics: [
+            {
+                title: "Invoices and estimates",
+                steps: [
+                    "Open Invoices to search, filter, export, print, download aging reports, bulk send, and create new invoices.",
+                    "Open Estimates to search, filter by status, export, bulk send, bulk update status, and create new estimates.",
+                    "Invoice and estimate detail pages include view/edit actions and printable document flows.",
+                    "Bulk send is permission-gated and uses the selected records from the table.",
+                ],
+                actionLink: "/billing/invoices",
+                actionLabel: "View Invoices",
+            },
+            {
+                title: "Payments, refunds, bills, and tills",
+                steps: [
+                    "Open Payments to review receipts, allocations, and payment history.",
+                    "Payment details support printing receipts and processing a full or partial refund for completed payments.",
+                    "Open Refunds to create refunds and approve or reject pending refund records.",
+                    "Open Vendor Bills, Credit Notes, and Proforma Invoices for their dedicated list and creation flows.",
+                    "Open Till Management to open or close tills, record pay in and pay out (drawer movements), view today's tills, export till detail as Excel (summary + movements), and jump to till history or refunds.",
+                ],
+                actionLink: "/billing/payments",
+                actionLabel: "View Payments",
+                keywords: ["receipt", "aging report", "refund approval"],
             },
         ],
     },
     accounting: {
         id: "accounting",
         title: "Accounting",
-        description: "Financials, reconciliation, and reporting.",
-        icon: BarChart3,
+        description: "Financial overview, chart of accounts, journal entries, accruals, budgets, controls, transfers, reconciliation, and reports.",
+        icon: Calculator,
+        keywords: ["ledger", "journal", "accrual", "budget", "reconciliation", "quickbooks"],
         topics: [
             {
-                title: "Unified Analytics Dashboard",
+                title: "Financial overview and reports",
                 steps: [
-                    "Navigate to Accounting → Overview to view the consolidated dashboard",
-                    "Monitor 'Pulse' metrics: Cash on Hand, Net Profit, Burn Rate, and Runway",
-                    "Use the Interactive Chart to toggle between Profitability, Cash Flow, and Revenue trends",
-                    "Check the 'Operational Grid' for smart alerts (e.g., Low Runway, Overdue AR) and top jobs",
-                    "Use global filters to analyze data by specific Date Range or Branch",
+                    "Open Accounting to review cash on hand, net profit, revenue, expenses, trends, and operational financial cards.",
+                    "Use Sync from QuickBooks to trigger a QuickBooks Online sync when configured.",
+                    "Use Export Report from the accounting overview to download the overview report.",
+                    "Use accounting report pages for profit and loss, balance sheet, cash flow, trial balance, tax, aging, expense breakdown, and job profitability.",
                 ],
                 actionLink: "/accounting",
-                actionLabel: "Go to Dashboard"
+                actionLabel: "Open Accounting",
             },
             {
-                title: "Bank Reconciliation",
+                title: "Ledger tools",
                 steps: [
-                    "Go to Accounting → Banking → Reconciliation",
-                    "Upload bank statements (CSV) or create manual statement records",
-                    "Use the split-view interface to match Bank Lines with System Transactions",
-                    "Use 'Create & Match' for missing items like bank fees or interest",
-                    "Ensure 'Difference' is 0.00 to finalize and close the reconciliation period",
+                    "Open Chart of Accounts to create or edit accounts and toggle account active state.",
+                    "Open Journal Entries to create new entries and reverse posted entries.",
+                    "Open Accruals to review active accruals, create manual accruals, create accruals from candidates, and reverse accruals.",
+                    "Open Budgets to create budgets, approve draft budgets, view details, and open budget reports.",
+                    "Open Controls & Compliance to save accounting lock dates and post closing entries.",
+                ],
+                actionLink: "/accounting/journal-entries",
+                actionLabel: "Journal Entries",
+            },
+            {
+                title: "Banking and fund movement",
+                steps: [
+                    "Open Bank Reconciliation to create statement records and reconcile or view existing statements.",
+                    "Inside a reconciliation, use unmatched and matched views, match bank lines, or create and match missing transactions.",
+                    "Open Fund Transfers to create transfers between accounts and review transfer history.",
                 ],
                 actionLink: "/accounting/banking/reconciliation",
-                actionLabel: "Start Reconciliation"
-            },
-            {
-                title: "Managing Accruals",
-                steps: [
-                    "Navigate to Accounting → Accruals",
-                    "Review 'Candidates' for auto-detected unbilled POs (Expense) or uninvoiced WOs (Revenue)",
-                    "Select items to auto-generate Accrual Journal Entries",
-                    "Use 'Active Accruals' to view and Reverse accruals in the subsequent period",
-                    "Manually create accruals for estimated costs (e.g., utilities) as needed",
-                ],
-                actionLink: "/accounting/accruals",
-                actionLabel: "Manage Accruals"
-            },
-            {
-                title: "Budgeting & Controls",
-                steps: [
-                    "Go to Accounting → Budgets to create Annual or Quarterly budgets",
-                    "Allocate budget limits to specific GL accounts",
-                    "Track real-time performance using the 'Budget vs Actual' report",
-                    "Monitor dashboard insights for budget overrun alerts",
-                ],
-                actionLink: "/accounting/budgets",
-                actionLabel: "View Budgets"
-            },
-            {
-                title: "Financial Reporting",
-                steps: [
-                    "Access standard reports: P&L, Balance Sheet, Cash Flow, Trial Balance, and Aging",
-                    "Use 'Job Profitability' to analyze margins per work order or technician",
-                    "Filter P&L by 'Branch' for multi-location performance analysis",
-                    "Export professional PDF 'Board Packs' directly from the Dashboard",
-                ],
-                actionLink: "/accounting/reports/profit-loss",
-                actionLabel: "View P&L"
-            },
-            {
-                title: "Journal Entries",
-                steps: [
-                    "Go to Accounting → Journal Entries → 'New Entry' for manual GL adjustments",
-                    "Ensure Debits equal Credits (system enforces balance)",
-                    "Use 'Recurring Entries' for standard monthly adjustments (if configured)",
-                    "System events (Invoices, Bills, Payments) create auto-locked Journal Entries",
-                ],
-                actionLink: "/accounting/journal-entries/new",
-                actionLabel: "New Entry"
-            },
-        ],
-    },
-    admin: {
-        id: "admin",
-        title: "Administration",
-        description: "User management, security, and system configuration.",
-        icon: Settings,
-        topics: [
-            {
-                title: "User Management",
-                steps: [
-                    "Go to Administration → Users.",
-                    "Click 'New User' to create account.",
-                    "Enter user details and assign a Role (Admin, Manager, Technician, etc.).",
-                    "Assign a default Branch to restrict their data view to a specific location if needed.",
-                    "The system sends an invitation email; users set their password upon first login.",
-                ],
-                actionLink: "/admin/users",
-                actionLabel: "Manage Users"
-            },
-            {
-                title: "Roles & Permissions (RBAC)",
-                steps: [
-                    "Navigate to Administration → Roles.",
-                    "Standard roles (Super Admin, Manager, Technician) are pre-configured.",
-                    "Create 'Custom Roles' to define granular access to specific modules (e.g., 'Inventory Only').",
-                    "Toggle specific permissions (View, Create, Edit, Delete) for each module.",
-                ],
-                actionLink: "/admin/roles",
-                actionLabel: "Manage Roles"
-            },
-            {
-                title: "Audit Logs",
-                steps: [
-                    "Go to Administration → Audit Log.",
-                    "Track every action taken in the system, including who did it and when.",
-                    "Filter by User, Action Type (Create, Update, Delete), or Date Range.",
-                    "Use this for troubleshooting data changes or security reviews.",
-                ],
-                actionLink: "/admin/audit-log",
-                actionLabel: "View Audit Log"
-            },
-            {
-                title: "Backups & Recovery",
-                steps: [
-                    "Navigate to Administration → Backups.",
-                    "The system performs automatic daily backups.",
-                    "Manually trigger a backup before major configuration changes.",
-                    "Download backup files to secure offline storage.",
-                ],
-                actionLink: "/admin/backups",
-                actionLabel: "Manage Backups"
-            },
-            {
-                title: "System Branding & Settings",
-                steps: [
-                    "Navigate to Administration → Settings.",
-                    "Set Company Logo, Colors, and Website Name.",
-                    "Configure Branch details and Currency settings.",
-                    "Manage 'Categories' for Inventory, Vehicles, and Assets.",
-                ],
-                actionLink: "/admin/settings",
-                actionLabel: "Go to Settings"
+                actionLabel: "Bank Reconciliation",
             },
         ],
     },
     fixedassets: {
         id: "fixedassets",
         title: "Fixed Assets",
-        description: "Track equipment, tools, and asset depreciation.",
-        icon: Package,
+        description: "Asset register, categories, valuation report, and asset detail/edit flows.",
+        icon: Landmark,
+        keywords: ["assets", "depreciation", "valuation"],
         topics: [
             {
-                title: "Tracking Assets",
+                title: "Managing fixed assets",
                 steps: [
-                    "Go to Fixed Assets to view list of all equipment and tools",
-                    "Monitor 'Net Book Value' and 'Accumulated Depreciation' stats",
-                    "Filter by status: Active, Inactive, Disposed, Sold, or Retired",
-                    "Click on an asset to view full history including acquisition cost",
+                    "Open Fixed Assets to review the asset register and asset valuation indicators.",
+                    "Use Add Asset to create an asset when you have the create-assets permission.",
+                    "Open an asset to view detail, or use the edit route to update asset information.",
+                    "Open Categories to manage fixed-asset categories.",
                 ],
                 actionLink: "/fixed-assets",
-                actionLabel: "View Assets"
+                actionLabel: "View Assets",
             },
             {
-                title: "Asset Management",
+                title: "Valuation reporting",
                 steps: [
-                    "Click 'Add Asset' to register new equipment",
-                    "Assign assets to specific branches for location tracking",
-                    "View 'Valuation' report for current financial standing",
+                    "Use the Valuation Report action from Fixed Assets to open the valuation report page.",
+                    "Use the report to review current asset valuation data separate from the main register.",
+                    "Keep category and acquisition information current so valuation reporting remains useful.",
                 ],
-            }
-        ]
-    },
-    diagnosis: {
-        id: "diagnosis",
-        title: "Diagnosis",
-        description: "AI-powered diagnostics and troubleshooting.",
-        icon: Search,
-        topics: [
-            {
-                title: "Diagnosis Overview",
-                steps: [
-                    "View all active diagnosis sessions in the main list",
-                    "Filter by status: In Progress, Completed, or On Hold",
-                    "Sort by 'Fee High to Low' to prioritize high-value diagnostic jobs",
-                ],
-                actionLink: "/diagnosis",
-                actionLabel: "Diagnosis List"
+                actionLink: "/fixed-assets/reports/valuation",
+                actionLabel: "Valuation Report",
             },
-            {
-                title: "Workflow",
-                steps: [
-                    "Technicians start a diagnosis from a Work Order",
-                    "Record customer complaints and vehicle symptoms",
-                    "System tracks 'Diagnostic Fee' for billing",
-                    "Mark status as 'Completed' when issue is identified",
-                ],
-            }
-        ]
+        ],
     },
     subscriptions: {
         id: "subscriptions",
         title: "Subscriptions",
-        description: "Manage recurring service plans and memberships.",
+        description: "Service subscriptions, packages, renewals, plan changes, cancellation, and deletion.",
         icon: CreditCard,
+        keywords: ["membership", "package", "renew", "plan"],
         topics: [
             {
-                title: "Package Management",
+                title: "Managing subscriptions",
                 steps: [
-                    "Go to 'Manage Packages' to define service tiers (e.g., Gold, Lite)",
-                    "Set monthly pricing and duration (e.g., 12 months)",
-                    "Configure limits for specific services (e.g., 5 Towing km, 1 Emergency Fuel)",
-                    "Toggle packages as Active/Inactive",
-                ],
-                actionLink: "/subscriptions/packages",
-                actionLabel: "Manage Packages"
-            },
-            {
-                title: "Subscription Lifecycle",
-                steps: [
-                    "Create new subscriptions for customers, linking specific vehicles",
-                    "Monitor 'Days Remaining' and 'Payment Status' (Paid/Pending)",
-                    "Use 'Renew' button to extend active subscriptions",
-                    "Check 'Refund Eligibility' for cancellations (calculated automatically based on usage)",
-                    "Track usage history (e.g., how many 'Flat Tyre' services used)",
+                    "Open Subscriptions to search and filter by payment state.",
+                    "Use New Subscription to create a subscription through the create dialog.",
+                    "Use row actions to view details, renew, change plan, cancel, or permanently delete a subscription.",
+                    "Renewal creates a pending invoice before the new period starts.",
                 ],
                 actionLink: "/subscriptions",
-                actionLabel: "View Subscriptions"
-            }
-        ]
-    },
-    servicesdue: {
-        id: "servicesdue",
-        title: "Services Due",
-        description: "Track and manage upcoming maintenance services.",
-        icon: Bell,
-        topics: [
-            {
-                title: "Monitoring Due Services",
-                steps: [
-                    "Navigate to 'Services Due' from the sidebar.",
-                    "View vehicles requiring immediate attention (Oil changes, Brake checks, etc.).",
-                    "Filter by time horizon (Due Today, Next 7 Days, Overdue).",
-                    "Filter by service type and customer priority.",
-                ],
-                actionLink: "/services-due",
-                actionLabel: "View Services Due"
+                actionLabel: "View Subscriptions",
             },
             {
-                title: "Customer Outreach",
+                title: "Managing packages",
                 steps: [
-                    "Select cars that are overdue for service.",
-                    "Click 'Send Reminder' to trigger an automated SMS/Email.",
-                    "Log follow-up calls in the customer notes profile.",
+                    "Open Packages to manage the subscription packages that subscriptions can use.",
+                    "Create or update packages before changing a customer's subscription plan.",
+                    "Use plan change from a subscription row to choose a new package.",
                 ],
-            }
-        ]
+                actionLink: "/subscriptions/packages",
+                actionLabel: "Manage Packages",
+            },
+        ],
+    },
+    technicians: {
+        id: "technicians",
+        title: "Technicians",
+        description: "Technician roster, assignment metrics, status filters, branch filters, grid/list views, and HR staff onboarding.",
+        icon: Wrench,
+        keywords: ["staff", "assigned", "available", "skills"],
+        topics: [
+            {
+                title: "Using the technician roster",
+                steps: [
+                    "Open Technicians to search technicians and filter by current status or branch.",
+                    "Switch between grid and list views using the view toggle.",
+                    "Use the roster cards or table to review assigned jobs, completed work, availability, and current status.",
+                    "Open a technician profile to view performance metrics, job history, certifications, and schedule components.",
+                ],
+                actionLink: "/technicians",
+                actionLabel: "View Technicians",
+            },
+            {
+                title: "Adding technicians",
+                steps: [
+                    "Technicians are added through HR staff onboarding, not from a separate technician-only form.",
+                    "Use Add Technician from the technician empty state or Add Staff from HR to create the staff record.",
+                    "Assign skills from the technician skills/settings pages when available for your permissions.",
+                ],
+                actionLink: "/hr/staff/new",
+                actionLabel: "Add via HR",
+                keywords: ["onboarding", "hr", "skills"],
+            },
+        ],
+    },
+    hr: {
+        id: "hr",
+        title: "Human Resources",
+        description: "Staff, departments, positions, leave, attendance, payroll, recruitment, performance, training, and compliance.",
+        icon: UserCog,
+        keywords: ["staff", "payroll", "leave", "attendance", "recruitment", "training"],
+        topics: [
+            {
+                title: "HR dashboard and staff",
+                steps: [
+                    "Open HR to review staff totals, pending leave, today's attendance, expiring compliance documents, and open positions.",
+                    "Use Add Staff to create a staff member.",
+                    "Open Staff to search, filter, switch grid/list view, open the org chart, bulk update status, or bulk delete staff.",
+                    "Open Departments & Positions to create, edit, or delete departments and positions.",
+                ],
+                actionLink: "/hr",
+                actionLabel: "Open HR",
+            },
+            {
+                title: "Leave, attendance, and payroll",
+                steps: [
+                    "Open Leave Management to apply leave, approve or reject pending requests, filter by status, and manage Leave Types.",
+                    "Open Attendance to review daily attendance and time-tracking information.",
+                    "Open Payroll to create payroll periods, process payroll, edit periods, mark payroll paid, reverse payroll, or delete a period when allowed.",
+                    "Open Payroll Components to manage salary components used by payroll.",
+                ],
+                actionLink: "/hr/payroll",
+                actionLabel: "Open Payroll",
+            },
+            {
+                title: "Recruitment, reviews, training, and compliance",
+                steps: [
+                    "Open Recruitment to post jobs, edit/delete job openings, view applicants, and delete applicants.",
+                    "Open Performance Reviews to initiate reviews and delete review records.",
+                    "Open Training to create programs, edit/delete programs, and review available or assigned training.",
+                    "Open Compliance to upload documents, edit document metadata, download document files, and track expiring documents.",
+                ],
+                actionLink: "/hr/recruitment",
+                actionLabel: "Open Recruitment",
+            },
+        ],
+    },
+    roadside: {
+        id: "roadside",
+        title: "Roadside Assistance",
+        description: "Roadside request list, filters, request creation, dispatch status, technician view, and subscription coverage flags.",
+        icon: Truck,
+        keywords: ["dispatch", "towing", "battery", "flat tyre", "subscription coverage"],
+        topics: [
+            {
+                title: "Managing roadside requests",
+                steps: [
+                    "Open Roadside to search and filter requests by status, service type, subscription coverage, and created date.",
+                    "Use quick filters such as New Requests and active request views.",
+                    "Use New Request to create a roadside request.",
+                    "Use row actions to view, edit, or delete a request. Delete is only shown for requested items before dispatch.",
+                    "The Export Excel menu item currently shows a coming-soon notification.",
+                ],
+                actionLink: "/roadside",
+                actionLabel: "View Roadside",
+            },
+            {
+                title: "Technician roadside view",
+                steps: [
+                    "Open Technician View to see active requested, dispatched, en route, on site, and in-progress roadside jobs.",
+                    "Use the status actions in the technician view to move a request through the field-service flow.",
+                    "Open a request detail page to review customer, vehicle, location, billing, and status information.",
+                ],
+                actionLink: "/roadside/technician",
+                actionLabel: "Technician View",
+                keywords: ["en route", "on site", "field service"],
+            },
+        ],
     },
     gatepasses: {
         id: "gatepasses",
         title: "Gate Passes",
-        description: "Control vehicle entry and exit from the facility.",
+        description: "Vehicle release passes linked to work orders, status filters, creation, edits, and deletion.",
         icon: Ticket,
+        keywords: ["release", "vehicle exit", "pass"],
         topics: [
             {
-                title: "Issuing a Gate Pass",
+                title: "Using gate passes",
                 steps: [
-                    "Navigate to Gate Passes → 'Issue Pass'.",
-                    "Select the Work Order or Vehicle being released.",
-                    "Confirm that the balance is fully paid or an exception is authorized.",
-                    "Enter the person authorized to pick up the vehicle.",
-                    "Print the pass or send a digital version to the gate security.",
+                    "Open Gate Passes to search and filter passes by status and created date.",
+                    "Use New Gate Pass to create a pass.",
+                    "Open a gate pass row to view it, or use row actions to edit or delete when allowed.",
+                    "Gate pass rows link back to the related work order when available.",
                 ],
                 actionLink: "/gatepass",
-                actionLabel: "Manage Passes"
+                actionLabel: "View Gate Passes",
+            },
+        ],
+    },
+    diagnosis: {
+        id: "diagnosis",
+        title: "Diagnosis",
+        description: "Diagnosis session list with search, status filtering, sorting, fees, and work-order links.",
+        icon: Search,
+        keywords: ["diagnostic", "complaint", "fee"],
+        topics: [
+            {
+                title: "Reviewing diagnosis sessions",
+                steps: [
+                    "Open Diagnosis to search active diagnosis records.",
+                    "Filter by all, in progress, completed, or on hold status.",
+                    "Sort by newest, oldest, highest fee, or lowest fee.",
+                    "Open a diagnosis row to review the linked diagnosis detail.",
+                ],
+                actionLink: "/diagnosis",
+                actionLabel: "Open Diagnosis",
+            },
+        ],
+    },
+    servicesdue: {
+        id: "servicesdue",
+        title: "Services Due",
+        description: "Upcoming and overdue vehicle service schedules with reminder actions.",
+        icon: Bell,
+        keywords: ["maintenance", "reminder", "overdue", "due soon"],
+        topics: [
+            {
+                title: "Tracking due services",
+                steps: [
+                    "Open Services Due to review vehicle service schedules that are due or upcoming.",
+                    "Filter by days ahead, service type, and search text.",
+                    "Use the status badge to distinguish overdue, due soon, and later service items.",
+                    "Open the linked vehicle from the table to review the vehicle profile.",
+                ],
+                actionLink: "/services-due",
+                actionLabel: "View Services Due",
             },
             {
-                title: "Security Verification",
+                title: "Sending reminders",
                 steps: [
-                    "Security staff can search for a pass via the 'Verify' interface.",
-                    "Scan the QR code or enter the pass ID.",
-                    "Mark the vehicle as 'Exited' once it leaves the facility.",
+                    "Use the reminder action on a due service row to open the Send Service Reminder dialog.",
+                    "Confirm the reminder to trigger the reminder mutation for that service schedule.",
+                    "Clear filters if expected service schedules are hidden.",
                 ],
-            }
-        ]
+                actionLink: "/services-due",
+                actionLabel: "Open Services Due",
+            },
+        ],
     },
     reports: {
         id: "reports",
-        title: "Operational Reports",
-        description: "Analyze shop performance, technician productivity, and sales.",
+        title: "Reports & Analytics",
+        description: "Financial, operational, inventory, customer, vehicle, and controls reporting with exports and schedules.",
         icon: FileBarChart,
+        keywords: ["analytics", "export", "schedule", "saved report"],
         topics: [
             {
-                title: "Standard Reports",
+                title: "Using report tabs",
                 steps: [
-                    "Visit the Reports module for high-level summaries.",
-                    "Sales Report: Analyze revenue by branch, service type, or time period.",
-                    "Technician Efficiency: Monitor productivity and billing performance.",
-                    "Customer Retention: Track repeat visits and churn rates.",
+                    "Open Reports & Analytics and choose a tab: Financial, Operational, Inventory, Customers, Vehicles, or Controls.",
+                    "Use the date range and branch controls to change report parameters.",
+                    "Financial reporting includes invoice, payment, revenue, technician revenue, and profit-margin views.",
+                    "Operational reporting includes work orders by status, work-order summary, technician performance, and appointment statistics.",
+                    "Controls reporting includes export logs and audit-related panels.",
                 ],
                 actionLink: "/reports",
-                actionLabel: "View Reports"
+                actionLabel: "Open Reports",
             },
             {
-                title: "Exporting Data",
+                title: "Saving, scheduling, and exporting",
                 steps: [
-                    "Use 'Export to Excel' for the raw data used in reports.",
-                    "Generate PDF summaries for management meetings or board packs.",
+                    "Use Save to save the current report view with a name and description.",
+                    "Use Schedule to create a recurring report schedule with recipients and a frequency.",
+                    "Use Export to generate and download the current report output.",
+                    "The page records export status in the reporting audit trail.",
                 ],
-            }
-        ]
+                actionLink: "/reports",
+                actionLabel: "Reports",
+            },
+        ],
     },
     sms: {
         id: "sms",
         title: "SMS Console",
-        description: "Direct customer communication and automated notifications.",
+        description: "Manual SMS composition, customer recipient selection, scheduling, and SMS logs.",
         icon: MessageSquare,
+        keywords: ["message", "scheduled sms", "recipients", "templates"],
         topics: [
             {
-                title: "Manual Messaging",
+                title: "Sending SMS messages",
                 steps: [
-                    "Open the SMS Console to chat directly with a customer.",
-                    "Search for a customer by name or phone number.",
-                    "View thread history including automated alerts.",
+                    "Open SMS Console to compose a message.",
+                    "Add recipients manually or search/select customers with phone numbers.",
+                    "Use Schedule when the message should be sent later.",
+                    "Use Send Message or Schedule after at least one recipient and message text are present.",
                 ],
                 actionLink: "/sms",
-                actionLabel: "Manage SMS"
+                actionLabel: "Open SMS",
             },
             {
-                title: "Automated Triggers",
+                title: "Logs and templates",
                 steps: [
-                    "Configure triggers in Administration → Settings → SMS Templates.",
-                    "Automated messages are sent for: Appointment Reminders, Work Order Updates, and Payment Confirmations.",
+                    "Review the SMS log table to see sent or scheduled message records.",
+                    "Use row actions where available to inspect or delete log records.",
+                    "Open SMS Templates to manage reusable SMS template content.",
                 ],
-            }
-        ]
+                actionLink: "/sms/templates",
+                actionLabel: "SMS Templates",
+            },
+        ],
     },
-    hr: {
-        id: "hr",
-        title: "Human Resources (HR)",
-        description: "Complete staff management: employees, leave, attendance, payroll, recruitment, performance, training, and compliance.",
-        icon: UserCog,
+    notifications: {
+        id: "notifications",
+        title: "Notifications",
+        description: "Notification center and notification preferences.",
+        icon: Bell,
+        keywords: ["alerts", "preferences"],
         topics: [
             {
-                title: "Staff Management",
+                title: "Viewing notifications",
                 steps: [
-                    "Navigate to **HR → Staff** to view all employees.",
-                    "Click **'Add Employee'** to create a new staff member — fill in personal details, role, branch, and salary.",
-                    "The system automatically creates an Employee Profile and user login credentials.",
-                    "Assign employees to a **Department** and **Position** for organisational structure.",
-                    "Set a **Reporting To** manager to establish the org chart hierarchy.",
-                    "Update employment status (Active, Probation, Suspended, Terminated) as needed.",
-                    "Each profile stores banking details, emergency contacts, and government IDs.",
+                    "Use the notification dropdown in the top navigation for recent alerts.",
+                    "Open Notifications for the full notification list.",
+                    "Open Notification Preferences to adjust notification settings when the route is available to your role.",
                 ],
-                actionLink: "/hr/staff",
-                actionLabel: "Manage Staff"
+                actionLink: "/notifications",
+                actionLabel: "Open Notifications",
             },
+        ],
+    },
+    security: {
+        id: "security",
+        title: "Security Notes",
+        description: "Permission-gated screens, protected routes, two-factor state, and audit visibility.",
+        icon: ShieldAlert,
+        keywords: ["permissions", "protected", "2fa", "audit"],
+        topics: [
             {
-                title: "Departments & Positions",
+                title: "Understanding permission-gated actions",
                 steps: [
-                    "Go to **HR → Departments** to create and manage organisational units.",
-                    "Each department belongs to a **Branch** and can have a **Department Head**.",
-                    "Create **Positions** under each department (e.g., Senior Mechanic under Workshop).",
-                    "Set salary ranges (min/max) on positions for budgeting and recruitment.",
-                    "The staff count per department updates automatically.",
+                    "Sidebar items and action buttons are hidden or disabled based on the signed-in user's permissions.",
+                    "If a documented button is missing, check the user's role and assigned permissions first.",
+                    "User Management shows whether two-factor authentication is enabled or disabled for each account.",
+                    "Audit Log and some admin actions require dedicated audit or management permissions.",
                 ],
-                actionLink: "/hr/departments",
-                actionLabel: "Manage Departments"
+                actionLink: "/admin/roles",
+                actionLabel: "Review Roles",
             },
-            {
-                title: "Leave Management",
-                steps: [
-                    "**Leave Types**: Go to **HR → Leave → Leave Types** to configure leave categories (Annual, Sick, Maternity, etc.).",
-                    "Set days allowed per year, whether it's paid, and if carry-forward is permitted.",
-                    "**Requesting Leave**: Employees go to **HR → Leave** and click **'New Request'**.",
-                    "Select leave type, date range, and provide a reason. Days are auto-calculated.",
-                    "**Approving Leave**: Managers see pending requests and can **Approve** or **Reject** with notes.",
-                    "**Leave Balances**: Track each employee's used, remaining, and carried-forward days per year.",
-                ],
-                actionLink: "/hr/leave",
-                actionLabel: "Manage Leave"
-            },
-            {
-                title: "Attendance & Time Tracking",
-                steps: [
-                    "Navigate to **HR → Attendance** to view daily attendance records.",
-                    "Employees can **Clock In / Clock Out** from the attendance page.",
-                    "The system calculates **Total Hours**, **Overtime**, and marks status (Present, Late, Absent, Half Day).",
-                    "**Attendance Policy**: Configure work start/end times, late threshold (in minutes), and overtime multiplier.",
-                    "Use **'Today Summary'** to get a quick overview of who's present, absent, and late.",
-                    "View **'My Attendance'** for a personal attendance history.",
-                ],
-                actionLink: "/hr/attendance",
-                actionLabel: "View Attendance"
-            },
-            {
-                title: "Payroll Processing",
-                steps: [
-                    "**Step 1 — Salary Components**: Go to **HR → Payroll → Components** to define allowances (Housing, Transport) and deductions (SSNIT, Provident Fund).",
-                    "Assign components to individual employees with specific amounts.",
-                    "**Step 2 — Tax Rules**: Click the **Calculator icon** on the Payroll page to configure progressive PAYE income tax brackets.",
-                    "**Step 3 — Create Period**: Click **'New Payroll Period'**, set start/end dates for the month.",
-                    "**Step 4 — Process**: Click **'Process'** on the period. The system auto-generates payslips by calculating: Base Salary + Allowances + Overtime − Deductions − Tax = Net Pay.",
-                    "**Step 5 — Review**: Click into the period to review individual payslips, view breakdowns, and edit if needed.",
-                    "**Step 6 — Approve & Pay**: Click **'Approve'**, then **'Mark as Paid'** with a payment reference.",
-                    "Employees can view their own payslips at **HR → Payroll → My Payslips**.",
-                ],
-                actionLink: "/hr/payroll",
-                actionLabel: "Manage Payroll"
-            },
-            {
-                title: "Recruitment & Hiring",
-                steps: [
-                    "Go to **HR → Recruitment** to manage open positions and candidates.",
-                    "Click **'New Job Opening'** — set title, department, position, salary range, and closing date.",
-                    "**Publish** the opening to make it visible.",
-                    "Add **Applicants** with their contact info, resume, and source (Website, Referral, LinkedIn).",
-                    "Move applicants through stages: **Screening → Interview → Offer → Hired** or **Rejected**.",
-                    "Schedule **Interviews** with date, interviewer, type (In-Person / Video), and location.",
-                    "After interview, add **Feedback** and **Rating** to the interview record.",
-                    "Click **'Hire'** on a successful applicant to convert them into a staff member.",
-                ],
-                actionLink: "/hr/recruitment",
-                actionLabel: "View Recruitment"
-            },
-            {
-                title: "Performance Reviews",
-                steps: [
-                    "Navigate to **HR → Performance** to manage employee evaluations.",
-                    "Click **'New Review'** — select the employee, review period, and assign a reviewer.",
-                    "Fill in: **Overall Rating** (1–5), **Strengths**, **Areas for Improvement**, and **Goals**.",
-                    "Click **'Submit'** to finalise the review.",
-                    "The employee can view the review and add **Staff Comments**.",
-                    "Click **'Acknowledge'** once the employee has read and accepted the review.",
-                    "Use reviews to track growth over time and identify training needs.",
-                ],
-                actionLink: "/hr/performance",
-                actionLabel: "Manage Reviews"
-            },
-            {
-                title: "Training Programs",
-                steps: [
-                    "Go to **HR → Training** to manage staff development programs.",
-                    "Click **'New Program'** — set name, description, trainer, dates, and max participants.",
-                    "Mark programs as **Mandatory** to flag required training for specific departments.",
-                    "**Enrol** employees into programs from the program detail page.",
-                    "Track enrolment status: **Enrolled → In Progress → Completed**.",
-                    "Record **Scores** and upload **Certificates** upon completion.",
-                ],
-                actionLink: "/hr/training",
-                actionLabel: "Manage Training"
-            },
-            {
-                title: "Compliance Documents",
-                steps: [
-                    "Navigate to **HR → Compliance** to track employee documents and certifications.",
-                    "Add documents with type (ID Card, Driver's License, Certification, Health Certificate).",
-                    "Enter **Issue Date** and **Expiry Date** — the system auto-calculates days until expiry.",
-                    "Documents expiring within 30 days are flagged as **'Expiring Soon'**.",
-                    "Expired documents are highlighted in red for immediate attention.",
-                    "Upload document files for digital record-keeping.",
-                ],
-                actionLink: "/hr/compliance",
-                actionLabel: "View Compliance"
-            },
-            {
-                title: "Recommended Workflow",
-                steps: [
-                    "**1. Setup**: Create Departments → Positions → Attendance Policy → Leave Types → Salary Components → Tax Rules.",
-                    "**2. Onboard**: Add employees with full profiles, assign to departments and positions.",
-                    "**3. Daily**: Employees clock in/out. Managers approve leave requests.",
-                    "**4. Monthly**: Create Payroll Period → Process → Review Payslips → Approve → Mark Paid.",
-                    "**5. Quarterly**: Conduct Performance Reviews. Enrol staff in Training Programs.",
-                    "**6. Ongoing**: Monitor Compliance Documents for expiry. Post Job Openings as needed.",
-                ],
-            },
-        ]
+        ],
     },
 };

@@ -7,7 +7,4 @@ class BillingConfig(AppConfig):
     verbose_name = 'Billing'
 
     def ready(self):
-        """Import signals when app is ready"""
-        import apps.billing.signals  # noqa
-        
-        # Monkey-patch removed for accounting module archival
+        """Accounting hooks live in apps.accounting.signals (Invoice, Payment, Bill, …)."""

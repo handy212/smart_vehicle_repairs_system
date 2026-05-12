@@ -16,10 +16,12 @@ import { cn } from "@/lib/utils/cn";
 import { Estimate } from "@/lib/api/portal";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function MyEstimatesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const queryClient = useQueryClient();
+  const { formatCurrency } = useCurrency();
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -144,7 +146,7 @@ export default function MyEstimatesPage() {
               header: "Amount",
               cell: (est) => (
                 <div className="font-semibold text-foreground">
-                  ${parseFloat(String(est.total || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {formatCurrency(parseFloat(String(est.total || 0)))}
                 </div>
               ),
             },
@@ -218,7 +220,7 @@ export default function MyEstimatesPage() {
                   <div className="flex flex-col gap-2 mt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold uppercase text-muted-foreground/60 tracking-widest">{est.vehicle_info}</span>
-                      <span className="font-semibold text-foreground">${parseFloat(String(est.total || 0)).toFixed(2)}</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(parseFloat(String(est.total || 0)))}</span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <Badge 

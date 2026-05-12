@@ -395,7 +395,7 @@ function SearchResultItem({
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-semibold text-foreground">${part.cost_price || "0.00"}</p>
+                        <p className="text-sm font-semibold text-foreground">{formatCurrency(parseFloat(part.cost_price || "0"))}</p>
                         <p className="text-xs text-muted-foreground">{part.quantity_in_stock} in stock</p>
                     </div>
                     <Button

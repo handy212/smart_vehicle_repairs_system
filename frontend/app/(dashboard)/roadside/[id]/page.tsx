@@ -49,6 +49,7 @@ const editRequestSchema = z.object({
     tow_distance_km: z.number().optional(),
     destination: z.string().optional(),
     notes: z.string().optional(),
+    charge_amount: z.number().min(0, "Charge amount cannot be negative").optional(),
 });
 
 type EditRequestFormData = z.infer<typeof editRequestSchema>;
@@ -101,6 +102,7 @@ export default function RoadsideDetailPage() {
                 tow_distance_km: typeof request.tow_distance_km === 'string' ? parseFloat(request.tow_distance_km) : request.tow_distance_km,
                 destination: request.destination || "",
                 notes: request.notes || "",
+                charge_amount: request.charge_amount ? parseFloat(request.charge_amount) : 0,
             });
             setIsEditDialogOpen(true);
         }
@@ -903,6 +905,19 @@ export default function RoadsideDetailPage() {
                                     />
                                 </div>
                             </div>
+                            {!request.is_covered_by_subscription && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="charge_amount">Pay As You Go Charge</Label>
+                                    <Input
+                                        id="charge_amount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        {...register("charge_amount", { valueAsNumber: true })}
+                                    />
+                                    {editErrors.charge_amount && <p className="text-xs text-destructive">{editErrors.charge_amount.message}</p>}
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
                                 <Textarea

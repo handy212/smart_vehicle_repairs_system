@@ -252,6 +252,15 @@ export interface CreditNoteLineItem {
   is_taxable?: boolean;
 }
 
+export interface CreditNoteApplication {
+  id: number;
+  invoice: number;
+  invoice_number?: string;
+  amount: string;
+  applied_by?: number | null;
+  applied_at?: string;
+}
+
 export interface CreditNote {
   id: number;
   credit_note_number: string;
@@ -269,9 +278,11 @@ export interface CreditNote {
   total: string;
   unused_amount: string;
   line_items?: CreditNoteLineItem[];
+  applications?: CreditNoteApplication[];
   created_by?: number;
   created_by_name?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreditNoteListResponse {
@@ -572,6 +583,14 @@ export const billingApi = {
 
     approve: async (id: number): Promise<void> => {
       await apiClient.post(`/billing/credit-notes/${id}/approve/`);
+    },
+
+    apply: async (
+      id: number,
+      data: { invoice: number; amount?: string | number }
+    ): Promise<CreditNote> => {
+      const response = await apiClient.post(`/billing/credit-notes/${id}/apply/`, data);
+      return response.data;
     },
   },
 

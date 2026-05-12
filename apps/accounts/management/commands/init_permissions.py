@@ -187,6 +187,8 @@ class Command(BaseCommand):
                 'send_estimates': ('billing', 'Send Estimates', 'Send estimates to customers'),
                 'view_payment_history': ('billing', 'View Payment History', 'View payment transaction history'),
                 'export_billing': ('billing', 'Export Billing', 'Export billing and invoice data'),
+                'create_credit_notes': ('billing', 'Create Credit Notes', 'Create customer credit notes'),
+                'edit_credit_notes': ('billing', 'Edit Credit Notes', 'Edit, issue, and apply credit notes'),
                 'view_bills': ('billing', 'View Bills', 'View vendor bills'),
                 'create_bills': ('billing', 'Create Bills', 'Create new vendor bills'),
                 'edit_bills': ('billing', 'Edit Bills', 'Edit vendor bill details'),

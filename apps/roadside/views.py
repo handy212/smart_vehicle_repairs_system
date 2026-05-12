@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -26,6 +26,7 @@ from apps.core.services.ai_service import AIService
 import logging
 from apps.notifications_app.triggers import notification_triggers
 from apps.subscriptions.services import SubscriptionUsageService
+from apps.subscriptions.models import SubscriptionUsage
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,9 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         elif action in ['update', 'partial_update']:
              permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
              return [p() for p in permission_classes]
+        elif action == 'destroy':
+             permission_classes.append(HasAnyPermission(['manage_roadside']))
+             return [p() for p in permission_classes]
         elif action in ['send_customer_sms', 'send_customer_email', 'suggested_message']:
              permission_classes.append(HasAnyPermission(['manage_roadside', 'dispatch_roadside']))
              return [p() for p in permission_classes]
@@ -142,6 +146,24 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         elif action in ['update', 'partial_update']:
             return RoadsideRequestUpdateSerializer
         return RoadsideRequestSerializer
+
+    def perform_destroy(self, instance):
+        from rest_framework.exceptions import ValidationError
+
+        if instance.status != 'requested' or instance.dispatches.exists():
+            raise ValidationError({
+                'detail': 'Only roadside requests that have not been dispatched can be deleted.'
+            })
+
+        if instance.subscription_allowance_deducted and instance.subscription_usage_record:
+            self._refund_subscription_allowance(
+                self.request,
+                instance,
+                'Deleted before dispatch'
+            )
+            instance.refresh_from_db()
+
+        instance.delete()
     
 
     
@@ -159,18 +181,31 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             logger.error(f"Branch resolution failed for roadside request. User: {request.user}, branch_id: {branch_id}, request_data: {request.data}")
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
             
-        # 1. Start atomic transaction for the entire request creation
-        with transaction.atomic():
-            # Create the request first
-            roadside_request = serializer.save(
-                branch=branch,
-                created_by=request.user
-            )
-            
-            # 2. Check and consume subscription allowance
-            # We wrap this logic here. If subscription consumption fails BUT we catch it,
-            # we must ensure that any created Usage record is rolled back OR never linked.
-            self._handle_subscription_usage(request, roadside_request)
+        try:
+            # 1. Start atomic transaction for the entire request creation
+            with transaction.atomic():
+                # Create the request first
+                roadside_request = serializer.save(
+                    branch=branch,
+                    created_by=request.user
+                )
+                
+                # 2. Check and consume subscription allowance
+                # We wrap this logic here. If subscription consumption fails BUT we catch it,
+                # we must ensure that any created Usage record is rolled back OR never linked.
+                self._handle_subscription_usage(request, roadside_request)
+                self._ensure_valid_subscription_usage_link(roadside_request)
+        except IntegrityError as exc:
+            if 'subscription_usage_record_id' in str(exc):
+                logger.warning(
+                    "Roadside request subscription usage link failed during create: %s",
+                    exc,
+                    exc_info=True,
+                )
+                raise ValidationError({
+                    'subscription': 'We could not apply the subscription allowance to this request. Please try again or create the request as pay-per-use.'
+                })
+            raise
 
         # 3. Send notification ONLY after successful commit
         def send_notification():
@@ -181,10 +216,40 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
 
         transaction.on_commit(send_notification)
 
+    def _clear_subscription_usage_link(self, roadside_request):
+        RoadsideRequest.objects.filter(pk=roadside_request.pk).update(
+            subscription_used=None,
+            subscription_allowance_deducted=False,
+            subscription_usage_record=None,
+            is_covered_by_subscription=False,
+        )
+        roadside_request.subscription_used = None
+        roadside_request.subscription_allowance_deducted = False
+        roadside_request.subscription_usage_record = None
+        roadside_request.subscription_usage_record_id = None
+        roadside_request.is_covered_by_subscription = False
+
+    def _ensure_valid_subscription_usage_link(self, roadside_request):
+        roadside_request.refresh_from_db(fields=[
+            'subscription_usage_record',
+            'subscription_used',
+            'subscription_allowance_deducted',
+            'is_covered_by_subscription',
+        ])
+        usage_id = roadside_request.subscription_usage_record_id
+        if usage_id and not SubscriptionUsage.objects.filter(pk=usage_id).exists():
+            logger.warning(
+                "Clearing missing subscription usage %s from roadside request %s before commit",
+                usage_id,
+                roadside_request.pk,
+            )
+            self._clear_subscription_usage_link(roadside_request)
+
     def _handle_subscription_usage(self, request, roadside_request):
         """Helper to handle strict subscription logic inside a transaction"""
-        from django.db import transaction
-        
+        if request.data.get('pay_as_you_go') in [True, 'true', 'True', '1', 1]:
+            return
+
         # Map service types to subscription feature keys
         service_to_feature = {
             'towing': 'towing_services_km',
@@ -194,6 +259,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             'emergency_fuel': 'emergency_fuel',
             'extrication': 'extrication',
             'mechanical_first_aid': 'roadside_first_aid',
+            'accident_estimate': 'accident_estimate',
+            'pre_purchase_inspection': 'pre_purchase_inspection',
         }
         
         feature_key = service_to_feature.get(roadside_request.service_type)
@@ -215,58 +282,65 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             )
             
             if has_allowance and subscription:
-                # Use a SAVEPOINT specifically for the subscription consumption interaction
-                # If this block fails, only the subscription usage creation is rolled back.
                 try:
-                    with transaction.atomic():
-                        # Determine quantity to deduct
-                        if roadside_request.service_type == 'towing' and roadside_request.tow_distance_km:
-                            quantity_used = roadside_request.tow_distance_km
-                        else:
-                            quantity_used = 1
-                        
-                        usage_type = service_to_feature.get(roadside_request.service_type, feature_key)
-                        
-                        # Consume allowance
-                        usage_record = SubscriptionUsageService.consume_allowance(
-                            subscription=subscription,
-                            usage_type=usage_type,
-                            quantity_used=quantity_used,
-                            reference_type='roadside',
-                            reference_id=roadside_request.id,
-                            description=f'{roadside_request.get_service_type_display()} - {roadside_request.request_number}',
-                            created_by=request.user
-                        )
-                        
-                        # Update request with subscription info
-                        roadside_request.subscription_used = subscription
-                        roadside_request.subscription_allowance_deducted = True
-                        roadside_request.subscription_usage_record = usage_record
-                        roadside_request.is_covered_by_subscription = True
-                        roadside_request.save()
+                    # Determine quantity to deduct
+                    if roadside_request.service_type == 'towing' and roadside_request.tow_distance_km:
+                        quantity_used = roadside_request.tow_distance_km
+                    else:
+                        quantity_used = 1
+                    
+                    usage_type = service_to_feature.get(roadside_request.service_type, feature_key)
+                    
+                    # Consume allowance in the same outer transaction as the request update.
+                    usage_record = SubscriptionUsageService.consume_allowance(
+                        subscription=subscription,
+                        usage_type=usage_type,
+                        quantity_used=quantity_used,
+                        reference_type='roadside',
+                        reference_id=roadside_request.id,
+                        description=f'{roadside_request.get_service_type_display()} - {roadside_request.request_number}',
+                        created_by=request.user
+                    )
+                    
+                    # Also consume the package-wide service call count if applicable.
+                    # `call_out_charges` is legacy and should not be deducted for
+                    # every roadside service because it can exhaust all services.
+                    for global_feat in ['total_service_calls']:
+                        if subscription.package.features.get(global_feat) is not None:
+                            SubscriptionUsageService.consume_allowance(
+                                subscription=subscription,
+                                usage_type=global_feat,
+                                quantity_used=1,
+                                reference_type='roadside',
+                                reference_id=roadside_request.id,
+                                description=f'Global deduction for {roadside_request.get_service_type_display()} - {roadside_request.request_number}',
+                                created_by=request.user
+                            )
+                    
+                    # Update request with subscription info only after the usage row exists.
+                    roadside_request.subscription_used = subscription
+                    roadside_request.subscription_allowance_deducted = True
+                    roadside_request.subscription_usage_record = usage_record
+                    roadside_request.is_covered_by_subscription = True
+                    roadside_request.save(update_fields=[
+                        'subscription_used',
+                        'subscription_allowance_deducted',
+                        'subscription_usage_record',
+                        'is_covered_by_subscription',
+                        'updated_at',
+                    ])
                         
                 except Exception as sub_e:
                     # Log the internal subscription failure
-                    logger.warning(f"Subscription consumption failed in atomic block: {sub_e}", exc_info=True)
+                    logger.warning(f"Subscription consumption failed: {sub_e}", exc_info=True)
                     
-                    # Ensure request is clean (the savepoint rollback handled the usage record creation)
-                    # We just need to ensure the request object in memory doesn't think it's covered
-                    roadside_request.refresh_from_db()
-                    roadside_request.subscription_used = None
-                    roadside_request.subscription_usage_record = None
-                    roadside_request.subscription_allowance_deducted = False
-                    roadside_request.is_covered_by_subscription = False
-                    roadside_request.save()
+                    self._clear_subscription_usage_link(roadside_request)
 
         except Exception as e:
             # Catch top-level logic errors in this helper
             logger.error(f"Error in _handle_subscription_usage: {e}", exc_info=True)
             # Ensure safe fallback - clear ALL subscription fields
-            roadside_request.is_covered_by_subscription = False
-            roadside_request.subscription_used = None
-            roadside_request.subscription_usage_record = None
-            roadside_request.subscription_allowance_deducted = False
-            roadside_request.save()
+            self._clear_subscription_usage_link(roadside_request)
 
     def _refund_subscription_allowance(self, request, roadside_request, reason):
         if not roadside_request.subscription_allowance_deducted or not roadside_request.subscription_usage_record:
@@ -484,6 +558,12 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         
         try:
             with transaction.atomic():
+                if not roadside_request.is_covered_by_subscription and (
+                    not roadside_request.charge_amount or roadside_request.charge_amount <= 0
+                ):
+                    raise DjangoValidationError(
+                        'Enter a charge amount before completing this pay-as-you-go roadside service.'
+                    )
                 roadside_request.mark_completed()
                 invoice_id = self._create_completion_invoice(request, roadside_request)
         except ValueError as e:

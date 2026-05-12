@@ -18,8 +18,23 @@ export interface Till {
     variance?: string;
     is_balanced?: boolean;
     duration?: string;
+    cash_payments_total?: string;
+    cash_refunds_total?: string;
+    current_expected_balance?: string;
+    till_cash_movements_net?: string;
     notes: string;
     cash_counts: CashCount[];
+}
+
+export interface TillCashMovement {
+    id: number;
+    till: number;
+    movement_type: 'pay_in' | 'pay_out';
+    amount: string;
+    reason: string;
+    recorded_by: number;
+    recorded_by_name: string;
+    created_at: string;
 }
 
 export interface CashCount {
@@ -65,6 +80,12 @@ export interface CloseTillRequest {
         quantity: number;
     }[];
     notes?: string;
+}
+
+export interface RecordTillMovementRequest {
+    movement_type: 'pay_in' | 'pay_out';
+    amount: string;
+    reason?: string;
 }
 
 export interface CreateRefundRequest {
@@ -113,6 +134,18 @@ export const tillApi = {
     getCurrent: async () => {
         const response = await apiClient.get('/billing/tills/current/');
         return response.data;
+    },
+
+    /** List pay-in / pay-out movements for audit */
+    listMovements: async (id: number) => {
+        const response = await apiClient.get(`/billing/tills/${id}/movements/`);
+        return response.data as TillCashMovement[];
+    },
+
+    /** Record pay-in or pay-out on your open till */
+    recordMovement: async (id: number, data: RecordTillMovementRequest) => {
+        const response = await apiClient.post(`/billing/tills/${id}/record_movement/`, data);
+        return response.data as TillCashMovement;
     },
 };
 

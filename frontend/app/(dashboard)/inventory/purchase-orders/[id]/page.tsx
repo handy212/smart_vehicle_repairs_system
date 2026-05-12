@@ -458,7 +458,7 @@ export default function PurchaseOrderDetailPage() {
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Financials</p>
                 <h3 className="text-xl font-bold text-foreground">
-                  {purchaseOrder.total ? formatCurrency(parseFloat(purchaseOrder.total)) : "$0.00"}
+                  {purchaseOrder.total ? formatCurrency(parseFloat(purchaseOrder.total)) : formatCurrency(0)}
                 </h3>
                 <p className="text-[10px] text-muted-foreground">Total order amount</p>
               </div>
@@ -584,7 +584,7 @@ export default function PurchaseOrderDetailPage() {
                     <TableRow className="bg-muted/10 font-bold border-t-2">
                        <TableCell colSpan={4} className="text-right text-xs uppercase tracking-wide px-4">Grand Total</TableCell>
                        <TableCell className="text-right text-sm px-4">
-                         {purchaseOrder.total ? formatCurrency(parseFloat(purchaseOrder.total)) : "$0.00"}
+                         {purchaseOrder.total ? formatCurrency(parseFloat(purchaseOrder.total)) : formatCurrency(0)}
                        </TableCell>
                     </TableRow>
                   </TableBody>
@@ -603,19 +603,19 @@ export default function PurchaseOrderDetailPage() {
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{purchaseOrder.subtotal ? formatCurrency(parseFloat(purchaseOrder.subtotal)) : "$0.00"}</span>
+                  <span>{purchaseOrder.subtotal ? formatCurrency(parseFloat(purchaseOrder.subtotal)) : formatCurrency(0)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-muted-foreground">Tax</span>
-                  <span>{purchaseOrder.tax ? formatCurrency(parseFloat(purchaseOrder.tax)) : "$0.00"}</span>
+                  <span>{purchaseOrder.tax ? formatCurrency(parseFloat(purchaseOrder.tax)) : formatCurrency(0)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>{purchaseOrder.shipping ? formatCurrency(parseFloat(purchaseOrder.shipping)) : "$0.00"}</span>
+                  <span>{purchaseOrder.shipping ? formatCurrency(parseFloat(purchaseOrder.shipping)) : formatCurrency(0)}</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between text-sm font-bold">
                   <span>Total Amount</span>
-                  <span className="text-primary">{purchaseOrder.total ? formatCurrency(parseFloat(purchaseOrder.total)) : "$0.00"}</span>
+                  <span className="text-primary">{purchaseOrder.total ? formatCurrency(parseFloat(purchaseOrder.total)) : formatCurrency(0)}</span>
                 </div>
               </CardContent>
             </Card>

@@ -7,7 +7,7 @@ import jsPDF from "jspdf";
  */
 
 
-export function exportToCSV<T extends Record<string, any>>(
+export function exportToCSV<T extends Record<string, unknown>>(
   data: T[],
   filename: string,
   headers: { key: keyof T; label: string }[]
@@ -23,7 +23,37 @@ export function exportToCSV<T extends Record<string, any>>(
   XLSX.writeFile(workbook, `${filename}_${new Date().toISOString().split("T")[0]}.xlsx`);
 }
 
-export function exportToPDF<T extends Record<string, any>>(
+/** Excel workbook with multiple sheets (e.g. till summary + drawer movements). */
+export function exportMultiSheetXlsx(
+  sheets: {
+    name: string;
+    headers: { key: string; label: string }[];
+    rows: Record<string, unknown>[];
+  }[],
+  filename: string
+) {
+  const dateStamp = new Date().toISOString().split("T")[0];
+  const workbook = XLSX.utils.book_new();
+
+  for (const sheet of sheets) {
+    const safeName =
+      (sheet.name.replace(/[\\/:*?[\]]/g, "_").slice(0, 31)) || "Sheet";
+    const headerRow = sheet.headers.map((header) => header.label);
+    const dataRows = sheet.rows.map((row) =>
+      sheet.headers.map((header) => formatExportValue(row[header.key]))
+    );
+    const aoa = [headerRow, ...dataRows];
+    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+    worksheet["!cols"] = sheet.headers.map((header) => ({
+      wch: Math.min(Math.max(header.label.length + 4, 14), 40),
+    }));
+    XLSX.utils.book_append_sheet(workbook, worksheet, safeName);
+  }
+
+  XLSX.writeFile(workbook, `${filename}_${dateStamp}.xlsx`);
+}
+
+export function exportToPDF<T extends Record<string, unknown>>(
   data: T[],
   filename: string,
   headers: { key: keyof T; label: string }[],

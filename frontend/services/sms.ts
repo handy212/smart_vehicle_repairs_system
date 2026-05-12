@@ -42,6 +42,8 @@ export interface SMSBalance {
     success: boolean;
     balance: number;
     currency?: string;
+    error?: string;
+    supported?: boolean;
 }
 
 export interface BulkSendSMSResponse {
